@@ -1,0 +1,5 @@
+upstart-app-launch (0.1) unstable; urgency=low
+
+  * Initial release 
+
+ -- Ted Gould <ted@ubuntu.com>  Fri, 03 May 2013 11:01:26 -0700
