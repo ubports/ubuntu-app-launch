@@ -10,6 +10,6 @@ application.conf: application.conf.in
 install: application.conf desktop-exec
 	mkdir -p $(DESTDIR)/usr/share/upstart/sessions
 	install -m 644 application.conf $(DESTDIR)/usr/share/upstart/sessions/
-	mkdir -p /usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
-	install -m 755 desktop-exec /usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
+	mkdir -p $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
+	install -m 755 desktop-exec $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 
