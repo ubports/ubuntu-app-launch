@@ -7,5 +7,5 @@ stop on desktop-end
 
 script
 	export UBUNTU_APPLICATION_ISOLATION=1
-	/usr/bin/${APP_ID}
+	@libexecdir@/desktop-exec ${APP_ID}
 end script
