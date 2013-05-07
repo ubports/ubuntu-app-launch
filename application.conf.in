@@ -6,7 +6,6 @@ expect fork
 
 stop on desktop-end
 
-script
-	export UBUNTU_APPLICATION_ISOLATION=1
-	@libexecdir@/desktop-exec ${APP_ID}
-end script
+env UBUNTU_APPLICATION_ISOLATION=1
+
+exec @libexecdir@/desktop-exec ${APP_ID}
