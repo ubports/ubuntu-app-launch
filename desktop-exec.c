@@ -1,6 +1,53 @@
 
+#include <unistd.h>
+#include <string.h>
 #include <glib.h>
-#include <gio/gdesktopappinfo.h>
+
+/* Try to find a desktop file in a particular data directory */
+GKeyFile *
+try_dir (const char * dir, const gchar * desktop)
+{
+	gchar * fullpath = g_build_filename(dir, "applications", desktop, NULL);
+	GKeyFile * keyfile = g_key_file_new();
+
+	/* NOTE: Leaving off the error here as we'll get a bunch of them,
+	   so individuals aren't really useful */
+	gboolean loaded = g_key_file_load_from_file(keyfile, fullpath, G_KEY_FILE_NONE, NULL);
+
+	g_free(fullpath);
+
+	if (loaded) {
+		return keyfile;
+	}
+
+	g_key_file_free(keyfile);
+	return NULL;
+}
+
+/* Check to make sure we have the sections and keys we want */
+GKeyFile *
+verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
+{
+	if (inkeyfile == NULL) return NULL;
+
+	gboolean passed = TRUE;
+
+	if (passed && !g_key_file_has_group(inkeyfile, "Desktop Entry")) {
+		passed = FALSE;
+	}
+
+	if (passed && !g_key_file_has_key(inkeyfile, "Desktop Entry", "Exec", NULL)) {
+		passed = FALSE;
+	}
+
+	if (passed) {
+		return inkeyfile;
+	}
+
+	g_debug("Desktop file '%s' is malformed", desktop);
+	g_key_file_free(inkeyfile);
+	return NULL;
+}
 
 int
 main (int argc, char * argv[])
@@ -11,16 +58,38 @@ main (int argc, char * argv[])
 	}
 
 	gchar * desktop = g_strdup_printf("%s.desktop", argv[1]);
-	GDesktopAppInfo * appinfo = g_desktop_app_info_new(desktop);
-	g_free(desktop);
 
-	if (!G_IS_DESKTOP_APP_INFO(appinfo)) {
-		g_error("Unable to load app '%s'", argv[1]);
+	const char * const * data_dirs = g_get_system_data_dirs();
+	GKeyFile * keyfile = NULL;
+	int i;
+
+	keyfile = try_dir(g_get_user_data_dir(), desktop);
+	keyfile = verify_keyfile(keyfile, desktop);
+
+	for (i = 0; data_dirs[i] != NULL && keyfile == NULL; i++) {
+		keyfile = try_dir(data_dirs[i], desktop);
+		keyfile = verify_keyfile(keyfile, desktop);
+	}
+
+	if (keyfile == NULL) {
+		g_error("Unable to find keyfile for application '%s'", argv[0]);
 		return 1;
 	}
 
-	g_app_info_launch(G_APP_INFO(appinfo), NULL, NULL, NULL);
+	gchar * execline = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
+	g_return_val_if_fail(execline != NULL, 1);
 
-	g_object_unref(appinfo);
-	return 0;
+	/* TODO: keeping this simple for now */
+	gchar * first = strstr(execline, " ");
+	if (first != NULL) {
+		first[0] = '\0';
+	}
+
+	int execret = execvp(execline, NULL);
+
+	g_key_file_free(keyfile);
+	g_free(desktop);
+	g_free(execline);
+
+	return execret;
 }
