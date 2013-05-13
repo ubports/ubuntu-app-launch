@@ -42,8 +42,71 @@ main (int argc, char * argv[])
 		return;
 	}
 
-	/* TODO: Do more */
-	g_print("%s\n", g_variant_print(instances, TRUE));
+	/* Header */
+	g_print("  PID  NAME\n");
+
+
+	GVariant * array = g_variant_get_child_value(instances, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, array);
+	gchar * instance_path = NULL;
+
+	while (g_variant_iter_loop(&iter, "o", &instance_path)) {
+		GVariant * propret   = g_dbus_connection_call_sync(upstart,
+		                                                   "com.ubuntu.Upstart",
+		                                                   instance_path,
+		                                                   "org.freedesktop.DBus.Properties",
+		                                                   "GetAll",
+		                                                   g_variant_new("(s)", "com.ubuntu.Upstart0_6.Instance"),
+		                                                   G_VARIANT_TYPE("(a{sv})"),
+		                                                   G_DBUS_CALL_FLAGS_NONE,
+		                                                   -1,
+		                                                   NULL,
+		                                                   &error);
+
+		if (error != NULL) {
+			g_warning("Unable to get props for '%s': %s", instance_path, error->message);
+			g_error_free(error);
+			error = NULL;
+			continue;
+		}
+
+		GVariant * params = g_variant_get_child_value(propret, 0);
+		GVariant * vname = g_variant_lookup_value(params, "name", G_VARIANT_TYPE_STRING);
+
+		const gchar * name = NULL;
+		if (vname != NULL) {
+			name = g_variant_get_string(vname, NULL);
+			if (name[0] == '\0') {
+				name = "(unnamed)";
+			}
+		} else {
+			name = "(no name)";
+		}
+
+		GVariant * processes = g_variant_lookup_value(params, "processes", G_VARIANT_TYPE("a(si)"));
+		if (processes != NULL) {
+			GVariantIter iproc;
+			g_variant_iter_init(&iproc, processes);
+			gchar * type;
+			gint pid;
+
+			while (g_variant_iter_loop(&iproc, "(si)", &type, &pid)) {
+				g_print("%5d  %s\n", pid, name);
+			}
+
+			g_variant_unref(processes);
+		} else {
+			g_warning("No processes for application: %s", name);
+		}
+
+		g_variant_unref(vname);
+		g_variant_unref(params);
+		g_variant_unref(propret);
+	}
+
+
+	g_variant_unref(array);
 	g_variant_unref(instances);
 
 	g_object_unref(upstart);
