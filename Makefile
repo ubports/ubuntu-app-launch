@@ -15,6 +15,6 @@ install: application.conf desktop-exec
 	install -m 644 application.conf $(DESTDIR)/usr/share/upstart/sessions/
 	mkdir -p $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 	install -m 755 desktop-exec $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
-	mkdir -p /usr/bin/
-	install -m 755 lsapp /usr/bin/
+	mkdir -p $(DESTDIR)/usr/bin/
+	install -m 755 lsapp $(DESTDIR)/usr/bin/
 
