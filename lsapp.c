@@ -43,7 +43,7 @@ main (int argc, char * argv[])
 	}
 
 	/* Header */
-	g_print("  PID  NAME\n");
+	g_print("  PID  TYPE  NAME\n");
 
 
 	GVariant * array = g_variant_get_child_value(instances, 0);
@@ -92,7 +92,7 @@ main (int argc, char * argv[])
 			gint pid;
 
 			while (g_variant_iter_loop(&iproc, "(si)", &type, &pid)) {
-				g_print("%5d  %s\n", pid, name);
+				g_print("%5d  %4s  %s\n", pid, type, name);
 			}
 
 			g_variant_unref(processes);
