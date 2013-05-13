@@ -2,7 +2,7 @@ default: desktop-exec application.conf
 	@echo "Building"
 
 desktop-exec: desktop-exec.c
-	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs gio-unix-2.0`
+	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0`
 
 application.conf: application.conf.in
 	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application.conf.in > application.conf
