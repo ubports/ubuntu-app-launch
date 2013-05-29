@@ -6,5 +6,10 @@ instance $APP_ID
 stop on desktop-end
 
 env UBUNTU_APPLICATION_ISOLATION=1
+env APP_EXEC="echo Error"
 
-exec @libexecdir@/desktop-exec ${APP_ID}
+pre-start script
+	initctl set-env APP_EXEC="`@libexecdir@/desktop-exec ${APP_ID}`"
+end script
+
+exec $APP_EXEC
