@@ -85,11 +85,11 @@ main (int argc, char * argv[])
 		first[0] = '\0';
 	}
 
-	int execret = execvp(execline, NULL);
+	g_print("%s\n", execline);
 
 	g_key_file_free(keyfile);
 	g_free(desktop);
 	g_free(execline);
 
-	return execret;
+	return 0;
 }
