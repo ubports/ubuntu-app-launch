@@ -8,8 +8,13 @@ stop on desktop-end
 env UBUNTU_APPLICATION_ISOLATION=1
 env APP_EXEC="echo Error"
 
+# This is unconfined and look through the desktop files so desktop-exec
+# needs to be executed in pre-start
+
 pre-start script
 	initctl set-env APP_EXEC="`@libexecdir@/desktop-exec ${APP_ID}`"
 end script
+
+# Full AppArmor confinement
 
 exec $APP_EXEC
