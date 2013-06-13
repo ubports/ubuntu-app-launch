@@ -2,7 +2,8 @@ Source: upstart-app-launch
 Section: unknown
 Priority: extra
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: debhelper (>= 8.0.0)
+Build-Depends: debhelper (>= 8.0.0),
+               libglib2.0-dev,
 Standards-Version: 3.9.4
 Homepage: <insert the upstream URL, if relevant>
 #Vcs-Git: git://git.debian.org/collab-maint/upstart-app-launch.git
