@@ -1,11 +1,14 @@
 Source: upstart-app-launch
-Priority: standard
+Section: gnome
+Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: debhelper (>= 8.0.0),
+Build-Depends: debhelper (>= 9),
                libglib2.0-dev,
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/upstart-app-launch
-Vcs-Bzr: lp:upstart-app-launch
+# If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
+# just go ahead.  ~indicator-applet-developers will notice and sync up the code again.
+Vcs-Bzr: https://code.launchpad.net/~indicator-applet-developers/upstart-app-launch/trunk.13.10
 Vcs-Browser: http://bazaar.launchpad.net/~indicator-applet-developers/upstart-app-launch/trunk.13.10/files
 
 Package: upstart-app-launch
