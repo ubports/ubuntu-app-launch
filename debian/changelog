@@ -1,5 +1,31 @@
-upstart-app-launch (0.1-0ubuntu1) UNRELEASED; urgency=low
+upstart-app-launch (0.1daily13.06.19-0ubuntu1) saucy; urgency=low
 
+  [ Ted Gould ]
   * Initial release 
+  * The application config file
+  * Adding debian stuff
+  * Fixing the make file to make it work-ish
+  * Adding notification of isolation
+  * Adding a build for a small executor target
+  * Fleshing out desktop exec
+  * Adding the directory into the conf file
+  * Make the deb stuff work
+  * Now that we have the tool we need to expect a fork
+  * Changing the conf file to not need the script suggested by zyga on
+    #ubuntu-devel
+  * Switch from using GIO to standard GLib and exec
+  * Simpler pkgconfig too
+  * Drop the forking
+  * Making a little script to help with apps
+  * Putting some boiler plate dbus in there
+  * Dump out the PIDs and the nice names
+  * Putting the type in too
+  * Close the metal here
+  * Adding a glib build dependency.
+  * Searching desktop files in pre-start.
+  * Adding a COPYING file and file copyrights.
 
- -- Ted Gould <ted@ubuntu.com>  Fri, 03 May 2013 11:01:26 -0700
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 22
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 19 Jun 2013 00:01:09 +0000
