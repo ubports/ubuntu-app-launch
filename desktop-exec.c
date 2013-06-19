@@ -103,6 +103,13 @@ main (int argc, char * argv[])
 		first[0] = '\0';
 	}
 
+	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
+	if (apparmor != NULL) {
+		gchar * execnew = g_strdup_printf("aa-exec -p \"%s\" -- %s", apparmor, execline);
+		g_free(execline);
+		execline = execnew;
+	}
+
 	g_print("%s\n", execline);
 
 	g_key_file_free(keyfile);
