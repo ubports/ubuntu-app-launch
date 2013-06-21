@@ -20,3 +20,10 @@ install: application-legacy.conf desktop-exec
 	mkdir -p $(DESTDIR)/usr/bin/
 	install -m 755 lsapp $(DESTDIR)/usr/bin/
 
+check: application-legacy.conf
+	@echo " *** Checking Application Job *** "
+	@init-checkconf application.conf
+	@echo " *** Checking Application Click Job *** "
+	@init-checkconf application-click.conf
+	@echo " *** Checking Application Legacy Job *** "
+	@init-checkconf application-legacy.conf
