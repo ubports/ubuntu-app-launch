@@ -13,7 +13,10 @@ zg-report-app: zg-report-app.c
 application-legacy.conf: application-legacy.conf.in
 	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-legacy.conf.in > application-legacy.conf
 
-install: application-legacy.conf desktop-exec
+application-click.conf: application-click.conf.in
+	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-click.conf.in > application-click.conf
+
+install: application-legacy.conf application-legacy.conf desktop-exec
 	mkdir -p $(DESTDIR)/usr/share/upstart/sessions
 	install -m 644 application.conf $(DESTDIR)/usr/share/upstart/sessions/
 	install -m 644 application-legacy.conf $(DESTDIR)/usr/share/upstart/sessions/
@@ -24,7 +27,7 @@ install: application-legacy.conf desktop-exec
 	mkdir -p $(DESTDIR)/usr/bin/
 	install -m 755 lsapp $(DESTDIR)/usr/bin/
 
-check: application-legacy.conf
+check: application-legacy.conf application-click.conf
 	@echo " *** Checking Application Job *** "
 	@init-checkconf application.conf
 	@echo " *** Checking Application Click Job *** "
