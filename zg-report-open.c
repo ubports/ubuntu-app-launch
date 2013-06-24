@@ -4,8 +4,8 @@
 int
 main (int argc, char * argv[])
 {
-	if (argc != 2) {
-		g_printerr("Usage: %s <application url>\n", argv[0]);
+	if (argc != 3 || (g_strcmp0(argv[1], "open") != 0 && g_strcmp0(argv[1], "close") != 0)) {
+		g_printerr("Usage: %s [open|close] <application url>\n", argv[0]);
 		return 1;
 	}
 
@@ -13,14 +13,18 @@ main (int argc, char * argv[])
 
 	ZeitgeistEvent * event = zeitgeist_event_new();
 	zeitgeist_event_set_actor(event, "application://upstart-app-launch.desktop");
-	zeitgeist_event_set_interpretation(event, ZEITGEIST_ZG_ACCESS_EVENT);
+	if (g_strcmp0(argv[1], "open") == 0) {
+		zeitgeist_event_set_interpretation(event, ZEITGEIST_ZG_ACCESS_EVENT);
+	} else {
+		zeitgeist_event_set_interpretation(event, ZEITGEIST_ZG_LEAVE_EVENT);
+	}
 	zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
 
 	ZeitgeistSubject * subject = zeitgeist_subject_new();
 	zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
 	zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
 	zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
-	zeitgeist_subject_set_uri(subject, argv[1]);
+	zeitgeist_subject_set_uri(subject, argv[2]);
 
 	zeitgeist_event_add_subject(event, subject);
 
