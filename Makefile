@@ -1,4 +1,4 @@
-default: desktop-exec lsapp zg-report-open application.conf application-click.conf application-legacy.conf
+default: desktop-exec lsapp zg-report-app application.conf application-click.conf application-legacy.conf
 	@echo "Building"
 
 desktop-exec: desktop-exec.c
@@ -7,8 +7,8 @@ desktop-exec: desktop-exec.c
 lsapp: lsapp.c
 	gcc -o lsapp lsapp.c `pkg-config --cflags --libs gio-2.0`
 
-zg-report-open: zg-report-open.c
-	gcc -o zg-report-open zg-report-open.c `pkg-config --cflags --libs zeitgeist-2.0`
+zg-report-app: zg-report-app.c
+	gcc -o zg-report-app zg-report-app.c `pkg-config --cflags --libs zeitgeist-2.0`
 
 application-legacy.conf: application-legacy.conf.in
 	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-legacy.conf.in > application-legacy.conf
@@ -20,7 +20,7 @@ install: application-legacy.conf desktop-exec
 	install -m 644 application-click.conf $(DESTDIR)/usr/share/upstart/sessions/
 	mkdir -p $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 	install -m 755 desktop-exec $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
-	install -m 755 zg-report-open $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
+	install -m 755 zg-report-app $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 	mkdir -p $(DESTDIR)/usr/bin/
 	install -m 755 lsapp $(DESTDIR)/usr/bin/
 
