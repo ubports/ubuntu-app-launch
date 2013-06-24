@@ -20,6 +20,15 @@
 
 #include <zeitgeist.h>
 
+static gboolean
+watchdog_timeout (gpointer user_data)
+{
+	g_error("Watchdog triggered, took to long to submit into Zeitgeist Database!");
+	g_main_loop_quit((GMainLoop *)user_data);
+
+	return G_SOURCE_REMOVE;
+}
+
 static void
 insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
 {
@@ -68,6 +77,7 @@ main (int argc, char * argv[])
 	GMainLoop * main_loop = g_main_loop_new(NULL, FALSE);
 
 	zeitgeist_log_insert_events(log, NULL, insert_complete, main_loop, event, NULL);
+	g_timeout_add_seconds(4, watchdog_timeout, main_loop);
 
 	g_main_loop_run(main_loop);
 
