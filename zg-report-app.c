@@ -20,6 +20,24 @@
 
 #include <zeitgeist.h>
 
+static void
+insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+	GArray * result = NULL;
+
+	result = zeitgeist_log_insert_events_finish(ZEITGEIST_LOG(obj), res, &error);
+
+	if (error != NULL) {
+		g_error("Unable to submit Zeitgeist Event: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_array_free(result, TRUE);
+	g_main_loop_quit((GMainLoop *)user_data);
+	return;
+}
+
 int
 main (int argc, char * argv[])
 {
@@ -47,14 +65,11 @@ main (int argc, char * argv[])
 
 	zeitgeist_event_add_subject(event, subject);
 
-	GError * error = NULL;
-	zeitgeist_log_insert_event_no_reply(log, event, &error);
+	GMainLoop * main_loop = g_main_loop_new(NULL, FALSE);
 
-	if (error != NULL) {
-		g_printerr("Unable to log Zeitgeist event: %s", error->message);
-		g_error_free(error);
-		return 1;
-	}
+	zeitgeist_log_insert_events(log, NULL, insert_complete, main_loop, event, NULL);
+
+	g_main_loop_run(main_loop);
 
 	return 0;
 }

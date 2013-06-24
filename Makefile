@@ -8,7 +8,7 @@ lsapp: lsapp.c
 	gcc -o lsapp lsapp.c `pkg-config --cflags --libs gio-2.0`
 
 zg-report-app: zg-report-app.c
-	gcc -o zg-report-app zg-report-app.c `pkg-config --cflags --libs zeitgeist-2.0`
+	gcc -o zg-report-app zg-report-app.c `pkg-config --cflags --libs zeitgeist-1.0`
 
 application-legacy.conf: application-legacy.conf.in
 	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-legacy.conf.in > application-legacy.conf
