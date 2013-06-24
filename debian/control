@@ -5,6 +5,7 @@ Maintainer: Ted Gould <ted@ubuntu.com>
 Build-Depends: debhelper (>= 9),
                libglib2.0-dev,
                dbus-x11,
+               libzeitgeist-dev,
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/upstart-app-launch
 # If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
