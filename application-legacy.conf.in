@@ -3,7 +3,8 @@ author "Ted Gould <ted@canonical.com>"
 
 instance ${APP_ID}-${INSTANCE_ID}
 
-stop on desktop-end
+start on application-legacy-start
+stop on application-end or desktop-end
 
 env APP_EXEC="echo Error"
 
