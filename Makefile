@@ -29,8 +29,8 @@ install: application-legacy.conf application-legacy.conf desktop-exec
 
 check: application-legacy.conf application-click.conf
 	@echo " *** Checking Application Job *** "
-	@init-checkconf application.conf
+	@./test-conffile.sh application.conf
 	@echo " *** Checking Application Click Job *** "
-	@init-checkconf application-click.conf
+	@./test-conffile.sh application-click.conf
 	@echo " *** Checking Application Legacy Job *** "
-	@init-checkconf application-legacy.conf
+	@./test-conffile.sh application-legacy.conf
