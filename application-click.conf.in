@@ -3,6 +3,9 @@ author "Ted Gould <ted@canonical.com>"
 
 instance ${APP_ID}
 
+start on application-click-start
+stop on application-end or desktop-end
+
 env APP_ID
 export APP_ID
 
