@@ -1,6 +1,8 @@
 #!/bin/bash
 
-if [ -x /sbin/initctl.REAL ] ; then
+UPSTARTVERSION=`initctl version | sed 's/[[:alpha:]\)|(|[:space:]]//g' | awk -F- '{print $1}' | awk -F. '{print $2}'`
+
+if [ ${UPSTARTVERSION} -lt 8 ] ; then
 # Old upstart on builders, don't test
 	true
 else
