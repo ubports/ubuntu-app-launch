@@ -1,3 +1,19 @@
+upstart-app-launch (0.1+13.10.20130703-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Split out legacy and click package startup.
+  * Allow setting the apparmor profile in the dekstop file.
+  * Add Zeitgeist logging of the start and stop of the applications.
+  * Adding a shell script to insert the initctl path if on buildd's.
+  * Switch initialization to be signal based.
+  * Don't run tests on buildds.
+  * Changing the script to check for upstart versions.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 30
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 03 Jul 2013 00:01:31 +0000
+
 upstart-app-launch (0.1daily13.06.19-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
