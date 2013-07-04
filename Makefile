@@ -2,7 +2,7 @@ default: desktop-exec lsapp zg-report-app application.conf application-click.con
 	@echo "Building"
 
 desktop-exec: desktop-exec.c
-	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0`
+	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0 gio-2.0`
 
 lsapp: lsapp.c
 	gcc -o lsapp lsapp.c `pkg-config --cflags --libs gio-2.0`

@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <glib.h>
+#include <gio/gio.h>
 
 /* Try to find a desktop file in a particular data directory */
 GKeyFile *
@@ -68,6 +69,22 @@ verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
 }
 
 static gchar *
+uri2file (const gchar * uri)
+{
+	GFile * gfile = g_file_new_for_uri(uri);
+
+	gchar * retval = g_file_get_path(gfile);
+	g_object_unref(gfile);
+
+	if (retval == NULL) {
+		retval = g_strdup("");
+	}
+
+	g_debug("Converting URI '%s' to file '%s'", uri, retval);
+	return retval;
+}
+
+static gchar *
 handle_codes (const gchar * execline, const gchar * uri_list)
 {
 	gchar ** execsplit = g_strsplit(execline, "%", 0);
@@ -80,6 +97,7 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 
 	int i;
 	gchar * single_uri = NULL;
+	gchar * single_file = NULL;
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
 	g_array_append_val(outarray, execsplit[0]);
 
@@ -102,6 +120,24 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'f':
+			if (uri_list != NULL) {
+				if (single_file == NULL) {
+					if (g_utf8_strchr(uri_list, -1, ' ') != NULL) {
+						if (single_uri == NULL) {
+							single_uri = g_strdup(uri_list);
+							g_utf8_strchr(single_uri, -1, ' ')[0] = '\0';
+						}
+						single_file = uri2file(single_uri);
+					} else {
+						single_file = uri2file(uri_list);
+					}
+				}
+
+				g_array_append_val(outarray, single_file);
+			}
+
+			g_array_append_val(outarray, skipchar);
+			break;
 		case 'F':
 			/* TODO: Handle files */
 			g_array_append_val(outarray, skipchar);
@@ -117,17 +153,22 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'u':
-			if (g_utf8_strchr(uri_list, -1, ' ') == NULL) {
-				/* There's only one, so we're good, just add it */
-				g_array_append_val(outarray, uri_list);
-				g_array_append_val(outarray, skipchar);
-			} else {
-				single_uri = g_strdup(uri_list);
-				g_utf8_strchr(single_uri, -1, ' ')[0] = '\0';
+			if (uri_list != NULL) {
+				if (g_utf8_strchr(uri_list, -1, ' ') == NULL) {
+					/* There's only one, so we're good, just add it */
+					g_array_append_val(outarray, uri_list);
+					g_array_append_val(outarray, skipchar);
+				} else {
+					if (single_uri == NULL) {
+						single_uri = g_strdup(uri_list);
+						g_utf8_strchr(single_uri, -1, ' ')[0] = '\0';
+					}
 
-				g_array_append_val(outarray, single_uri);
-				g_array_append_val(outarray, skipchar);
+					g_array_append_val(outarray, single_uri);
+				}
 			}
+
+			g_array_append_val(outarray, skipchar);
 			break;
 		default:
 			g_warning("Desktop Exec line code '%%%c' unknown, skipping.", execsplit[i][0]);
@@ -138,7 +179,9 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 
 	gchar * output = g_strjoinv(" ", (gchar **)outarray->data);
 	g_array_free(outarray, TRUE);
+
 	g_free(single_uri);
+	g_free(single_file);
 
 	return output;
 }
