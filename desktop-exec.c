@@ -67,11 +67,87 @@ verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
 	return NULL;
 }
 
+static gchar *
+handle_codes (const gchar * execline, const gchar * uri_list)
+{
+	gchar ** execsplit = g_strsplit(execline, "%", 0);
+
+	/* If we didn't have any codes, just exit here */
+	if (execsplit[1] == NULL) {
+		g_strfreev(execsplit);
+		return g_strdup(execline);
+	}
+
+	int i;
+	gchar * single_uri = NULL;
+	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
+	g_array_append_val(outarray, execsplit[0]);
+
+	for (i = 1; execsplit[i] != NULL; i++) {
+		const gchar * skipchar = &(execsplit[i][1]);
+
+		switch (execsplit[i][0]) {
+		case '\0': {
+			const gchar * percent = "%";
+			g_array_append_val(outarray, percent); /* %% is the litteral */
+			break;
+		}
+		case 'd':
+		case 'D':
+		case 'n':
+		case 'N':
+		case 'v':
+		case 'm':
+			/* Deprecated */
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'f':
+		case 'F':
+			/* TODO: Handle files */
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'i':
+		case 'c':
+		case 'k':
+			/* Perhaps?  Not sure anyone uses these */
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'U':
+			g_array_append_val(outarray, uri_list);
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'u':
+			if (g_utf8_strchr(uri_list, -1, ' ') == NULL) {
+				/* There's only one, so we're good, just add it */
+				g_array_append_val(outarray, uri_list);
+				g_array_append_val(outarray, skipchar);
+			} else {
+				single_uri = g_strdup(uri_list);
+				g_utf8_strchr(single_uri, -1, ' ')[0] = '\0';
+
+				g_array_append_val(outarray, single_uri);
+				g_array_append_val(outarray, skipchar);
+			}
+			break;
+		default:
+			g_warning("Desktop Exec line code '%%%c' unknown, skipping.", execsplit[i][0]);
+			g_array_append_val(outarray, skipchar);
+			break;
+		}
+	}
+
+	gchar * output = g_strjoinv(" ", (gchar **)outarray->data);
+	g_array_free(outarray, TRUE);
+	g_free(single_uri);
+
+	return output;
+}
+
 int
 main (int argc, char * argv[])
 {
-	if (argc != 2) {
-		g_error("Should be called as: %s <app_id>", argv[0]);
+	if (argc != 2 && argc != 3) {
+		g_error("Should be called as: %s <app_id> [uri list]", argv[0]);
 		return 1;
 	}
 
@@ -97,10 +173,10 @@ main (int argc, char * argv[])
 	gchar * execline = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
 	g_return_val_if_fail(execline != NULL, 1);
 
-	/* TODO: keeping this simple for now */
-	gchar * first = strstr(execline, " ");
-	if (first != NULL) {
-		first[0] = '\0';
+	gchar * codeexec = handle_codes(execline, argc == 3 ? argv[2] : NULL);
+	if (codeexec != NULL) {
+		g_free(execline);
+		execline = codeexec;
 	}
 
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
