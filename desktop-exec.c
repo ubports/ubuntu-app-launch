@@ -84,6 +84,34 @@ uri2file (const gchar * uri)
 	return retval;
 }
 
+static void
+free_string (gpointer value)
+{
+	gchar ** str = (gchar **)value;
+	g_free(*str);
+	return;
+}
+
+static gchar *
+build_file_list (const gchar * uri_list)
+{
+	gchar ** uri_split = g_strsplit(uri_list, " ", 0);
+
+	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(gchar *));
+	g_array_set_clear_func(outarray, free_string);
+
+	int i;
+	for (i = 0; uri_split[i] != NULL; i++) {
+		gchar * path = uri2file(uri_split[i]);
+		g_array_append_val(outarray, path);
+	}
+
+	gchar * filelist = g_strjoinv(" ", (gchar **)outarray->data);
+	g_array_free(outarray, TRUE);
+
+	return filelist;
+}
+
 static gchar *
 handle_codes (const gchar * execline, const gchar * uri_list)
 {
@@ -98,6 +126,7 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 	int i;
 	gchar * single_uri = NULL;
 	gchar * single_file = NULL;
+	gchar * file_list = NULL;
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
 	g_array_append_val(outarray, execsplit[0]);
 
@@ -139,7 +168,13 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'F':
-			/* TODO: Handle files */
+			if (uri_list != NULL) {
+				if (file_list == NULL) {
+					file_list = build_file_list(uri_list);
+				}
+				g_array_append_val(outarray, file_list);
+			}
+
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'i':
@@ -182,6 +217,7 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 
 	g_free(single_uri);
 	g_free(single_file);
+	g_free(file_list);
 
 	return output;
 }
