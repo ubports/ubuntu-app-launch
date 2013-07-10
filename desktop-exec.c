@@ -71,10 +71,13 @@ verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
 static gchar *
 uri2file (const gchar * uri)
 {
-	GFile * gfile = g_file_new_for_uri(uri);
+	GError * error = NULL;
+	gchar * retval = g_filename_from_uri(uri, NULL, &error);
 
-	gchar * retval = g_file_get_path(gfile);
-	g_object_unref(gfile);
+	if (error != NULL) {
+		g_warning("Unable to resolve '%s' to a filename: %s", uri, error->message);
+		g_error_free(error);
+	}
 
 	if (retval == NULL) {
 		retval = g_strdup("");
