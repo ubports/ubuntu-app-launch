@@ -182,7 +182,7 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 		switch (execsplit[i][0]) {
 		case '\0': {
 			const gchar * percent = "%";
-			g_array_append_val(outarray, percent); /* %% is the litteral */
+			g_array_append_val(outarray, percent); /* %% is the literal */
 			break;
 		}
 		case 'd':
