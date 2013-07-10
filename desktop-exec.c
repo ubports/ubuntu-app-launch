@@ -223,6 +223,7 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 	g_free(single_uri);
 	g_free(single_file);
 	g_free(file_list);
+	g_strfreev(execsplit);
 
 	return output;
 }
