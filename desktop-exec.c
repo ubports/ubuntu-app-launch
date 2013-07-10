@@ -117,6 +117,46 @@ build_file_list (const gchar * uri_list)
 	return filelist;
 }
 
+/* Make sure we have the single URI variable */
+static inline void
+ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
+{
+	if (uri_list == NULL) {
+		return;
+	}
+
+	if (*single_uri != NULL) {
+		return;
+	}
+
+	*single_uri = g_strdup(uri_list);
+	g_utf8_strchr(*single_uri, -1, ' ')[0] = '\0';
+
+	return;
+}
+
+/* Make sure we have a single file variable */
+static inline void
+ensure_singlefile (gchar ** single_file, gchar ** single_uri, const gchar * uri_list)
+{
+	if (uri_list == NULL) {
+		return;
+	}
+
+	if (*single_file != NULL) {
+		return;
+	}
+
+	ensure_singleuri(single_uri, uri_list);
+
+	if (single_uri != NULL) {
+		*single_file = uri2file(*single_uri);
+	}
+
+	return;
+}
+
+
 static gchar *
 handle_codes (const gchar * execline, const gchar * uri_list)
 {
@@ -154,19 +194,9 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'f':
-			if (uri_list != NULL) {
-				if (single_file == NULL) {
-					if (g_utf8_strchr(uri_list, -1, ' ') != NULL) {
-						if (single_uri == NULL) {
-							single_uri = g_strdup(uri_list);
-							g_utf8_strchr(single_uri, -1, ' ')[0] = '\0';
-						}
-						single_file = uri2file(single_uri);
-					} else {
-						single_file = uri2file(uri_list);
-					}
-				}
+			ensure_singlefile(&single_file, &single_uri, uri_list);
 
+			if (single_file != NULL) {
 				g_array_append_val(outarray, single_file);
 			}
 
@@ -195,19 +225,10 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'u':
-			if (uri_list != NULL) {
-				if (g_utf8_strchr(uri_list, -1, ' ') == NULL) {
-					/* There's only one, so we're good, just add it */
-					g_array_append_val(outarray, uri_list);
-					g_array_append_val(outarray, skipchar);
-				} else {
-					if (single_uri == NULL) {
-						single_uri = g_strdup(uri_list);
-						g_utf8_strchr(single_uri, -1, ' ')[0] = '\0';
-					}
+			ensure_singleuri(&single_uri, uri_list);
 
-					g_array_append_val(outarray, single_uri);
-				}
+			if (single_uri != NULL) {
+				g_array_append_val(outarray, single_uri);
 			}
 
 			g_array_append_val(outarray, skipchar);
