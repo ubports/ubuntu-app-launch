@@ -232,7 +232,7 @@ set_variable (const gchar * variable, const gchar * value)
 	GError * error = NULL;
 	gchar * command[4] = {
 		"initctl",
-		"setenv",
+		"set-env",
 		NULL,
 		NULL
 	};
