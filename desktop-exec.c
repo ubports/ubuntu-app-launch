@@ -112,6 +112,8 @@ build_file_list (const gchar * uri_list)
 	gchar * filelist = g_strjoinv(" ", (gchar **)outarray->data);
 	g_array_free(outarray, TRUE);
 
+	g_strfreev(uri_split);
+
 	return filelist;
 }
 
