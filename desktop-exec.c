@@ -176,6 +176,8 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
 	g_array_append_val(outarray, execsplit[0]);
 
+	/* The variables allowed in an exec line from the Freedesktop.org Desktop
+	   File specification: http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	for (i = 1; execsplit[i] != NULL; i++) {
 		const gchar * skipchar = &(execsplit[i][1]);
 
