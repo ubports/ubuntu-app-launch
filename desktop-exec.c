@@ -22,6 +22,8 @@
 #include <glib.h>
 #include <gio/gio.h>
 
+gboolean verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop);
+
 /* Try to find a desktop file in a particular data directory */
 GKeyFile *
 try_dir (const char * dir, const gchar * desktop)
@@ -35,39 +37,36 @@ try_dir (const char * dir, const gchar * desktop)
 
 	g_free(fullpath);
 
-	if (loaded) {
-		return keyfile;
+	if (!loaded) {
+		g_key_file_free(keyfile);
+		return NULL;
 	}
 
-	g_key_file_free(keyfile);
-	return NULL;
+	if (!verify_keyfile(keyfile, desktop)) {
+		g_key_file_free(keyfile);
+		return NULL;
+	}
+
+	return keyfile;
 }
 
 /* Check to make sure we have the sections and keys we want */
-GKeyFile *
+gboolean
 verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
 {
-	if (inkeyfile == NULL) return NULL;
+	if (inkeyfile == NULL) return FALSE;
 
-	gboolean passed = TRUE;
-
-	if (passed && !g_key_file_has_group(inkeyfile, "Desktop Entry")) {
+	if (!g_key_file_has_group(inkeyfile, "Desktop Entry")) {
 		g_warning("Desktop file '%s' is missing the 'Desktop Entry' group", desktop);
-		passed = FALSE;
+		return FALSE;
 	}
 
-	if (passed && !g_key_file_has_key(inkeyfile, "Desktop Entry", "Exec", NULL)) {
+	if (!g_key_file_has_key(inkeyfile, "Desktop Entry", "Exec", NULL)) {
 		g_warning("Desktop file '%s' is missing the 'Exec' key", desktop);
-		passed = FALSE;
+		return FALSE;
 	}
 
-	if (passed) {
-		return inkeyfile;
-	}
-
-	g_warning("Desktop file '%s' is malformed", desktop);
-	g_key_file_free(inkeyfile);
-	return NULL;
+	return TRUE;
 }
 
 static gchar *
@@ -268,11 +267,9 @@ main (int argc, char * argv[])
 	int i;
 
 	keyfile = try_dir(g_get_user_data_dir(), desktop);
-	keyfile = verify_keyfile(keyfile, desktop);
 
 	for (i = 0; data_dirs[i] != NULL && keyfile == NULL; i++) {
 		keyfile = try_dir(data_dirs[i], desktop);
-		keyfile = verify_keyfile(keyfile, desktop);
 	}
 
 	if (keyfile == NULL) {
