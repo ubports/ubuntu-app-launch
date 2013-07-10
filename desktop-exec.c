@@ -187,7 +187,9 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'U':
-			g_array_append_val(outarray, uri_list);
+			if (uri_list != NULL) {
+				g_array_append_val(outarray, uri_list);
+			}
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'u':
