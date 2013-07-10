@@ -52,10 +52,12 @@ verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
 	gboolean passed = TRUE;
 
 	if (passed && !g_key_file_has_group(inkeyfile, "Desktop Entry")) {
+		g_warning("Desktop file '%s' is missing the 'Desktop Entry' group", desktop);
 		passed = FALSE;
 	}
 
 	if (passed && !g_key_file_has_key(inkeyfile, "Desktop Entry", "Exec", NULL)) {
+		g_warning("Desktop file '%s' is missing the 'Exec' key", desktop);
 		passed = FALSE;
 	}
 
@@ -63,7 +65,7 @@ verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
 		return inkeyfile;
 	}
 
-	g_debug("Desktop file '%s' is malformed", desktop);
+	g_warning("Desktop file '%s' is malformed", desktop);
 	g_key_file_free(inkeyfile);
 	return NULL;
 }
