@@ -9,7 +9,7 @@ stop on application-end or desktop-end
 env APP_EXEC="echo Error"
 
 pre-start script
-	initctl set-env APP_EXEC="`@libexecdir@/desktop-exec ${APP_ID}`"
+	initctl set-env APP_EXEC="`@libexecdir@/desktop-exec ${APP_ID} \"${APP_URIS}\"`"
 end script
 
 exec $APP_EXEC
