@@ -48,11 +48,25 @@ add_desktop_file (const gchar * name, GArray * app_array)
 void
 dir_for_each (const gchar * dirname, void(*func)(const gchar * name, GArray * app_array), GArray * app_array)
 {
+	GError * error = NULL;
+	GDir * directory = g_dir_open(dirname, 0, &error);
 
+	if (error != NULL) {
+		g_warning("Unable to read directory '%s': %s", dirname, error->message);
+		g_error_free(error);
+		return;
+	}
 
+	const gchar * filename = NULL;
+	while ((filename = g_dir_read_name(directory)) != NULL) {
+		func(filename, app_array);
+	}
+
+	g_dir_close(directory);
 	return;
 }
 
+/* The main function */
 int
 main (int argc, char * argv[])
 {
