@@ -18,12 +18,13 @@
  */
 
 #include <gio/gio.h>
+#include <string.h>
 
 typedef struct _app_state_t app_state_t;
 struct _app_state_t {
 	gchar * app_id;
 	gboolean has_click;
-	gboolean has_app;
+	gboolean has_desktop;
 };
 
 /* Find an entry in the app array */
@@ -41,7 +42,7 @@ find_app_entry (const gchar * name, GArray * app_array)
 
 	app_state_t newstate;
 	newstate.has_click = FALSE;
-	newstate.has_app = FALSE;
+	newstate.has_desktop = FALSE;
 	newstate.app_id = g_strdup(name);
 
 	g_array_append_val(app_array, newstate);
@@ -66,8 +67,21 @@ add_click_package (const gchar * name, GArray * app_array)
 void
 add_desktop_file (const gchar * name, GArray * app_array)
 {
+	if (!g_str_has_suffix(name, ".desktop")) {
+		return;
+	}
 
+	if (!g_str_has_prefix(name, "click-")) {
+		return;
+	}
 
+	gchar * appid = g_strdup(name + strlen("click-"));
+	g_strstr_len(appid, -1, ".desktop")[0] = '\0';
+
+	app_state_t * state = find_app_entry(appid, app_array);
+	state->has_desktop = TRUE;
+
+	g_free(appid);
 	return;
 }
 
