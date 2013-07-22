@@ -26,11 +26,38 @@ struct _app_state_t {
 	gboolean has_app;
 };
 
+/* Find an entry in the app array */
+app_state_t *
+find_app_entry (const gchar * name, GArray * app_array)
+{
+	int i;
+	for (i = 0; i < app_array->len; i++) {
+		app_state_t * state = &g_array_index(app_array, app_state_t, i);
+
+		if (g_strcmp0(state->app_id, name) == 0) {
+			return state;
+		}
+	}
+
+	app_state_t newstate;
+	newstate.has_click = FALSE;
+	newstate.has_app = FALSE;
+	newstate.app_id = g_strdup(name);
+
+	g_array_append_val(app_array, newstate);
+
+	/* Note: The pointer needs to be the entry in the array, not the
+	   one that we have on the stack.  Criticaly important. */
+	app_state_t * statepntr = &g_array_index(app_array, app_state_t, app_array->len - 1);
+	return statepntr;
+}
+
 /* Look at an click package entry */
 void
 add_click_package (const gchar * name, GArray * app_array)
 {
-
+	app_state_t * state = find_app_entry(name, app_array);
+	state->has_click = TRUE;
 
 	return;
 }
