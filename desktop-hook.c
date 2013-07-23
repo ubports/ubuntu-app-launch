@@ -186,7 +186,9 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		g_free(oldpath);
 	}
 
-	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
+	gchar * path = g_build_filename(appdir, app_id, NULL);
+	g_key_file_set_string(keyfile, "Desktop Entry", "Path", path);
+	g_free(path);
 
 	if (!g_key_file_has_key(keyfile, "Desktop Entry", "Exec", NULL)) {
 		g_warning("Desktop file '%s' has no 'Exec' key", from);
@@ -277,7 +279,7 @@ parse_manifest_file (const gchar * manifestfile, const gchar * application_name,
 	}
 
 	JsonObject * appobj = json_object_get_object_member(appsobj, application_name);
-	if (appobj != NULL) {
+	if (appobj == NULL) {
 		g_warning("Manifest '%s' has a definition for application '%s' that is not an object", manifestfile, application_name);
 		g_object_unref(parser);
 		return;
@@ -296,7 +298,7 @@ parse_manifest_file (const gchar * manifestfile, const gchar * application_name,
 		filename = g_strdup_printf("%s.desktop", application_name);
 	}
 
-	gchar * desktoppath = g_build_filename(application_dir, filename, NULL);
+	gchar * desktoppath = g_build_filename(application_dir, app_id, filename, NULL);
 	g_free(filename);
 
 	if (g_file_test(desktoppath, G_FILE_TEST_EXISTS)) {
@@ -329,7 +331,7 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 
 	/* Determine the manifest file name */
 	gchar * manifestfile = g_strdup_printf("%s.manifest", packageid);
-	gchar * manifestpath = g_build_filename(symlinkdir, ".click", "info", manifestfile, NULL);
+	gchar * manifestpath = g_build_filename(symlinkdir, state->app_id, ".click", "info", manifestfile, NULL);
 	g_free(manifestfile);
 
 	/* Determine the desktop file name */
@@ -379,7 +381,7 @@ main (int argc, char * argv[])
 	GArray * apparray = g_array_new(FALSE, FALSE, sizeof(app_state_t));
 
 	/* Find all the symlinks of apps */
-	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-lauch", "desktop", NULL);
+	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-launch", "desktop", NULL);
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("No installed click packages");
 	} else {
