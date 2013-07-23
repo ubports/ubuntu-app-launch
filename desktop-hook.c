@@ -107,6 +107,24 @@ dir_for_each (const gchar * dirname, void(*func)(const gchar * name, GArray * ap
 	return;
 }
 
+/* Build a desktop file in the user's home directory */
+static void
+build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar * desktopdir)
+{
+
+
+	return;
+}
+
+/* Remove the desktop file from the user's home directory */
+static void
+remove_desktop_file (app_state_t * state, const gchar * desktopdir)
+{
+
+
+	return;
+}
+
 /* The main function */
 int
 main (int argc, char * argv[])
@@ -118,6 +136,7 @@ main (int argc, char * argv[])
 
 	GArray * apparray = g_array_new(FALSE, FALSE, sizeof(app_state_t));
 
+	/* Find all the symlinks of apps */
 	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-lauch", "desktop", NULL);
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("No installed click packages");
@@ -125,6 +144,7 @@ main (int argc, char * argv[])
 		dir_for_each(symlinkdir, add_click_package, apparray);
 	}
 
+	/* Find all the click desktop files */
 	gchar * desktopdir = g_build_filename(g_get_user_data_dir(), "applications", NULL);
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("No applications defined");
@@ -132,6 +152,28 @@ main (int argc, char * argv[])
 		dir_for_each(desktopdir, add_desktop_file, apparray);
 	}
 
+	/* Process the merge */
+	int i;
+	for (i = 0; i < apparray->len; i++) {
+		app_state_t * state = &g_array_index(apparray, app_state_t, i);
+		g_debug("Processing App ID: %s", state->app_id);
+
+		if (state->has_click && state->has_desktop) {
+			g_debug("\tAlready synchronized");
+		} else if (state->has_click) {
+			g_debug("\tBuilding desktop file");
+			build_desktop_file(state, symlinkdir, desktopdir);
+		} else if (state->has_desktop) {
+			g_debug("\tRemoving desktop file");
+			remove_desktop_file(state, desktopdir);
+		}
+
+		g_free(state->app_id);
+	}
+
+	g_array_free(apparray, TRUE);
+	g_free(desktopdir);
+	g_free(symlinkdir);
 
 	return 0;
 }
