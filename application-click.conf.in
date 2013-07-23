@@ -9,8 +9,7 @@ stop on application-end or desktop-end
 env APP_ID
 export APP_ID
 
-# Testing leave this disabled
-# apparmor switch ${APP_ID}
+apparmor switch ${APP_ID}
 
 env APP_EXEC="echo Error"
 
