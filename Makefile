@@ -2,16 +2,16 @@ default: desktop-exec desktop-hook lsapp zg-report-app application.conf applicat
 	@echo "Building"
 
 desktop-exec: desktop-exec.c
-	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0 gio-2.0`
+	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0 gio-2.0` -Wall -Werror
 
 desktop-hook: desktop-hook.c
-	gcc -o desktop-hook desktop-hook.c helpers.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0`
+	gcc -o desktop-hook desktop-hook.c helpers.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0` -Wall -Werror
 
 lsapp: lsapp.c
-	gcc -o lsapp lsapp.c `pkg-config --cflags --libs gio-2.0`
+	gcc -o lsapp lsapp.c `pkg-config --cflags --libs gio-2.0` -Wall -Werror
 
 zg-report-app: zg-report-app.c
-	gcc -o zg-report-app zg-report-app.c `pkg-config --cflags --libs zeitgeist-1.0`
+	gcc -o zg-report-app zg-report-app.c `pkg-config --cflags --libs zeitgeist-1.0` -Wall -Werror
 
 application-legacy.conf: application-legacy.conf.in
 	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-legacy.conf.in > application-legacy.conf

@@ -18,6 +18,7 @@
  */
 
 #include <gio/gio.h>
+#include <glib/gstdio.h>
 #include <string.h>
 #include <json-glib/json-glib.h>
 
