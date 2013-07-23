@@ -9,12 +9,14 @@ stop on application-end or desktop-end
 env APP_ID
 export APP_ID
 
+env APP_URIS
+
 apparmor switch ${APP_ID}
 
 env APP_EXEC="echo Error"
 
-pre-start exec @libexecdir@/click-exec ${APP_ID}
+pre-start exec @libexecdir@/click-exec ${APP_ID} "${APP_URIS}"
 exec ${APP_EXEC}
 
-post-start exec @libexecdir@/zg-report-app open application://${APP_ID}.desktop
-post-stop exec @libexecdir@/zg-report-app close application://${APP_ID}.desktop
+post-start exec @libexecdir@/zg-report-app open application://click-${APP_ID}.desktop
+post-stop exec @libexecdir@/zg-report-app close application://click-${APP_ID}.desktop
