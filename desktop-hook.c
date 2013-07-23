@@ -129,54 +129,10 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		return;
 	}
 
-	if (!g_key_file_has_group(keyfile, "Desktop Entry")) {
-		g_warning("Desktop file '%s' does not have a 'Desktop Entry' group", from);
+	gchar * oldexec = desktop_to_exec(keyfile, from);
+	if (oldexec == NULL) {
 		g_key_file_unref(keyfile);
 		return;
-	}
-
-	gchar * type = g_key_file_get_string(keyfile, "Desktop Entry", "Type", &error);
-	if (error != NULL) {
-		g_warning("Desktop file '%s' unable to get type: %s", from, error->message);
-		g_error_free(error);
-		g_key_file_unref(keyfile);
-		g_free(type);
-		return;
-	}
-
-	if (g_strcmp0(type, "Application") != 0) {
-		g_warning("Desktop file '%s' has a type of '%s' instead of 'Application'", from, type);
-		g_key_file_unref(keyfile);
-		g_free(type);
-		return;
-	}
-	g_free(type);
-
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "NoDisplay", NULL)) {
-		gboolean nodisplay = g_key_file_get_boolean(keyfile, "Desktop Entry", "NoDisplay", NULL);
-		if (nodisplay) {
-			g_warning("Desktop file '%s' is set to not display, not copying", from);
-			g_key_file_unref(keyfile);
-			return;
-		}
-	}
-
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "Hidden", NULL)) {
-		gboolean hidden = g_key_file_get_boolean(keyfile, "Desktop Entry", "Hidden", NULL);
-		if (hidden) {
-			g_warning("Desktop file '%s' is set to be hidden, not copying", from);
-			g_key_file_unref(keyfile);
-			return;
-		}
-	}
-
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "Terminal", NULL)) {
-		gboolean terminal = g_key_file_get_boolean(keyfile, "Desktop Entry", "Terminal", NULL);
-		if (terminal) {
-			g_warning("Desktop file '%s' is set to run in a terminal, not copying", from);
-			g_key_file_unref(keyfile);
-			return;
-		}
 	}
 
 	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
@@ -192,13 +148,6 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	g_key_file_set_string(keyfile, "Desktop Entry", "Path", path);
 	g_free(path);
 
-	if (!g_key_file_has_key(keyfile, "Desktop Entry", "Exec", NULL)) {
-		g_warning("Desktop file '%s' has no 'Exec' key", from);
-		g_key_file_unref(keyfile);
-		return;
-	}
-
-	gchar * oldexec = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
 	gchar * newexec = g_strdup_printf("aa-exec -p %s -- %s", app_id, oldexec);
 	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
 	g_free(newexec);

@@ -144,9 +144,60 @@ manifest_out:
 /* Take a desktop file, make sure that it makes sense and
    then return the exec line */
 gchar *
-desktop_to_exec (GKeyFile * desktop_file)
+desktop_to_exec (GKeyFile * desktop_file, const gchar * from)
 {
+	GError * error = NULL;
 
-	return NULL;
+	if (!g_key_file_has_group(desktop_file, "Desktop Entry")) {
+		g_warning("Desktop file '%s' does not have a 'Desktop Entry' group", from);
+		return NULL;
+	}
+
+	gchar * type = g_key_file_get_string(desktop_file, "Desktop Entry", "Type", &error);
+	if (error != NULL) {
+		g_warning("Desktop file '%s' unable to get type: %s", from, error->message);
+		g_error_free(error);
+		g_free(type);
+		return NULL;
+	}
+
+	if (g_strcmp0(type, "Application") != 0) {
+		g_warning("Desktop file '%s' has a type of '%s' instead of 'Application'", from, type);
+		g_free(type);
+		return NULL;
+	}
+	g_free(type);
+
+	if (g_key_file_has_key(desktop_file, "Desktop Entry", "NoDisplay", NULL)) {
+		gboolean nodisplay = g_key_file_get_boolean(desktop_file, "Desktop Entry", "NoDisplay", NULL);
+		if (nodisplay) {
+			g_warning("Desktop file '%s' is set to not display, not copying", from);
+			return NULL;
+		}
+	}
+
+	if (g_key_file_has_key(desktop_file, "Desktop Entry", "Hidden", NULL)) {
+		gboolean hidden = g_key_file_get_boolean(desktop_file, "Desktop Entry", "Hidden", NULL);
+		if (hidden) {
+			g_warning("Desktop file '%s' is set to be hidden, not copying", from);
+			return NULL;
+		}
+	}
+
+	if (g_key_file_has_key(desktop_file, "Desktop Entry", "Terminal", NULL)) {
+		gboolean terminal = g_key_file_get_boolean(desktop_file, "Desktop Entry", "Terminal", NULL);
+		if (terminal) {
+			g_warning("Desktop file '%s' is set to run in a terminal, not copying", from);
+			return NULL;
+		}
+	}
+
+	if (!g_key_file_has_key(desktop_file, "Desktop Entry", "Exec", NULL)) {
+		g_warning("Desktop file '%s' has no 'Exec' key", from);
+		return NULL;
+	}
+
+	gchar * exec = g_key_file_get_string(desktop_file, "Desktop Entry", "Exec", NULL);
+	return exec;
 }
 
