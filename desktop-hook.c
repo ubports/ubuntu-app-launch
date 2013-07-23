@@ -111,15 +111,102 @@ dir_for_each (const gchar * dirname, void(*func)(const gchar * name, GArray * ap
 /* Function to take the source Desktop file and build a new
    one with similar, but not the same data in it */
 static void
-copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir)
+copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, const gchar * app_id)
 {
+	GError * error = NULL;
+	GKeyFile * keyfile = g_key_file_new();
+	g_key_file_load_from_file(keyfile,
+		from,
+		G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to read the desktop file '%s' in the application directory: %s", from, error->message);
+		g_error_free(error);
+		g_key_file_unref(keyfile);
+		return;
+	}
+
+	if (!g_key_file_has_group(keyfile, "Desktop Entry")) {
+		g_warning("Desktop file '%s' does not have a 'Desktop Entry' group", from);
+		g_key_file_unref(keyfile);
+		return;
+	}
+
+	gchar * type = g_key_file_get_string(keyfile, "Desktop Entry", "Type", &error);
+	if (error != NULL) {
+		g_warning("Desktop file '%s' unable to get type: %s", from, error->message);
+		g_error_free(error);
+		g_key_file_unref(keyfile);
+		g_free(type);
+		return;
+	}
+
+	if (g_strcmp0(type, "Application") != 0) {
+		g_warning("Desktop file '%s' has a type of '%s' instead of 'Application'", from, type);
+		g_key_file_unref(keyfile);
+		g_free(type);
+		return;
+	}
+	g_free(type);
+
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "NoDisplay", NULL)) {
+		gboolean nodisplay = g_key_file_get_boolean(keyfile, "Desktop Entry", "NoDisplay", NULL);
+		if (nodisplay) {
+			g_warning("Desktop file '%s' is set to not display, not copying", from);
+			g_key_file_unref(keyfile);
+			return;
+		}
+	}
+
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "Hidden", NULL)) {
+		gboolean hidden = g_key_file_get_boolean(keyfile, "Desktop Entry", "Hidden", NULL);
+		if (hidden) {
+			g_warning("Desktop file '%s' is set to be hidden, not copying", from);
+			g_key_file_unref(keyfile);
+			return;
+		}
+	}
+
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "Terminal", NULL)) {
+		gboolean terminal = g_key_file_get_boolean(keyfile, "Desktop Entry", "Terminal", NULL);
+		if (terminal) {
+			g_warning("Desktop file '%s' is set to run in a terminal, not copying", from);
+			g_key_file_unref(keyfile);
+			return;
+		}
+	}
+
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
+		gchar * oldpath = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
+		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as XCanonicalOldPath.", from, oldpath);
+
+		g_key_file_set_string(keyfile, "Desktop Entry", "XCanonicalOldPath", oldpath);
+
+		g_free(oldpath);
+	}
+
+	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
+
+	if (!g_key_file_has_key(keyfile, "Desktop Entry", "Exec", NULL)) {
+		g_warning("Desktop file '%s' has no 'Exec' key", from);
+		g_key_file_unref(keyfile);
+		return;
+	}
+
+	gchar * oldexec = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
+	gchar * newexec = g_strdup_printf("aa-exec -p %s -- %s", app_id, oldexec);
+	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
+	g_free(newexec);
+	g_free(oldexec);
+
 
 	return;
 }
 
 /* Parse the manifest file and start looking into it */
 static void
-parse_manifest_file (const gchar * manifestfile, const gchar * application_name, const gchar * version, const gchar * desktopfile, const gchar * application_dir)
+parse_manifest_file (const gchar * manifestfile, const gchar * application_name, const gchar * version, const gchar * desktopfile, const gchar * application_dir, const gchar * app_id)
 {
 	JsonParser * parser = json_parser_new();
 	GError * error = NULL;
@@ -195,7 +282,7 @@ parse_manifest_file (const gchar * manifestfile, const gchar * application_name,
 	g_free(filename);
 
 	if (g_file_test(desktoppath, G_FILE_TEST_EXISTS)) {
-		copy_desktop_file(desktoppath, desktopfile, application_dir);
+		copy_desktop_file(desktoppath, desktopfile, application_dir, app_id);
 	} else {
 		g_warning("Application desktop file '%s' doesn't exist", desktoppath);
 	}
@@ -236,7 +323,7 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	if (!g_file_test(manifestpath, G_FILE_TEST_EXISTS)) {
 		g_warning("Unable to find manifest file: %s", manifestpath);
 	} else {
-		parse_manifest_file(manifestpath, application, version, desktoppath, symlinkdir);
+		parse_manifest_file(manifestpath, application, version, desktoppath, symlinkdir, state->app_id);
 	}
 
 	g_free(desktoppath);
