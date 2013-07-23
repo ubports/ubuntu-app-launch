@@ -5,7 +5,7 @@ desktop-exec: desktop-exec.c
 	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0 gio-2.0`
 
 desktop-hook: desktop-hook.c
-	gcc -o desktop-hook desktop-hook.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0`
+	gcc -o desktop-hook desktop-hook.c helpers.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0`
 
 lsapp: lsapp.c
 	gcc -o lsapp lsapp.c `pkg-config --cflags --libs gio-2.0`
