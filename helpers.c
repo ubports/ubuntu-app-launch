@@ -252,3 +252,191 @@ set_upstart_variable (const gchar * variable, const gchar * value)
 	g_free(variablestr);
 	return;
 }
+
+/* Convert a URI into a file */
+static gchar *
+uri2file (const gchar * uri)
+{
+	GError * error = NULL;
+	gchar * retval = g_filename_from_uri(uri, NULL, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to resolve '%s' to a filename: %s", uri, error->message);
+		g_error_free(error);
+	}
+
+	if (retval == NULL) {
+		retval = g_strdup("");
+	}
+
+	g_debug("Converting URI '%s' to file '%s'", uri, retval);
+	return retval;
+}
+
+/* free a string in an array */
+static void
+free_string (gpointer value)
+{
+	gchar ** str = (gchar **)value;
+	g_free(*str);
+	return;
+}
+
+/* Builds the file list from the URI list */
+static gchar *
+build_file_list (const gchar * uri_list)
+{
+	gchar ** uri_split = g_strsplit(uri_list, " ", 0);
+
+	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(gchar *));
+	g_array_set_clear_func(outarray, free_string);
+
+	int i;
+	for (i = 0; uri_split[i] != NULL; i++) {
+		gchar * path = uri2file(uri_split[i]);
+		g_array_append_val(outarray, path);
+	}
+
+	gchar * filelist = g_strjoinv(" ", (gchar **)outarray->data);
+	g_array_free(outarray, TRUE);
+
+	g_strfreev(uri_split);
+
+	return filelist;
+}
+
+/* Make sure we have the single URI variable */
+static inline void
+ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
+{
+	if (uri_list == NULL) {
+		return;
+	}
+
+	if (*single_uri != NULL) {
+		return;
+	}
+
+	*single_uri = g_strdup(uri_list);
+	g_utf8_strchr(*single_uri, -1, ' ')[0] = '\0';
+
+	return;
+}
+
+/* Make sure we have a single file variable */
+static inline void
+ensure_singlefile (gchar ** single_file, gchar ** single_uri, const gchar * uri_list)
+{
+	if (uri_list == NULL) {
+		return;
+	}
+
+	if (*single_file != NULL) {
+		return;
+	}
+
+	ensure_singleuri(single_uri, uri_list);
+
+	if (single_uri != NULL) {
+		*single_file = uri2file(*single_uri);
+	}
+
+	return;
+}
+
+/* Parse a desktop exec line and return the next string */
+gchar *
+desktop_exec_parse (const gchar * execline, const gchar * uri_list)
+{
+	gchar ** execsplit = g_strsplit(execline, "%", 0);
+
+	/* If we didn't have any codes, just exit here */
+	if (execsplit[1] == NULL) {
+		g_strfreev(execsplit);
+		return g_strdup(execline);
+	}
+
+	int i;
+	gchar * single_uri = NULL;
+	gchar * single_file = NULL;
+	gchar * file_list = NULL;
+	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
+	g_array_append_val(outarray, execsplit[0]);
+
+	/* The variables allowed in an exec line from the Freedesktop.org Desktop
+	   File specification: http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
+	for (i = 1; execsplit[i] != NULL; i++) {
+		const gchar * skipchar = &(execsplit[i][1]);
+
+		switch (execsplit[i][0]) {
+		case '\0': {
+			const gchar * percent = "%";
+			g_array_append_val(outarray, percent); /* %% is the literal */
+			break;
+		}
+		case 'd':
+		case 'D':
+		case 'n':
+		case 'N':
+		case 'v':
+		case 'm':
+			/* Deprecated */
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'f':
+			ensure_singlefile(&single_file, &single_uri, uri_list);
+
+			if (single_file != NULL) {
+				g_array_append_val(outarray, single_file);
+			}
+
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'F':
+			if (uri_list != NULL) {
+				if (file_list == NULL) {
+					file_list = build_file_list(uri_list);
+				}
+				g_array_append_val(outarray, file_list);
+			}
+
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'i':
+		case 'c':
+		case 'k':
+			/* Perhaps?  Not sure anyone uses these */
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'U':
+			if (uri_list != NULL) {
+				g_array_append_val(outarray, uri_list);
+			}
+			g_array_append_val(outarray, skipchar);
+			break;
+		case 'u':
+			ensure_singleuri(&single_uri, uri_list);
+
+			if (single_uri != NULL) {
+				g_array_append_val(outarray, single_uri);
+			}
+
+			g_array_append_val(outarray, skipchar);
+			break;
+		default:
+			g_warning("Desktop Exec line code '%%%c' unknown, skipping.", execsplit[i][0]);
+			g_array_append_val(outarray, skipchar);
+			break;
+		}
+	}
+
+	gchar * output = g_strjoinv(" ", (gchar **)outarray->data);
+	g_array_free(outarray, TRUE);
+
+	g_free(single_uri);
+	g_free(single_file);
+	g_free(file_list);
+	g_strfreev(execsplit);
+
+	return output;
+}
