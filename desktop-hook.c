@@ -200,6 +200,24 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	g_free(newexec);
 	g_free(oldexec);
 
+	gsize datalen = 0;
+	gchar * data = g_key_file_to_data(keyfile, &datalen, &error);
+	g_key_file_unref(keyfile);
+
+	if (error != NULL) {
+		g_warning("Unable serialize keyfile built from '%s': %s", from, error->message);
+		g_error_free(error);
+		return;
+	}
+
+	g_file_set_contents(to, data, datalen, &error);
+	g_free(data);
+
+	if (error != NULL) {
+		g_warning("Unable to write out desktop file to '%s': %s", to, error->message);
+		g_error_free(error);
+		return;
+	}
 
 	return;
 }
