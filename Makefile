@@ -4,7 +4,7 @@ default: desktop-exec desktop-hook lsapp zg-report-app application.conf applicat
 desktop-exec: desktop-exec.c
 	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0 gio-2.0` -Wall -Werror
 
-desktop-hook: desktop-hook.c
+desktop-hook: desktop-hook.c helpers.c helpers.h
 	gcc -o desktop-hook desktop-hook.c helpers.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0` -Wall -Werror
 
 lsapp: lsapp.c
