@@ -21,6 +21,8 @@
 #include <string.h>
 #include <json-glib/json-glib.h>
 
+#include "helpers.h"
+
 typedef struct _app_state_t app_state_t;
 struct _app_state_t {
 	gchar * app_id;
@@ -316,18 +318,14 @@ parse_manifest_file (const gchar * manifestfile, const gchar * application_name,
 static void
 build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar * desktopdir)
 {
+	gchar * packageid = NULL;
+	gchar * application = NULL;
+	gchar * version = NULL;
+
 	/* 'Parse' the App ID */
-	gchar ** app_id_segments = g_strsplit(state->app_id, "_", 4);
-	if (g_strv_length(app_id_segments) != 3) {
-		g_warning("Unable to parse Application ID: %s", state->app_id);
-		g_strfreev(app_id_segments);
+	if (!app_id_to_triplet(state->app_id, &packageid, &application, &version)) {
 		return;
 	}
-
-	/* Break appart the parsed app id */
-	const gchar * packageid = app_id_segments[0];
-	const gchar * application = app_id_segments[1];
-	const gchar * version = app_id_segments[2];
 
 	/* Determine the manifest file name */
 	gchar * manifestfile = g_strdup_printf("%s.manifest", packageid);
@@ -348,7 +346,10 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 
 	g_free(desktoppath);
 	g_free(manifestpath);
-	g_strfreev(app_id_segments);
+	g_free(packageid);
+	g_free(application);
+	g_free(version);
+
 	return;
 }
 
