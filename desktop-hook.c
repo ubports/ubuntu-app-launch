@@ -19,6 +19,7 @@
 
 #include <gio/gio.h>
 #include <string.h>
+#include <json-glib/json-glib.h>
 
 typedef struct _app_state_t app_state_t;
 struct _app_state_t {
@@ -107,12 +108,100 @@ dir_for_each (const gchar * dirname, void(*func)(const gchar * name, GArray * ap
 	return;
 }
 
+/* Function to take the source Desktop file and build a new
+   one with similar, but not the same data in it */
+static void
+copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir)
+{
+
+	return;
+}
+
 /* Parse the manifest file and start looking into it */
 static void
 parse_manifest_file (const gchar * manifestfile, const gchar * application_name, const gchar * version, const gchar * desktopfile, const gchar * application_dir)
 {
+	JsonParser * parser = json_parser_new();
+	GError * error = NULL;
 
+	json_parser_load_from_file(parser, manifestfile, &error);
+	if (error != NULL) {
+		g_warning("Unable to load manifest file '%s': %s", manifestfile, error->message);
+		g_error_free(error);
+		g_object_unref(parser);
+		return;
+	}
 
+	JsonNode * root = json_parser_get_root(parser);
+	if (json_node_get_node_type(root) != JSON_NODE_OBJECT) {
+		g_warning("Manifest '%s' doesn't start with an object", manifestfile);
+		g_object_unref(parser);
+		return;
+	}
+
+	JsonObject * rootobj = json_node_get_object(root);
+	if (!json_object_has_member(rootobj, "version")) {
+		g_warning("Manifest '%s' doesn't have a version", manifestfile);
+		g_object_unref(parser);
+		return;
+	}
+
+	if (g_strcmp0(json_object_get_string_member(rootobj, "version"), version) != 0) {
+		g_warning("Manifest '%s' version '%s' doesn't match AppID version '%s'", manifestfile, json_object_get_string_member(rootobj, "version"), version);
+		g_object_unref(parser);
+		return;
+	}
+
+	if (!json_object_has_member(rootobj, "applications")) {
+		g_warning("Manifest '%s' doesn't have an applications section", manifestfile);
+		g_object_unref(parser);
+		return;
+	}
+
+	JsonObject * appsobj = json_object_get_object_member(rootobj, "applications");
+	if (appsobj == NULL) {
+		g_warning("Manifest '%s' has an applications section that is not a JSON object", manifestfile);
+		g_object_unref(parser);
+		return;
+	}
+
+	if (!json_object_has_member(appsobj, application_name)) {
+		g_warning("Manifest '%s' doesn't have the application '%s' defined", manifestfile, application_name);
+		g_object_unref(parser);
+		return;
+	}
+
+	JsonObject * appobj = json_object_get_object_member(appsobj, application_name);
+	if (appobj != NULL) {
+		g_warning("Manifest '%s' has a definition for application '%s' that is not an object", manifestfile, application_name);
+		g_object_unref(parser);
+		return;
+	}
+
+	if (json_object_has_member(appobj, "type") && g_strcmp0(json_object_get_string_member(appobj, "type"), "desktop") != 0) {
+		g_warning("Manifest '%s' has a definition for application '%s' who's type is not 'desktop'", manifestfile, application_name);
+		g_object_unref(parser);
+		return;
+	}
+
+	gchar * filename = NULL;
+	if (json_object_has_member(appobj, "file")) {
+		filename = g_strdup(json_object_get_string_member(appobj, "file"));
+	} else {
+		filename = g_strdup_printf("%s.desktop", application_name);
+	}
+
+	gchar * desktoppath = g_build_filename(application_dir, filename, NULL);
+	g_free(filename);
+
+	if (g_file_test(desktoppath, G_FILE_TEST_EXISTS)) {
+		copy_desktop_file(desktoppath, desktopfile, application_dir);
+	} else {
+		g_warning("Application desktop file '%s' doesn't exist", desktoppath);
+	}
+
+	g_free(desktoppath);
+	g_object_unref(parser);
 	return;
 }
 
