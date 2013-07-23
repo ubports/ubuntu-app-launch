@@ -120,7 +120,15 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 static void
 remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 {
+	gchar * desktopfile = g_strdup_printf("click-%s.desktop", state->app_id);
+	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
+	g_free(desktopfile);
 
+	if (g_unlink(desktoppath) != 0) {
+		g_warning("Unable to delete desktop file: %s", desktoppath);
+	}
+
+	g_free(desktoppath);
 
 	return;
 }
