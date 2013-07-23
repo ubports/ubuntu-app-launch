@@ -107,12 +107,52 @@ dir_for_each (const gchar * dirname, void(*func)(const gchar * name, GArray * ap
 	return;
 }
 
+/* Parse the manifest file and start looking into it */
+static void
+parse_manifest_file (const gchar * manifestfile, const gchar * application_name, const gchar * version, const gchar * desktopfile, const gchar * application_dir)
+{
+
+
+	return;
+}
+
 /* Build a desktop file in the user's home directory */
 static void
 build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar * desktopdir)
 {
+	/* 'Parse' the App ID */
+	gchar ** app_id_segments = g_strsplit(state->app_id, "_", 4);
+	if (g_strv_length(app_id_segments) != 3) {
+		g_warning("Unable to parse Application ID: %s", state->app_id);
+		g_strfreev(app_id_segments);
+		return;
+	}
 
+	/* Break appart the parsed app id */
+	const gchar * packageid = app_id_segments[0];
+	const gchar * application = app_id_segments[1];
+	const gchar * version = app_id_segments[2];
 
+	/* Determine the manifest file name */
+	gchar * manifestfile = g_strdup_printf("%s.manifest", packageid);
+	gchar * manifestpath = g_build_filename(symlinkdir, ".click", "info", manifestfile, NULL);
+	g_free(manifestfile);
+
+	/* Determine the desktop file name */
+	gchar * desktopfile = g_strdup_printf("click-%s.desktop", state->app_id);
+	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
+	g_free(desktopfile);
+
+	/* Make sure the manifest exists */
+	if (!g_file_test(manifestpath, G_FILE_TEST_EXISTS)) {
+		g_warning("Unable to find manifest file: %s", manifestpath);
+	} else {
+		parse_manifest_file(manifestpath, application, version, desktoppath, symlinkdir);
+	}
+
+	g_free(desktoppath);
+	g_free(manifestpath);
+	g_strfreev(app_id_segments);
 	return;
 }
 
