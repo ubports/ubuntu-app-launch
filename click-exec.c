@@ -54,8 +54,11 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	set_upstart_variable("APP_EXEC", exec);
+	gchar * parsedexec = desktop_exec_parse(exec, argc == 3 ? argv[2] : NULL);
 
+	set_upstart_variable("APP_EXEC", parsedexec);
+
+	g_free(parsedexec);
 	g_free(exec);
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
