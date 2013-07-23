@@ -18,6 +18,7 @@
  */
 
 #include <glib.h>
+#include "helpers.h"
 
 int
 main (int argc, char * argv[])
@@ -27,6 +28,38 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-launch", "desktop", NULL);
+	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
+		g_warning("Application directory '%s' doesn't exist", symlinkdir);
+		return 1;
+	}
+
+	gchar * desktopfile = manifest_to_desktop(symlinkdir, argv[1]);
+	if (desktopfile != NULL) {
+		return 1;
+	}
+
+	GKeyFile * keyfile = g_key_file_new();
+	GError * error = NULL;
+
+	g_key_file_load_from_file(keyfile, desktopfile, 0, &error);
+	if (error != NULL) {
+		g_warning("Unable to load desktop file '%s': %s", desktopfile, error->message);
+		g_error_free(error);
+		return 1;
+	}
+
+	gchar * exec = desktop_to_exec(keyfile, desktopfile);
+	if (exec == NULL) {
+		return 1;
+	}
+
+	set_upstart_variable("APP_EXEC", exec);
+
+	g_free(exec);
+	g_key_file_unref(keyfile);
+	g_free(desktopfile);
+	g_free(symlinkdir);
 
 	return 0;
 }
