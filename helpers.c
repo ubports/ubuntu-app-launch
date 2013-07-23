@@ -219,3 +219,36 @@ desktop_to_exec (GKeyFile * desktop_file, const gchar * from)
 	return exec;
 }
 
+/* Sets an upstart variable, currently using initctl */
+void
+set_upstart_variable (const gchar * variable, const gchar * value)
+{
+	GError * error = NULL;
+	gchar * command[4] = {
+		"initctl",
+		"set-env",
+		NULL,
+		NULL
+	};
+
+	gchar * variablestr = g_strdup_printf("%s=%s", variable, value);
+	command[2] = variablestr;
+
+	g_spawn_sync(NULL, /* working directory */
+		command,
+		NULL, /* environment */
+		G_SPAWN_SEARCH_PATH,
+		NULL, NULL, /* child setup */
+		NULL, /* stdout */
+		NULL, /* stderr */
+		NULL, /* exit status */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to set variable '%s' to '%s': %s", variable, value, error->message);
+		g_error_free(error);
+	}
+
+	g_free(variablestr);
+	return;
+}

@@ -22,6 +22,8 @@
 #include <glib.h>
 #include <gio/gio.h>
 
+#include "helpers.h"
+
 gboolean verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop);
 
 /* Try to find a desktop file in a particular data directory */
@@ -254,40 +256,6 @@ handle_codes (const gchar * execline, const gchar * uri_list)
 	return output;
 }
 
-/* Set an environment variable in Upstart */
-static void
-set_variable (const gchar * variable, const gchar * value)
-{
-	GError * error = NULL;
-	gchar * command[4] = {
-		"initctl",
-		"set-env",
-		NULL,
-		NULL
-	};
-
-	gchar * variablestr = g_strdup_printf("%s=%s", variable, value);
-	command[2] = variablestr;
-
-	g_spawn_sync(NULL, /* working directory */
-		command,
-		NULL, /* environment */
-		G_SPAWN_SEARCH_PATH,
-		NULL, NULL, /* child setup */
-		NULL, /* stdout */
-		NULL, /* stderr */
-		NULL, /* exit status */
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to set variable '%s' to '%s': %s", variable, value, error->message);
-		g_error_free(error);
-	}
-
-	g_free(variablestr);
-	return;
-}
-
 int
 main (int argc, char * argv[])
 {
@@ -324,10 +292,10 @@ main (int argc, char * argv[])
 
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
 	if (apparmor != NULL) {
-		set_variable("APP_EXEC_POLICY", apparmor);
+		set_upstart_variable("APP_EXEC_POLICY", apparmor);
 	}
 
-	set_variable("APP_EXEC", execline);
+	set_upstart_variable("APP_EXEC", execline);
 
 	g_key_file_free(keyfile);
 	g_free(desktop);

@@ -1,8 +1,8 @@
 default: desktop-exec desktop-hook click-exec lsapp zg-report-app application.conf application-click.conf application-legacy.conf upstart-app-launch-desktop.hook
 	@echo "Building"
 
-desktop-exec: desktop-exec.c
-	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0 gio-2.0` -Wall -Werror
+desktop-exec: desktop-exec.c helpers.h helpers.c
+	gcc -o desktop-exec desktop-exec.c helpers.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0` -Wall -Werror
 
 click-exec: click-exec.c
 	gcc -o click-exec click-exec.c `pkg-config --cflags --libs glib-2.0 gio-2.0` -Wall -Werror
