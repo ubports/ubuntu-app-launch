@@ -357,6 +357,10 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 		return g_strdup(execline);
 	}
 
+	if (uri_list != NULL && uri_list[0] == '\0') {
+		uri_list = NULL;
+	}
+
 	int i;
 	gchar * single_uri = NULL;
 	gchar * single_file = NULL;
