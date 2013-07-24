@@ -365,6 +365,7 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 	gchar * single_uri = NULL;
 	gchar * single_file = NULL;
 	gchar * file_list = NULL;
+	gboolean previous_percent = FALSE;
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
 	g_array_append_val(outarray, execsplit[0]);
 
@@ -373,10 +374,18 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 	for (i = 1; execsplit[i] != NULL; i++) {
 		const gchar * skipchar = &(execsplit[i][1]);
 
+		/* Handle the case of %%F printing "%F" */
+		if (previous_percent) {
+			g_array_append_val(outarray, execsplit[i]);
+			previous_percent = FALSE;
+			continue;
+		}
+
 		switch (execsplit[i][0]) {
 		case '\0': {
 			const gchar * percent = "%";
 			g_array_append_val(outarray, percent); /* %% is the literal */
+			previous_percent = TRUE;
 			break;
 		}
 		case 'd':
