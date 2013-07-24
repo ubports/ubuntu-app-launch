@@ -2,8 +2,10 @@ Source: upstart-app-launch
 Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: debhelper (>= 9),
+Build-Depends: click-dev (>= 0.2.2),
+               debhelper (>= 9),
                libglib2.0-dev,
+               libjson-glib-dev,
                dbus-x11,
                libzeitgeist-dev,
 Standards-Version: 3.9.4
@@ -17,6 +19,7 @@ Package: upstart-app-launch
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         click,
 Description: Upstart Job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
