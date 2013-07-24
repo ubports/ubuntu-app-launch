@@ -68,6 +68,7 @@ manifest_to_desktop (const gchar * app_dir, const gchar * app_id)
 	gchar * desktoppath = NULL;
 
 	if (!app_id_to_triplet(app_id, &package, &application, &version)) {
+		g_warning("Unable to parse triplet: %s", app_id);
 		return NULL;
 	}
 

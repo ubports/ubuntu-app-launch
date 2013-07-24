@@ -35,7 +35,8 @@ main (int argc, char * argv[])
 	}
 
 	gchar * desktopfile = manifest_to_desktop(symlinkdir, argv[1]);
-	if (desktopfile != NULL) {
+	if (desktopfile == NULL) {
+		g_warning("Desktop file unable to be found");
 		return 1;
 	}
 
@@ -56,6 +57,7 @@ main (int argc, char * argv[])
 
 	gchar * parsedexec = desktop_exec_parse(exec, argc == 3 ? argv[2] : NULL);
 
+	g_debug("Setting 'APP_EXEC' to '%s'", parsedexec);
 	set_upstart_variable("APP_EXEC", parsedexec);
 
 	g_free(parsedexec);
