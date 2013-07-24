@@ -130,7 +130,7 @@ manifest_to_desktop (const gchar * app_dir, const gchar * app_id)
 	}
 
 	if (json_object_has_member(appobj, "type") && g_strcmp0(json_object_get_string_member(appobj, "type"), "desktop") != 0) {
-		g_warning("Manifest '%s' has a definition for application '%s' who's type is not 'desktop'", manifestpath, application);
+		g_warning("Manifest '%s' has a definition for application '%s' whose type is not 'desktop'", manifestpath, application);
 		goto manifest_out;
 	}
 

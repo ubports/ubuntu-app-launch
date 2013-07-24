@@ -5,4 +5,8 @@
 #export DH_VERBOSE=1
 
 %:
-	dh $@ 
+	dh $@ --with click
+
+override_dh_click:
+	dh_click --name upstart-app-launch-desktop
+

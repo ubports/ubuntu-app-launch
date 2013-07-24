@@ -10,7 +10,7 @@ env APP_EXEC="echo Error"
 env APP_EXEC_POLICY
 env APP_URIS
 
-pre-start exec @libexecdir@/desktop-exec "${APP_ID}" "${APP_URIS}"
+pre-start exec @pkglibexecdir@/desktop-exec "${APP_ID}" "${APP_URIS}"
 
 script
 	if [ -z $APP_EXEC_POLICY ]; then
@@ -20,5 +20,5 @@ script
 	fi
 end script
 
-post-start exec @libexecdir@/zg-report-app open "application://${APP_ID}.desktop"
-post-stop exec @libexecdir@/zg-report-app close "application://${APP_ID}.desktop"
+post-start exec @pkglibexecdir@/zg-report-app open "application://${APP_ID}.desktop"
+post-stop exec @pkglibexecdir@/zg-report-app close "application://${APP_ID}.desktop"
