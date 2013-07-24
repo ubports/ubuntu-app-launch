@@ -12,6 +12,7 @@ export APP_ID
 env APP_URIS
 
 apparmor switch ${APP_ID}
+chdir ~/.cache/upstart-app-launch/desktop/${APP_ID}
 
 env APP_EXEC="echo Error"
 
