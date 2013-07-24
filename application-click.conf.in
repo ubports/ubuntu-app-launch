@@ -20,7 +20,7 @@ pre-start exec @libexecdir@/click-exec ${APP_ID} "${APP_URIS}"
 script
 	cd ${HOME}/.cache/upstart-app-launch/desktop/${APP_ID}
 	PATH=.:${PATH}
-	${APP_EXEC}
+	exec ${APP_EXEC}
 end script
 
 post-start exec @libexecdir@/zg-report-app open application://click-${APP_ID}.desktop
