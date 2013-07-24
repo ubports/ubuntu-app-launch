@@ -14,13 +14,13 @@ zg-report-app: zg-report-app.c
 	gcc -o zg-report-app zg-report-app.c `pkg-config --cflags --libs zeitgeist-1.0` -Wall -Werror
 
 application-legacy.conf: application-legacy.conf.in
-	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-legacy.conf.in > application-legacy.conf
+	sed -e "s|\@pkglibexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-legacy.conf.in > application-legacy.conf
 
 application-click.conf: application-click.conf.in
-	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-click.conf.in > application-click.conf
+	sed -e "s|\@pkglibexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-click.conf.in > application-click.conf
 
 upstart-app-launch-desktop.hook: upstart-app-launch-desktop.hook.in
-	sed -e "s|\@libexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" upstart-app-launch-desktop.hook.in > upstart-app-launch-desktop.hook
+	sed -e "s|\@pkglibexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" upstart-app-launch-desktop.hook.in > upstart-app-launch-desktop.hook
 
 install: application-legacy.conf application-legacy.conf desktop-exec desktop-hook upstart-app-launch-desktop.hook
 	mkdir -p $(DESTDIR)/usr/share/upstart/sessions
