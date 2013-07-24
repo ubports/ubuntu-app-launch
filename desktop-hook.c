@@ -290,7 +290,7 @@ main (int argc, char * argv[])
 			}
 		} else if (state->has_click) {
 			if (!desktopdirexists) {
-				if (g_mkdir_with_parents(desktopdir, 0600) == 0) {
+				if (g_mkdir_with_parents(desktopdir, 0755) == 0) {
 					g_debug("\tCreated applications directory");
 					desktopdirexists = TRUE;
 				} else {
