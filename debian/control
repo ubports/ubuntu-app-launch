@@ -2,7 +2,8 @@ Source: upstart-app-launch
 Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: debhelper (>= 9),
+Build-Depends: click-dev (>= 0.2.2),
+               debhelper (>= 9),
                libglib2.0-dev,
                libjson-glib-dev,
                dbus-x11,

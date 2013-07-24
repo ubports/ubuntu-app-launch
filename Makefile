@@ -1,4 +1,4 @@
-default: desktop-exec desktop-hook lsapp zg-report-app application.conf application-click.conf application-legacy.conf upstart-app-launch-desktop.hook
+default: desktop-exec desktop-hook lsapp zg-report-app application.conf application-click.conf application-legacy.conf debian/upstart-app-launch-desktop.click-hook
 	@echo "Building"
 
 desktop-exec: desktop-exec.c
@@ -19,10 +19,10 @@ application-legacy.conf: application-legacy.conf.in
 application-click.conf: application-click.conf.in
 	sed -e "s|\@pkglibexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" application-click.conf.in > application-click.conf
 
-upstart-app-launch-desktop.hook: upstart-app-launch-desktop.hook.in
-	sed -e "s|\@pkglibexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" upstart-app-launch-desktop.hook.in > upstart-app-launch-desktop.hook
+debian/upstart-app-launch-desktop.click-hook: upstart-app-launch-desktop.click-hook.in
+	sed -e "s|\@pkglibexecdir\@|/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/|" upstart-app-launch-desktop.click-hook.in > debian/upstart-app-launch-desktop.click-hook
 
-install: application-legacy.conf application-legacy.conf desktop-exec desktop-hook upstart-app-launch-desktop.hook
+install: application-legacy.conf application-legacy.conf desktop-exec desktop-hook
 	mkdir -p $(DESTDIR)/usr/share/upstart/sessions
 	install -m 644 application.conf $(DESTDIR)/usr/share/upstart/sessions/
 	install -m 644 application-legacy.conf $(DESTDIR)/usr/share/upstart/sessions/
@@ -33,8 +33,6 @@ install: application-legacy.conf application-legacy.conf desktop-exec desktop-ho
 	install -m 755 zg-report-app $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 	mkdir -p $(DESTDIR)/usr/bin/
 	install -m 755 lsapp $(DESTDIR)/usr/bin/
-	mkdir -p $(DESTDIR)/usr/share/click/hooks
-	install -m 644 upstart-app-launch-desktop.hook $(DESTDIR)/usr/share/click/hooks/
 
 check: application-legacy.conf application-click.conf
 	@echo " *** Checking Application Job *** "
