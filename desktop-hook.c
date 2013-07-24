@@ -264,10 +264,12 @@ main (int argc, char * argv[])
 
 	/* Find all the click desktop files */
 	gchar * desktopdir = g_build_filename(g_get_user_data_dir(), "applications", NULL);
+	gboolean desktopdirexists = FALSE;
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("No applications defined");
 	} else {
 		dir_for_each(desktopdir, add_desktop_file, apparray);
+		desktopdirexists = TRUE;
 	}
 
 	/* Process the merge */
@@ -287,8 +289,18 @@ main (int argc, char * argv[])
 				g_debug("\tAlready synchronized");
 			}
 		} else if (state->has_click) {
-			g_debug("\tBuilding desktop file");
-			build_desktop_file(state, symlinkdir, desktopdir);
+			if (!desktopdirexists) {
+				if (g_mkdir_with_parents(desktopdir, 0600) == 0) {
+					g_debug("\tCreated applications directory");
+					desktopdirexists = TRUE;
+				} else {
+					g_warning("\tUnable to create applications directory");
+				}
+			}
+			if (desktopdirexists) {
+				g_debug("\tBuilding desktop file");
+				build_desktop_file(state, symlinkdir, desktopdir);
+			}
 		} else if (state->has_desktop) {
 			g_debug("\tRemoving desktop file");
 			remove_desktop_file(state, desktopdir);
