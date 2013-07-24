@@ -1,0 +1,3 @@
+Pattern: ${home}/.cache/upstart-app-launch/desktop/${id}
+Exec: @libexecdir@/desktop-hook ${id}
+User-Level: yes
