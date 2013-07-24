@@ -28,6 +28,8 @@ struct _app_state_t {
 	gchar * app_id;
 	gboolean has_click;
 	gboolean has_desktop;
+	guint64 click_created;
+	guint64 desktop_created;
 };
 
 /* Find an entry in the app array */
@@ -46,6 +48,8 @@ find_app_entry (const gchar * name, GArray * app_array)
 	app_state_t newstate;
 	newstate.has_click = FALSE;
 	newstate.has_desktop = FALSE;
+	newstate.click_created = 0;
+	newstate.desktop_created = 0;
 	newstate.app_id = g_strdup(name);
 
 	g_array_append_val(app_array, newstate);
@@ -56,19 +60,38 @@ find_app_entry (const gchar * name, GArray * app_array)
 	return statepntr;
 }
 
+/* Looks up the file creation time, which seems harder with GLib
+   than it should be */
+guint64
+creation_time (const gchar * dir, const gchar * filename)
+{
+	gchar * path = g_build_filename(dir, filename, NULL);
+	GFile * file = g_file_new_for_path(path);
+	GFileInfo * info = g_file_query_info(file, G_FILE_ATTRIBUTE_TIME_CREATED, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL, NULL);
+
+	guint64 time = g_file_info_get_attribute_uint64(info, G_FILE_ATTRIBUTE_TIME_CREATED);
+
+	g_object_unref(info);
+	g_object_unref(file);
+	g_free(path);
+
+	return time;
+}
+
 /* Look at an click package entry */
 void
-add_click_package (const gchar * name, GArray * app_array)
+add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 {
 	app_state_t * state = find_app_entry(name, app_array);
 	state->has_click = TRUE;
+	state->click_created = creation_time(dir, name);
 
 	return;
 }
 
 /* Look at an desktop file entry */
 void
-add_desktop_file (const gchar * name, GArray * app_array)
+add_desktop_file (const gchar * dir, const gchar * name, GArray * app_array)
 {
 	if (!g_str_has_suffix(name, ".desktop")) {
 		return;
@@ -83,6 +106,7 @@ add_desktop_file (const gchar * name, GArray * app_array)
 
 	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_desktop = TRUE;
+	state->desktop_created = creation_time(dir, name);
 
 	g_free(appid);
 	return;
@@ -90,7 +114,7 @@ add_desktop_file (const gchar * name, GArray * app_array)
 
 /* Open a directory and look at all the entries */
 void
-dir_for_each (const gchar * dirname, void(*func)(const gchar * name, GArray * app_array), GArray * app_array)
+dir_for_each (const gchar * dirname, void(*func)(const gchar * dir, const gchar * name, GArray * app_array), GArray * app_array)
 {
 	GError * error = NULL;
 	GDir * directory = g_dir_open(dirname, 0, &error);
@@ -103,7 +127,7 @@ dir_for_each (const gchar * dirname, void(*func)(const gchar * name, GArray * ap
 
 	const gchar * filename = NULL;
 	while ((filename = g_dir_read_name(directory)) != NULL) {
-		func(filename, app_array);
+		func(dirname, filename, app_array);
 	}
 
 	g_dir_close(directory);
@@ -253,7 +277,15 @@ main (int argc, char * argv[])
 		g_debug("Processing App ID: %s", state->app_id);
 
 		if (state->has_click && state->has_desktop) {
-			g_debug("\tAlready synchronized");
+			if (state->click_created > state->desktop_created) {
+				g_debug("\tClick updated more recently");
+				g_debug("\tRemoving desktop file");
+				remove_desktop_file(state, desktopdir);
+				g_debug("\tBuilding desktop file");
+				build_desktop_file(state, symlinkdir, desktopdir);
+			} else {
+				g_debug("\tAlready synchronized");
+			}
 		} else if (state->has_click) {
 			g_debug("\tBuilding desktop file");
 			build_desktop_file(state, symlinkdir, desktopdir);
