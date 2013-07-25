@@ -115,7 +115,7 @@ add_test(application.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_C
 # application-legacy.conf
 ####################
 
-configure_file("application-legacy.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf")
+configure_file("application-legacy.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
 add_test(application-legacy.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf")
 
@@ -123,7 +123,7 @@ add_test(application-legacy.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${
 # application-click.conf
 ####################
 
-configure_file("application-click.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
+configure_file("application-click.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
 add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
 
@@ -131,5 +131,5 @@ add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${C
 # upstart-app-launch-desktop.click-hook
 ####################
 
-configure_file("upstart-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/upstart-app-launch-desktop.click-hook")
+configure_file("upstart-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/upstart-app-launch-desktop.click-hook" @ONLY)
 
