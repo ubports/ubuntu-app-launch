@@ -133,3 +133,4 @@ add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${C
 
 configure_file("upstart-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/upstart-app-launch-desktop.click-hook" @ONLY)
 
+add_subdirectory(libupstart-app-launch)

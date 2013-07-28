@@ -1,4 +1,6 @@
 
+#include "upstart-app-launch.h"
+
 gboolean
 upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
