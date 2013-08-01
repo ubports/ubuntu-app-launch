@@ -32,7 +32,7 @@ set_target_properties(upstart-launcher PROPERTIES
 target_link_libraries(upstart-launcher
 	${GLIB2_LIBARIES}
 	${GOBJECT2_LIBRARIES}
-	${LIBUPSTART_LIBRARIES}
+	${GIO2_LIBRARIES}
 	-Wl,--no-undefined
 )
 
