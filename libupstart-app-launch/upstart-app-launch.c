@@ -29,7 +29,7 @@ nih_proxy_create (void)
 	dbus_error_free(&error);
 
 	upstart = nih_dbus_proxy_new(NULL, conn,
-		DBUS_SERVICE_UPSTART,
+		NULL,
 		DBUS_PATH_UPSTART,
 		NULL, NULL);
 
@@ -71,7 +71,7 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	};
 
 	gboolean retval = TRUE;
-	if (upstart_emit_event_sync(NULL, proxy, "application-start", env, 100) != 0) {
+	if (upstart_emit_event_sync(NULL, proxy, "application-start", env, 0) != 0) {
 		g_warning("Unable to emit signal 'application-start'");
 		retval = FALSE;
 	}
