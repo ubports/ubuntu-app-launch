@@ -64,11 +64,10 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 		g_free(urisjoin);
 	}
 
-	gchar * env[3] = {
-		env_appid,
-		env_uris,
-		NULL
-	};
+	gchar * env[3];
+	env[0] = env_appid;
+	env[1] = env_uris;
+	env[2] = NULL;
 
 	gboolean retval = TRUE;
 	if (upstart_emit_event_sync(NULL, proxy, "application-start", env, 0) != 0) {
