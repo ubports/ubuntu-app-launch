@@ -41,6 +41,8 @@ include_directories(${JSONGLIB_INCLUDE_DIRS})
 pkg_check_modules(ZEITGEIST zeitgeist-1.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
+pkg_check_modules(LIBUPSTART libupstart libnih libnih-dbus dbus-1)
+include_directories(${LIBUPSTART_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
