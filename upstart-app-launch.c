@@ -27,7 +27,20 @@ main (int argc, gchar * argv[]) {
 		return 1;
 	}
 
-	upstart_app_launch_start_application(argv[1], NULL);
+	gchar ** uris = NULL;
+	if (argc > 2) {
+		int i;
+
+		uris = g_new0(gchar *, argc - 1);
+
+		for (i = 2; i < argc; i++) {
+			uris[i - 2] = argv[i];
+		}
+	}
+
+	upstart_app_launch_start_application(argv[1], (const gchar * const *)uris);
+
+	g_free(uris);
 
 	return 0;
 }
