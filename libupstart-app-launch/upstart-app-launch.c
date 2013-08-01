@@ -2,6 +2,7 @@
 #include "upstart-app-launch.h"
 #include <upstart.h>
 #include <nih/alloc.h>
+#include <gio/gio.h>
 
 static NihDBusProxy *
 nih_proxy_create (void)
@@ -82,9 +83,91 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	return retval;
 }
 
+GDBusConnection *
+gdbus_upstart_ref (void) {
+	static GDBusConnection * gdbus_upstart = NULL;
+
+	if (gdbus_upstart != NULL) {
+		return g_object_ref(gdbus_upstart);
+	}
+
+	const gchar * upstart_addr = g_getenv("UPSTART_SESSION");
+	if (upstart_addr == NULL) {
+		g_print("Doesn't appear to be an upstart user session\n");
+		return NULL;
+	}
+
+	GError * error = NULL;
+	gdbus_upstart = g_dbus_connection_new_for_address_sync(upstart_addr,
+	                                                       G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
+	                                                       NULL, /* auth */
+	                                                       NULL, /* cancel */
+	                                                       &error);
+
+	if (error != NULL) {
+		g_warning("Unable to connect to Upstart bus: %s", error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	g_object_add_weak_pointer(G_OBJECT(gdbus_upstart), (gpointer)&gdbus_upstart);
+
+	return gdbus_upstart;
+}
+
+/* The data we keep for each observer */
+typedef struct _observer_t observer_t;
+struct _observer_t {
+	GDBusConnection * conn;
+	guint sighandle;
+	upstart_app_launch_app_observer_t func;
+	gpointer user_data;
+};
+
+/* The Arrays of Observers */
+static GArray * start_array = NULL;
+//static GArray * stop_array = NULL;
+
+static void
+starting_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	observer_t * observer = (observer_t *)user_data;
+
+	observer->func("dummy id", 0, observer->user_data);
+
+	return;
+}
+
+
 gboolean
 upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
+	observer_t observert;
+	observert.conn = gdbus_upstart_ref();
+
+	if (observert.conn == NULL) {
+		return FALSE;
+	}
+
+	observert.func = observer;
+	observert.user_data = user_data;
+
+	if (start_array == NULL) {
+		start_array = g_array_new(FALSE, FALSE, sizeof(observer_t));
+	}
+	g_array_append_val(start_array, observert);
+	observer_t * pobserver = &g_array_index(start_array, observer_t, start_array->len - 1);
+
+	pobserver->sighandle = g_dbus_connection_signal_subscribe(observert.conn,
+		NULL, /* sender */
+		DBUS_INTERFACE_UPSTART, /* interface */
+		"EventEmitted", /* signal */
+		DBUS_PATH_UPSTART, /* path */
+		"starting", /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
+		starting_cb,
+		pobserver,
+		NULL); /* user data destroy */
 
 	return FALSE;
 }
