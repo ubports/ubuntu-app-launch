@@ -19,6 +19,11 @@
 
 #include <glib.h>
 
+#ifndef __UPSTART_APP_LAUNCH_H__
+#define __UPSTART_APP_LAUNCH_H__ 1
+
+#pragma GCC visibility push(default)
+
 /**
  * upstart_app_launch_app_observer_t:
  *
@@ -113,3 +118,7 @@ gchar **   upstart_app_launch_list_running_apps         (void);
  *     is not running.
  */
 GPid       upstart_app_launch_check_app_running         (const gchar *                     appid);
+
+#pragma GCC visibility pop
+
+#endif /* __UPSTART_APP_LAUNCH_H__ */
