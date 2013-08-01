@@ -21,15 +21,15 @@ set(LAUNCHER_SOURCES
 upstart-app-launch.c
 )
 
-add_library(launcher SHARED ${LAUNCHER_SOURCES})
+add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
 
-set_target_properties(launcher PROPERTIES
+set_target_properties(upstart-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
 	SOVERSION ${ABI_VERSION}
 	OUTPUT_NAME "upstart-app-launch"
 )
 
-target_link_libraries(launcher
+target_link_libraries(upstart-launcher
 	${GLIB2_LIBARIES}
 	${GOBJECT2_LIBRARIES}
 	${LIBUPSTART_LIBRARIES}
@@ -42,7 +42,7 @@ install(
 )
 
 install(
-	TARGETS launcher
+	TARGETS upstart-launcher
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 

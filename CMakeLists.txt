@@ -65,6 +65,15 @@ target_link_libraries(lsapp ${GIO2_LIBRARIES})
 install(TARGETS lsapp RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ####################
+# upstart-app-launch
+####################
+
+add_executable(upstart-app-launch upstart-app-launch.c)
+set_target_properties(upstart-app-launch PROPERTIES OUTPUT_NAME "upstart-app-launch")
+target_link_libraries(upstart-app-launch upstart-launcher)
+install(TARGETS upstart-app-launch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+####################
 # desktop-exec
 ####################
 
