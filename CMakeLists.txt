@@ -61,7 +61,7 @@ target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES})
 
 add_executable(lsapp lsapp.c)
 set_target_properties(lsapp PROPERTIES OUTPUT_NAME "lsapp")
-target_link_libraries(lsapp ${GIO2_LIBRARIES})
+target_link_libraries(lsapp upstart-launcher)
 install(TARGETS lsapp RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ####################

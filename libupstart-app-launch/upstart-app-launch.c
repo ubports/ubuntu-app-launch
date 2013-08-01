@@ -146,7 +146,8 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
 
 		gchar * instance_name = NULL;
 		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
-			g_array_append_val(apps, instance_name);
+			gchar * dup = g_strdup(instance_name);
+			g_array_append_val(apps, dup);
 		} else {
 			g_warning("Unable to get name for instance '%s' of job '%s'", instances[jobnum], name);
 		}
