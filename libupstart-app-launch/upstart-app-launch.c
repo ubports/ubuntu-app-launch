@@ -147,6 +147,14 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
 		gchar * instance_name = NULL;
 		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
 			gchar * dup = g_strdup(instance_name);
+
+			if (g_strcmp0(name, "application-legacy") == 0) {
+				gchar * last_dash = g_strrstr(dup, "-");
+				if (last_dash != NULL) {
+					last_dash[0] = '\0';
+				}
+			}
+
 			g_array_append_val(apps, dup);
 		} else {
 			g_warning("Unable to get name for instance '%s' of job '%s'", instances[jobnum], name);

@@ -74,6 +74,15 @@ target_link_libraries(upstart-app-launch upstart-launcher)
 install(TARGETS upstart-app-launch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ####################
+# upstart-app-watch
+####################
+
+add_executable(upstart-app-watch upstart-app-watch.c)
+set_target_properties(upstart-app-watch PROPERTIES OUTPUT_NAME "upstart-app-watch")
+target_link_libraries(upstart-app-watch upstart-launcher)
+install(TARGETS upstart-app-watch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+####################
 # desktop-exec
 ####################
 
