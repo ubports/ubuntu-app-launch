@@ -110,13 +110,30 @@ upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t o
 	return FALSE;
 }
 
+/* Get all the instances for a given job name */
+static void
+apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
+{
+
+
+}
+
 gchar **
 upstart_app_launch_list_running_apps (void)
 {
-	gchar ** retval = g_new(gchar *, 1);
-	retval[0] = NULL;
+	NihDBusProxy * proxy = nih_proxy_create();
+	if (proxy == NULL) {
+		return g_new0(gchar *, 1);
+	}
 
-	return retval;
+	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
+
+	apps_for_job(proxy, "application-legacy", apps);
+	apps_for_job(proxy, "application-click", apps);
+
+	nih_unref(proxy, NULL);
+
+	return (gchar **)g_array_free(apps, FALSE);
 }
 
 GPid
