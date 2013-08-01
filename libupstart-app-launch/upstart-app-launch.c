@@ -18,7 +18,7 @@ nih_proxy_create (void)
 	}
 
 	dbus_error_init(&error);
-	conn = dbus_connection_open(upstart_session, &error);
+	conn = dbus_connection_open_private(upstart_session, &error);
 
 	if (conn == NULL) {
 		g_warning("Unable to connect to the Upstart Session: %s", error.message);
@@ -33,12 +33,14 @@ nih_proxy_create (void)
 		DBUS_PATH_UPSTART,
 		NULL, NULL);
 
-	dbus_connection_unref(conn);
-
 	if (upstart == NULL) {
 		g_warning("Unable to build proxy to Upstart");
+		dbus_connection_close(conn);
+		dbus_connection_unref(conn);
 		return NULL;
 	}
+
+	dbus_connection_unref(conn);
 
 	upstart->auto_start = FALSE;
 
