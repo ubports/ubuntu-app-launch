@@ -32,6 +32,7 @@ set_target_properties(launcher PROPERTIES
 target_link_libraries(launcher
 	${GLIB2_LIBARIES}
 	${GOBJECT2_LIBRARIES}
+	${LIBUPSTART_LIBRARIES}
 	-Wl,--no-undefined
 )
 
