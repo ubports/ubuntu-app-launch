@@ -2,8 +2,11 @@ Source: upstart-app-launch
 Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: debhelper (>= 9),
+Build-Depends: click-dev (>= 0.2.2),
+               cmake,
+               debhelper (>= 9),
                libglib2.0-dev,
+               libjson-glib-dev,
                dbus-x11,
                libzeitgeist-dev,
 Standards-Version: 3.9.4
@@ -17,6 +20,47 @@ Package: upstart-app-launch
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         click,
 Description: Upstart Job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
+
+Package: upstart-app-launch-tools
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         upstart-app-launch (= ${binary:Version}),
+Description: Tools for working wtih launched applications
+ Upstart Job file and associated utilities that is used to launch
+ applications in a standard and confined way.
+ .
+ This package provides tools for working with the Upstart App Launch.
+
+Package: libupstart-app-launch1
+Section: libs
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Pre-Depends: ${misc:Pre-Depends},
+Multi-Arch: same
+Description: library for sending requests to the upstart app launch
+ Upstart Job file and associated utilities that is used to launch
+ applications in a standard and confined way.
+ .
+ This package contains shared libraries to be used by applications.
+
+Package: libupstart-app-launch1-dev
+Section: libdevel
+Architecture: any
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+         libglib2.0-dev,
+         libupstart-app-launch1 (= ${binary:Version}),
+Pre-Depends: ${misc:Pre-Depends},
+Multi-Arch: same
+Description: library for sending requests to the upstart app launch
+ Upstart Job file and associated utilities that is used to launch
+ applications in a standard and confined way.
+ .
+ This package contains files that are needed to build applications.
+

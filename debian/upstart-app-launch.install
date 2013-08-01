@@ -1,0 +1,2 @@
+usr/share/upstart/sessions/*
+usr/lib/*/upstart-app-launch/*
