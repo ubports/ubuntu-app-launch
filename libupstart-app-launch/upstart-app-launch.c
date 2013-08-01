@@ -114,8 +114,49 @@ upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t o
 static void
 apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
 {
+	char * job_path = NULL;
+	if (upstart_get_job_by_name_sync(NULL, upstart, name, &job_path) != 0) {
+		g_warning("Unable to find job '%s'", name);
+		return;
+	}
 
+	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
+		NULL,
+		job_path,
+		NULL, NULL);
 
+	if (job_proxy == NULL) {
+		g_warning("Unable to build proxy to Job '%s'", name);
+		return;
+	}
+
+	gchar ** instances;
+	if (job_class_get_all_instances_sync(NULL, job_proxy, &instances) != 0) {
+		g_warning("Unable to get instances for job '%s'", name);
+		nih_unref(job_proxy, NULL);
+		return;
+	}
+
+	int jobnum;
+	for (jobnum = 0; instances[jobnum] != NULL; jobnum++) {
+		NihDBusProxy * instance_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
+			NULL,
+			instances[jobnum],
+			NULL, NULL);
+
+		gchar * instance_name = NULL;
+		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
+			g_array_append_val(apps, instance_name);
+		} else {
+			g_warning("Unable to get name for instance '%s' of job '%s'", instances[jobnum], name);
+		}
+
+		nih_unref(instance_proxy, NULL);
+	}
+
+	nih_unref(job_proxy, NULL);
+
+	return;
 }
 
 gchar **
