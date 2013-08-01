@@ -22,7 +22,12 @@
 int
 main (int argc, gchar * argv[]) {
 
-	upstart_app_launch_start_application("gedit", NULL);
+	if (argc < 2) {
+		g_printerr("Usage: %s <app id> [uris]\n", argv[0]);
+		return 1;
+	}
+
+	upstart_app_launch_start_application(argv[1], NULL);
 
 	return 0;
 }
