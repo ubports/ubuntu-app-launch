@@ -242,13 +242,57 @@ upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t obse
 gboolean
 upstart_app_launch_observer_delete_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
+	int i;
+	observer_t * observert = NULL;
+	for (i = 0; i < start_array->len; i++) {
+		observert = &g_array_index(start_array, observer_t, i);
 
-	return FALSE;
+		if (observert->func == observer && observert->user_data == user_data) {
+			break;
+		}
+	}
+
+	if (i == start_array->len) {
+		return FALSE;
+	}
+
+	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
+	g_object_unref(observert->conn);
+	g_array_remove_index_fast(start_array, i);
+
+	if (start_array->len == 0) {
+		g_array_free(start_array, TRUE);
+		start_array = NULL;
+	}
+
+	return TRUE;
 }
 
 gboolean
 upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
+	int i;
+	observer_t * observert = NULL;
+	for (i = 0; i < stop_array->len; i++) {
+		observert = &g_array_index(stop_array, observer_t, i);
+
+		if (observert->func == observer && observert->user_data == user_data) {
+			break;
+		}
+	}
+
+	if (i == stop_array->len) {
+		return FALSE;
+	}
+
+	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
+	g_object_unref(observert->conn);
+	g_array_remove_index_fast(stop_array, i);
+
+	if (stop_array->len == 0) {
+		g_array_free(stop_array, TRUE);
+		stop_array = NULL;
+	}
 
 	return FALSE;
 }
