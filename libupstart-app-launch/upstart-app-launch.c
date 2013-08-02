@@ -23,54 +23,56 @@
 #include <gio/gio.h>
 #include <string.h>
 
-static NihDBusProxy *
-nih_proxy_create (void)
+static void
+nih_proxy_create (NihDBusProxy ** upstart, DBusConnection ** conn)
 {
 	DBusError        error;
-	DBusConnection * conn;
-	NihDBusProxy *   upstart;
 	const gchar *    upstart_session;
 
 	upstart_session = g_getenv("UPSTART_SESSION");
 	if (upstart_session == NULL) {
 		g_warning("Not running under Upstart User Session");
-		return NULL;
+		return;
 	}
 
 	dbus_error_init(&error);
-	conn = dbus_connection_open_private(upstart_session, &error);
+	*conn = dbus_connection_open_private(upstart_session, &error);
 
-	if (conn == NULL) {
+	if (*conn == NULL) {
 		g_warning("Unable to connect to the Upstart Session: %s", error.message);
 		dbus_error_free(&error);
-		return NULL;
+		return;
 	}
 
 	dbus_error_free(&error);
 
-	upstart = nih_dbus_proxy_new(NULL, conn,
+	*upstart = nih_dbus_proxy_new(NULL, *conn,
 		NULL,
 		DBUS_PATH_UPSTART,
 		NULL, NULL);
 
-	if (upstart == NULL) {
+	if (*upstart == NULL) {
 		g_warning("Unable to build proxy to Upstart");
-		dbus_connection_close(conn);
-		dbus_connection_unref(conn);
-		return NULL;
+		dbus_connection_close(*conn);
+		dbus_connection_unref(*conn);
+		*conn = NULL;
+		return;
 	}
 
-	dbus_connection_unref(conn);
+	dbus_connection_unref(*conn);
 
-	upstart->auto_start = FALSE;
+	(*upstart)->auto_start = FALSE;
 
-	return upstart;
+	return;
 }
 
 gboolean
 upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
-	NihDBusProxy * proxy = nih_proxy_create();
+	NihDBusProxy * proxy = NULL;
+	DBusConnection * conn = NULL;
+
+	nih_proxy_create(&proxy, &conn);
 	if (proxy == NULL) {
 		return FALSE;
 	}
@@ -97,6 +99,7 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 
 	g_free(env_appid);
 	g_free(env_uris);
+	dbus_connection_close(conn);
 	nih_unref(proxy, NULL);
 
 	return retval;
@@ -376,7 +379,10 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
 gchar **
 upstart_app_launch_list_running_apps (void)
 {
-	NihDBusProxy * proxy = nih_proxy_create();
+	NihDBusProxy * proxy = NULL;
+	DBusConnection * conn = NULL;
+
+	nih_proxy_create(&proxy, &conn);
 	if (proxy == NULL) {
 		return g_new0(gchar *, 1);
 	}
@@ -386,6 +392,7 @@ upstart_app_launch_list_running_apps (void)
 	apps_for_job(proxy, "application-legacy", apps);
 	apps_for_job(proxy, "application-click", apps);
 
+	dbus_connection_close(conn);
 	nih_unref(proxy, NULL);
 
 	return (gchar **)g_array_free(apps, FALSE);
