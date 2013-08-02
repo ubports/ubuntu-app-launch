@@ -322,7 +322,7 @@ upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t o
 static void
 apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
 {
-	char * job_path = NULL;
+	nih_local char * job_path = NULL;
 	if (upstart_get_job_by_name_sync(NULL, upstart, name, &job_path) != 0) {
 		g_warning("Unable to find job '%s'", name);
 		return;
@@ -338,7 +338,7 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
 		return;
 	}
 
-	gchar ** instances;
+	nih_local char ** instances;
 	if (job_class_get_all_instances_sync(NULL, job_proxy, &instances) != 0) {
 		g_warning("Unable to get instances for job '%s'", name);
 		nih_unref(job_proxy, NULL);
@@ -352,7 +352,7 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
 			instances[jobnum],
 			NULL, NULL);
 
-		gchar * instance_name = NULL;
+		nih_local char * instance_name = NULL;
 		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
 			gchar * dup = g_strdup(instance_name);
 
@@ -402,7 +402,7 @@ upstart_app_launch_list_running_apps (void)
 static GPid
 pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 {
-	char * job_path = NULL;
+	nih_local char * job_path = NULL;
 	if (upstart_get_job_by_name_sync(NULL, upstart, job, &job_path) != 0) {
 		g_warning("Unable to find job '%s'", job);
 		return 0;
@@ -418,7 +418,7 @@ pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 		return 0;
 	}
 
-	gchar ** instances;
+	nih_local char ** instances;
 	if (job_class_get_all_instances_sync(NULL, job_proxy, &instances) != 0) {
 		g_warning("Unable to get instances for job '%s'", job);
 		nih_unref(job_proxy, NULL);
@@ -433,7 +433,7 @@ pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 			instances[jobnum],
 			NULL, NULL);
 
-		gchar * instance_name = NULL;
+		nih_local char * instance_name = NULL;
 		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
 			if (g_strcmp0(job, "application-legacy") == 0) {
 				gchar * last_dash = g_strrstr(instance_name, "-");
@@ -446,7 +446,7 @@ pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 		}
 
 		if (g_strcmp0(instance_name, appid) == 0) {
-			JobProcessesElement ** elements;
+			nih_local JobProcessesElement ** elements;
 			if (job_get_processes_sync(NULL, instance_proxy, &elements) == 0) {
 				pid = elements[0]->item1;
 			}
