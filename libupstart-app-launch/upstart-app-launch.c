@@ -400,12 +400,64 @@ upstart_app_launch_list_running_apps (void)
 
 /* Look for the app for a job */
 static GPid
-pid_for_job (NihDBusProxy * proxy, const gchar * job, const gchar * appid)
+pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 {
+	char * job_path = NULL;
+	if (upstart_get_job_by_name_sync(NULL, upstart, job, &job_path) != 0) {
+		g_warning("Unable to find job '%s'", job);
+		return 0;
+	}
 
+	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
+		NULL,
+		job_path,
+		NULL, NULL);
 
+	if (job_proxy == NULL) {
+		g_warning("Unable to build proxy to Job '%s'", job);
+		return 0;
+	}
 
-	return 0;
+	gchar ** instances;
+	if (job_class_get_all_instances_sync(NULL, job_proxy, &instances) != 0) {
+		g_warning("Unable to get instances for job '%s'", job);
+		nih_unref(job_proxy, NULL);
+		return 0;
+	}
+
+	GPid pid = 0;
+	int jobnum;
+	for (jobnum = 0; instances[jobnum] != NULL && pid == 0; jobnum++) {
+		NihDBusProxy * instance_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
+			NULL,
+			instances[jobnum],
+			NULL, NULL);
+
+		gchar * instance_name = NULL;
+		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
+			if (g_strcmp0(job, "application-legacy") == 0) {
+				gchar * last_dash = g_strrstr(instance_name, "-");
+				if (last_dash != NULL) {
+					last_dash[0] = '\0';
+				}
+			}
+		} else {
+			g_warning("Unable to get name for instance '%s' of job '%s'", instances[jobnum], job);
+		}
+
+		if (g_strcmp0(instance_name, appid) == 0) {
+			JobProcessesElement ** elements;
+			if (job_get_processes_sync(NULL, instance_proxy, &elements) == 0) {
+				pid = elements[0]->item1;
+			}
+		}
+
+		nih_unref(instance_proxy, NULL);
+	}
+
+	nih_unref(job_proxy, NULL);
+
+	return pid;
 }
 
 GPid
