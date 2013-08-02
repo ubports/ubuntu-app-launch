@@ -56,13 +56,13 @@ add_library(helpers STATIC helpers.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES})
 
 ####################
-# lsapp
+# upstart-app-list
 ####################
 
-add_executable(lsapp lsapp.c)
-set_target_properties(lsapp PROPERTIES OUTPUT_NAME "lsapp")
-target_link_libraries(lsapp upstart-launcher)
-install(TARGETS lsapp RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+add_executable(upstart-app-list upstart-app-list.c)
+set_target_properties(upstart-app-list PROPERTIES OUTPUT_NAME "upstart-app-list")
+target_link_libraries(upstart-app-list upstart-launcher)
+install(TARGETS upstart-app-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ####################
 # upstart-app-launch
