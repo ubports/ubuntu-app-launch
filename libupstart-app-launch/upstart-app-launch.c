@@ -3,6 +3,7 @@
 #include <upstart.h>
 #include <nih/alloc.h>
 #include <gio/gio.h>
+#include <string.h>
 
 static NihDBusProxy *
 nih_proxy_create (void)
@@ -133,7 +134,40 @@ starting_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 {
 	observer_t * observer = (observer_t *)user_data;
 
-	observer->func("dummy id", 0, observer->user_data);
+	gchar * env = NULL;
+	GVariant * envs = g_variant_get_child_value(params, 1);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envs);
+
+	gboolean job_found = FALSE;
+	gboolean job_legacy = FALSE;
+	gchar * instance = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &env)) {
+		if (g_strcmp0(env, "JOB=application-click") == 0) {
+			job_found = TRUE;
+		} else if (g_strcmp0(env, "JOB=application-legacy") == 0) {
+			job_found = TRUE;
+			job_legacy = TRUE;
+		} else if (g_str_has_prefix(env, "INSTANCE=")) {
+			instance = g_strdup(env + strlen("INSTANCE="));
+		}
+	}
+
+	g_variant_unref(envs);
+
+	if (job_legacy && instance != NULL) {
+		gchar * dash = g_strrstr(instance, "-");
+		if (dash != NULL) {
+			dash[0] = '\0';
+		}
+	}
+
+	if (job_found && instance != NULL) {
+		observer->func(instance, 0, observer->user_data);
+	}
+
+	g_free(instance);
 
 	return;
 }
