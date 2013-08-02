@@ -127,10 +127,10 @@ struct _observer_t {
 
 /* The Arrays of Observers */
 static GArray * start_array = NULL;
-//static GArray * stop_array = NULL;
+static GArray * stop_array = NULL;
 
 static void
-starting_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
 	observer_t * observer = (observer_t *)user_data;
 
@@ -199,18 +199,44 @@ upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t obs
 		DBUS_PATH_UPSTART, /* path */
 		"starting", /* arg0 */
 		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
-		starting_cb,
+		observer_cb,
 		pobserver,
 		NULL); /* user data destroy */
 
-	return FALSE;
+	return TRUE;
 }
 
 gboolean
 upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
+	observer_t observert;
+	observert.conn = gdbus_upstart_ref();
 
-	return FALSE;
+	if (observert.conn == NULL) {
+		return FALSE;
+	}
+
+	observert.func = observer;
+	observert.user_data = user_data;
+
+	if (stop_array == NULL) {
+		stop_array = g_array_new(FALSE, FALSE, sizeof(observer_t));
+	}
+	g_array_append_val(stop_array, observert);
+	observer_t * pobserver = &g_array_index(stop_array, observer_t, stop_array->len - 1);
+
+	pobserver->sighandle = g_dbus_connection_signal_subscribe(observert.conn,
+		NULL, /* sender */
+		DBUS_INTERFACE_UPSTART, /* interface */
+		"EventEmitted", /* signal */
+		DBUS_PATH_UPSTART, /* path */
+		"stopped", /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
+		observer_cb,
+		pobserver,
+		NULL); /* user data destroy */
+
+	return TRUE;
 }
 
 gboolean
