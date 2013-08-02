@@ -83,6 +83,15 @@ target_link_libraries(upstart-app-watch upstart-launcher)
 install(TARGETS upstart-app-watch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ####################
+# upstart-app-pid
+####################
+
+add_executable(upstart-app-pid upstart-app-pid.c)
+set_target_properties(upstart-app-pid PROPERTIES OUTPUT_NAME "upstart-app-pid")
+target_link_libraries(upstart-app-pid upstart-launcher)
+install(TARGETS upstart-app-pid RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+####################
 # desktop-exec
 ####################
 
