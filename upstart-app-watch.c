@@ -20,14 +20,14 @@
 #include "libupstart-app-launch/upstart-app-launch.h"
 
 void
-started (const gchar * appid, GPid pid, gpointer user_data)
+started (const gchar * appid, gpointer user_data)
 {
 	g_print("Start  %s\n", appid);
 	return;
 }
 
 void
-stopped (const gchar * appid, GPid pid, gpointer user_data)
+stopped (const gchar * appid, gpointer user_data)
 {
 	g_print("Stop   %s\n", appid);
 	return;

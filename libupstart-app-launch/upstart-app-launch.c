@@ -185,7 +185,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 	}
 
 	if (job_found && instance != NULL) {
-		observer->func(instance, 0, observer->user_data);
+		observer->func(instance, observer->user_data);
 	}
 
 	g_free(instance);

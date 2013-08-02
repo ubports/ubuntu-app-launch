@@ -29,7 +29,7 @@
  *
  * Function prototype for application observers.
  */
-typedef void (*upstart_app_launch_app_observer_t) (const gchar * appid, GPid pid, gpointer user_data);
+typedef void (*upstart_app_launch_app_observer_t) (const gchar * appid, gpointer user_data);
 
 
 /**
