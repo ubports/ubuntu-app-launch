@@ -398,9 +398,39 @@ upstart_app_launch_list_running_apps (void)
 	return (gchar **)g_array_free(apps, FALSE);
 }
 
+/* Look for the app for a job */
+static GPid
+pid_for_job (NihDBusProxy * proxy, const gchar * job, const gchar * appid)
+{
+
+
+
+	return 0;
+}
+
 GPid
 upstart_app_launch_check_app_running (const gchar * appid)
 {
+	NihDBusProxy * proxy = NULL;
+	DBusConnection * conn = NULL;
 
-	return 0;
+	nih_proxy_create(&proxy, &conn);
+	if (proxy == NULL) {
+		return 0;
+	}
+
+	GPid pid = 0;
+
+	if (pid == 0) {
+		pid = pid_for_job(proxy, "application-legacy", appid);
+	}
+
+	if (pid == 0) {
+		pid = pid_for_job(proxy, "application-click", appid);
+	}
+
+	dbus_connection_close(conn);
+	nih_unref(proxy, NULL);
+
+	return pid;
 }
