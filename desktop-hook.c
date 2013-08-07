@@ -177,7 +177,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		g_free(oldpath);
 	}
 
-	gchar * path = g_build_filename(appdir, app_id, NULL);
+	gchar * path = g_build_filename(appdir, NULL);
 	g_key_file_set_string(keyfile, "Desktop Entry", "Path", path);
 	g_free(path);
 
@@ -247,8 +247,8 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	}
 
 	gchar * indesktop = manifest_to_desktop(output, state->app_id);
-	g_free(output);
 	if (indesktop == NULL) {
+		g_free(output);
 		return;
 	}
 
@@ -257,10 +257,11 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
 	g_free(desktopfile);
 
-	copy_desktop_file(indesktop, desktoppath, symlinkdir, state->app_id);
+	copy_desktop_file(indesktop, desktoppath, output, state->app_id);
 
 	g_free(desktoppath);
 	g_free(indesktop);
+	g_free(output);
 
 	return;
 }
