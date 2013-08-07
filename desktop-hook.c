@@ -186,6 +186,8 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	g_free(newexec);
 	g_free(oldexec);
 
+	g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", app_id);
+
 	gsize datalen = 0;
 	gchar * data = g_key_file_to_data(keyfile, &datalen, &error);
 	g_key_file_unref(keyfile);
