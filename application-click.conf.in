@@ -9,7 +9,8 @@ stop on application-end or desktop-end
 env APP_ID
 export APP_ID
 
-env APP_URIS
+env APP_URIS=""
+env APP_DIR="/"
 
 apparmor switch ${APP_ID}
 
@@ -18,13 +19,7 @@ env APP_EXEC="echo Error"
 pre-start exec @libexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
 
 script
-	CLICK_PKG=`echo "${APP_ID}" | cut -d _ -f 1`
-
-	if [ ! -z $CLICK_PKG ] ; then
-		CLICK_DIR=`click pkgdir "${CLICK_PKG}"`
-	fi
-
-	cd ${CLICK_DIR}
+	cd ${APP_DIR}
 	PATH=.:${PATH}
 	exec ${APP_EXEC}
 end script

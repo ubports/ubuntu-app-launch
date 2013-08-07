@@ -62,6 +62,9 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	g_debug("Setting 'APP_DIR' to '%s'", output);
+	set_upstart_variable("APP_DIR", output);
+
 	gchar * desktopfile = manifest_to_desktop(output, argv[1]);
 	g_free(output);
 	if (desktopfile == NULL) {
