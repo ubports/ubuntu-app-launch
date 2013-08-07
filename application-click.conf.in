@@ -16,7 +16,7 @@ apparmor switch ${APP_ID}
 
 env APP_EXEC="echo Error"
 
-pre-start exec @libexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
+pre-start exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
 
 script
 	cd ${APP_DIR}
