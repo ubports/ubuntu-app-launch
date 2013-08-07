@@ -82,9 +82,18 @@ creation_time (const gchar * dir, const gchar * filename)
 void
 add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 {
-	app_state_t * state = find_app_entry(name, app_array);
+	if (!g_str_has_suffix(name, ".desktop")) {
+		return;
+	}
+
+	gchar * appid = g_strdup(name);
+	g_strstr_len(appid, -1, ".desktop")[0] = '\0';
+
+	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_click = TRUE;
 	state->click_created = creation_time(dir, name);
+
+	g_free(appid);
 
 	return;
 }
@@ -254,7 +263,7 @@ main (int argc, char * argv[])
 
 	GArray * apparray = g_array_new(FALSE, FALSE, sizeof(app_state_t));
 
-	/* Find all the symlinks of apps */
+	/* Find all the symlinks of desktop files */
 	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-launch", "desktop", NULL);
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("No installed click packages");
