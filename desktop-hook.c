@@ -212,12 +212,35 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 static void
 build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar * desktopdir)
 {
+	GError * error = NULL;
+	gchar * package = NULL;
 	/* 'Parse' the App ID */
-	if (!app_id_to_triplet(state->app_id, NULL, NULL, NULL)) {
+	if (!app_id_to_triplet(state->app_id, &package, NULL, NULL)) {
 		return;
 	}
 
-	gchar * indesktop = manifest_to_desktop(symlinkdir, state->app_id);
+	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
+	g_free(package);
+
+	gchar * output = NULL;
+	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
+	g_free(cmdline);
+
+	if (error != NULL) {
+		g_warning("Unable to get the package directory from click: %s", error->message);
+		g_error_free(error);
+		g_free(output); /* Probably not set, but just in case */
+		return;
+	}
+
+	if (!g_file_test(output, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
+		g_warning("Dirctory returned by click '%s' couldn't be found", output);
+		g_free(output);
+		return;
+	}
+
+	gchar * indesktop = manifest_to_desktop(output, state->app_id);
+	g_free(output);
 	if (indesktop == NULL) {
 		return;
 	}

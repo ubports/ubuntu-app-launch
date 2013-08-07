@@ -72,7 +72,7 @@ manifest_to_desktop (const gchar * app_dir, const gchar * app_id)
 	}
 
 	gchar * manifestfile = g_strdup_printf("%s.manifest", package);
-	gchar * manifestpath = g_build_filename(app_dir, app_id, ".click", "info", manifestfile, NULL);
+	gchar * manifestpath = g_build_filename(app_dir, ".click", "info", manifestfile, NULL);
 	g_free(manifestfile);
 
 	if (!g_file_test(manifestpath, G_FILE_TEST_EXISTS)) {
