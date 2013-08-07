@@ -106,12 +106,14 @@ add_desktop_file (const gchar * dir, const gchar * name, GArray * app_array)
 		return;
 	}
 
-	if (!g_str_has_prefix(name, "click-")) {
+	gchar * appid = g_strdup(name);
+	g_strstr_len(appid, -1, ".desktop")[0] = '\0';
+
+	/* We only want valid APP IDs as desktop files */
+	if (!app_id_to_triplet(appid, NULL, NULL, NULL)) {
+		g_free(appid);
 		return;
 	}
-
-	gchar * appid = g_strdup(name + strlen("click-"));
-	g_strstr_len(appid, -1, ".desktop")[0] = '\0';
 
 	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_desktop = TRUE;
@@ -255,7 +257,7 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	}
 
 	/* Determine the desktop file name */
-	gchar * desktopfile = g_strdup_printf("click-%s.desktop", state->app_id);
+	gchar * desktopfile = g_strdup_printf("%s.desktop", state->app_id);
 	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
 	g_free(desktopfile);
 
@@ -272,7 +274,7 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 static void
 remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 {
-	gchar * desktopfile = g_strdup_printf("click-%s.desktop", state->app_id);
+	gchar * desktopfile = g_strdup_printf("%s.desktop", state->app_id);
 	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
 	g_free(desktopfile);
 
