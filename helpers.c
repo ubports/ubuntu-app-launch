@@ -106,14 +106,14 @@ manifest_to_desktop (const gchar * app_dir, const gchar * app_id)
 		goto manifest_out;
 	}
 
-	if (!json_object_has_member(rootobj, "applications")) {
-		g_warning("Manifest '%s' doesn't have an applications section", manifestpath);
+	if (!json_object_has_member(rootobj, "hooks")) {
+		g_warning("Manifest '%s' doesn't have an hooks section", manifestpath);
 		goto manifest_out;
 	}
 
-	JsonObject * appsobj = json_object_get_object_member(rootobj, "applications");
+	JsonObject * appsobj = json_object_get_object_member(rootobj, "hooks");
 	if (appsobj == NULL) {
-		g_warning("Manifest '%s' has an applications section that is not a JSON object", manifestpath);
+		g_warning("Manifest '%s' has an hooks section that is not a JSON object", manifestpath);
 		goto manifest_out;
 	}
 
@@ -128,19 +128,14 @@ manifest_to_desktop (const gchar * app_dir, const gchar * app_id)
 		goto manifest_out;
 	}
 
-	if (json_object_has_member(appobj, "type") && g_strcmp0(json_object_get_string_member(appobj, "type"), "desktop") != 0) {
-		g_warning("Manifest '%s' has a definition for application '%s' whose type is not 'desktop'", manifestpath, application);
-		goto manifest_out;
-	}
-
 	gchar * filename = NULL;
-	if (json_object_has_member(appobj, "file")) {
-		filename = g_strdup(json_object_get_string_member(appobj, "file"));
+	if (json_object_has_member(appobj, "desktop")) {
+		filename = g_strdup(json_object_get_string_member(appobj, "desktop"));
 	} else {
 		filename = g_strdup_printf("%s.desktop", application);
 	}
 
-	desktoppath = g_build_filename(app_dir, app_id, filename, NULL);
+	desktoppath = g_build_filename(app_dir, filename, NULL);
 	g_free(filename);
 
 	if (!g_file_test(desktoppath, G_FILE_TEST_EXISTS)) {
