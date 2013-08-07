@@ -278,6 +278,20 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
 	g_free(desktopfile);
 
+	GKeyFile * keyfile = g_key_file_new();
+	g_key_file_load_from_file(keyfile,
+		desktoppath,
+		G_KEY_FILE_NONE,
+		NULL);
+
+	if (!g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", NULL)) {
+		g_debug("Desktop file '%s' is not one created by us.", desktoppath);
+		g_key_file_unref(keyfile);
+		g_free(desktoppath);
+		return;
+	}
+	g_key_file_unref(keyfile);
+
 	if (g_unlink(desktoppath) != 0) {
 		g_warning("Unable to delete desktop file: %s", desktoppath);
 	}
