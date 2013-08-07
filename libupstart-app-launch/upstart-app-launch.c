@@ -36,7 +36,7 @@ nih_proxy_create (NihDBusProxy ** upstart, DBusConnection ** conn)
 	}
 
 	dbus_error_init(&error);
-	*conn = dbus_connection_open_private(upstart_session, &error);
+	*conn = dbus_connection_open(upstart_session, &error);
 
 	if (*conn == NULL) {
 		g_warning("Unable to connect to the Upstart Session: %s", error.message);
@@ -99,7 +99,6 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 
 	g_free(env_appid);
 	g_free(env_uris);
-	dbus_connection_close(conn);
 	nih_unref(proxy, NULL);
 
 	return retval;
@@ -392,7 +391,6 @@ upstart_app_launch_list_running_apps (void)
 	apps_for_job(proxy, "application-legacy", apps);
 	apps_for_job(proxy, "application-click", apps);
 
-	dbus_connection_close(conn);
 	nih_unref(proxy, NULL);
 
 	return (gchar **)g_array_free(apps, FALSE);
@@ -481,7 +479,6 @@ upstart_app_launch_check_app_running (const gchar * appid)
 		pid = pid_for_job(proxy, "application-click", appid);
 	}
 
-	dbus_connection_close(conn);
 	nih_unref(proxy, NULL);
 
 	return pid;
