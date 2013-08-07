@@ -219,12 +219,19 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 		return;
 	}
 
+	/* Check click to find out where the files are */
 	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
 	g_free(package);
 
 	gchar * output = NULL;
 	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
 	g_free(cmdline);
+
+	/* If we have an extra newline, we can delete it. */
+	gchar * newline = g_strstr_len(output, -1, "\n");
+	if (newline != NULL) {
+		newline[0] = '\0';
+	}
 
 	if (error != NULL) {
 		g_warning("Unable to get the package directory from click: %s", error->message);
