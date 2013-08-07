@@ -170,9 +170,9 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 
 	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
 		gchar * oldpath = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
-		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as XCanonicalOldPath.", from, oldpath);
+		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old-Path.", from, oldpath);
 
-		g_key_file_set_string(keyfile, "Desktop Entry", "XCanonicalOldPath", oldpath);
+		g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Path", oldpath);
 
 		g_free(oldpath);
 	}
