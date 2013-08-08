@@ -47,3 +47,18 @@ install(
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
+##########################
+# Pkg Config
+##########################
+
+set(apiversion "${API_VERSION}")
+set(libdir "${CMAKE_INSTALL_FULL_LIBDIR}")
+set(includedir "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
+set(VERSION "${API_VERSION}")
+
+configure_file("upstart-app-launch.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/upstart-app-launch-${API_VERSION}.pc" @ONLY)
+install(
+	FILES "${CMAKE_CURRENT_BINARY_DIR}/upstart-app-launch-${API_VERSION}.pc"
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
+)
+
