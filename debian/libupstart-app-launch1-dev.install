@@ -1,2 +1,3 @@
 usr/lib/*/libupstart-app-launch.so
+usr/lib/*/pkgconfig/*
 usr/include/*
