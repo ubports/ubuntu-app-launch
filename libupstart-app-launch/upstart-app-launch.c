@@ -107,8 +107,9 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 }
 
 static void
-stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * instancename)
+stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * appname, const gchar * instanceid)
 {
+	g_debug("Stopping job %s app_id %s instance_id %s", jobname, appname, instanceid);
 	nih_local char * job_path = NULL;
 	if (upstart_get_job_by_name_sync(NULL, upstart, jobname, &job_path) != 0) {
 		g_warning("Unable to find job '%s'", jobname);
@@ -125,17 +126,24 @@ stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * instancen
 		return;
 	}
 
-	gchar * instance = g_strdup_printf("INSTANCE=%s", instancename);
-	gchar * env[2] = {
-		instance,
+	gchar * app = g_strdup_printf("APP_ID=%s", appname);
+	gchar * inst = NULL;
+	
+	if (instanceid != NULL) {
+		g_strdup_printf("INSTANCE_ID=%s", instanceid);
+	}
+
+	gchar * env[3] = {
+		app,
+		inst,
 		NULL
 	};
 
 	if (job_class_stop_sync(NULL, job_proxy, env, 0) != 0) {
-		g_warning("Unable to stop job %s instance %s", jobname, instancename);
+		g_warning("Unable to stop job %s app %s instance %s", jobname, appname, instanceid);
 	}
 
-	g_free(instance);
+	g_free(app); g_free(inst);
 	nih_unref(job_proxy, NULL);
 
 	return;
@@ -169,7 +177,7 @@ upstart_app_launch_stop_application (const gchar * appid)
 	for (i = 0; i < apps->len; i++) {
 		const gchar * array_id = g_array_index(apps, const gchar *, i);
 		if (g_strcmp0(array_id, appid) == 0) {
-			stop_job(proxy, "application-click", appid);
+			stop_job(proxy, "application-click", appid, NULL);
 			found = TRUE;
 			break; /* There can be only one with click */
 		}
@@ -186,7 +194,8 @@ upstart_app_launch_stop_application (const gchar * appid)
 	for (i = 0; i < apps->len; i++) {
 		const gchar * array_id = g_array_index(apps, const gchar *, i);
 		if (g_str_has_prefix(array_id, appiddash)) {
-			stop_job(proxy, "application-legacy", array_id);
+			gchar * instanceid = g_strrstr(array_id, "-");
+			stop_job(proxy, "application-legacy", appid, instanceid);
 			found = TRUE;
 		}
 	}
