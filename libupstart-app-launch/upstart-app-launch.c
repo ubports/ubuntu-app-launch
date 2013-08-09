@@ -176,6 +176,7 @@ upstart_app_launch_stop_application (const gchar * appid)
 	apps_for_job(proxy, "application-click", apps, FALSE);
 	for (i = 0; i < apps->len; i++) {
 		const gchar * array_id = g_array_index(apps, const gchar *, i);
+		g_debug("Looking at: '%s'", array_id);
 		if (g_strcmp0(array_id, appid) == 0) {
 			stop_job(proxy, "application-click", appid, NULL);
 			found = TRUE;
@@ -193,9 +194,10 @@ upstart_app_launch_stop_application (const gchar * appid)
 	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
 	for (i = 0; i < apps->len; i++) {
 		const gchar * array_id = g_array_index(apps, const gchar *, i);
+		g_debug("Looking at: '%s'", array_id);
 		if (g_str_has_prefix(array_id, appiddash)) {
 			gchar * instanceid = g_strrstr(array_id, "-");
-			stop_job(proxy, "application-legacy", appid, instanceid);
+			stop_job(proxy, "application-legacy", appid, &(instanceid[1]));
 			found = TRUE;
 		}
 	}
