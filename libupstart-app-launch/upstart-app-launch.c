@@ -130,7 +130,7 @@ stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * appname, 
 	gchar * inst = NULL;
 	
 	if (instanceid != NULL) {
-		g_strdup_printf("INSTANCE_ID=%s", instanceid);
+		inst = g_strdup_printf("INSTANCE_ID=%s", instanceid);
 	}
 
 	gchar * env[3] = {
