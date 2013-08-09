@@ -23,6 +23,8 @@
 #include <gio/gio.h>
 #include <string.h>
 
+static void apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolean truncate_legacy);
+
 static NihDBusProxy *
 nih_proxy_create (void)
 {
@@ -326,7 +328,7 @@ upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t o
 
 /* Get all the instances for a given job name */
 static void
-apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
+apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolean truncate_legacy)
 {
 	nih_local char * job_path = NULL;
 	if (upstart_get_job_by_name_sync(NULL, upstart, name, &job_path) != 0) {
@@ -362,7 +364,7 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps)
 		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
 			gchar * dup = g_strdup(instance_name);
 
-			if (g_strcmp0(name, "application-legacy") == 0) {
+			if (truncate_legacy && g_strcmp0(name, "application-legacy") == 0) {
 				gchar * last_dash = g_strrstr(dup, "-");
 				if (last_dash != NULL) {
 					last_dash[0] = '\0';
@@ -394,8 +396,8 @@ upstart_app_launch_list_running_apps (void)
 
 	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
 
-	apps_for_job(proxy, "application-legacy", apps);
-	apps_for_job(proxy, "application-click", apps);
+	apps_for_job(proxy, "application-legacy", apps, TRUE);
+	apps_for_job(proxy, "application-click", apps, FALSE);
 
 	nih_unref(proxy, NULL);
 
