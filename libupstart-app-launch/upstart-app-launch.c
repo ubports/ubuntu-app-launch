@@ -109,7 +109,34 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 static void
 stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * instancename)
 {
+	nih_local char * job_path = NULL;
+	if (upstart_get_job_by_name_sync(NULL, upstart, jobname, &job_path) != 0) {
+		g_warning("Unable to find job '%s'", jobname);
+		return;
+	}
 
+	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
+		NULL,
+		job_path,
+		NULL, NULL);
+
+	if (job_proxy == NULL) {
+		g_warning("Unable to build proxy to Job '%s'", jobname);
+		return;
+	}
+
+	gchar * instance = g_strdup_printf("INSTANCE=%s", instancename);
+	gchar * env[2] = {
+		instance,
+		NULL
+	};
+
+	if (job_class_stop_sync(NULL, job_proxy, env, 0) != 0) {
+		g_warning("Unable to stop job %s instance %s", jobname, instancename);
+	}
+
+	g_free(instance);
+	nih_unref(job_proxy, NULL);
 
 	return;
 }
