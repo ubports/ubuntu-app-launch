@@ -82,9 +82,18 @@ creation_time (const gchar * dir, const gchar * filename)
 void
 add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 {
-	app_state_t * state = find_app_entry(name, app_array);
+	if (!g_str_has_suffix(name, ".desktop")) {
+		return;
+	}
+
+	gchar * appid = g_strdup(name);
+	g_strstr_len(appid, -1, ".desktop")[0] = '\0';
+
+	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_click = TRUE;
 	state->click_created = creation_time(dir, name);
+
+	g_free(appid);
 
 	return;
 }
@@ -97,12 +106,14 @@ add_desktop_file (const gchar * dir, const gchar * name, GArray * app_array)
 		return;
 	}
 
-	if (!g_str_has_prefix(name, "click-")) {
+	gchar * appid = g_strdup(name);
+	g_strstr_len(appid, -1, ".desktop")[0] = '\0';
+
+	/* We only want valid APP IDs as desktop files */
+	if (!app_id_to_triplet(appid, NULL, NULL, NULL)) {
+		g_free(appid);
 		return;
 	}
-
-	gchar * appid = g_strdup(name + strlen("click-"));
-	g_strstr_len(appid, -1, ".desktop")[0] = '\0';
 
 	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_desktop = TRUE;
@@ -161,14 +172,14 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 
 	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
 		gchar * oldpath = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
-		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as XCanonicalOldPath.", from, oldpath);
+		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old-Path.", from, oldpath);
 
-		g_key_file_set_string(keyfile, "Desktop Entry", "XCanonicalOldPath", oldpath);
+		g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Path", oldpath);
 
 		g_free(oldpath);
 	}
 
-	gchar * path = g_build_filename(appdir, app_id, NULL);
+	gchar * path = g_build_filename(appdir, NULL);
 	g_key_file_set_string(keyfile, "Desktop Entry", "Path", path);
 	g_free(path);
 
@@ -176,6 +187,8 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
 	g_free(newexec);
 	g_free(oldexec);
+
+	g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", app_id);
 
 	gsize datalen = 0;
 	gchar * data = g_key_file_to_data(keyfile, &datalen, &error);
@@ -203,25 +216,56 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 static void
 build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar * desktopdir)
 {
+	GError * error = NULL;
+	gchar * package = NULL;
 	/* 'Parse' the App ID */
-	if (!app_id_to_triplet(state->app_id, NULL, NULL, NULL)) {
+	if (!app_id_to_triplet(state->app_id, &package, NULL, NULL)) {
 		return;
 	}
 
-	gchar * indesktop = manifest_to_desktop(symlinkdir, state->app_id);
+	/* Check click to find out where the files are */
+	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
+	g_free(package);
+
+	gchar * output = NULL;
+	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
+	g_free(cmdline);
+
+	/* If we have an extra newline, we can delete it. */
+	gchar * newline = g_strstr_len(output, -1, "\n");
+	if (newline != NULL) {
+		newline[0] = '\0';
+	}
+
+	if (error != NULL) {
+		g_warning("Unable to get the package directory from click: %s", error->message);
+		g_error_free(error);
+		g_free(output); /* Probably not set, but just in case */
+		return;
+	}
+
+	if (!g_file_test(output, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
+		g_warning("Dirctory returned by click '%s' couldn't be found", output);
+		g_free(output);
+		return;
+	}
+
+	gchar * indesktop = manifest_to_desktop(output, state->app_id);
 	if (indesktop == NULL) {
+		g_free(output);
 		return;
 	}
 
 	/* Determine the desktop file name */
-	gchar * desktopfile = g_strdup_printf("click-%s.desktop", state->app_id);
+	gchar * desktopfile = g_strdup_printf("%s.desktop", state->app_id);
 	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
 	g_free(desktopfile);
 
-	copy_desktop_file(indesktop, desktoppath, symlinkdir, state->app_id);
+	copy_desktop_file(indesktop, desktoppath, output, state->app_id);
 
 	g_free(desktoppath);
 	g_free(indesktop);
+	g_free(output);
 
 	return;
 }
@@ -230,9 +274,23 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 static void
 remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 {
-	gchar * desktopfile = g_strdup_printf("click-%s.desktop", state->app_id);
+	gchar * desktopfile = g_strdup_printf("%s.desktop", state->app_id);
 	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
 	g_free(desktopfile);
+
+	GKeyFile * keyfile = g_key_file_new();
+	g_key_file_load_from_file(keyfile,
+		desktoppath,
+		G_KEY_FILE_NONE,
+		NULL);
+
+	if (!g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", NULL)) {
+		g_debug("Desktop file '%s' is not one created by us.", desktoppath);
+		g_key_file_unref(keyfile);
+		g_free(desktoppath);
+		return;
+	}
+	g_key_file_unref(keyfile);
 
 	if (g_unlink(desktoppath) != 0) {
 		g_warning("Unable to delete desktop file: %s", desktoppath);
@@ -254,7 +312,7 @@ main (int argc, char * argv[])
 
 	GArray * apparray = g_array_new(FALSE, FALSE, sizeof(app_state_t));
 
-	/* Find all the symlinks of apps */
+	/* Find all the symlinks of desktop files */
 	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-launch", "desktop", NULL);
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("No installed click packages");

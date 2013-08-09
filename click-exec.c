@@ -28,20 +28,51 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-launch", "desktop", NULL);
-	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
-		g_warning("Application directory '%s' doesn't exist", symlinkdir);
+	GError * error = NULL;
+	gchar * package = NULL;
+	/* 'Parse' the App ID */
+	if (!app_id_to_triplet(argv[1], &package, NULL, NULL)) {
 		return 1;
 	}
 
-	gchar * desktopfile = manifest_to_desktop(symlinkdir, argv[1]);
+	/* Check click to find out where the files are */
+	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
+	g_free(package);
+
+	gchar * output = NULL;
+	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
+	g_free(cmdline);
+
+	/* If we have an extra newline, we can delete it. */
+	gchar * newline = g_strstr_len(output, -1, "\n");
+	if (newline != NULL) {
+		newline[0] = '\0';
+	}
+
+	if (error != NULL) {
+		g_warning("Unable to get the package directory from click: %s", error->message);
+		g_error_free(error);
+		g_free(output); /* Probably not set, but just in case */
+		return 1;
+	}
+
+	if (!g_file_test(output, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
+		g_warning("Application directory '%s' doesn't exist", output);
+		g_free(output);
+		return 1;
+	}
+
+	g_debug("Setting 'APP_DIR' to '%s'", output);
+	set_upstart_variable("APP_DIR", output);
+
+	gchar * desktopfile = manifest_to_desktop(output, argv[1]);
+	g_free(output);
 	if (desktopfile == NULL) {
 		g_warning("Desktop file unable to be found");
 		return 1;
 	}
 
 	GKeyFile * keyfile = g_key_file_new();
-	GError * error = NULL;
 
 	g_key_file_load_from_file(keyfile, desktopfile, 0, &error);
 	if (error != NULL) {
@@ -64,7 +95,6 @@ main (int argc, char * argv[])
 	g_free(exec);
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
-	g_free(symlinkdir);
 
 	return 0;
 }

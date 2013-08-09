@@ -9,16 +9,17 @@ stop on application-end or desktop-end
 env APP_ID
 export APP_ID
 
-env APP_URIS
+env APP_URIS=""
+env APP_DIR="/"
 
 apparmor switch ${APP_ID}
 
 env APP_EXEC="echo Error"
 
-pre-start exec @libexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
+pre-start exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
 
 script
-	cd ${HOME}/.cache/upstart-app-launch/desktop/${APP_ID}
+	cd ${APP_DIR}
 	PATH=.:${PATH}
 	exec ${APP_EXEC}
 end script
