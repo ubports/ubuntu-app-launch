@@ -92,6 +92,15 @@ target_link_libraries(upstart-app-pid upstart-launcher)
 install(TARGETS upstart-app-pid RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ####################
+# upstart-app-stop
+####################
+
+add_executable(upstart-app-stop upstart-app-stop.c)
+set_target_properties(upstart-app-stop PROPERTIES OUTPUT_NAME "upstart-app-stop")
+target_link_libraries(upstart-app-stop upstart-launcher)
+install(TARGETS upstart-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+####################
 # desktop-exec
 ####################
 
