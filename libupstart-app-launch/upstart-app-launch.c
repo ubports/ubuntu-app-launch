@@ -141,6 +141,13 @@ stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * instancen
 	return;
 }
 
+static void
+free_helper (gpointer value)
+{
+	gchar ** strp = (gchar **)value;
+	g_free(*strp);
+}
+
 gboolean
 upstart_app_launch_stop_application (const gchar * appid)
 {
@@ -154,7 +161,7 @@ upstart_app_launch_stop_application (const gchar * appid)
 	}
 
 	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-	g_array_set_clear_func(apps, g_free);
+	g_array_set_clear_func(apps, free_helper);
 
 	/* Look through the click jobs and see if any match.  There can
 	   only be one instance for each ID in the click world */
@@ -168,7 +175,8 @@ upstart_app_launch_stop_application (const gchar * appid)
 		}
 	}
 
-	g_array_remove_range(apps, 0, apps->len);
+	if (apps->len > 0)
+		g_array_remove_range(apps, 0, apps->len);
 
 	/* Look through the legacy apps.  Trickier because we know that there
 	   can be many instances of the legacy jobs out there, so we might
