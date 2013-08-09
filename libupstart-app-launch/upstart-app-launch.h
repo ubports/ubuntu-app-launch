@@ -45,6 +45,17 @@ typedef void (*upstart_app_launch_app_observer_t) (const gchar * appid, gpointer
 gboolean   upstart_app_launch_start_application         (const gchar *                     appid,
                                                          const gchar * const *             uris);
 
+/**
+ * upstart_app_launch_stop_application:
+ * @appid: ID of the application to launch
+ *
+ * Asks upstart to stop an application.
+ *
+ * Return value: Whether we were able to ask Upstart to stop the process,
+ *    used upstart_app_launch_observer_add_app_stop() to know when it is
+ *    finally stopped.
+ */
+gboolean   upstart_app_launch_stop_application         (const gchar *                     appid);
 
 /**
  * upstart_app_launch_observer_add_app_start:

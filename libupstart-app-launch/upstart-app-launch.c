@@ -104,6 +104,13 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	return retval;
 }
 
+gboolean
+upstart_app_launch_stop_application (const gchar * appid)
+{
+
+	return FALSE;
+}
+
 GDBusConnection *
 gdbus_upstart_ref (void) {
 	static GDBusConnection * gdbus_upstart = NULL;
