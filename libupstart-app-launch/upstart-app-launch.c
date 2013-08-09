@@ -106,11 +106,60 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	return retval;
 }
 
+static void
+stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * instancename)
+{
+
+
+	return;
+}
+
 gboolean
 upstart_app_launch_stop_application (const gchar * appid)
 {
+	gboolean found = FALSE;
+	int i;
+	NihDBusProxy * proxy = NULL;
 
-	return FALSE;
+	proxy = nih_proxy_create();
+	if (proxy == NULL) {
+		return FALSE;
+	}
+
+	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
+	g_array_set_clear_func(apps, g_free);
+
+	/* Look through the click jobs and see if any match.  There can
+	   only be one instance for each ID in the click world */
+	apps_for_job(proxy, "application-click", apps, FALSE);
+	for (i = 0; i < apps->len; i++) {
+		const gchar * array_id = g_array_index(apps, const gchar *, i);
+		if (g_strcmp0(array_id, appid) == 0) {
+			stop_job(proxy, "application-click", appid);
+			found = TRUE;
+			break; /* There can be only one with click */
+		}
+	}
+
+	g_array_remove_range(apps, 0, apps->len);
+
+	/* Look through the legacy apps.  Trickier because we know that there
+	   can be many instances of the legacy jobs out there, so we might
+	   have to kill more than one of them. */
+	apps_for_job(proxy, "application-legacy", apps, FALSE);
+	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
+	for (i = 0; i < apps->len; i++) {
+		const gchar * array_id = g_array_index(apps, const gchar *, i);
+		if (g_str_has_prefix(array_id, appiddash) == 0) {
+			stop_job(proxy, "application-legacy", array_id);
+			found = TRUE;
+		}
+	}
+	g_free(appiddash);
+
+	g_array_free(apps, TRUE);
+
+	return found;
 }
 
 GDBusConnection *
