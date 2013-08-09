@@ -27,7 +27,7 @@ main (int argc, gchar * argv[]) {
 		return 1;
 	}
 
-	GPid pid = upstart_app_launch_check_app_running(argv[1]);
+	GPid pid = upstart_app_launch_get_primary_pid(argv[1]);
 
 	if (pid == 0) {
 		return 1;

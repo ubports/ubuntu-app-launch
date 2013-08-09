@@ -458,7 +458,7 @@ pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 }
 
 GPid
-upstart_app_launch_check_app_running (const gchar * appid)
+upstart_app_launch_get_primary_pid (const gchar * appid)
 {
 	NihDBusProxy * proxy = NULL;
 

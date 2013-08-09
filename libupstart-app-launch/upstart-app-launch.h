@@ -108,8 +108,8 @@ gboolean   upstart_app_launch_observer_delete_app_stop  (upstart_app_launch_app_
 gchar **   upstart_app_launch_list_running_apps         (void);
 
 /**
- * upstart_app_launch_check_app_running:
- * @appid: ID of the application to check for
+ * upstart_app_launch_get_primary_pid:
+ * @appid: ID of the application to look for
  *
  * Checks to see if an application is running and returns its
  * main PID if so.
@@ -117,7 +117,7 @@ gchar **   upstart_app_launch_list_running_apps         (void);
  * Return Value: Either the PID of the application or 0 if it
  *     is not running.
  */
-GPid       upstart_app_launch_check_app_running         (const gchar *                     appid);
+GPid       upstart_app_launch_get_primary_pid           (const gchar *                     appid);
 
 #pragma GCC visibility pop
 
