@@ -17,6 +17,31 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+/*
+
+INTRODUCTION:
+
+This is a hook for Click packages.  You can find information on Click package hooks in
+the click documentation:
+
+https://click-package.readthedocs.org/en/latest/
+
+Probably the biggest thing to understand for how this code works is that you need to
+understand that this hook is run after one, or many packages are installed.  A set of
+symbolic links are made to the desktop files per-application (not per-package) in the
+directory specified in upstart-app-launcher-desktop.click-hook.in.  Those desktop files
+give us the App ID of the packages that are installed and have applications needing
+desktop files in them.  We then operate on each of them ensuring that they are synchronized
+with the desktop files in ~/.local/share/applications/.
+
+The desktop files that we're creating there ARE NOT used for execution by the
+upstart-app-launch Upstart jobs.  They are there so that Unity can know which applications
+are installed for this user and they provide an Exec line to allow compatibility with
+desktop environments that are not using upstart-app-launch for launching applications.
+You should not modify them and expect any executing under Unity to change.
+
+*/
+
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <string.h>
