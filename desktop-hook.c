@@ -17,6 +17,31 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+/*
+
+INTRODUCTION:
+
+This is a hook for Click packages.  You can find information on Click package hooks in
+the click documentation:
+
+https://click-package.readthedocs.org/en/latest/
+
+Probably the biggest thing to understand for how this code works is that you need to
+understand that this hook is run after one, or many packages are installed.  A set of
+symbolic links are made to the desktop files per-application (not per-package) in the
+directory specified in upstart-app-launcher-desktop.click-hook.in.  Those desktop files
+give us the App ID of the packages that are installed and have applications needing
+desktop files in them.  We then operate on each of them ensuring that they are synchronized
+with the desktop files in ~/.local/share/applications/.
+
+The desktop files that we're creating there ARE NOT used for execution by the
+upstart-app-launch Upstart jobs.  They are there so that Unity can know which applications
+are installed for this user and they provide an Exec line to allow compatibility with
+desktop environments that are not using upstart-app-launch for launching applications.
+You should not modify them and expect any executing under Unity to change.
+
+*/
+
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <string.h>
@@ -28,8 +53,8 @@ struct _app_state_t {
 	gchar * app_id;
 	gboolean has_click;
 	gboolean has_desktop;
-	guint64 click_created;
-	guint64 desktop_created;
+	guint64 click_modified;
+	guint64 desktop_modified;
 };
 
 /* Find an entry in the app array */
@@ -48,8 +73,8 @@ find_app_entry (const gchar * name, GArray * app_array)
 	app_state_t newstate;
 	newstate.has_click = FALSE;
 	newstate.has_desktop = FALSE;
-	newstate.click_created = 0;
-	newstate.desktop_created = 0;
+	newstate.click_modified = 0;
+	newstate.desktop_modified = 0;
 	newstate.app_id = g_strdup(name);
 
 	g_array_append_val(app_array, newstate);
@@ -63,13 +88,13 @@ find_app_entry (const gchar * name, GArray * app_array)
 /* Looks up the file creation time, which seems harder with GLib
    than it should be */
 guint64
-creation_time (const gchar * dir, const gchar * filename)
+modified_time (const gchar * dir, const gchar * filename)
 {
 	gchar * path = g_build_filename(dir, filename, NULL);
 	GFile * file = g_file_new_for_path(path);
-	GFileInfo * info = g_file_query_info(file, G_FILE_ATTRIBUTE_TIME_CREATED, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL, NULL);
+	GFileInfo * info = g_file_query_info(file, G_FILE_ATTRIBUTE_TIME_MODIFIED, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL, NULL);
 
-	guint64 time = g_file_info_get_attribute_uint64(info, G_FILE_ATTRIBUTE_TIME_CREATED);
+	guint64 time = g_file_info_get_attribute_uint64(info, G_FILE_ATTRIBUTE_TIME_MODIFIED);
 
 	g_object_unref(info);
 	g_object_unref(file);
@@ -91,7 +116,7 @@ add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 
 	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_click = TRUE;
-	state->click_created = creation_time(dir, name);
+	state->click_modified = modified_time(dir, name);
 
 	g_free(appid);
 
@@ -117,7 +142,7 @@ add_desktop_file (const gchar * dir, const gchar * name, GArray * app_array)
 
 	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_desktop = TRUE;
-	state->desktop_created = creation_time(dir, name);
+	state->desktop_modified = modified_time(dir, name);
 
 	g_free(appid);
 	return;
@@ -231,10 +256,15 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
 	g_free(cmdline);
 
-	/* If we have an extra newline, we can delete it. */
-	gchar * newline = g_strstr_len(output, -1, "\n");
-	if (newline != NULL) {
-		newline[0] = '\0';
+	/* If we have an extra newline, we can hide it. */
+	if (output != NULL) {
+		gchar * newline = NULL;
+
+		newline = g_strstr_len(output, -1, "\n");
+
+		if (newline != NULL) {
+			newline[0] = '\0';
+		}
 	}
 
 	if (error != NULL) {
@@ -271,7 +301,7 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 }
 
 /* Remove the desktop file from the user's home directory */
-static void
+static gboolean
 remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 {
 	gchar * desktopfile = g_strdup_printf("%s.desktop", state->app_id);
@@ -288,7 +318,7 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 		g_debug("Desktop file '%s' is not one created by us.", desktoppath);
 		g_key_file_unref(keyfile);
 		g_free(desktoppath);
-		return;
+		return FALSE;
 	}
 	g_key_file_unref(keyfile);
 
@@ -298,7 +328,7 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 
 	g_free(desktoppath);
 
-	return;
+	return TRUE;
 }
 
 /* The main function */
@@ -337,12 +367,13 @@ main (int argc, char * argv[])
 		g_debug("Processing App ID: %s", state->app_id);
 
 		if (state->has_click && state->has_desktop) {
-			if (state->click_created > state->desktop_created) {
+			if (state->click_modified > state->desktop_modified) {
 				g_debug("\tClick updated more recently");
 				g_debug("\tRemoving desktop file");
-				remove_desktop_file(state, desktopdir);
-				g_debug("\tBuilding desktop file");
-				build_desktop_file(state, symlinkdir, desktopdir);
+				if (remove_desktop_file(state, desktopdir)) {
+					g_debug("\tBuilding desktop file");
+					build_desktop_file(state, symlinkdir, desktopdir);
+				}
 			} else {
 				g_debug("\tAlready synchronized");
 			}
