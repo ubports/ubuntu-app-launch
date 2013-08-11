@@ -276,7 +276,7 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 }
 
 /* Remove the desktop file from the user's home directory */
-static void
+static gboolean
 remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 {
 	gchar * desktopfile = g_strdup_printf("%s.desktop", state->app_id);
@@ -293,7 +293,7 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 		g_debug("Desktop file '%s' is not one created by us.", desktoppath);
 		g_key_file_unref(keyfile);
 		g_free(desktoppath);
-		return;
+		return FALSE;
 	}
 	g_key_file_unref(keyfile);
 
@@ -303,7 +303,7 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 
 	g_free(desktoppath);
 
-	return;
+	return TRUE;
 }
 
 /* The main function */
@@ -345,9 +345,10 @@ main (int argc, char * argv[])
 			if (state->click_created > state->desktop_created) {
 				g_debug("\tClick updated more recently");
 				g_debug("\tRemoving desktop file");
-				remove_desktop_file(state, desktopdir);
-				g_debug("\tBuilding desktop file");
-				build_desktop_file(state, symlinkdir, desktopdir);
+				if (remove_desktop_file(state, desktopdir)) {
+					g_debug("\tBuilding desktop file");
+					build_desktop_file(state, symlinkdir, desktopdir);
+				}
 			} else {
 				g_debug("\tAlready synchronized");
 			}
