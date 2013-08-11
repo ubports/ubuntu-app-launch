@@ -57,7 +57,7 @@ main (int argc, char * argv[])
 	if (error != NULL) {
 		g_error("Unable to list instances: %s", error->message);
 		g_error_free(error);
-		return;
+		return 1;
 	}
 
 	/* Header */

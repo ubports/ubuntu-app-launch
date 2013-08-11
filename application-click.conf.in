@@ -19,5 +19,5 @@ script
 	fi
 end script
 
-post-start exec @libexecdir@/zg-report-app open application://${APP_ID}.desktop
-post-stop exec @libexecdir@/zg-report-app close application://${APP_ID}.desktop
+post-start exec @pkglibexecdir@/zg-report-app open application://${APP_ID}.desktop
+post-stop exec @pkglibexecdir@/zg-report-app close application://${APP_ID}.desktop
