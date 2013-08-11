@@ -231,10 +231,15 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
 	g_free(cmdline);
 
-	/* If we have an extra newline, we can delete it. */
-	gchar * newline = g_strstr_len(output, -1, "\n");
-	if (newline != NULL) {
-		newline[0] = '\0';
+	/* If we have an extra newline, we can hide it. */
+	if (output != NULL) {
+		gchar * newline = NULL;
+
+		newline = g_strstr_len(output, -1, "\n");
+
+		if (newline != NULL) {
+			newline[0] = '\0';
+		}
 	}
 
 	if (error != NULL) {
