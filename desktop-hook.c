@@ -28,8 +28,8 @@ struct _app_state_t {
 	gchar * app_id;
 	gboolean has_click;
 	gboolean has_desktop;
-	guint64 click_created;
-	guint64 desktop_created;
+	guint64 click_modified;
+	guint64 desktop_modified;
 };
 
 /* Find an entry in the app array */
@@ -48,8 +48,8 @@ find_app_entry (const gchar * name, GArray * app_array)
 	app_state_t newstate;
 	newstate.has_click = FALSE;
 	newstate.has_desktop = FALSE;
-	newstate.click_created = 0;
-	newstate.desktop_created = 0;
+	newstate.click_modified = 0;
+	newstate.desktop_modified = 0;
 	newstate.app_id = g_strdup(name);
 
 	g_array_append_val(app_array, newstate);
@@ -63,13 +63,13 @@ find_app_entry (const gchar * name, GArray * app_array)
 /* Looks up the file creation time, which seems harder with GLib
    than it should be */
 guint64
-creation_time (const gchar * dir, const gchar * filename)
+modified_time (const gchar * dir, const gchar * filename)
 {
 	gchar * path = g_build_filename(dir, filename, NULL);
 	GFile * file = g_file_new_for_path(path);
-	GFileInfo * info = g_file_query_info(file, G_FILE_ATTRIBUTE_TIME_CREATED, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL, NULL);
+	GFileInfo * info = g_file_query_info(file, G_FILE_ATTRIBUTE_TIME_MODIFIED, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL, NULL);
 
-	guint64 time = g_file_info_get_attribute_uint64(info, G_FILE_ATTRIBUTE_TIME_CREATED);
+	guint64 time = g_file_info_get_attribute_uint64(info, G_FILE_ATTRIBUTE_TIME_MODIFIED);
 
 	g_object_unref(info);
 	g_object_unref(file);
@@ -91,7 +91,7 @@ add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 
 	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_click = TRUE;
-	state->click_created = creation_time(dir, name);
+	state->click_modified = modified_time(dir, name);
 
 	g_free(appid);
 
@@ -117,7 +117,7 @@ add_desktop_file (const gchar * dir, const gchar * name, GArray * app_array)
 
 	app_state_t * state = find_app_entry(appid, app_array);
 	state->has_desktop = TRUE;
-	state->desktop_created = creation_time(dir, name);
+	state->desktop_modified = modified_time(dir, name);
 
 	g_free(appid);
 	return;
@@ -342,7 +342,7 @@ main (int argc, char * argv[])
 		g_debug("Processing App ID: %s", state->app_id);
 
 		if (state->has_click && state->has_desktop) {
-			if (state->click_created > state->desktop_created) {
+			if (state->click_modified > state->desktop_modified) {
 				g_debug("\tClick updated more recently");
 				g_debug("\tRemoving desktop file");
 				if (remove_desktop_file(state, desktopdir)) {
