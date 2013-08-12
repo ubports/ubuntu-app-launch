@@ -1,8 +1,11 @@
-default: desktop-exec desktop-hook lsapp zg-report-app application.conf application-click.conf application-legacy.conf debian/upstart-app-launch-desktop.click-hook
+default: desktop-exec desktop-hook click-exec lsapp zg-report-app application.conf application-click.conf application-legacy.conf debian/upstart-app-launch-desktop.click-hook
 	@echo "Building"
 
-desktop-exec: desktop-exec.c
-	gcc -o desktop-exec desktop-exec.c `pkg-config --cflags --libs glib-2.0 gio-2.0` -Wall -Werror
+desktop-exec: desktop-exec.c helpers.h helpers.c
+	gcc -o desktop-exec desktop-exec.c helpers.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0` -Wall -Werror
+
+click-exec: click-exec.c helpers.h helpers.c
+	gcc -o click-exec click-exec.c helpers.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0` -Wall -Werror
 
 desktop-hook: desktop-hook.c helpers.c helpers.h
 	gcc -o desktop-hook desktop-hook.c helpers.c `pkg-config --cflags --libs glib-2.0 gio-2.0 json-glib-1.0` -Wall -Werror
@@ -29,6 +32,7 @@ install: application-legacy.conf application-legacy.conf desktop-exec desktop-ho
 	install -m 644 application-click.conf $(DESTDIR)/usr/share/upstart/sessions/
 	mkdir -p $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 	install -m 755 desktop-exec $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
+	install -m 755 click-exec $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 	install -m 755 desktop-hook $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 	install -m 755 zg-report-app $(DESTDIR)/usr/lib/$(DEB_BUILD_MULTIARCH)/upstart-app-launch/
 	mkdir -p $(DESTDIR)/usr/bin/

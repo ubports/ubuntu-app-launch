@@ -27,4 +27,8 @@ gchar *   manifest_to_desktop    (const gchar *   app_dir,
                                   const gchar *   app_id);
 gchar *   desktop_to_exec        (GKeyFile *      desktop_file,
                                   const gchar *   from);
+void      set_upstart_variable   (const gchar *   variable,
+                                  const gchar *   value);
+gchar *   desktop_exec_parse     (const gchar *   execline,
+                                  const gchar *   uri_list);
 
