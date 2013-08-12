@@ -130,6 +130,22 @@ gchar **   upstart_app_launch_list_running_apps         (void);
  */
 GPid       upstart_app_launch_get_primary_pid           (const gchar *                     appid);
 
+/**
+ * upstart_app_launch_pid_in_app_id:
+ * @pid: Process ID to check on
+ * @appid: ID of the application to look in
+ *
+ * Checks to see if a PID is associated with the current application ID.
+ *
+ * Currently the implementation just calls upstart_app_launch_get_primary_pid()
+ * and checks to see if they're the same.  But in the future this will check
+ * any PID created in the cgroup to see if it is associated.
+ *
+ * Return Value: Whether @pid is associated with the @appid
+ */
+gboolean   upstart_app_launch_pid_in_app_id             (GPid                              pid,
+                                                         const gchar *                     appid);
+
 #pragma GCC visibility pop
 
 #endif /* __UPSTART_APP_LAUNCH_H__ */

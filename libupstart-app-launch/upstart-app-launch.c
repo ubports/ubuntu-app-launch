@@ -583,3 +583,15 @@ upstart_app_launch_get_primary_pid (const gchar * appid)
 
 	return pid;
 }
+
+gboolean
+upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
+{
+	if (pid == 0) {
+		return FALSE;
+	}
+
+	GPid primary = upstart_app_launch_get_primary_pid(appid);
+
+	return primary == pid;
+}
