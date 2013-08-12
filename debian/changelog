@@ -1,3 +1,17 @@
+upstart-app-launch (0.1+13.10.20130812-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Use the click utility to determine path to the package.
+  * Split profile and exec into two variables.
+  * Add a click package hook to build desktop files.
+  * Flesh out the click package execution.
+  * Switch to CMake and add stub library.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 38
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 12 Aug 2013 18:04:33 +0000
+
 upstart-app-launch (0.1+13.10.20130712-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
