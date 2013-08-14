@@ -20,6 +20,23 @@
 #include <glib.h>
 #include "helpers.h"
 
+/*
+
+INTRODUCTION:
+
+This is the utility that executes a click package based on the Application ID.
+Actually it just determines what needs to be executed, and asks Upstart to execute
+it so that it can be tracked better.  This process runs OUTSIDE of the app armor
+confinement for the application.  It also DOES NOT use any files that can be modified
+by the user.  So things like the desktop file in ~/.local/share/applications are
+all off limits.
+
+For information on Click packages and the manifest look at the Click package documentation:
+
+https://click-package.readthedocs.org/en/latest/
+
+*/
+
 int
 main (int argc, char * argv[])
 {
