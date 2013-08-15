@@ -52,6 +52,45 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	/* Set environment various variables to make apps work under
+	 * confinement according to:
+	 * https://wiki.ubuntu.com/SecurityTeam/Specifications/ApplicationConfinement
+	 */
+	g_debug("Setting 'UBUNTU_APPLICATION_ISOLATION' to '1'");
+	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1");
+
+	/* Make sure the XDG base dirs are set for the application using
+	 * the user's current values/system defaults. We could set these to
+	 * what is expected in the AppArmor profile, but that might be too
+	 * brittle if someone uses different base dirs.
+	 */
+	g_debug("Setting 'XDG_CACHE_HOME' using g_get_user_cache_dir()");
+	set_upstart_variable("XDG_CACHE_HOME", g_get_user_cache_dir());
+
+	g_debug("Setting 'XDG_CONFIG_HOME' using g_get_user_config_dir()");
+	set_upstart_variable("XDG_CONFIG_HOME", g_get_user_config_dir());
+
+	g_debug("Setting 'XDG_DATA_HOME' using g_get_user_data_dir()");
+	set_upstart_variable("XDG_DATA_HOME", g_get_user_data_dir());
+
+	g_debug("Setting 'XDG_RUNTIME_DIR' using g_get_user_runtime_dir()");
+	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
+
+	/* Set TMPDIR to something sane and application-specific */
+	gchar * tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package);
+	g_debug("Setting 'TMPDIR' to '%s'", tmpdir);
+	set_upstart_variable("TMPDIR", tmpdir);
+	g_debug("Creating '%s'", tmpdir);
+	g_mkdir_with_parents(tmpdir, 0700);
+	g_free(tmpdir);
+
+	/* Do the same for nvidia */
+	gchar * nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package);
+	g_debug("Setting '__GL_SHADER_DISK_CACHE_PATH' to '%s'", nv_shader_cachedir);
+	set_upstart_variable("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
+	g_free(nv_shader_cachedir);
+	/* End setting application confinement environment variables */
+
 	/* Check click to find out where the files are */
 	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
 	g_free(package);
