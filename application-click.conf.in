@@ -20,7 +20,13 @@ pre-start exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
 
 script
 	cd ${APP_DIR}
-	PATH=.:${PATH}
+
+	# Should be done immediately before exec so that other commands can't
+	# be placed in the directory and used
+	if [ -n "${APP_DIR}" ]; then
+		PATH="${APP_DIR}:${PATH}"
+	fi
+
 	exec ${APP_EXEC}
 end script
 
