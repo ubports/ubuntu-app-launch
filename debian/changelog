@@ -1,3 +1,19 @@
+upstart-app-launch (0.1+13.10.20130819-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Make setting the PATH more robust.
+
+  [ jdstrand ]
+  * Update click-exec.c to setup the sandbox environment. Specifically:
+    - explicitly set the XDG base dirs to the user's preference - set
+    UBUNTU_APPLICATION_ISOLATION - set TMPDIR - set
+    __GL_SHADER_DISK_CACHE_PATH.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 41
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 19 Aug 2013 02:04:19 +0000
+
 upstart-app-launch (0.1+13.10.20130812-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
