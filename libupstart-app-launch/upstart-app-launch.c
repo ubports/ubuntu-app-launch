@@ -143,7 +143,8 @@ stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * appname, 
 		g_warning("Unable to stop job %s app %s instance %s", jobname, appname, instanceid);
 	}
 
-	g_free(app); g_free(inst);
+	g_free(app);
+	g_free(inst);
 	nih_unref(job_proxy, NULL);
 
 	return;
