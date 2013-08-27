@@ -294,9 +294,10 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 	return;
 }
 
-
-gboolean
-upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
+/* Creates the observer structure and registers for the signal with
+   GDBus so that we can get a callback */
+static gboolean
+add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GArray ** array)
 {
 	observer_t observert;
 	observert.conn = gdbus_upstart_ref();
@@ -308,18 +309,18 @@ upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t obs
 	observert.func = observer;
 	observert.user_data = user_data;
 
-	if (start_array == NULL) {
-		start_array = g_array_new(FALSE, FALSE, sizeof(observer_t));
+	if (*array == NULL) {
+		*array = g_array_new(FALSE, FALSE, sizeof(observer_t));
 	}
-	g_array_append_val(start_array, observert);
-	observer_t * pobserver = &g_array_index(start_array, observer_t, start_array->len - 1);
+	g_array_append_val(*array, observert);
+	observer_t * pobserver = &g_array_index(*array, observer_t, (*array)->len - 1);
 
 	pobserver->sighandle = g_dbus_connection_signal_subscribe(observert.conn,
 		NULL, /* sender */
 		DBUS_INTERFACE_UPSTART, /* interface */
 		"EventEmitted", /* signal */
 		DBUS_PATH_UPSTART, /* path */
-		"starting", /* arg0 */
+		signal, /* arg0 */
 		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
 		observer_cb,
 		pobserver,
@@ -329,34 +330,42 @@ upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t obs
 }
 
 gboolean
+upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return add_app_generic(observer, user_data, "starting", &start_array);
+}
+
+gboolean
 upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	observer_t observert;
-	observert.conn = gdbus_upstart_ref();
+	return add_app_generic(observer, user_data, "stopped", &stop_array);
+}
 
-	if (observert.conn == NULL) {
+static gboolean
+delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, GArray ** array)
+{
+	int i;
+	observer_t * observert = NULL;
+	for (i = 0; i < (*array)->len; i++) {
+		observert = &g_array_index(*array, observer_t, i);
+
+		if (observert->func == observer && observert->user_data == user_data) {
+			break;
+		}
+	}
+
+	if (i == (*array)->len) {
 		return FALSE;
 	}
 
-	observert.func = observer;
-	observert.user_data = user_data;
+	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
+	g_object_unref(observert->conn);
+	g_array_remove_index_fast(*array, i);
 
-	if (stop_array == NULL) {
-		stop_array = g_array_new(FALSE, FALSE, sizeof(observer_t));
+	if ((*array)->len == 0) {
+		g_array_free(*array, TRUE);
+		*array = NULL;
 	}
-	g_array_append_val(stop_array, observert);
-	observer_t * pobserver = &g_array_index(stop_array, observer_t, stop_array->len - 1);
-
-	pobserver->sighandle = g_dbus_connection_signal_subscribe(observert.conn,
-		NULL, /* sender */
-		DBUS_INTERFACE_UPSTART, /* interface */
-		"EventEmitted", /* signal */
-		DBUS_PATH_UPSTART, /* path */
-		"stopped", /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
-		observer_cb,
-		pobserver,
-		NULL); /* user data destroy */
 
 	return TRUE;
 }
@@ -364,59 +373,13 @@ upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t obse
 gboolean
 upstart_app_launch_observer_delete_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	int i;
-	observer_t * observert = NULL;
-	for (i = 0; i < start_array->len; i++) {
-		observert = &g_array_index(start_array, observer_t, i);
-
-		if (observert->func == observer && observert->user_data == user_data) {
-			break;
-		}
-	}
-
-	if (i == start_array->len) {
-		return FALSE;
-	}
-
-	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
-	g_object_unref(observert->conn);
-	g_array_remove_index_fast(start_array, i);
-
-	if (start_array->len == 0) {
-		g_array_free(start_array, TRUE);
-		start_array = NULL;
-	}
-
-	return TRUE;
+	return delete_app_generic(observer, user_data, &start_array);
 }
 
 gboolean
 upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	int i;
-	observer_t * observert = NULL;
-	for (i = 0; i < stop_array->len; i++) {
-		observert = &g_array_index(stop_array, observer_t, i);
-
-		if (observert->func == observer && observert->user_data == user_data) {
-			break;
-		}
-	}
-
-	if (i == stop_array->len) {
-		return FALSE;
-	}
-
-	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
-	g_object_unref(observert->conn);
-	g_array_remove_index_fast(stop_array, i);
-
-	if (stop_array->len == 0) {
-		g_array_free(stop_array, TRUE);
-		stop_array = NULL;
-	}
-
-	return FALSE;
+	return delete_app_generic(observer, user_data, &stop_array);
 }
 
 /* Get all the instances for a given job name */
