@@ -21,17 +21,19 @@ set(LAUNCHER_SOURCES
 upstart-app-launch.c
 )
 
-add_library(launcher SHARED ${LAUNCHER_SOURCES})
+add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
 
-set_target_properties(launcher PROPERTIES
+set_target_properties(upstart-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
 	SOVERSION ${ABI_VERSION}
 	OUTPUT_NAME "upstart-app-launch"
 )
 
-target_link_libraries(launcher
+target_link_libraries(upstart-launcher
 	${GLIB2_LIBARIES}
 	${GOBJECT2_LIBRARIES}
+	${LIBUPSTART_LIBRARIES}
+	${GIO2_LIBRARIES}
 	-Wl,--no-undefined
 )
 
@@ -41,7 +43,22 @@ install(
 )
 
 install(
-	TARGETS launcher
+	TARGETS upstart-launcher
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+##########################
+# Pkg Config
+##########################
+
+set(apiversion "${API_VERSION}")
+set(libdir "${CMAKE_INSTALL_FULL_LIBDIR}")
+set(includedir "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
+set(VERSION "${API_VERSION}")
+
+configure_file("upstart-app-launch.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/upstart-app-launch-${API_VERSION}.pc" @ONLY)
+install(
+	FILES "${CMAKE_CURRENT_BINARY_DIR}/upstart-app-launch-${API_VERSION}.pc"
+	DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
