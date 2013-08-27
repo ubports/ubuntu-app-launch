@@ -1,3 +1,14 @@
+upstart-app-launch (0.1+13.10.20130827-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Completes the base functionality in the libupstart-app-launch
+    library.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 43
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 27 Aug 2013 14:04:33 +0000
+
 upstart-app-launch (0.1+13.10.20130819-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
