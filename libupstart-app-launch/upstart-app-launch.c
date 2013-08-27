@@ -206,7 +206,7 @@ upstart_app_launch_stop_application (const gchar * appid)
 	return found;
 }
 
-GDBusConnection *
+static GDBusConnection *
 gdbus_upstart_ref (void) {
 	static GDBusConnection * gdbus_upstart = NULL;
 
