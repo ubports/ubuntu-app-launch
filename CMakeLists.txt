@@ -35,13 +35,13 @@ include_directories(${GOBJECT2_INCLUDE_DIRS})
 pkg_check_modules(GIO2 REQUIRED gio-2.0)
 include_directories(${GIO2_INCLUDE_DIRS})
 
-pkg_check_modules(JSONGLIB json-glib-1.0)
+pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
 include_directories(${JSONGLIB_INCLUDE_DIRS})
 
-pkg_check_modules(ZEITGEIST zeitgeist-1.0)
+pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-1.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
-pkg_check_modules(LIBUPSTART libupstart libnih libnih-dbus dbus-1)
+pkg_check_modules(LIBUPSTART REQUIRED libupstart libnih libnih-dbus dbus-1)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
