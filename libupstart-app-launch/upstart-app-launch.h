@@ -24,6 +24,10 @@
 
 #pragma GCC visibility push(default)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * upstart_app_launch_app_observer_t:
  *
@@ -145,6 +149,10 @@ GPid       upstart_app_launch_get_primary_pid           (const gchar *          
  */
 gboolean   upstart_app_launch_pid_in_app_id             (GPid                              pid,
                                                          const gchar *                     appid);
+
+#ifdef __cplusplus
+}
+#endif
 
 #pragma GCC visibility pop
 
