@@ -25,6 +25,7 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          click,
+         click-apparmor,
 Description: Upstart Job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
