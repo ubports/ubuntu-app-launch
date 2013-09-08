@@ -28,7 +28,7 @@ app_id_to_triplet (const gchar * app_id, gchar ** package, gchar ** application,
 	/* 'Parse' the App ID */
 	gchar ** app_id_segments = g_strsplit(app_id, "_", 4);
 	if (g_strv_length(app_id_segments) != 3) {
-		g_warning("Unable to parse Application ID: %s", app_id);
+		g_debug("Unable to parse Application ID: %s", app_id);
 		g_strfreev(app_id_segments);
 		return FALSE;
 	}

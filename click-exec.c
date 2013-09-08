@@ -49,6 +49,7 @@ main (int argc, char * argv[])
 	gchar * package = NULL;
 	/* 'Parse' the App ID */
 	if (!app_id_to_triplet(argv[1], &package, NULL, NULL)) {
+		g_warning("Unable to parse App ID: '%s'", argv[1]);
 		return 1;
 	}
 
