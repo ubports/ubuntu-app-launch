@@ -199,9 +199,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		g_free(oldpath);
 	}
 
-	gchar * path = g_build_filename(appdir, NULL);
-	g_key_file_set_string(keyfile, "Desktop Entry", "Path", path);
-	g_free(path);
+	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
 
 	/* Exec Handling */
 	gchar * oldexec = desktop_to_exec(keyfile, from);
