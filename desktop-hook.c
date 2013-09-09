@@ -189,12 +189,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		return;
 	}
 
-	gchar * oldexec = desktop_to_exec(keyfile, from);
-	if (oldexec == NULL) {
-		g_key_file_unref(keyfile);
-		return;
-	}
-
+	/* Path Hanlding */
 	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
 		gchar * oldpath = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
 		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old-Path.", from, oldpath);
@@ -208,13 +203,22 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	g_key_file_set_string(keyfile, "Desktop Entry", "Path", path);
 	g_free(path);
 
+	/* Exec Handling */
+	gchar * oldexec = desktop_to_exec(keyfile, from);
+	if (oldexec == NULL) {
+		g_key_file_unref(keyfile);
+		return;
+	}
+
 	gchar * newexec = g_strdup_printf("aa-exec-click -p %s -- %s", app_id, oldexec);
 	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
 	g_free(newexec);
 	g_free(oldexec);
 
+	/* Adding an Application ID */
 	g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", app_id);
 
+	/* Output */
 	gsize datalen = 0;
 	gchar * data = g_key_file_to_data(keyfile, &datalen, &error);
 	g_key_file_unref(keyfile);
