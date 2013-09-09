@@ -201,6 +201,25 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 
 	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
 
+	/* Icon Hanlding */
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "Icon", NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
+		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
+
+		/* If the icon in the path exists, let's use that */
+		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
+			g_key_file_set_string(keyfile, "Desktop Entry", "Icon", iconpath);
+			/* Save the old value, because, debugging */
+			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Icon", originalicon);
+		} else {
+			/* So here we are, realizing all is lost.  Let's file a bug. */
+
+		}
+
+		g_free(iconpath);
+		g_free(originalicon);
+	}
+
 	/* Exec Handling */
 	gchar * oldexec = desktop_to_exec(keyfile, from);
 	if (oldexec == NULL) {
