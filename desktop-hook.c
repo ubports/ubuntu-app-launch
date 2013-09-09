@@ -208,7 +208,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	g_key_file_set_string(keyfile, "Desktop Entry", "Path", path);
 	g_free(path);
 
-	gchar * newexec = g_strdup_printf("aa-exec -p %s -- %s", app_id, oldexec);
+	gchar * newexec = g_strdup_printf("aa-exec-click -p %s -- %s", app_id, oldexec);
 	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
 	g_free(newexec);
 	g_free(oldexec);
