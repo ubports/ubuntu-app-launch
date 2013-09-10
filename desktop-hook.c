@@ -275,7 +275,7 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	}
 
 	if (!g_file_test(output, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
-		g_warning("Dirctory returned by click '%s' couldn't be found", output);
+		g_warning("Directory returned by click '%s' couldn't be found", output);
 		g_free(output);
 		return;
 	}
