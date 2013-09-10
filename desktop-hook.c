@@ -213,7 +213,19 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Icon", originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
+			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
+			gchar * cmdline = g_strdup_printf("printf \""
+				"IconValue\\0%s\\0"
+				"AppID\\0%s\\0"
+				"IconPath\\0%s\\0"
+				"Signature\\0icon-path-unhandled-%s\""
+				" | /usr/share/apport/recoverable_problem -p %d",
+				originalicon, app_id, iconpath, app_id, getpid());
 
+			/* Firing and forgetting */
+			g_spawn_command_line_async(cmdline, NULL);
+
+			g_free(cmdline);
 		}
 
 		g_free(iconpath);
