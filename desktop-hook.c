@@ -319,7 +319,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 
 	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
 
-	/* Icon Hanlding */
+	/* Icon Handling */
 	if (g_key_file_has_key(keyfile, "Desktop Entry", "Icon", NULL)) {
 		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", "Icon", NULL);
 		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
