@@ -45,6 +45,7 @@ You should not modify them and expect any executing under Unity to change.
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include "helpers.h"
 
@@ -170,6 +171,27 @@ dir_for_each (const gchar * dirname, void(*func)(const gchar * dir, const gchar 
 	return;
 }
 
+/* Helpers to ensure we write nicely */
+static void 
+write_string (int          fd,
+              const gchar *string)
+{
+	int res; 
+	do
+		res = write (fd, string, strlen (string));
+	while (G_UNLIKELY (res == -1 && errno == EINTR));
+}
+
+/* Make NULLs fast and fun! */
+static void 
+write_null (int fd)
+{
+	int res; 
+	do
+		res = write (fd, "", 1);
+	while (G_UNLIKELY (res == -1 && errno == EINTR));
+}
+
 /* Function to take the source Desktop file and build a new
    one with similar, but not the same data in it */
 static void
@@ -214,18 +236,59 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
-			gchar * cmdline = g_strdup_printf("printf \""
-				"IconValue\\0%s\\0"
-				"AppID\\0%s\\0"
-				"IconPath\\0%s\\0"
-				"Signature\\0icon-path-unhandled-%s\""
-				" | /usr/share/apport/recoverable_problem -p %d",
-				originalicon, app_id, iconpath, app_id, getpid());
 
-			/* Firing and forgetting */
-			g_spawn_command_line_async(cmdline, NULL);
+			GError * error = NULL;
+			gint error_stdin = 0;
+			gchar * pid = g_strdup_printf("%d", getpid());
+			gchar * argv[4] = {
+				"/usr/share/apport/recoverable_problem",
+				"-p",
+				pid,
+				NULL
+			};
 
-			g_free(cmdline);
+			g_spawn_async_with_pipes(NULL, /* cwd */
+				argv,
+				NULL, /* envp */
+				G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+				NULL, NULL, /* child setup func */
+				NULL, /* pid */
+				&error_stdin,
+				NULL, /* stdout */
+				NULL, /* stderr */
+				&error);
+
+			if (error != NULL) {
+				g_warning("Unable to report a recoverable error: %s", error->message);
+				g_error_free(error);
+			}
+
+			if (error_stdin != 0) {
+				write_string(error_stdin, "IconValue");
+				write_null(error_stdin);
+				write_string(error_stdin, originalicon);
+				write_null(error_stdin);
+
+				write_string(error_stdin, "AppID");
+				write_null(error_stdin);
+				write_string(error_stdin, app_id);
+				write_null(error_stdin);
+
+				write_string(error_stdin, "IconPath");
+				write_null(error_stdin);
+				write_string(error_stdin, iconpath);
+				write_null(error_stdin);
+
+				write_string(error_stdin, "DuplicateSignature");
+				write_null(error_stdin);
+				write_string(error_stdin, "icon-path-unhandled-");
+				write_string(error_stdin, app_id);
+				/* write_null(error_stdin); -- No final NULL */
+
+				close(error_stdin);
+			}
+
+			g_free(pid);
 		}
 
 		g_free(iconpath);
