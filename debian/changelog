@@ -1,3 +1,19 @@
+upstart-app-launch (0.1+13.10.20130912-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Don't automatically warn on a failed App ID.
+  * Check to see if an icon exists, and if so prepend the full path.
+
+  [ Jamie Strandboge ]
+  * application-legacy.conf.in: use aa-exec-click instead of aa-exec
+    desktop-hook.c: use aa-exec-click instead of aa-exec (LP: #1197047)
+    debian/control: Depends on click-apparmor. (LP: #1197047)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 52
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 12 Sep 2013 20:33:42 +0000
+
 upstart-app-launch (0.1+13.10.20130905-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
