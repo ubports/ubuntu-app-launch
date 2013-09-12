@@ -45,6 +45,7 @@ You should not modify them and expect any executing under Unity to change.
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include "helpers.h"
 
@@ -170,6 +171,123 @@ dir_for_each (const gchar * dirname, void(*func)(const gchar * dir, const gchar 
 	return;
 }
 
+/* Helpers to ensure we write nicely */
+static void 
+write_string (int          fd,
+              const gchar *string)
+{
+	int res; 
+	do
+		res = write (fd, string, strlen (string));
+	while (G_UNLIKELY (res == -1 && errno == EINTR));
+}
+
+/* Make NULLs fast and fun! */
+static void 
+write_null (int fd)
+{
+	int res; 
+	do
+		res = write (fd, "", 1);
+	while (G_UNLIKELY (res == -1 && errno == EINTR));
+}
+
+/* Child watcher */
+static gboolean
+apport_child_watch (GPid pid, gint status, gpointer user_data)
+{
+	g_main_loop_quit((GMainLoop *)user_data);
+	return FALSE;
+}
+
+static gboolean
+apport_child_timeout (gpointer user_data)
+{
+	g_warning("Recoverable Error Reporter Timeout");
+	g_main_loop_quit((GMainLoop *)user_data);
+	return FALSE;
+}
+
+
+/* Code to report an error, so we can start tracking how important this is */
+static void
+report_recoverable_error (const gchar * app_id, const gchar * originalicon, const gchar * iconpath)
+{
+	GError * error = NULL;
+	gint error_stdin = 0;
+	GPid pid = 0;
+	gchar * argv[2] = {
+		"/usr/share/apport/recoverable_problem",
+		NULL
+	};
+
+	g_spawn_async_with_pipes(NULL, /* cwd */
+		argv,
+		NULL, /* envp */
+		G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL | G_SPAWN_DO_NOT_REAP_CHILD,
+		NULL, NULL, /* child setup func */
+		&pid,
+		&error_stdin,
+		NULL, /* stdout */
+		NULL, /* stderr */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to report a recoverable error: %s", error->message);
+		g_error_free(error);
+	}
+
+	if (error_stdin != 0) {
+		write_string(error_stdin, "IconValue");
+		write_null(error_stdin);
+		write_string(error_stdin, originalicon);
+		write_null(error_stdin);
+
+		write_string(error_stdin, "AppID");
+		write_null(error_stdin);
+		write_string(error_stdin, app_id);
+		write_null(error_stdin);
+
+		write_string(error_stdin, "IconPath");
+		write_null(error_stdin);
+		write_string(error_stdin, iconpath);
+		write_null(error_stdin);
+
+		write_string(error_stdin, "DuplicateSignature");
+		write_null(error_stdin);
+		write_string(error_stdin, "icon-path-unhandled-");
+		write_string(error_stdin, app_id);
+		/* write_null(error_stdin); -- No final NULL */
+
+		close(error_stdin);
+	}
+
+	if (pid != 0) {
+		GSource * child_source, * timeout_source;
+		GMainContext * context = g_main_context_new();
+		GMainLoop * loop = g_main_loop_new(context, FALSE);
+
+		child_source = g_child_watch_source_new(pid);
+		g_source_attach(child_source, context);
+		g_source_set_callback(child_source, (GSourceFunc)apport_child_watch, loop, NULL);
+
+		timeout_source = g_timeout_source_new_seconds(5);
+		g_source_attach(timeout_source, context);
+		g_source_set_callback(timeout_source, apport_child_timeout, loop, NULL);
+
+		g_main_loop_run(loop);
+
+		g_source_destroy(timeout_source);
+		g_source_destroy(child_source);
+		g_main_loop_unref(loop);
+		g_main_context_unref(context);
+
+		g_spawn_close_pid(pid);
+	}
+
+	return;
+}
+
 /* Function to take the source Desktop file and build a new
    one with similar, but not the same data in it */
 static void
@@ -189,12 +307,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		return;
 	}
 
-	gchar * oldexec = desktop_to_exec(keyfile, from);
-	if (oldexec == NULL) {
-		g_key_file_unref(keyfile);
-		return;
-	}
-
+	/* Path Hanlding */
 	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
 		gchar * oldpath = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
 		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old-Path.", from, oldpath);
@@ -204,17 +317,45 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		g_free(oldpath);
 	}
 
-	gchar * path = g_build_filename(appdir, NULL);
-	g_key_file_set_string(keyfile, "Desktop Entry", "Path", path);
-	g_free(path);
+	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
+
+	/* Icon Handling */
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "Icon", NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", "Icon", NULL);
+		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
+
+		/* If the icon in the path exists, let's use that */
+		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
+			g_key_file_set_string(keyfile, "Desktop Entry", "Icon", iconpath);
+			/* Save the old value, because, debugging */
+			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Icon", originalicon);
+		} else {
+			/* So here we are, realizing all is lost.  Let's file a bug. */
+			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
+
+			report_recoverable_error(app_id, originalicon, iconpath);
+		}
+
+		g_free(iconpath);
+		g_free(originalicon);
+	}
+
+	/* Exec Handling */
+	gchar * oldexec = desktop_to_exec(keyfile, from);
+	if (oldexec == NULL) {
+		g_key_file_unref(keyfile);
+		return;
+	}
 
 	gchar * newexec = g_strdup_printf("aa-exec-click -p %s -- %s", app_id, oldexec);
 	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
 	g_free(newexec);
 	g_free(oldexec);
 
+	/* Adding an Application ID */
 	g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", app_id);
 
+	/* Output */
 	gsize datalen = 0;
 	gchar * data = g_key_file_to_data(keyfile, &datalen, &error);
 	g_key_file_unref(keyfile);
