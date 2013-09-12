@@ -192,6 +192,66 @@ write_null (int fd)
 	while (G_UNLIKELY (res == -1 && errno == EINTR));
 }
 
+/* Code to report an error, so we can start tracking how important this is */
+static void
+report_recoverable_error (const gchar * app_id, const gchar * originalicon, const gchar * iconpath)
+{
+	GError * error = NULL;
+	gint error_stdin = 0;
+	gchar * pid = g_strdup_printf("%d", getpid());
+	gchar * argv[4] = {
+		"/usr/share/apport/recoverable_problem",
+		"-p",
+		pid,
+		NULL
+	};
+
+	g_spawn_async_with_pipes(NULL, /* cwd */
+		argv,
+		NULL, /* envp */
+		G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+		NULL, NULL, /* child setup func */
+		NULL, /* pid */
+		&error_stdin,
+		NULL, /* stdout */
+		NULL, /* stderr */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to report a recoverable error: %s", error->message);
+		g_error_free(error);
+	}
+
+	if (error_stdin != 0) {
+		write_string(error_stdin, "IconValue");
+		write_null(error_stdin);
+		write_string(error_stdin, originalicon);
+		write_null(error_stdin);
+
+		write_string(error_stdin, "AppID");
+		write_null(error_stdin);
+		write_string(error_stdin, app_id);
+		write_null(error_stdin);
+
+		write_string(error_stdin, "IconPath");
+		write_null(error_stdin);
+		write_string(error_stdin, iconpath);
+		write_null(error_stdin);
+
+		write_string(error_stdin, "DuplicateSignature");
+		write_null(error_stdin);
+		write_string(error_stdin, "icon-path-unhandled-");
+		write_string(error_stdin, app_id);
+		/* write_null(error_stdin); -- No final NULL */
+
+		close(error_stdin);
+	}
+
+	g_free(pid);
+
+	return;
+}
+
 /* Function to take the source Desktop file and build a new
    one with similar, but not the same data in it */
 static void
@@ -237,58 +297,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
 
-			GError * error = NULL;
-			gint error_stdin = 0;
-			gchar * pid = g_strdup_printf("%d", getpid());
-			gchar * argv[4] = {
-				"/usr/share/apport/recoverable_problem",
-				"-p",
-				pid,
-				NULL
-			};
-
-			g_spawn_async_with_pipes(NULL, /* cwd */
-				argv,
-				NULL, /* envp */
-				G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
-				NULL, NULL, /* child setup func */
-				NULL, /* pid */
-				&error_stdin,
-				NULL, /* stdout */
-				NULL, /* stderr */
-				&error);
-
-			if (error != NULL) {
-				g_warning("Unable to report a recoverable error: %s", error->message);
-				g_error_free(error);
-			}
-
-			if (error_stdin != 0) {
-				write_string(error_stdin, "IconValue");
-				write_null(error_stdin);
-				write_string(error_stdin, originalicon);
-				write_null(error_stdin);
-
-				write_string(error_stdin, "AppID");
-				write_null(error_stdin);
-				write_string(error_stdin, app_id);
-				write_null(error_stdin);
-
-				write_string(error_stdin, "IconPath");
-				write_null(error_stdin);
-				write_string(error_stdin, iconpath);
-				write_null(error_stdin);
-
-				write_string(error_stdin, "DuplicateSignature");
-				write_null(error_stdin);
-				write_string(error_stdin, "icon-path-unhandled-");
-				write_string(error_stdin, app_id);
-				/* write_null(error_stdin); -- No final NULL */
-
-				close(error_stdin);
-			}
-
-			g_free(pid);
+			report_recoverable_error(app_id, originalicon, iconpath);
 		}
 
 		g_free(iconpath);
