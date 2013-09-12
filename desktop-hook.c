@@ -192,26 +192,41 @@ write_null (int fd)
 	while (G_UNLIKELY (res == -1 && errno == EINTR));
 }
 
+/* Child watcher */
+static gboolean
+apport_child_watch (GPid pid, gint status, gpointer user_data)
+{
+	g_main_loop_quit((GMainLoop *)user_data);
+	return FALSE;
+}
+
+static gboolean
+apport_child_timeout (gpointer user_data)
+{
+	g_warning("Recoverable Error Reporter Timeout");
+	g_main_loop_quit((GMainLoop *)user_data);
+	return FALSE;
+}
+
+
 /* Code to report an error, so we can start tracking how important this is */
 static void
 report_recoverable_error (const gchar * app_id, const gchar * originalicon, const gchar * iconpath)
 {
 	GError * error = NULL;
 	gint error_stdin = 0;
-	gchar * pid = g_strdup_printf("%d", getpid());
-	gchar * argv[4] = {
+	GPid pid = 0;
+	gchar * argv[2] = {
 		"/usr/share/apport/recoverable_problem",
-		"-p",
-		pid,
 		NULL
 	};
 
 	g_spawn_async_with_pipes(NULL, /* cwd */
 		argv,
 		NULL, /* envp */
-		G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
+		G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL | G_SPAWN_DO_NOT_REAP_CHILD,
 		NULL, NULL, /* child setup func */
-		NULL, /* pid */
+		&pid,
 		&error_stdin,
 		NULL, /* stdout */
 		NULL, /* stderr */
@@ -247,7 +262,28 @@ report_recoverable_error (const gchar * app_id, const gchar * originalicon, cons
 		close(error_stdin);
 	}
 
-	g_free(pid);
+	if (pid != 0) {
+		GSource * child_source, * timeout_source;
+		GMainContext * context = g_main_context_new();
+		GMainLoop * loop = g_main_loop_new(context, FALSE);
+
+		child_source = g_child_watch_source_new(pid);
+		g_source_attach(child_source, context);
+		g_source_set_callback(child_source, (GSourceFunc)apport_child_watch, loop, NULL);
+
+		timeout_source = g_timeout_source_new_seconds(5);
+		g_source_attach(timeout_source, context);
+		g_source_set_callback(timeout_source, apport_child_timeout, loop, NULL);
+
+		g_main_loop_run(loop);
+
+		g_source_destroy(timeout_source);
+		g_source_destroy(child_source);
+		g_main_loop_unref(loop);
+		g_main_context_unref(context);
+
+		g_spawn_close_pid(pid);
+	}
 
 	return;
 }
