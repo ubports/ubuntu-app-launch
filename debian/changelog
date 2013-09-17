@@ -1,3 +1,13 @@
+upstart-app-launch (0.1+13.10.20130917.1-0ubuntu1) saucy; urgency=low
+
+  [ Sebastien Bacher ]
+  * typo fix in one of the warning strings.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 54
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 17 Sep 2013 22:03:45 +0000
+
 upstart-app-launch (0.1+13.10.20130912-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
