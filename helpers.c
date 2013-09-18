@@ -314,7 +314,11 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 	}
 
 	*single_uri = g_strdup(uri_list);
-	g_utf8_strchr(*single_uri, -1, ' ')[0] = '\0';
+	gchar * first_space = g_utf8_strchr(*single_uri, -1, ' ');
+	
+	if (first_space != NULL) {
+		first_space[0] = '\0';
+	}
 
 	return;
 }
