@@ -13,7 +13,7 @@ env APP_URIS
 pre-start exec @pkglibexecdir@/desktop-exec "${APP_ID}" "${APP_URIS}"
 
 script
-	if [ -z $DISPLAY ] && [ ! -e $HOME/.display-mir ]; then
+	if pgrep -u system surfaceflinger ; then
 		APP_EXEC="$APP_EXEC --desktop_file_hint=/usr/share/applications/$APP_ID.desktop"
 	fi
 

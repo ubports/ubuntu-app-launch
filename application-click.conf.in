@@ -19,7 +19,7 @@ env APP_EXEC="echo Error"
 pre-start exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
 
 script
-	if [ -z $DISPLAY ] && [ ! -e $HOME/.display-mir ]; then
+	if pgrep -u system surfaceflinger ; then
 		APP_EXEC="$APP_EXEC --desktop_file_hint=$HOME/.local/share/applications/$APP_ID.desktop"
 	fi
 
