@@ -22,6 +22,10 @@ script
 	if [ ! -z $CLICK_DIR ] && [ -d $CLICK_DIR ] ; then
 		initctl emit application-click-start APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"
 	else
-		initctl emit application-legacy-start APP_ID="${APP_ID}" INSTANCE_ID=`date -u +%s` APP_URIS="${APP_URIS}"
+		if @pkglibexecdir@/desktop-single $APP_ID ; then
+			initctl emit application-legacy-start APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"
+		else
+			initctl emit application-legacy-start APP_ID="${APP_ID}" INSTANCE_ID=`date -u +%s` APP_URIS="${APP_URIS}"
+		fi
 	fi
 end script
