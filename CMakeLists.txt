@@ -140,12 +140,7 @@ install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 # application.conf
 ####################
 
-install(FILES application.conf DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-
-####################
-# application.conf
-####################
-
+configure_file("application.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application.conf" @ONLY)
 install(FILES application.conf DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
 add_test(application.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_SOURCE_DIR}/application.conf")
 
