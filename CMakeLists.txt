@@ -128,6 +128,15 @@ target_link_libraries(desktop-hook helpers)
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# desktop-single
+####################
+
+add_executable(desktop-single desktop-single.c)
+set_target_properties(desktop-single PROPERTIES OUTPUT_NAME "desktop-single")
+target_link_libraries(desktop-single helpers)
+install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # zg-report-app
 ####################
 
