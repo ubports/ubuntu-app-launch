@@ -16,9 +16,20 @@ apparmor switch ${APP_ID}
 
 env APP_EXEC="echo Error"
 
-pre-start exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
+pre-start script
+	if pgrep -u system surfaceflinger ; then
+		initctl set-env USING_SURFACE_FLINGER=1
+	fi
 
+	exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
+end script
+
+# Remember, everything in this block is confined
 script
+	if [ "x$USING_SURFACE_FLINGER" = "x1" ] ; then
+		APP_EXEC="$APP_EXEC --desktop_file_hint=$HOME/.local/share/applications/$APP_ID.desktop"
+	fi
+
 	cd ${APP_DIR}
 
 	# Should be done immediately before exec so that other commands can't

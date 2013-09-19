@@ -314,7 +314,11 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 	}
 
 	*single_uri = g_strdup(uri_list);
-	g_utf8_strchr(*single_uri, -1, ' ')[0] = '\0';
+	gchar * first_space = g_utf8_strchr(*single_uri, -1, ' ');
+	
+	if (first_space != NULL) {
+		first_space[0] = '\0';
+	}
 
 	return;
 }
@@ -439,7 +443,7 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 		}
 	}
 
-	gchar * output = g_strjoinv(" ", (gchar **)outarray->data);
+	gchar * output = g_strjoinv(NULL, (gchar **)outarray->data);
 	g_array_free(outarray, TRUE);
 
 	g_free(single_uri);
