@@ -449,3 +449,70 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 
 	return output;
 }
+
+/* Check to make sure we have the sections and keys we want */
+static gboolean
+verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
+{
+	if (inkeyfile == NULL) return FALSE;
+
+	if (!g_key_file_has_group(inkeyfile, "Desktop Entry")) {
+		g_warning("Desktop file '%s' is missing the 'Desktop Entry' group", desktop);
+		return FALSE;
+	}
+
+	if (!g_key_file_has_key(inkeyfile, "Desktop Entry", "Exec", NULL)) {
+		g_warning("Desktop file '%s' is missing the 'Exec' key", desktop);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+/* Try to find a desktop file in a particular data directory */
+static GKeyFile *
+try_dir (const char * dir, const gchar * desktop)
+{
+	gchar * fullpath = g_build_filename(dir, "applications", desktop, NULL);
+	GKeyFile * keyfile = g_key_file_new();
+
+	/* NOTE: Leaving off the error here as we'll get a bunch of them,
+	   so individuals aren't really useful */
+	gboolean loaded = g_key_file_load_from_file(keyfile, fullpath, G_KEY_FILE_NONE, NULL);
+
+	g_free(fullpath);
+
+	if (!loaded) {
+		g_key_file_free(keyfile);
+		return NULL;
+	}
+
+	if (!verify_keyfile(keyfile, desktop)) {
+		g_key_file_free(keyfile);
+		return NULL;
+	}
+
+	return keyfile;
+}
+
+/* Find the keyfile that we need for a particular AppID and return it.
+   Or NULL if we can't find it. */
+GKeyFile *
+keyfile_for_appid (const gchar * appid)
+{
+	gchar * desktop = g_strdup_printf("%s.desktop", appid);
+
+	const char * const * data_dirs = g_get_system_data_dirs();
+	GKeyFile * keyfile = NULL;
+	int i;
+
+	keyfile = try_dir(g_get_user_data_dir(), desktop);
+
+	for (i = 0; data_dirs[i] != NULL && keyfile == NULL; i++) {
+		keyfile = try_dir(data_dirs[i], desktop);
+	}
+
+	g_free(desktop);
+
+	return keyfile;
+}
