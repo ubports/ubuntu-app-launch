@@ -24,6 +24,7 @@ pre-start script
 	exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
 end script
 
+# Remember, everything in this block is confined
 script
 	if [ "x$USING_SURFACE_FLINGER" = "x1" ] ; then
 		APP_EXEC="$APP_EXEC --desktop_file_hint=$HOME/.local/share/applications/$APP_ID.desktop"
