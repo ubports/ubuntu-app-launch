@@ -20,18 +20,18 @@ script
 	fi
 
 	if [ ! -z $CLICK_DIR ] && [ -d $CLICK_DIR ] ; then
-		if ! initctl emit application-click-start APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"; then
+		if ! start application-click APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"; then
 			stop application-click APP_ID="${APP_ID}"
-			initctl emit application-click-start APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"
+			start application-click APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"
 		fi
 	else
 		if @pkglibexecdir@/desktop-single $APP_ID ; then
-			if ! initctl emit application-legacy-start APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}" ; then
+			if ! start application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}" ; then
 				stop application-legacy APP_ID="${APP_ID}" INSTANCE_ID=""
-				initctl emit application-legacy-start APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}"
+				start application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}"
 			fi
 		else
-			initctl emit application-legacy-start APP_ID="${APP_ID}" INSTANCE_ID=`date -u +%s` APP_URIS="${APP_URIS}"
+			start application-legacy APP_ID="${APP_ID}" INSTANCE_ID=`date -u +%s` APP_URIS="${APP_URIS}"
 		fi
 	fi
 end script
