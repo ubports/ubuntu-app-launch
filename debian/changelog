@@ -1,3 +1,18 @@
+upstart-app-launch (0.1+13.10.20130919.3-0ubuntu1) saucy; urgency=low
+
+  [ Loïc Minier ]
+  * Fix LP #1227632 by directly joining the components of the Exec line
+    split on % instead of joining them with spaces. (LP: #1227632)
+
+  [ Ted Gould ]
+  * Only split the URIs if there are more than one.
+  * Try to deduce if we're on Surface Flinger.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 58
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 19 Sep 2013 14:03:55 +0000
+
 upstart-app-launch (0.1+13.10.20130917.1-0ubuntu1) saucy; urgency=low
 
   [ Sebastien Bacher ]
