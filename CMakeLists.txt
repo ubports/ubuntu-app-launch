@@ -128,6 +128,15 @@ target_link_libraries(desktop-hook helpers)
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# desktop-single
+####################
+
+add_executable(desktop-single desktop-single.c)
+set_target_properties(desktop-single PROPERTIES OUTPUT_NAME "desktop-single")
+target_link_libraries(desktop-single helpers)
+install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # zg-report-app
 ####################
 
@@ -140,14 +149,9 @@ install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 # application.conf
 ####################
 
-install(FILES application.conf DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-
-####################
-# application.conf
-####################
-
-install(FILES application.conf DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_SOURCE_DIR}/application.conf")
+configure_file("application.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application.conf" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
+add_test(application.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application.conf")
 
 ####################
 # application-legacy.conf

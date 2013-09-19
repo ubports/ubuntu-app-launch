@@ -17,18 +17,14 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <unistd.h>
-#include <string.h>
-#include <glib.h>
-#include <gio/gio.h>
-
 #include "helpers.h"
 
 int
 main (int argc, char * argv[])
 {
-	if (argc != 2 && argc != 3) {
-		g_error("Should be called as: %s <app_id> [uri list]", argv[0]);
+	/* Nothing is single instance yet */
+	if (argc != 2) {
+		g_error("Should be called as: %s <app_id>", argv[0]);
 		return 1;
 	}
 
@@ -39,24 +35,26 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	gchar * execline = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
-	g_return_val_if_fail(execline != NULL, 1);
+	gboolean singleinstance = FALSE;
 
-	gchar * codeexec = desktop_exec_parse(execline, argc == 3 ? argv[2] : NULL);
-	if (codeexec != NULL) {
-		g_free(execline);
-		execline = codeexec;
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", NULL)) {
+		GError * error = NULL;
+
+		singleinstance = g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", &error);
+
+		if (error != NULL) {
+			g_warning("Unable to get single instance key for app '%s': %s", argv[1], error->message);
+			g_error_free(error);
+			/* Ensure that if we got an error, we assume standard case */
+			singleinstance = FALSE;
+		}
 	}
-
-	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
-	if (apparmor != NULL) {
-		set_upstart_variable("APP_EXEC_POLICY", apparmor);
-	}
-
-	set_upstart_variable("APP_EXEC", execline);
-
+	
 	g_key_file_free(keyfile);
-	g_free(execline);
 
-	return 0;
+	if (singleinstance) {
+		return 0;
+	} else {
+		return 1;
+	}
 }
