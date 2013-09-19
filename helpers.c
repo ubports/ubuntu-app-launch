@@ -443,7 +443,7 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 		}
 	}
 
-	gchar * output = g_strjoinv(" ", (gchar **)outarray->data);
+	gchar * output = g_strjoinv(NULL, (gchar **)outarray->data);
 	g_array_free(outarray, TRUE);
 
 	g_free(single_uri);
