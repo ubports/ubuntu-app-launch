@@ -101,17 +101,44 @@ app_id_to_dbus_path (void)
 	return;
 }
 
+/* Finish the send and decrement the counter */
+static void
+send_open_cb (GObject * object, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+
+	g_dbus_connection_call_finish(G_DBUS_CONNECTION(object), res, &error);
+
+	if (error != NULL) {
+		/* Mostly just to free the error, but printing for debugging */
+		g_debug("Unable to send Open: %s", error->message);
+		g_error_free(error);
+	}
+
+	connection_count_dec();
+	return;
+}
+
 /* Sends the Open message to the connection with the URIs we were given */
 static void
-contact_app (const gchar * connection)
+contact_app (GDBusConnection * bus, const gchar * connection)
 {
 	parse_uris();
 	app_id_to_dbus_path();
 
 	/* Using the FD.o Application interface */
+	g_dbus_connection_call(bus,
+		connection,
+		dbus_path,
+		"org.freedesktop.Application",
+		"Open",
+		output_uris,
+		NULL,
+		G_DBUS_CALL_FLAGS_NONE,
+		-1,
+		NULL,
+		send_open_cb, NULL);
 
-
-	connection_count_dec();
 	return;
 }
 
@@ -142,7 +169,7 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 
 	if (pid == app_pid) {
 		/* Trying to send a message to the connection */
-		contact_app(connection);
+		contact_app(G_DBUS_CONNECTION(object), connection);
 	} else {
 		/* See if we can quit now */
 		connection_count_dec();
