@@ -22,8 +22,8 @@
 int
 main (int argc, char * argv[])
 {
-	if (argc != 2 && argc != 3) {
-		g_error("Should be called as: %s <app_id> [uri list]", argv[0]);
+	if (argc != 3) {
+		g_error("Should be called as: %s <app_id> <uri list>", argv[0]);
 		return 1;
 	}
 
