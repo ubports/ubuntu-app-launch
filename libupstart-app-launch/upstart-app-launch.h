@@ -105,6 +105,19 @@ gboolean   upstart_app_launch_observer_add_app_stop     (upstart_app_launch_app_
                                                          gpointer                          user_data);
 
 /**
+ * upstart_app_launch_observer_add_window_focus:
+ * @observer: Callback when an application is started for the second time
+ * @user_data: (allow none): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an app gets called
+ * that is already running, so we request it to be focused again.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_add_window_focus (upstart_app_launch_app_observer_t observer,
+                                                         gpointer                          user_data);
+
+/**
  * upstart_app_launch_observer_add_app_failed:
  * @observer: Callback when an application fails
  * @user_data: (allow none): Data to pass to the observer
@@ -141,6 +154,19 @@ gboolean   upstart_app_launch_observer_delete_app_start (upstart_app_launch_app_
  */
 gboolean   upstart_app_launch_observer_delete_app_stop  (upstart_app_launch_app_observer_t observer,
                                                          gpointer                          user_data);
+
+/**
+ * upstart_app_launch_observer_delete_window_focus:
+ * @observer: Callback to remove
+ * @user_data: (allow none): Data that was passed to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_delete_window_focus (upstart_app_launch_app_observer_t observer,
+                                                            gpointer                          user_data);
 
 /**
  * upstart_app_launch_observer_delete_app_failed:
