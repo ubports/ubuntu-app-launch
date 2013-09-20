@@ -36,6 +36,16 @@ connection_count_dec (void)
 	return;
 }
 
+/* Sends the Open message to the connection with the URIs we were given */
+static void
+contact_app (const gchar * connection)
+{
+	connection_count_dec();
+	return;
+}
+
+/* Gets the PID for a connection, and if it matches the one we're looking
+   for then it tries to send a message to that connection */
 static void
 get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 {
@@ -60,13 +70,14 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 	g_variant_unref(vpid);
 
 	if (pid == app_pid) {
-		g_debug("Connection: %s", connection);
+		/* Trying to send a message to the connection */
+		contact_app(connection);
+	} else {
+		/* See if we can quit now */
+		connection_count_dec();
 	}
 
 	g_free(connection);
-
-	/* See if we can quit now */
-	connection_count_dec();
 
 	return;
 }
