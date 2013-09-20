@@ -19,13 +19,16 @@
 
 #include <gio/gio.h>
 #include "libupstart-app-launch/upstart-app-launch.h"
+#include "helpers.h"
 
 /* Globals */
 GPid app_pid = 0;
 GMainLoop * mainloop = NULL;
 guint connections_open = 0;
+const gchar * appid = NULL;
 const gchar * input_uris = NULL;
 GVariant * output_uris = NULL;
+gchar * dbus_path = NULL;
 
 /* Lower the connection count and process if it gets to zero */
 static void
@@ -67,11 +70,46 @@ parse_uris (void)
 	return;
 }
 
+/* Finds us our dbus path to use.  Basically this is the name
+   of the application with dots replaced by / and a / tacted on
+   the front.  This is recommended here:
+
+   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#dbus   
+*/
+static void
+app_id_to_dbus_path (void)
+{
+	if (dbus_path != NULL) {
+		return;
+	}
+
+	/* If it's an app id, use the application name, otherwise
+	   assume legacy and it's the desktop file name */
+	gchar * application = NULL;
+	if (!app_id_to_triplet(appid, NULL, &application, NULL)) {
+		application = g_strdup(appid);
+	}
+
+	gchar * dot = g_utf8_strchr(application, -1, '.');
+	while (dot != NULL) {
+		dot[0] = '/';
+		dot = g_utf8_strchr(application, -1, '.');
+	}
+
+	dbus_path = g_strdup_printf("/%s", application);
+	g_free(application);
+	return;
+}
+
 /* Sends the Open message to the connection with the URIs we were given */
 static void
 contact_app (const gchar * connection)
 {
 	parse_uris();
+	app_id_to_dbus_path();
+
+	/* Using the FD.o Application interface */
+
 
 	connection_count_dec();
 	return;
@@ -123,10 +161,11 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	appid = argv[1];
 	input_uris = argv[2];
 
 	/* First figure out what we're looking for (and if there is something to look for) */
-	app_pid = upstart_app_launch_get_primary_pid(argv[1]);
+	app_pid = upstart_app_launch_get_primary_pid(appid);
 	if (app_pid == 0) {
 		g_warning("Unable to find pid for app id '%s'", argv[1]);
 		return 1;
@@ -205,6 +244,7 @@ main (int argc, char * argv[])
 
 	g_main_loop_unref(mainloop);
 	g_object_unref(session);
+	g_free(dbus_path);
 
 	return 0;
 }
