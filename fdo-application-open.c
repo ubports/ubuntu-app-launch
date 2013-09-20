@@ -76,6 +76,7 @@ parse_uris (void)
 	g_variant_builder_add_value(&tuple, platform);
 
 	app_data = g_variant_builder_end(&tuple);
+	g_variant_ref_sink(app_data);
 
 	return;
 }
