@@ -150,6 +150,8 @@ contact_app (GDBusConnection * bus, const gchar * connection)
 		NULL,
 		send_open_cb, NULL);
 
+	g_debug("Sending Open request to: %s", connection);
+
 	return;
 }
 
