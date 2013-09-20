@@ -65,6 +65,9 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 
 	g_free(connection);
 
+	/* See if we can quit now */
+	connection_count_dec();
+
 	return;
 }
 
