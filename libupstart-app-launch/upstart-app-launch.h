@@ -29,11 +29,29 @@ extern "C" {
 #endif
 
 /**
+ * upstart_app_launch_app_failed_t:
+ *
+ * Types of failure that we report.
+ */
+typedef enum _upstart_app_launch_app_failed_t upstart_app_launch_app_failed_t;
+enum _upstart_app_launch_app_failed_t {
+	UPSTART_APP_LAUNCH_APP_FAILED_CRASH,
+	UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE,
+};
+
+/**
  * upstart_app_launch_app_observer_t:
  *
  * Function prototype for application observers.
  */
 typedef void (*upstart_app_launch_app_observer_t) (const gchar * appid, gpointer user_data);
+
+/**
+ * upstart_app_launch_app_failed_observer_t:
+ *
+ * Function prototype for application failed observers.
+ */
+typedef void (*upstart_app_launch_app_failed_observer_t) (const gchar * appid, upstart_app_launch_app_failed_t failure_type, gpointer user_data);
 
 
 /**
@@ -87,6 +105,19 @@ gboolean   upstart_app_launch_observer_add_app_stop     (upstart_app_launch_app_
                                                          gpointer                          user_data);
 
 /**
+ * upstart_app_launch_observer_add_app_failed:
+ * @observer: Callback when an application fails
+ * @user_data: (allow none): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * stops via failure.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_add_app_failed   (upstart_app_launch_app_failed_observer_t observer,
+                                                         gpointer                                 user_data);
+
+/**
  * upstart_app_launch_observer_delete_app_start:
  * @observer: Callback to remove
  * @user_data: (allow none): Data that was passed to the observer
@@ -111,6 +142,18 @@ gboolean   upstart_app_launch_observer_delete_app_start (upstart_app_launch_app_
 gboolean   upstart_app_launch_observer_delete_app_stop  (upstart_app_launch_app_observer_t observer,
                                                          gpointer                          user_data);
 
+/**
+ * upstart_app_launch_observer_delete_app_failed:
+ * @observer: Callback to remove
+ * @user_data: (allow none): Data to pass to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_observer_t observer,
+                                                          gpointer                                 user_data);
 /**
  * upstart_app_launch_list_running_apps:
  *
