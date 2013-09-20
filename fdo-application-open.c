@@ -24,6 +24,8 @@
 GPid app_pid = 0;
 GMainLoop * mainloop = NULL;
 guint connections_open = 0;
+const gchar * input_uris = NULL;
+GVariant * output_uris = NULL;
 
 /* Lower the connection count and process if it gets to zero */
 static void
@@ -36,10 +38,41 @@ connection_count_dec (void)
 	return;
 }
 
+/* Turn the input string into something we can send to apps */
+static void
+parse_uris (void)
+{
+	if (output_uris != NULL) {
+		/* Already done */
+		return;
+	}
+
+	gchar ** uri_split = g_strsplit(input_uris, " ", 0);
+	if (uri_split[0] == NULL) {
+		g_free(uri_split);
+		output_uris = g_variant_new_array(G_VARIANT_TYPE_STRING, NULL, 0);
+		return;
+	}
+	
+	GVariantBuilder builder;
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
+
+	int i;
+	for (i = 0; uri_split[i] != NULL; i++) {
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(uri_split[i]));
+	}
+	g_free(uri_split);
+
+	output_uris = g_variant_builder_end(&builder);
+	return;
+}
+
 /* Sends the Open message to the connection with the URIs we were given */
 static void
 contact_app (const gchar * connection)
 {
+	parse_uris();
+
 	connection_count_dec();
 	return;
 }
@@ -89,6 +122,8 @@ main (int argc, char * argv[])
 		g_error("Should be called as: %s <app_id> <uri list>", argv[0]);
 		return 1;
 	}
+
+	input_uris = argv[2];
 
 	/* First figure out what we're looking for (and if there is something to look for) */
 	app_pid = upstart_app_launch_get_primary_pid(argv[1]);
@@ -162,6 +197,10 @@ main (int argc, char * argv[])
 
 	if (connections_open != 0) {
 		g_main_loop_run(mainloop);
+	}
+
+	if (output_uris != NULL) {
+		g_variant_unref(output_uris);
 	}
 
 	g_main_loop_unref(mainloop);
