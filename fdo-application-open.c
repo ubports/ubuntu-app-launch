@@ -27,7 +27,7 @@ GMainLoop * mainloop = NULL;
 guint connections_open = 0;
 const gchar * appid = NULL;
 const gchar * input_uris = NULL;
-GVariant * output_uris = NULL;
+GVariant * app_data = NULL;
 gchar * dbus_path = NULL;
 
 /* Lower the connection count and process if it gets to zero */
@@ -45,28 +45,38 @@ connection_count_dec (void)
 static void
 parse_uris (void)
 {
-	if (output_uris != NULL) {
+	if (app_data != NULL) {
 		/* Already done */
 		return;
 	}
 
+	GVariant * uris = NULL;
 	gchar ** uri_split = g_strsplit(input_uris, " ", 0);
 	if (uri_split[0] == NULL) {
 		g_free(uri_split);
-		output_uris = g_variant_new_array(G_VARIANT_TYPE_STRING, NULL, 0);
-		return;
-	}
-	
-	GVariantBuilder builder;
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
+		uris = g_variant_new_array(G_VARIANT_TYPE_STRING, NULL, 0);
+	} else {
+		GVariantBuilder builder;
+		g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
 
-	int i;
-	for (i = 0; uri_split[i] != NULL; i++) {
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(uri_split[i]));
-	}
-	g_free(uri_split);
+		int i;
+		for (i = 0; uri_split[i] != NULL; i++) {
+			g_variant_builder_add_value(&builder, g_variant_new_take_string(uri_split[i]));
+		}
+		g_free(uri_split);
 
-	output_uris = g_variant_builder_end(&builder);
+		uris = g_variant_builder_end(&builder);
+	}
+
+	GVariant * platform = g_variant_new_array(G_VARIANT_TYPE("{sv}"), NULL, 0);
+
+	GVariantBuilder tuple;
+	g_variant_builder_init(&tuple, G_VARIANT_TYPE_TUPLE);
+	g_variant_builder_add_value(&tuple, uris);
+	g_variant_builder_add_value(&tuple, platform);
+
+	app_data = g_variant_builder_end(&tuple);
+
 	return;
 }
 
@@ -132,7 +142,7 @@ contact_app (GDBusConnection * bus, const gchar * connection)
 		dbus_path,
 		"org.freedesktop.Application",
 		"Open",
-		output_uris,
+		app_data,
 		NULL,
 		G_DBUS_CALL_FLAGS_NONE,
 		-1,
@@ -265,8 +275,8 @@ main (int argc, char * argv[])
 		g_main_loop_run(mainloop);
 	}
 
-	if (output_uris != NULL) {
-		g_variant_unref(output_uris);
+	if (app_data != NULL) {
+		g_variant_unref(app_data);
 	}
 
 	g_main_loop_unref(mainloop);
