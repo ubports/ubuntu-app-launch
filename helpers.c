@@ -298,7 +298,10 @@ build_file_list (const gchar * uri_list)
 
 	g_strfreev(uri_split);
 
-	return filelist;
+	gchar * qfilelist = g_shell_quote(filelist);
+	g_free(filelist);
+
+	return qfilelist;
 }
 
 /* Make sure we have the single URI variable */
@@ -313,19 +316,22 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 		return;
 	}
 
-	*single_uri = g_strdup(uri_list);
-	gchar * first_space = g_utf8_strchr(*single_uri, -1, ' ');
+	gchar * first_uri = g_strdup(uri_list);
+	gchar * first_space = g_utf8_strchr(first_uri, -1, ' ');
 	
 	if (first_space != NULL) {
 		first_space[0] = '\0';
 	}
+
+	*single_uri = g_shell_quote(first_uri);
+	g_free(first_uri);
 
 	return;
 }
 
 /* Make sure we have a single file variable */
 static inline void
-ensure_singlefile (gchar ** single_file, gchar ** single_uri, const gchar * uri_list)
+ensure_singlefile (gchar ** single_file, const gchar * uri_list)
 {
 	if (uri_list == NULL) {
 		return;
@@ -335,10 +341,21 @@ ensure_singlefile (gchar ** single_file, gchar ** single_uri, const gchar * uri_
 		return;
 	}
 
-	ensure_singleuri(single_uri, uri_list);
+	gchar * first_uri = g_strdup(uri_list);
+	gchar * first_space = g_utf8_strchr(first_uri, -1, ' ');
+	
+	if (first_space != NULL) {
+		first_space[0] = '\0';
+	}
 
-	if (single_uri != NULL) {
-		*single_file = uri2file(*single_uri);
+	gchar * first_file = NULL;
+	if (first_uri != NULL) {
+		first_file = uri2file(first_uri);
+	}
+
+	if (first_file != NULL) {
+		*single_file = g_shell_quote(first_file);
+		g_free(first_file);
 	}
 
 	return;
@@ -364,6 +381,7 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 	gchar * single_uri = NULL;
 	gchar * single_file = NULL;
 	gchar * file_list = NULL;
+	gchar * uri_qlist = NULL;
 	gboolean previous_percent = FALSE;
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
 	g_array_append_val(outarray, execsplit[0]);
@@ -397,7 +415,7 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'f':
-			ensure_singlefile(&single_file, &single_uri, uri_list);
+			ensure_singlefile(&single_file, uri_list);
 
 			if (single_file != NULL) {
 				g_array_append_val(outarray, single_file);
@@ -422,8 +440,11 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'U':
-			if (uri_list != NULL) {
-				g_array_append_val(outarray, uri_list);
+			if (uri_qlist == NULL && uri_list != NULL) {
+				uri_qlist = g_shell_quote(uri_list);
+			}
+			if (uri_qlist != NULL) {
+				g_array_append_val(outarray, uri_qlist);
 			}
 			g_array_append_val(outarray, skipchar);
 			break;
@@ -449,6 +470,7 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 	g_free(single_uri);
 	g_free(single_file);
 	g_free(file_list);
+	g_free(uri_qlist);
 	g_strfreev(execsplit);
 
 	return output;
