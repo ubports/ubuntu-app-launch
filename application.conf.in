@@ -21,16 +21,12 @@ script
 
 	if [ ! -z $CLICK_DIR ] && [ -d $CLICK_DIR ] ; then
 		if ! start application-click APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"; then
-			# TODO: This is pure evil.
-			stop application-click APP_ID="${APP_ID}"
-			start application-click APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"
+			@pkglibexecdir@/fdo-application-open "${APP_ID}" "${APP_URIS}"
 		fi
 	else
 		if @pkglibexecdir@/desktop-single $APP_ID ; then
 			if ! start application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}" ; then
-				# TODO: This is a little less, but still mostly evil.
-				stop application-legacy APP_ID="${APP_ID}" INSTANCE_ID=""
-				start application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}"
+				@pkglibexecdir@/fdo-application-open "${APP_ID}" "${APP_URIS}"
 			fi
 		else
 			start application-legacy APP_ID="${APP_ID}" INSTANCE_ID=`date -u +%s` APP_URIS="${APP_URIS}"
