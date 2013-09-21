@@ -269,6 +269,30 @@ uri2file (const gchar * uri)
 	return retval;
 }
 
+/* Take a string and escape it for the shell */
+static gchar *
+string_shell_escape (const gchar * instr)
+{
+	GString * outstr = g_string_new("");
+	const gchar * pntr = NULL;
+
+	for (pntr = instr; pntr != NULL; pntr = g_utf8_next_char(pntr)) {
+		gunichar thischar = g_utf8_get_char(pntr);
+
+		/* Are we a normal ascii character */
+		if ((thischar >= 48 && thischar <= 57) || /* 0-9 */
+			(thischar >= 65 && thischar <= 90) || /* A-Z */
+			(thischar >= 97 && thischar <= 122)) { /* a-z */
+			g_string_append_unichar(outstr, thischar);
+		} else {
+			/* Let's escape this mofo */
+			g_string_append_printf(outstr, "\\U%4X", thischar);
+		}
+	}
+
+	return g_string_free(outstr, FALSE);
+}
+
 /* free a string in an array */
 static void
 free_string (gpointer value)
@@ -298,7 +322,7 @@ build_file_list (const gchar * uri_list)
 
 	g_strfreev(uri_split);
 
-	gchar * qfilelist = g_shell_quote(filelist);
+	gchar * qfilelist = string_shell_escape(filelist);
 	g_free(filelist);
 
 	return qfilelist;
@@ -323,7 +347,7 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 		first_space[0] = '\0';
 	}
 
-	*single_uri = g_shell_quote(first_uri);
+	*single_uri = string_shell_escape(first_uri);
 	g_free(first_uri);
 
 	return;
@@ -354,7 +378,7 @@ ensure_singlefile (gchar ** single_file, const gchar * uri_list)
 	}
 
 	if (first_file != NULL) {
-		*single_file = g_shell_quote(first_file);
+		*single_file = string_shell_escape(first_file);
 		g_free(first_file);
 	}
 
@@ -441,7 +465,7 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 			break;
 		case 'U':
 			if (uri_qlist == NULL && uri_list != NULL) {
-				uri_qlist = g_shell_quote(uri_list);
+				uri_qlist = string_shell_escape(uri_list);
 			}
 			if (uri_qlist != NULL) {
 				g_array_append_val(outarray, uri_qlist);
