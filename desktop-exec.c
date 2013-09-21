@@ -18,6 +18,7 @@
  */
 
 #include <unistd.h>
+#include <errno.h>
 #include <string.h>
 #include <glib.h>
 #include <gio/gio.h>
@@ -47,12 +48,13 @@ main (int argc, char * argv[])
 	g_free(execline);
 
 	if (splitexec == NULL || splitexec[0] == NULL) {
+		g_debug("No exec line");
 		g_key_file_free(keyfile);
 		g_free(splitexec);
 		return 1;
 	}
 
-	GArray * newargv = g_array_sized_new(TRUE, FALSE, 10, sizeof(gchar *));
+	GArray * newargv = g_array_new(TRUE, FALSE, sizeof(gchar *));
 	int i;
 	for (i = 0; splitexec[i] != NULL; i++) {
 		gchar * execinserted = desktop_exec_parse(splitexec[i], argc == 3 ? argv[2] : NULL);
@@ -62,6 +64,7 @@ main (int argc, char * argv[])
 
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
 	if (apparmor != NULL) {
+		g_debug("Changing to app armor profile '%s' on exec", apparmor);
 		aa_change_onexec(apparmor);
 		g_free(apparmor);
 	}
@@ -72,7 +75,9 @@ main (int argc, char * argv[])
 
 	int execret = execvp(nargv[0], nargv);
 
-	g_strfreev(nargv);
+	if (execret != 0) {
+		g_warning("Unable to exec: %s", strerror(errno));
+	}
 
 	return execret;
 }
