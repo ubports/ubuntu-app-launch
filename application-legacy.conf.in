@@ -10,19 +10,13 @@ env APP_EXEC="echo Error"
 env APP_EXEC_POLICY
 env APP_URIS
 
-pre-start exec @pkglibexecdir@/desktop-exec "${APP_ID}" "${APP_URIS}"
-
-script
+pre-start script
 	if pgrep -u system surfaceflinger ; then
-		APP_EXEC="$APP_EXEC --desktop_file_hint=/usr/share/applications/$APP_ID.desktop"
-	fi
-
-	if [ -z $APP_EXEC_POLICY ]; then
-		exec $APP_EXEC
-	else
-		exec aa-exec-click -p "$APP_EXEC_POLICY" -- $APP_EXEC
+		initctl set-env USING_SURFACE_FLINGER=1
 	fi
 end script
+
+exec @pkglibexecdir@/desktop-exec "${APP_ID}" "${APP_URIS}"
 
 post-start exec @pkglibexecdir@/zg-report-app open "application://${APP_ID}.desktop"
 post-stop exec @pkglibexecdir@/zg-report-app close "application://${APP_ID}.desktop"
