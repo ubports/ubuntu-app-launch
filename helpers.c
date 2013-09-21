@@ -273,20 +273,26 @@ uri2file (const gchar * uri)
 static gchar *
 string_shell_escape (const gchar * instr)
 {
+	if (instr == NULL) {
+		return NULL;
+	}
+
 	GString * outstr = g_string_new("");
 	const gchar * pntr = NULL;
 
-	for (pntr = instr; pntr != NULL; pntr = g_utf8_next_char(pntr)) {
+	for (pntr = instr; pntr[0] != '\0'; pntr = g_utf8_next_char(pntr)) {
 		gunichar thischar = g_utf8_get_char(pntr);
 
 		/* Are we a normal ascii character */
 		if ((thischar >= 48 && thischar <= 57) || /* 0-9 */
+			(thischar >= 43 && thischar <= 47) || /* +,-./ */
+			thischar == 58 || /* : */
 			(thischar >= 65 && thischar <= 90) || /* A-Z */
 			(thischar >= 97 && thischar <= 122)) { /* a-z */
 			g_string_append_unichar(outstr, thischar);
 		} else {
 			/* Let's escape this mofo */
-			g_string_append_printf(outstr, "\\U%4X", thischar);
+			g_string_append_printf(outstr, "\\U%04X", thischar);
 		}
 	}
 
