@@ -44,6 +44,9 @@ include_directories(${ZEITGEIST_INCLUDE_DIRS})
 pkg_check_modules(LIBUPSTART REQUIRED libupstart libnih libnih-dbus dbus-1)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
 
+pkg_check_modules(APPARMOR REQUIRED libapparmor)
+include_directories(${APPARMOR_INCLUDE_DIRS})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
@@ -106,7 +109,7 @@ install(TARGETS upstart-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDI
 
 add_executable(desktop-exec desktop-exec.c)
 set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
-target_link_libraries(desktop-exec helpers)
+target_link_libraries(desktop-exec helpers ${APPARMOR_LIBRARIES})
 install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
