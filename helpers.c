@@ -280,8 +280,8 @@ string_shell_escape (const gchar * instr)
 	GString * outstr = g_string_new("");
 	const gchar * pntr = NULL;
 
-	for (pntr = instr; pntr[0] != '\0'; pntr = g_utf8_next_char(pntr)) {
-		gunichar thischar = g_utf8_get_char(pntr);
+	for (pntr = instr; pntr[0] != '\0'; pntr++) {
+		gchar thischar = pntr[0];
 
 		/* Are we a normal ascii character */
 		if ((thischar >= 48 && thischar <= 57) || /* 0-9 */
@@ -292,7 +292,7 @@ string_shell_escape (const gchar * instr)
 			g_string_append_unichar(outstr, thischar);
 		} else {
 			/* Let's escape this mofo */
-			g_string_append_printf(outstr, "\\U%04X", thischar);
+			g_string_append_printf(outstr, "\\%o", thischar);
 		}
 	}
 
