@@ -292,7 +292,7 @@ string_shell_escape (const gchar * instr)
 			g_string_append_unichar(outstr, thischar);
 		} else {
 			/* Let's escape this mofo */
-			g_string_append_printf(outstr, "\\%o", thischar);
+			g_string_append_printf(outstr, "\\0%o", thischar);
 		}
 	}
 
