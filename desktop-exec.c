@@ -62,6 +62,12 @@ main (int argc, char * argv[])
 	}
 	g_strfreev(splitexec);
 
+	/* Surface flinger check */
+	if (g_getenv("USING_SURFACE_FLINGER") != NULL) {
+		gchar * sf = g_strdup_printf("--desktop_file_hint=%s/.local/share/applications/%s.desktop", g_get_home_dir(), argv[1]);
+		g_array_append_val(newargv, sf);
+	}
+
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
 	if (apparmor != NULL) {
 		g_debug("Changing to app armor profile '%s' on exec", apparmor);
