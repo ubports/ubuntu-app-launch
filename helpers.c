@@ -289,10 +289,11 @@ string_shell_escape (const gchar * instr)
 			thischar == 58 || /* : */
 			(thischar >= 65 && thischar <= 90) || /* A-Z */
 			(thischar >= 97 && thischar <= 122)) { /* a-z */
-			g_string_append_unichar(outstr, thischar);
+			g_string_append_c(outstr, thischar);
 		} else {
 			/* Let's escape this mofo */
-			g_string_append_printf(outstr, "\\0%o", thischar);
+			g_string_append_c(outstr, '\\');
+			g_string_append_c(outstr, thischar);
 		}
 	}
 
