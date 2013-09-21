@@ -269,13 +269,6 @@ uri2file (const gchar * uri)
 	return retval;
 }
 
-/* Take a string and escape it for the shell */
-static gchar *
-string_shell_escape (const gchar * instr)
-{
-	return g_strdup(instr);
-}
-
 /* free a string in an array */
 static void
 free_string (gpointer value)
@@ -305,10 +298,7 @@ build_file_list (const gchar * uri_list)
 
 	g_strfreev(uri_split);
 
-	gchar * qfilelist = string_shell_escape(filelist);
-	g_free(filelist);
-
-	return qfilelist;
+	return filelist;
 }
 
 /* Make sure we have the single URI variable */
@@ -330,8 +320,7 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 		first_space[0] = '\0';
 	}
 
-	*single_uri = string_shell_escape(first_uri);
-	g_free(first_uri);
+	*single_uri = first_uri;
 
 	return;
 }
@@ -361,8 +350,7 @@ ensure_singlefile (gchar ** single_file, const gchar * uri_list)
 	}
 
 	if (first_file != NULL) {
-		*single_file = string_shell_escape(first_file);
-		g_free(first_file);
+		*single_file = first_file;
 	}
 
 	return;
@@ -388,7 +376,6 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 	gchar * single_uri = NULL;
 	gchar * single_file = NULL;
 	gchar * file_list = NULL;
-	gchar * uri_qlist = NULL;
 	gboolean previous_percent = FALSE;
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
 	g_array_append_val(outarray, execsplit[0]);
@@ -447,11 +434,8 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'U':
-			if (uri_qlist == NULL && uri_list != NULL) {
-				uri_qlist = string_shell_escape(uri_list);
-			}
-			if (uri_qlist != NULL) {
-				g_array_append_val(outarray, uri_qlist);
+			if (uri_list != NULL) {
+				g_array_append_val(outarray, uri_list);
 			}
 			g_array_append_val(outarray, skipchar);
 			break;
@@ -477,7 +461,6 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 	g_free(single_uri);
 	g_free(single_file);
 	g_free(file_list);
-	g_free(uri_qlist);
 	g_strfreev(execsplit);
 
 	return output;
