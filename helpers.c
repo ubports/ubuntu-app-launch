@@ -273,31 +273,7 @@ uri2file (const gchar * uri)
 static gchar *
 string_shell_escape (const gchar * instr)
 {
-	if (instr == NULL) {
-		return NULL;
-	}
-
-	GString * outstr = g_string_new("");
-	const gchar * pntr = NULL;
-
-	for (pntr = instr; pntr[0] != '\0'; pntr++) {
-		gchar thischar = pntr[0];
-
-		/* Are we a normal ascii character */
-		if ((thischar >= 48 && thischar <= 57) || /* 0-9 */
-			(thischar >= 43 && thischar <= 47) || /* +,-./ */
-			thischar == 58 || /* : */
-			(thischar >= 65 && thischar <= 90) || /* A-Z */
-			(thischar >= 97 && thischar <= 122)) { /* a-z */
-			g_string_append_c(outstr, thischar);
-		} else {
-			/* Let's escape this mofo */
-			g_string_append_c(outstr, '\\');
-			g_string_append_c(outstr, thischar);
-		}
-	}
-
-	return g_string_free(outstr, FALSE);
+	return g_strdup(instr);
 }
 
 /* free a string in an array */
