@@ -357,8 +357,8 @@ ensure_singlefile (gchar ** single_file, const gchar * uri_list)
 }
 
 /* Parse a desktop exec line and return the next string */
-gchar *
-desktop_exec_parse (const gchar * execline, const gchar * uri_list)
+static gchar *
+desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
 {
 	gchar ** execsplit = g_strsplit(execline, "%", 0);
 
@@ -464,6 +464,29 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 	g_strfreev(execsplit);
 
 	return output;
+}
+
+/* Take a full exec line, split it out, parse the segments and return
+   it to the caller */
+GArray *
+desktop_exec_parse (const gchar * execline, const gchar * urilist)
+{
+	gchar ** splitexec = g_strsplit(execline, " ", -1);
+	if (splitexec == NULL || splitexec[0] == NULL) {
+		g_debug("No exec line");
+		g_free(splitexec);
+		return NULL;
+	}
+
+	GArray * newargv = g_array_new(TRUE, FALSE, sizeof(gchar *));
+	int i;
+	for (i = 0; splitexec[i] != NULL; i++) {
+		gchar * execinserted = desktop_exec_segment_parse(splitexec[i], urilist);
+		g_array_append_val(newargv, execinserted);
+	}
+	g_strfreev(splitexec);
+
+	return newargv;
 }
 
 /* Check to make sure we have the sections and keys we want */

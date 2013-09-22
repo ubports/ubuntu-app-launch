@@ -44,23 +44,14 @@ main (int argc, char * argv[])
 	gchar * execline = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
 	g_return_val_if_fail(execline != NULL, 1);
 
-	gchar ** splitexec = g_strsplit(execline, " ", -1);
+	GArray * newargv = desktop_exec_parse(execline, argc == 3 ? argv[2] : NULL);
 	g_free(execline);
 
-	if (splitexec == NULL || splitexec[0] == NULL) {
-		g_debug("No exec line");
+	if (newargv == NULL) {
+		g_warning("Unable to parse exec line '%s'", execline);
 		g_key_file_free(keyfile);
-		g_free(splitexec);
 		return 1;
 	}
-
-	GArray * newargv = g_array_new(TRUE, FALSE, sizeof(gchar *));
-	int i;
-	for (i = 0; splitexec[i] != NULL; i++) {
-		gchar * execinserted = desktop_exec_parse(splitexec[i], argc == 3 ? argv[2] : NULL);
-		g_array_append_val(newargv, execinserted);
-	}
-	g_strfreev(splitexec);
 
 	/* Surface flinger check */
 	if (g_getenv("USING_SURFACE_FLINGER") != NULL) {
