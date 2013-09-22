@@ -23,6 +23,19 @@
 int
 main (int argc, char * argv[])
 {
+	/* Make sure we have work to do */
+	const gchar * app_exec = g_getenv("APP_EXEC");
+	if (app_exec == NULL) {
+		g_warning("No exec line given, nothing to do except fail");
+		return 1;
+	}
+
+	/* URIs */
+	const gchar * app_uris = g_getenv("APP_URIS");
+
+	/* Look to see if we have a directory defined that we
+	   should be using for everything.  If so, change to it
+	   and add it to the path */
 	const gchar * appdir = g_getenv("APP_DIR");
 
 	if (appdir != NULL) {
@@ -35,6 +48,8 @@ main (int argc, char * argv[])
 		g_setenv("PATH", newpath, TRUE);
 		g_free(newpath);
 	}
+
+	/* Parse the execiness of it all */
 
 	return 0;
 }
