@@ -50,10 +50,17 @@ insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
 int
 main (int argc, char * argv[])
 {
-	if (argc != 3 || (g_strcmp0(argv[1], "open") != 0 && g_strcmp0(argv[1], "close") != 0)) {
-		g_printerr("Usage: %s [open|close] <application url>\n", argv[0]);
+	if (argc != 2 || (g_strcmp0(argv[1], "open") != 0 && g_strcmp0(argv[1], "close") != 0)) {
+		g_printerr("Usage: %s [open|close]\n", argv[0]);
 		return 1;
 	}
+
+	const gchar * appid = g_getenv("APP_ID");
+	if (appid == NULL) {
+		g_printerr("No App ID defined");
+		return 1;
+	}
+	gchar * uri = g_strdup_printf("application://%s.desktop", appid);
 
 	ZeitgeistLog * log = zeitgeist_log_get_default();
 
@@ -70,7 +77,7 @@ main (int argc, char * argv[])
 	zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
 	zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
 	zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
-	zeitgeist_subject_set_uri(subject, argv[2]);
+	zeitgeist_subject_set_uri(subject, uri);
 
 	zeitgeist_event_add_subject(event, subject);
 
@@ -80,6 +87,9 @@ main (int argc, char * argv[])
 	g_timeout_add_seconds(4, watchdog_timeout, main_loop);
 
 	g_main_loop_run(main_loop);
+
+	g_main_loop_unref(main_loop);
+	g_free(uri);
 
 	return 0;
 }

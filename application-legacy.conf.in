@@ -18,5 +18,5 @@ end script
 
 exec @pkglibexecdir@/desktop-exec
 
-post-start exec @pkglibexecdir@/zg-report-app open "application://${APP_ID}.desktop"
-post-stop exec @pkglibexecdir@/zg-report-app close "application://${APP_ID}.desktop"
+post-start exec @pkglibexecdir@/zg-report-app open
+post-stop exec @pkglibexecdir@/zg-report-app close
