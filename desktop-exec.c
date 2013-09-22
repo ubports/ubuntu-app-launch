@@ -29,22 +29,30 @@
 int
 main (int argc, char * argv[])
 {
-	if (argc != 2 && argc != 3) {
-		g_error("Should be called as: %s <app_id> [uri list]", argv[0]);
+	if (argc != 1) {
+		g_error("Should be called as: %s", argv[0]);
 		return 1;
 	}
 
-	GKeyFile * keyfile = keyfile_for_appid(argv[1]);
+	const gchar * app_id = g_getenv("APP_ID");
+	const gchar * app_uris = g_getenv("APP_URIS");
+
+	if (app_id == NULL) {
+		g_error("No APP_ID environment variable defined");
+		return 1;
+	}
+
+	GKeyFile * keyfile = keyfile_for_appid(app_id);
 
 	if (keyfile == NULL) {
-		g_error("Unable to find keyfile for application '%s'", argv[0]);
+		g_error("Unable to find keyfile for application '%s'", app_id);
 		return 1;
 	}
 
 	gchar * execline = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
 	g_return_val_if_fail(execline != NULL, 1);
 
-	GArray * newargv = desktop_exec_parse(execline, argc == 3 ? argv[2] : NULL);
+	GArray * newargv = desktop_exec_parse(execline, app_uris);
 	g_free(execline);
 
 	if (newargv == NULL) {
@@ -55,7 +63,7 @@ main (int argc, char * argv[])
 
 	/* Surface flinger check */
 	if (g_getenv("USING_SURFACE_FLINGER") != NULL) {
-		gchar * sf = g_strdup_printf("--desktop_file_hint=%s/.local/share/applications/%s.desktop", g_get_home_dir(), argv[1]);
+		gchar * sf = g_strdup_printf("--desktop_file_hint=%s/.local/share/applications/%s.desktop", g_get_home_dir(), app_id);
 		g_array_append_val(newargv, sf);
 	}
 

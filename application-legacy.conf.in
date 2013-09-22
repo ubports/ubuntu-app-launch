@@ -16,7 +16,7 @@ pre-start script
 	fi
 end script
 
-exec @pkglibexecdir@/desktop-exec "${APP_ID}" "${APP_URIS}"
+exec @pkglibexecdir@/desktop-exec
 
 post-start exec @pkglibexecdir@/zg-report-app open "application://${APP_ID}.desktop"
 post-stop exec @pkglibexecdir@/zg-report-app close "application://${APP_ID}.desktop"
