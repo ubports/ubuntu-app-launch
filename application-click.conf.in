@@ -25,7 +25,7 @@ pre-start script
 end script
 
 # Remember, this is confined
-exec @pkglibexecdir@/exec-line-exec "${APP_EXEC}" "${APP_URIS}"
+exec @pkglibexecdir@/exec-line-exec
 
 post-start exec @pkglibexecdir@/zg-report-app open "application://${APP_ID}.desktop"
 post-stop exec @pkglibexecdir@/zg-report-app close "application://${APP_ID}.desktop"
