@@ -40,16 +40,23 @@ https://click-package.readthedocs.org/en/latest/
 int
 main (int argc, char * argv[])
 {
-	if (argc != 2 && argc != 3) {
-		g_error("Should be called as: %s <app_id> [uri list]", argv[0]);
+	if (argc != 1 && argc != 3) {
+		g_error("Should be called as: %s", argv[0]);
+		return 1;
+	}
+
+	const gchar * app_id = g_getenv("APP_ID");
+
+	if (app_id == NULL) {
+		g_error("No APP ID defined");
 		return 1;
 	}
 
 	GError * error = NULL;
 	gchar * package = NULL;
 	/* 'Parse' the App ID */
-	if (!app_id_to_triplet(argv[1], &package, NULL, NULL)) {
-		g_warning("Unable to parse App ID: '%s'", argv[1]);
+	if (!app_id_to_triplet(app_id, &package, NULL, NULL)) {
+		g_warning("Unable to parse App ID: '%s'", app_id);
 		return 1;
 	}
 
@@ -122,7 +129,7 @@ main (int argc, char * argv[])
 	g_debug("Setting 'APP_DIR' to '%s'", output);
 	set_upstart_variable("APP_DIR", output);
 
-	gchar * desktopfile = manifest_to_desktop(output, argv[1]);
+	gchar * desktopfile = manifest_to_desktop(output, app_id);
 	g_free(output);
 	if (desktopfile == NULL) {
 		g_warning("Desktop file unable to be found");
