@@ -21,7 +21,7 @@ pre-start script
 		initctl set-env USING_SURFACE_FLINGER=1
 	fi
 
-	exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
+	exec @pkglibexecdir@/click-exec
 end script
 
 # Remember, this is confined
