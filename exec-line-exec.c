@@ -17,8 +17,14 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+
 #include <glib.h>
 #include <glib/gstdio.h>
+
+#include "helpers.h"
 
 int
 main (int argc, char * argv[])
@@ -32,6 +38,7 @@ main (int argc, char * argv[])
 
 	/* URIs */
 	const gchar * app_uris = g_getenv("APP_URIS");
+	const gchar * app_id =   g_getenv("APP_ID");
 
 	/* Look to see if we have a directory defined that we
 	   should be using for everything.  If so, change to it
@@ -50,6 +57,26 @@ main (int argc, char * argv[])
 	}
 
 	/* Parse the execiness of it all */
+	GArray * newargv = desktop_exec_parse(app_exec, app_uris);
+	if (newargv == NULL) {
+		g_warning("Unable to parse exec line '%s'", app_exec);
+		return 1;
+	}
 
-	return 0;
+	/* Surface flinger check */
+	if (g_getenv("USING_SURFACE_FLINGER") != NULL) {
+		gchar * sf = g_strdup_printf("--desktop_file_hint=/usr/share/applications/%s.desktop", app_id);
+		g_array_append_val(newargv, sf);
+	}
+
+	/* Now exec */
+	gchar ** nargv = (gchar**)g_array_free(newargv, FALSE);
+
+	int execret = execvp(nargv[0], nargv);
+
+	if (execret != 0) {
+		g_warning("Unable to exec: %s", strerror(errno));
+	}
+
+	return execret;
 }
