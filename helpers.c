@@ -227,6 +227,7 @@ set_upstart_variable (const gchar * variable, const gchar * value)
 		NULL
 	};
 
+	g_debug("Setting Upstart variable '%s' to '%s'", variable, value);
 	gchar * variablestr = g_strdup_printf("%s=%s", variable, value);
 	command[2] = variablestr;
 
