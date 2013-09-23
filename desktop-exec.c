@@ -55,18 +55,19 @@ main (int argc, char * argv[])
 	g_return_val_if_fail(execline != NULL, 1);
 
 	gchar * unquote_execline = g_shell_unquote(execline, &error);
-	if (error == NULL) {
+	g_free(execline);
+
+	if (error != NULL) {
 		g_warning("Unable to unquote the Exec line: %s", error->message);
 		g_error_free(error);
 		return 1;
 	}
-	g_free(execline);
 
 	GArray * newargv = desktop_exec_parse(unquote_execline, app_uris);
 	g_free(unquote_execline);
 
 	if (newargv == NULL) {
-		g_warning("Unable to parse exec line '%s'", execline);
+		g_warning("Unable to parse exec line '%s'", unquote_execline);
 		g_key_file_free(keyfile);
 		return 1;
 	}
