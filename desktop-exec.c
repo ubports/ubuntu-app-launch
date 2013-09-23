@@ -53,6 +53,12 @@ main (int argc, char * argv[])
 	set_upstart_variable("APP_EXEC", execline);
 	g_free(execline);
 
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
+		gchar * path = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
+		set_upstart_variable("APP_DIR", path);
+		g_free(path);
+	}
+
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
 	if (apparmor != NULL) {
 		set_upstart_variable("APP_EXEC_POLICY", apparmor);
