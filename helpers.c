@@ -498,6 +498,10 @@ desktop_exec_parse (const gchar * execline, const gchar * urilist)
 	gchar ** splitexec = NULL;
 	gint execitems = 0;
 
+	/* This returns from desktop file style quoting to straight strings with
+	   the appropriate characters split by the spaces that were meant for
+	   splitting.  Trickier than it sounds.  But now we should be able to assume
+	   that each string in the array is expected to be its own parameter. */
 	g_shell_parse_argv(execline, &execitems, &splitexec, &error);
 
 	if (error != NULL) {
@@ -513,6 +517,8 @@ desktop_exec_parse (const gchar * execline, const gchar * urilist)
 		g_array_append_val(newargv, execinserted);
 	}
 	g_strfreev(splitexec);
+
+	/* Each string here should be its own param */
 
 	return newargv;
 }

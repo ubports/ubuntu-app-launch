@@ -108,6 +108,8 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	/* This string is quoted using desktop file quoting:
+	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	gchar * exec = desktop_to_exec(keyfile, desktopfile);
 	if (exec == NULL) {
 		return 1;

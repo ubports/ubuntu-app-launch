@@ -30,6 +30,8 @@ int
 main (int argc, char * argv[])
 {
 	/* Make sure we have work to do */
+	/* This string is quoted using desktop file quoting:
+	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	const gchar * app_exec = g_getenv("APP_EXEC");
 	if (app_exec == NULL) {
 		g_warning("No exec line given, nothing to do except fail");
