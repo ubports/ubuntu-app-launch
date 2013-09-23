@@ -7,14 +7,13 @@ start on application-click-start
 stop on application-end or desktop-end
 
 env APP_ID
-export APP_ID
-
-env APP_URIS=""
-env APP_DIR="/"
+env APP_EXEC="echo Error"
+env APP_URIS
+env APP_DIR
+# For Surface Flinger
+env APP_DESKTOP_FILE
 
 apparmor switch ${APP_ID}
-
-env APP_EXEC="echo Error"
 
 pre-start script
 	if pgrep -u system surfaceflinger ; then
