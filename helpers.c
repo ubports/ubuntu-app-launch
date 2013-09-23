@@ -558,10 +558,10 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 
 	for (i = 0; data_dirs[i] != NULL && keyfile == NULL; i++) {
 		keyfile = try_dir(data_dirs[i], desktop);
-	}
 
-	if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
-		*desktopfile = g_build_filename(data_dirs[i - 1], desktop, NULL);
+		if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
+			*desktopfile = g_build_filename(data_dirs[i], desktop, NULL);
+		}
 	}
 
 	g_free(desktop);
