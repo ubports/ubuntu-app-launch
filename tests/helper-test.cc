@@ -36,5 +36,21 @@ class HelperTest : public ::testing::Test
 TEST_F(HelperTest, AppIdTest)
 {
 	ASSERT_TRUE(app_id_to_triplet("com.ubuntu.test_test_123", NULL, NULL, NULL));
+	ASSERT_FALSE(app_id_to_triplet("inkscape", NULL, NULL, NULL));
+	ASSERT_FALSE(app_id_to_triplet("music-app", NULL, NULL, NULL));
+
+	gchar * pkg;
+	gchar * app;
+	gchar * version;
+
+	ASSERT_TRUE(app_id_to_triplet("com.ubuntu.test_test_123", &pkg, &app, &version));
+	ASSERT_STREQ(pkg, "com.ubuntu.test");
+	ASSERT_STREQ(app, "test");
+	ASSERT_STREQ(version, "123");
+
+	g_free(pkg);
+	g_free(app);
+	g_free(version);
+
 	return;
 }
