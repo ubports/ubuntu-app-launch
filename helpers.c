@@ -471,16 +471,21 @@ desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
 GArray *
 desktop_exec_parse (const gchar * execline, const gchar * urilist)
 {
-	gchar ** splitexec = g_strsplit(execline, " ", -1);
-	if (splitexec == NULL || splitexec[0] == NULL) {
-		g_debug("No exec line");
-		g_free(splitexec);
+	GError * error = NULL;
+	gchar ** splitexec = NULL;
+	gint execitems = 0;
+
+	g_shell_parse_argv(execline, &execitems, &splitexec, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to parse exec line '%s': %s", execline, error->message);
+		g_error_free(error);
 		return NULL;
 	}
 
 	GArray * newargv = g_array_new(TRUE, FALSE, sizeof(gchar *));
 	int i;
-	for (i = 0; splitexec[i] != NULL; i++) {
+	for (i = 0; i < execitems; i++) {
 		gchar * execinserted = desktop_exec_segment_parse(splitexec[i], urilist);
 		g_array_append_val(newargv, execinserted);
 	}
