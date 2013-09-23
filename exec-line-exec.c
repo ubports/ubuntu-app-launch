@@ -65,7 +65,7 @@ main (int argc, char * argv[])
 
 	/* Surface flinger check */
 	if (g_getenv("USING_SURFACE_FLINGER") != NULL) {
-		gchar * sf = g_strdup_printf("--desktop_file_hint=/usr/share/applications/%s.desktop", app_id);
+		gchar * sf = g_strdup_printf("--desktop_file_hint=%s/.local/share/applications/%s.desktop", g_get_home_dir(), app_id);
 		g_array_append_val(newargv, sf);
 	}
 
