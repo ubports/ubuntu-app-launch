@@ -29,6 +29,8 @@
 int
 main (int argc, char * argv[])
 {
+	GError * error = NULL;
+
 	if (argc != 1) {
 		g_error("Should be called as: %s", argv[0]);
 		return 1;
@@ -52,8 +54,16 @@ main (int argc, char * argv[])
 	gchar * execline = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
 	g_return_val_if_fail(execline != NULL, 1);
 
-	GArray * newargv = desktop_exec_parse(execline, app_uris);
+	gchar * unquote_execline = g_shell_unquote(execline, &error);
+	if (error == NULL) {
+		g_warning("Unable to unquote the Exec line: %s", error->message);
+		g_error_free(error);
+		return 1;
+	}
 	g_free(execline);
+
+	GArray * newargv = desktop_exec_parse(unquote_execline, app_uris);
+	g_free(unquote_execline);
 
 	if (newargv == NULL) {
 		g_warning("Unable to parse exec line '%s'", execline);

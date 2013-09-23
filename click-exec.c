@@ -150,10 +150,19 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	g_debug("Setting 'APP_EXEC' to '%s'", exec);
-	set_upstart_variable("APP_EXEC", exec);
-
+	gchar * unquoted_exec = g_shell_unquote(exec, &error);
 	g_free(exec);
+
+	if (error != NULL) {
+		g_warning("Unable to unquote exec line: %s", error->message);
+		g_error_free(error);
+		return 1;
+	}
+
+	g_debug("Setting 'APP_EXEC' to '%s'", unquoted_exec);
+	set_upstart_variable("APP_EXEC", unquoted_exec);
+
+	g_free(unquoted_exec);
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
 
