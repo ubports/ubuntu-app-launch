@@ -40,7 +40,8 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	GKeyFile * keyfile = keyfile_for_appid(app_id);
+	gchar * desktopfilename = NULL;
+	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
 	if (keyfile == NULL) {
 		g_error("Unable to find keyfile for application '%s'", app_id);
@@ -61,6 +62,12 @@ main (int argc, char * argv[])
 	}
 
 	g_key_file_free(keyfile);
+
+	/* TODO: This is for Surface Flinger.  When we drop support, we can drop this code */
+	if (desktopfilename != NULL) {
+		set_upstart_variable("APP_DESKTOP_FILE", desktopfilename);
+		g_free(desktopfilename);
+	}
 
 	return 0;
 }

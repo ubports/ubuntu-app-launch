@@ -542,7 +542,7 @@ try_dir (const char * dir, const gchar * desktop)
 /* Find the keyfile that we need for a particular AppID and return it.
    Or NULL if we can't find it. */
 GKeyFile *
-keyfile_for_appid (const gchar * appid)
+keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 {
 	gchar * desktop = g_strdup_printf("%s.desktop", appid);
 
@@ -551,9 +551,16 @@ keyfile_for_appid (const gchar * appid)
 	int i;
 
 	keyfile = try_dir(g_get_user_data_dir(), desktop);
+	if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
+		*desktopfile = g_build_filename(g_get_user_data_dir(), desktop, NULL);
+	}
 
 	for (i = 0; data_dirs[i] != NULL && keyfile == NULL; i++) {
 		keyfile = try_dir(data_dirs[i], desktop);
+	}
+
+	if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
+		*desktopfile = g_build_filename(data_dirs[i], desktop, NULL);
 	}
 
 	g_free(desktop);

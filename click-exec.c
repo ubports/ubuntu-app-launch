@@ -157,5 +157,12 @@ main (int argc, char * argv[])
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
 
+	/* TODO: This is for Surface Flinger, when we drop support we can drop this */
+	gchar * userdesktopfile = g_strdup_printf("%s.desktop", app_id);
+	gchar * userdesktoppath = g_build_filename(g_get_home_dir(), ".local", "share", "applications", userdesktopfile, NULL);
+	set_upstart_variable("APP_DESKTOP_FILE", userdesktoppath);
+	g_free(userdesktopfile);
+	g_free(userdesktoppath);
+
 	return 0;
 }

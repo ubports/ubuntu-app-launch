@@ -39,6 +39,7 @@ main (int argc, char * argv[])
 	/* URIs */
 	const gchar * app_uris = g_getenv("APP_URIS");
 	const gchar * app_id =   g_getenv("APP_ID");
+	const gchar * app_desktop = g_getenv("APP_DESKTOP_FILE");
 
 	/* Look to see if we have a directory defined that we
 	   should be using for everything.  If so, change to it
@@ -64,8 +65,8 @@ main (int argc, char * argv[])
 	}
 
 	/* Surface flinger check */
-	if (g_getenv("USING_SURFACE_FLINGER") != NULL) {
-		gchar * sf = g_strdup_printf("--desktop_file_hint=%s/.local/share/applications/%s.desktop", g_get_home_dir(), app_id);
+	if (g_getenv("USING_SURFACE_FLINGER") != NULL && app_desktop != NULL) {
+		gchar * sf = g_strdup_printf("--desktop_file_hint=%s", app_desktop);
 		g_array_append_val(newargv, sf);
 	}
 
