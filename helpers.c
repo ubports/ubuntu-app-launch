@@ -560,7 +560,7 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 	}
 
 	if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
-		*desktopfile = g_build_filename(data_dirs[i], desktop, NULL);
+		*desktopfile = g_build_filename(data_dirs[i - 1], desktop, NULL);
 	}
 
 	g_free(desktop);
