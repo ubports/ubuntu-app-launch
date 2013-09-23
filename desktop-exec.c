@@ -62,6 +62,7 @@ main (int argc, char * argv[])
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
 	if (apparmor != NULL) {
 		set_upstart_variable("APP_EXEC_POLICY", apparmor);
+		set_confined_envvars(app_id);
 		g_free(apparmor);
 	} else {
 		set_upstart_variable("APP_EXEC_POLICY", "unconfined");
