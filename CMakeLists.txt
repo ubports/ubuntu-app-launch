@@ -44,9 +44,6 @@ include_directories(${ZEITGEIST_INCLUDE_DIRS})
 pkg_check_modules(LIBUPSTART REQUIRED libupstart libnih libnih-dbus dbus-1)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
 
-pkg_check_modules(APPARMOR REQUIRED libapparmor)
-include_directories(${APPARMOR_INCLUDE_DIRS})
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
