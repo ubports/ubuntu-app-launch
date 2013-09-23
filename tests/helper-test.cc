@@ -1,6 +1,10 @@
 
 #include <gtest/gtest.h>
 
+extern "C" {
+#include "../helpers.h"
+}
+
 class HelperTest : public ::testing::Test
 {
 	private:
@@ -11,7 +15,8 @@ class HelperTest : public ::testing::Test
 		}
 };
 
-TEST_F(HelperTest, StubTest)
+TEST_F(HelperTest, AppIdTest)
 {
+	ASSERT_TRUE(app_id_to_triplet("com.ubuntu.test_test_123", NULL, NULL, NULL));
 	return;
 }

@@ -10,7 +10,7 @@ add_library (gtest STATIC
 # Helper test
 
 add_executable (helper-test helper-test.cc)
-target_link_libraries (helper-test gtest ${GTEST_LIBS})
+target_link_libraries (helper-test helpers gtest ${GTEST_LIBS})
 
 add_test (helper-test helper-test)
 
