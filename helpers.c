@@ -553,14 +553,14 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 
 	keyfile = try_dir(g_get_user_data_dir(), desktop);
 	if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
-		*desktopfile = g_build_filename(g_get_user_data_dir(), desktop, NULL);
+		*desktopfile = g_build_filename(g_get_user_data_dir(), "applications", desktop, NULL);
 	}
 
 	for (i = 0; data_dirs[i] != NULL && keyfile == NULL; i++) {
 		keyfile = try_dir(data_dirs[i], desktop);
 
 		if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
-			*desktopfile = g_build_filename(data_dirs[i], desktop, NULL);
+			*desktopfile = g_build_filename(data_dirs[i], "applications", desktop, NULL);
 		}
 	}
 
