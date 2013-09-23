@@ -59,7 +59,7 @@ main (int argc, char * argv[])
 		g_free(path);
 	}
 
-	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
+	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "X-Ubuntu-AppArmor-Profile", NULL);
 	if (apparmor != NULL) {
 		set_upstart_variable("APP_EXEC_POLICY", apparmor);
 		set_confined_envvars(app_id);
