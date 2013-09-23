@@ -38,7 +38,6 @@ main (int argc, char * argv[])
 
 	/* URIs */
 	const gchar * app_uris = g_getenv("APP_URIS");
-	const gchar * app_id =   g_getenv("APP_ID");
 	const gchar * app_desktop = g_getenv("APP_DESKTOP_FILE");
 
 	/* Look to see if we have a directory defined that we
