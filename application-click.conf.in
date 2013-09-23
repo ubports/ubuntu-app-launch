@@ -7,39 +7,24 @@ start on application-click-start
 stop on application-end or desktop-end
 
 env APP_ID
-export APP_ID
-
-env APP_URIS=""
-env APP_DIR="/"
+env APP_EXEC="echo Error"
+env APP_URIS
+env APP_DIR
+# For Surface Flinger
+env APP_DESKTOP_FILE
 
 apparmor switch ${APP_ID}
-
-env APP_EXEC="echo Error"
 
 pre-start script
 	if pgrep -u system surfaceflinger ; then
 		initctl set-env USING_SURFACE_FLINGER=1
 	fi
 
-	exec @pkglibexecdir@/click-exec "${APP_ID}" "${APP_URIS}"
+	exec @pkglibexecdir@/click-exec
 end script
 
-# Remember, everything in this block is confined
-script
-	if [ "x$USING_SURFACE_FLINGER" = "x1" ] ; then
-		APP_EXEC="$APP_EXEC --desktop_file_hint=$HOME/.local/share/applications/$APP_ID.desktop"
-	fi
+# Remember, this is confined
+exec @pkglibexecdir@/exec-line-exec
 
-	cd ${APP_DIR}
-
-	# Should be done immediately before exec so that other commands can't
-	# be placed in the directory and used
-	if [ -n "${APP_DIR}" ]; then
-		PATH="${APP_DIR}:${PATH}"
-	fi
-
-	exec ${APP_EXEC}
-end script
-
-post-start exec @pkglibexecdir@/zg-report-app open "application://${APP_ID}.desktop"
-post-stop exec @pkglibexecdir@/zg-report-app close "application://${APP_ID}.desktop"
+post-start exec @pkglibexecdir@/zg-report-app open
+post-stop exec @pkglibexecdir@/zg-report-app close
