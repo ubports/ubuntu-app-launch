@@ -33,4 +33,5 @@ GArray *  desktop_exec_parse     (const gchar *   execline,
                                   const gchar *   uri_list);
 GKeyFile * keyfile_for_appid     (const gchar *   appid,
                                   gchar * *       desktopfile);
+void      set_confined_envvars   (const gchar *   package);
 
