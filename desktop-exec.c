@@ -22,7 +22,6 @@
 #include <string.h>
 #include <glib.h>
 #include <gio/gio.h>
-#include <sys/apparmor.h>
 
 #include "helpers.h"
 
@@ -35,7 +34,6 @@ main (int argc, char * argv[])
 	}
 
 	const gchar * app_id = g_getenv("APP_ID");
-	const gchar * app_uris = g_getenv("APP_URIS");
 
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");
@@ -49,41 +47,20 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	gchar * execline = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
+	gchar * execline = desktop_to_exec(keyfile, app_id);
 	g_return_val_if_fail(execline != NULL, 1);
-
-	GArray * newargv = desktop_exec_parse(execline, app_uris);
-
-	if (newargv == NULL) {
-		g_warning("Unable to parse exec line '%s'", execline);
-		g_key_file_free(keyfile);
-		g_free(execline);
-		return 1;
-	}
+	set_upstart_variable("APP_EXEC", execline);
 	g_free(execline);
-
-	/* Surface flinger check */
-	if (g_getenv("USING_SURFACE_FLINGER") != NULL) {
-		gchar * sf = g_strdup_printf("--desktop_file_hint=/usr/share/applications/%s.desktop", app_id);
-		g_array_append_val(newargv, sf);
-	}
 
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
 	if (apparmor != NULL) {
-		g_debug("Changing to app armor profile '%s' on exec", apparmor);
-		aa_change_onexec(apparmor);
+		set_upstart_variable("APP_EXEC_POLICY", apparmor);
 		g_free(apparmor);
+	} else {
+		set_upstart_variable("APP_EXEC_POLICY", "unconfined");
 	}
 
 	g_key_file_free(keyfile);
 
-	gchar ** nargv = (gchar**)g_array_free(newargv, FALSE);
-
-	int execret = execvp(nargv[0], nargv);
-
-	if (execret != 0) {
-		g_warning("Unable to exec: %s", strerror(errno));
-	}
-
-	return execret;
+	return 0;
 }

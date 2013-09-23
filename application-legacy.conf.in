@@ -7,16 +7,21 @@ start on application-legacy-start
 stop on application-end or desktop-end
 
 env APP_EXEC="echo Error"
-env APP_EXEC_POLICY
+env APP_EXEC_POLICY=""
 env APP_URIS
+
+# This will be set to "unconfined" by desktop-exec if there is no confinement defined
+apparmor switch $APP_EXEC_POLICY
 
 pre-start script
 	if pgrep -u system surfaceflinger ; then
 		initctl set-env USING_SURFACE_FLINGER=1
 	fi
+
+	exec @pkglibexecdir@/desktop-exec
 end script
 
-exec @pkglibexecdir@/desktop-exec
+exec @pkglibexecdir@/exec-line-exec
 
 post-start exec @pkglibexecdir@/zg-report-app open
 post-stop exec @pkglibexecdir@/zg-report-app close
