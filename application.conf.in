@@ -3,6 +3,7 @@ author "Ted Gould <ted@canonical.com>"
 
 start on application-start
 
+# Events aren't emitted directly, but start is used to create them
 emits application-legacy-start
 emits application-click-start
 
