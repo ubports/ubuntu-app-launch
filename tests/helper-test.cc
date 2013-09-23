@@ -54,3 +54,93 @@ TEST_F(HelperTest, AppIdTest)
 
 	return;
 }
+
+TEST_F(HelperTest, DesktopExecParse)
+{
+	GArray * output;
+
+	output = desktop_exec_parse("foo", NULL);
+	ASSERT_EQ(output->len, 1);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo", "http://ubuntu.com");
+	ASSERT_EQ(output->len, 1);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo %u", "http://ubuntu.com");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo %U", "http://ubuntu.com");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo %u", "http://ubuntu.com http://slashdot.org");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo \"%u\"", "http://ubuntu.com");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo \\\"%u", "http://ubuntu.com");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"http://ubuntu.com");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo %u", "\"");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo \\\"\"%u\"", "\"");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"\"");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo\\ %u", "bar");
+	ASSERT_EQ(output->len, 1);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo bar");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo %U", "http://ubuntu.com http://slashdot.org");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com http://slashdot.org");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo %f", "file:///proc/version");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo %f", "file:///proc/version file:///proc/uptime");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
+	g_array_free(output, TRUE);
+
+	output = desktop_exec_parse("foo %F", "file:///proc/version file:///proc/uptime");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version /proc/uptime");
+	g_array_free(output, TRUE);
+
+
+
+	return;
+}
