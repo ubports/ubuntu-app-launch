@@ -283,6 +283,11 @@ free_string (gpointer value)
 static gchar *
 build_file_list (const gchar * uri_list)
 {
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
 	gchar ** uri_split = g_strsplit(uri_list, " ", 0);
 
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(gchar *));
@@ -314,6 +319,12 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 		return;
 	}
 
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
+
 	gchar * first_uri = g_strdup(uri_list);
 	gchar * first_space = g_utf8_strchr(first_uri, -1, ' ');
 	
@@ -337,6 +348,12 @@ ensure_singlefile (gchar ** single_file, const gchar * uri_list)
 	if (*single_file != NULL) {
 		return;
 	}
+
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
 
 	gchar * first_uri = g_strdup(uri_list);
 	gchar * first_space = g_utf8_strchr(first_uri, -1, ' ');
@@ -435,6 +452,11 @@ desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'U':
+			/* TODO: Joining only with space could cause issues with breaking them
+			   back out.  We don't have any cases of more than one today.  But, this
+			   isn't good.
+			   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+			   */
 			if (uri_list != NULL) {
 				g_array_append_val(outarray, uri_list);
 			}
