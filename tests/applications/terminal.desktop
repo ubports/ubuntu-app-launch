@@ -4,4 +4,4 @@ Type=Application
 Exec=foo
 NoDisplay=false
 Hidden=false
-Terminal=false
+Terminal=true

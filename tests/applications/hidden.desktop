@@ -3,5 +3,5 @@ Name=Foo
 Type=Application
 Exec=foo
 NoDisplay=false
-Hidden=false
+Hidden=true
 Terminal=false

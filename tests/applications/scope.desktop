@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Foo
-Type=Application
+Type=Scope
 Exec=foo
 NoDisplay=false
 Hidden=false
