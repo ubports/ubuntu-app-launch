@@ -354,8 +354,19 @@ main (int argc, char * argv[])
 
 	/* Now that we're done sending the info to the app, we can ask
 	   Unity to focus the application. */
-	/* TODO: Send focus */
+	g_dbus_connection_emit_signal(session,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityFocusRequest", /* signal */
+		g_variant_new("(s)", appid),
+		&error);
 
+	if (error != NULL) {
+		g_warning("Unable to request focus to Unity: %s", error->message);
+		g_error_free(error);
+		error = NULL;
+	}
 
 	/* Clean up */
 	if (app_data != NULL) {
