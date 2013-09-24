@@ -33,17 +33,55 @@ stopped (const gchar * appid, gpointer user_data)
 	return;
 }
 
+void
+resume (const gchar * appid, gpointer user_data)
+{
+	g_print("Resume %s\n", appid);
+	return;
+}
+
+void
+focus (const gchar * appid, gpointer user_data)
+{
+	g_print("Focus  %s\n", appid);
+	return;
+}
+
+void
+fail (const gchar * appid, upstart_app_launch_app_failed_t failhow, gpointer user_data)
+{
+	const gchar * failstr = "unknown";
+	switch (failhow) {
+		case UPSTART_APP_LAUNCH_APP_FAILED_CRASH:
+			failstr = "crashed";
+			break;
+		case UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE:
+			failstr = "startup";
+			break;
+	}
+
+	g_print("Focus  %s (%s)\n", appid, failstr);
+	return;
+}
+
+
 int
 main (int argc, gchar * argv[])
 {
 	upstart_app_launch_observer_add_app_start(started, NULL);
 	upstart_app_launch_observer_add_app_stop(stopped, NULL);
+	upstart_app_launch_observer_add_window_focus(focus, NULL);
+	upstart_app_launch_observer_add_resume(resume, NULL);
+	upstart_app_launch_observer_add_app_failed(fail, NULL);
 
 	GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
 	g_main_loop_run(mainloop);
 
 	upstart_app_launch_observer_delete_app_start(started, NULL);
 	upstart_app_launch_observer_delete_app_stop(stopped, NULL);
+	upstart_app_launch_observer_delete_window_focus(focus, NULL);
+	upstart_app_launch_observer_delete_resume(resume, NULL);
+	upstart_app_launch_observer_delete_app_failed(fail, NULL);
 
 	g_main_loop_unref(mainloop);
 
