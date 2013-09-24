@@ -347,6 +347,24 @@ upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t obse
 	return add_app_generic(observer, user_data, "stopped", &stop_array);
 }
 
+gboolean
+upstart_app_launch_observer_add_window_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_add_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_add_app_failed (upstart_app_launch_app_failed_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
 static gboolean
 delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, GArray ** array)
 {
@@ -386,6 +404,30 @@ gboolean
 upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &stop_array);
+}
+
+gboolean
+upstart_app_launch_observer_delete_app_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_delete_window_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_delete_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_observer_t observer, gpointer user_data)
+{
+	return FALSE;
 }
 
 /* Get all the instances for a given job name */
