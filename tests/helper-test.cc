@@ -29,6 +29,7 @@ class HelperTest : public ::testing::Test
 
 	protected:
 		virtual void SetUp() {
+			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
 			return;
 		}
 };
