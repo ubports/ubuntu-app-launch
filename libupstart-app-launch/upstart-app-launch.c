@@ -348,7 +348,7 @@ upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t obse
 }
 
 gboolean
-upstart_app_launch_observer_add_window_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
+upstart_app_launch_observer_add_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return FALSE;
 }
@@ -413,7 +413,7 @@ upstart_app_launch_observer_delete_app_resume (upstart_app_launch_app_observer_t
 }
 
 gboolean
-upstart_app_launch_observer_delete_window_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
+upstart_app_launch_observer_delete_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return FALSE;
 }
