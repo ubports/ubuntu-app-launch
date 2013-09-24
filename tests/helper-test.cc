@@ -30,6 +30,7 @@ class HelperTest : public ::testing::Test
 	protected:
 		virtual void SetUp() {
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+			g_setenv("PATH", CMAKE_SOURCE_DIR, TRUE);
 			return;
 		}
 };
@@ -246,5 +247,12 @@ TEST_F(HelperTest, KeyfileForAppid)
 	g_key_file_free(keyfile);
 	g_free(desktop);
 
+	return;
+}
+
+TEST_F(HelperTest, SetConfinedEnvvars)
+{
+	/* Not a test other than "don't crash" */
+	set_confined_envvars("pkg");
 	return;
 }
