@@ -1,0 +1,8 @@
+{
+	"ver": "1.2.3",
+	"hooks": {
+		"application": {
+			"desktop": "application.desktop"
+		}
+	}
+}

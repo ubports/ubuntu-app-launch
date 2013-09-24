@@ -325,6 +325,32 @@ TEST_F(HelperTest, ManifestToDesktop)
 	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.good_application_1.2.3");
 	ASSERT_STREQ(desktop, CMAKE_SOURCE_DIR "/click-app-dir/application.desktop");
 	g_free(desktop);
+	desktop = NULL;
+
+	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.bad-version_application_1.2.3");
+	ASSERT_TRUE(desktop == NULL);
+
+	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-app_application_1.2.3");
+	ASSERT_TRUE(desktop == NULL);
+
+	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-hooks_application_1.2.3");
+	ASSERT_TRUE(desktop == NULL);
+
+	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-version_application_1.2.3");
+	ASSERT_TRUE(desktop == NULL);
+
+	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-exist_application_1.2.3");
+	ASSERT_TRUE(desktop == NULL);
+
+	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-json_application_1.2.3");
+	ASSERT_TRUE(desktop == NULL);
+
+	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-object_application_1.2.3");
+	ASSERT_TRUE(desktop == NULL);
+
+	/* Bad App ID */
+	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.good_application-1.2.3");
+	ASSERT_TRUE(desktop == NULL);
 
 	return;
 }
