@@ -29,6 +29,7 @@ const gchar * appid = NULL;
 const gchar * input_uris = NULL;
 GVariant * app_data = NULL;
 gchar * dbus_path = NULL;
+guint64 unity_starttime = 0;
 
 /* Lower the connection count and process if it gets to zero */
 static void
@@ -36,6 +37,9 @@ connection_count_dec (void)
 {
 	connections_open--;
 	if (connections_open == 0) {
+		/* TODO: Check time here, either we've already heard from
+		   Unity and we should send the data to the app (quit) or
+		   we should wait some more */
 		g_main_loop_quit(mainloop);
 	}
 	return;
@@ -220,6 +224,18 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	/* Set up listening for the unfrozen signal from Unity */
+	/* TODO: Setup callback */
+
+	/* Send unfreeze to to Unity */
+	/* TODO: Unfreeze */
+
+
+	/* Now we start a race, we try to get to the point of knowing who
+	   to send things to, and Unity is unfrezing it.  When both are
+	   done we can send something to the app */
+	unity_starttime = g_get_monotonic_time();
+
 	/* List all the connections on dbus.  This sucks that we have to do
 	   this, but in the future we should add DBus API to do this lookup
 	   instead of having to do it with a bunch of requests */
@@ -274,10 +290,17 @@ main (int argc, char * argv[])
 	g_variant_unref(names);
 	g_variant_unref(listnames);
 
+	/* Loop and wait for everything to align */
 	if (connections_open != 0) {
 		g_main_loop_run(mainloop);
 	}
 
+	/* Now that we're done sending the info to the app, we can ask
+	   Unity to focus the application. */
+	/* TODO: Send focus */
+
+
+	/* Clean up */
 	if (app_data != NULL) {
 		g_variant_unref(app_data);
 	}
