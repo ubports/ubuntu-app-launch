@@ -273,13 +273,27 @@ main (int argc, char * argv[])
 		NULL); /* user data destroy */
 
 	/* Send unfreeze to to Unity */
-	/* TODO: Unfreeze */
-
+	g_dbus_connection_emit_signal(session,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityResumeRequest", /* signal */
+		g_variant_new("(s)", appid),
+		&error);
 
 	/* Now we start a race, we try to get to the point of knowing who
 	   to send things to, and Unity is unfrezing it.  When both are
 	   done we can send something to the app */
 	unity_starttime = g_get_monotonic_time();
+
+	if (error != NULL) {
+		/* On error let's not wait for Unity */
+		g_warning("Unable to signal Unity: %s", error->message);
+		g_error_free(error);
+		error = NULL;
+		unity_starttime = 0;
+	}
+
 
 	/* List all the connections on dbus.  This sucks that we have to do
 	   this, but in the future we should add DBus API to do this lookup
