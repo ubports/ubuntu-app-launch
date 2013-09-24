@@ -265,3 +265,19 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	set_confined_envvars("pkg");
 	return;
 }
+
+TEST_F(HelperTest, DesktopToExec)
+{
+	GKeyFile * keyfile = NULL;
+	gchar * exec = NULL;
+
+	keyfile = g_key_file_new();
+	ASSERT_TRUE(g_key_file_load_from_file(keyfile, CMAKE_SOURCE_DIR "/applications/foo.desktop", G_KEY_FILE_NONE, NULL));
+	exec = desktop_to_exec(keyfile, "");
+	ASSERT_TRUE(exec != NULL);
+	ASSERT_STREQ(exec, "foo");
+	g_free(exec);
+	g_key_file_free(keyfile);
+
+	return;
+}
