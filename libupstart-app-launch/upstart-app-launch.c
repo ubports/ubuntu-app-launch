@@ -82,6 +82,11 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	gchar * env_appid = g_strdup_printf("APP_ID=%s", appid);
 	gchar * env_uris = NULL;
 
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
 	if (uris != NULL) {
 		gchar * urisjoin = g_strjoinv(" ", (gchar **)uris);
 		env_uris = g_strdup_printf("APP_URIS=%s", urisjoin);

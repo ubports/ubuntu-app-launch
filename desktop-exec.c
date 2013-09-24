@@ -18,6 +18,7 @@
  */
 
 #include <unistd.h>
+#include <errno.h>
 #include <string.h>
 #include <glib.h>
 #include <gio/gio.h>
@@ -27,36 +28,55 @@
 int
 main (int argc, char * argv[])
 {
-	if (argc != 2 && argc != 3) {
-		g_error("Should be called as: %s <app_id> [uri list]", argv[0]);
+	if (argc != 1) {
+		g_error("Should be called as: %s", argv[0]);
 		return 1;
 	}
 
-	GKeyFile * keyfile = keyfile_for_appid(argv[1]);
+	const gchar * app_id = g_getenv("APP_ID");
+
+	if (app_id == NULL) {
+		g_error("No APP_ID environment variable defined");
+		return 1;
+	}
+
+	gchar * desktopfilename = NULL;
+	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
 	if (keyfile == NULL) {
-		g_error("Unable to find keyfile for application '%s'", argv[0]);
+		g_error("Unable to find keyfile for application '%s'", app_id);
 		return 1;
 	}
 
-	gchar * execline = g_key_file_get_string(keyfile, "Desktop Entry", "Exec", NULL);
+	/* This string is quoted using desktop file quoting:
+	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
+	gchar * execline = desktop_to_exec(keyfile, app_id);
 	g_return_val_if_fail(execline != NULL, 1);
+	set_upstart_variable("APP_EXEC", execline);
+	g_free(execline);
 
-	gchar * codeexec = desktop_exec_parse(execline, argc == 3 ? argv[2] : NULL);
-	if (codeexec != NULL) {
-		g_free(execline);
-		execline = codeexec;
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
+		gchar * path = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
+		set_upstart_variable("APP_DIR", path);
+		g_free(path);
 	}
 
-	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "XCanonicalAppArmorProfile", NULL);
+	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "X-Ubuntu-AppArmor-Profile", NULL);
 	if (apparmor != NULL) {
 		set_upstart_variable("APP_EXEC_POLICY", apparmor);
+		set_confined_envvars(app_id);
+		g_free(apparmor);
+	} else {
+		set_upstart_variable("APP_EXEC_POLICY", "unconfined");
 	}
 
-	set_upstart_variable("APP_EXEC", execline);
-
 	g_key_file_free(keyfile);
-	g_free(execline);
+
+	/* TODO: This is for Surface Flinger.  When we drop support, we can drop this code */
+	if (desktopfilename != NULL) {
+		set_upstart_variable("APP_DESKTOP_FILE", desktopfilename);
+		g_free(desktopfilename);
+	}
 
 	return 0;
 }
