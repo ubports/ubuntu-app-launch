@@ -118,7 +118,7 @@ gboolean   upstart_app_launch_observer_add_app_focus    (upstart_app_launch_app_
                                                          gpointer                          user_data);
 
 /**
- * upstart_app_launch_observer_add_resume:
+ * upstart_app_launch_observer_add_app_resume:
  * @observer: Callback when an application is started an possibly asleep
  * @user_data: (allow none): Data to pass to the observer
  *
@@ -128,7 +128,7 @@ gboolean   upstart_app_launch_observer_add_app_focus    (upstart_app_launch_app_
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_resume       (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_add_app_resume   (upstart_app_launch_app_observer_t observer,
                                                          gpointer                          user_data);
 
 /**
@@ -183,7 +183,7 @@ gboolean   upstart_app_launch_observer_delete_app_focus    (upstart_app_launch_a
                                                             gpointer                          user_data);
 
 /**
- * upstart_app_launch_observer_delete_resume:
+ * upstart_app_launch_observer_delete_app_resume:
  * @observer: Callback to remove
  * @user_data: (allow none): Data that was passed to the observer
  *
@@ -192,7 +192,7 @@ gboolean   upstart_app_launch_observer_delete_app_focus    (upstart_app_launch_a
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_resume       (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_resume   (upstart_app_launch_app_observer_t observer,
                                                             gpointer                          user_data);
 
 /**

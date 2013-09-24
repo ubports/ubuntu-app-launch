@@ -71,7 +71,7 @@ main (int argc, gchar * argv[])
 	upstart_app_launch_observer_add_app_start(started, NULL);
 	upstart_app_launch_observer_add_app_stop(stopped, NULL);
 	upstart_app_launch_observer_add_app_focus(focus, NULL);
-	upstart_app_launch_observer_add_resume(resume, NULL);
+	upstart_app_launch_observer_add_app_resume(resume, NULL);
 	upstart_app_launch_observer_add_app_failed(fail, NULL);
 
 	GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
@@ -80,7 +80,7 @@ main (int argc, gchar * argv[])
 	upstart_app_launch_observer_delete_app_start(started, NULL);
 	upstart_app_launch_observer_delete_app_stop(stopped, NULL);
 	upstart_app_launch_observer_delete_app_focus(focus, NULL);
-	upstart_app_launch_observer_delete_resume(resume, NULL);
+	upstart_app_launch_observer_delete_app_resume(resume, NULL);
 	upstart_app_launch_observer_delete_app_failed(fail, NULL);
 
 	g_main_loop_unref(mainloop);
