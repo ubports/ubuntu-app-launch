@@ -225,7 +225,5 @@ TEST_F(HelperTest, DesktopExecParse)
 	ASSERT_STREQ(g_array_index(output, gchar *, 9), "");
 	g_array_free(output, TRUE);
 
-
-
 	return;
 }
