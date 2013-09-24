@@ -228,3 +228,23 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	return;
 }
+
+TEST_F(HelperTest, KeyfileForAppid)
+{
+	GKeyFile * keyfile = NULL;
+	gchar * desktop = NULL;
+
+	g_debug("XDG_DATA_DIRS=%s", g_getenv("XDG_DATA_DIRS"));
+
+	keyfile = keyfile_for_appid("bar", &desktop);
+	ASSERT_TRUE(keyfile == NULL);
+	ASSERT_TRUE(desktop == NULL);
+
+	keyfile = keyfile_for_appid("foo", &desktop);
+	ASSERT_TRUE(keyfile != NULL);
+	ASSERT_TRUE(desktop != NULL);
+	g_key_file_free(keyfile);
+	g_free(desktop);
+
+	return;
+}
