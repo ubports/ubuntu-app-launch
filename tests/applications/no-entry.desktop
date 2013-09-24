@@ -1,0 +1,7 @@
+[Desktop Non-Entry]
+Name=Foo
+Type=Application
+Exec=foo
+NoDisplay=false
+Hidden=false
+Terminal=false
