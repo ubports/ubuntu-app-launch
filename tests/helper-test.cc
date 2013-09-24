@@ -140,6 +140,14 @@ TEST_F(HelperTest, DesktopExecParse)
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version /proc/uptime");
 	g_array_free(output, TRUE);
 
+	output = desktop_exec_parse("foo %% %% %%%%", NULL);
+	ASSERT_EQ(output->len, 4);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "%");
+	ASSERT_STREQ(g_array_index(output, gchar *, 2), "%");
+	ASSERT_STREQ(g_array_index(output, gchar *, 3), "%%");
+	g_array_free(output, TRUE);
+
 
 
 	return;
