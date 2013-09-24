@@ -30,6 +30,16 @@ const gchar * input_uris = NULL;
 GVariant * app_data = NULL;
 gchar * dbus_path = NULL;
 guint64 unity_starttime = 0;
+guint timer = 0;
+
+/* Unity didn't respond in time, continue on */
+static gboolean
+timer_cb (gpointer user_data)
+{
+	g_warning("Unity didn't respond in 500ms to resume the app");
+	g_main_loop_quit(mainloop);
+	return G_SOURCE_REMOVE;
+}
 
 /* Lower the connection count and process if it gets to zero */
 static void
@@ -37,11 +47,35 @@ connection_count_dec (void)
 {
 	connections_open--;
 	if (connections_open == 0) {
-		/* TODO: Check time here, either we've already heard from
+		/* Check time here, either we've already heard from
 		   Unity and we should send the data to the app (quit) or
 		   we should wait some more */
-		g_main_loop_quit(mainloop);
+		guint64 timespent = g_get_monotonic_time() - unity_starttime;
+		if (timespent > 500 /* ms */ * 1000 /* ms to us */) {
+			g_main_loop_quit(mainloop);
+		} else {
+			timer = g_timeout_add(500 - (timespent / 1000), timer_cb, NULL);
+		}
 	}
+	return;
+}
+
+/* Called when Unity is done unfreezing the application, if we're
+   done determining the PID, we can send signals */
+static void
+unity_resume_cb (GDBusConnection * connection, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	if (timer != 0) {
+		g_source_remove(timer);
+	}
+
+	if (connections_open == 0) {
+		g_main_loop_quit(mainloop);
+	} else {
+		/* Make it look like we started *forever* ago */
+		unity_starttime = 0;
+	}
+
 	return;
 }
 
@@ -224,8 +258,19 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	/* Allocate main loop */
+	mainloop = g_main_loop_new(NULL, FALSE);
+
 	/* Set up listening for the unfrozen signal from Unity */
-	/* TODO: Setup callback */
+	g_dbus_connection_signal_subscribe(session,
+		NULL, /* sender */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityResumeResponse", /* signal */
+		"/", /* path */
+		appid, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		unity_resume_cb, mainloop,
+		NULL); /* user data destroy */
 
 	/* Send unfreeze to to Unity */
 	/* TODO: Unfreeze */
@@ -257,9 +302,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	/* Allocate the mainloop now as we know we're going async */
-	mainloop = g_main_loop_new(NULL, FALSE);
-
+	/* Now as we know we're going async */
 	GVariant * names = g_variant_get_child_value(listnames, 0);
 	GVariantIter iter;
 	g_variant_iter_init(&iter, names);
