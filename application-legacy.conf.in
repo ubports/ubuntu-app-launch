@@ -6,23 +6,25 @@ instance ${APP_ID}-${INSTANCE_ID}
 start on application-legacy-start
 stop on application-end or desktop-end
 
+env APP_ID
 env APP_EXEC="echo Error"
-env APP_EXEC_POLICY
+env APP_EXEC_POLICY=""
 env APP_URIS
+# For Surface Flinger
+env APP_DESKTOP_FILE
 
-pre-start exec @pkglibexecdir@/desktop-exec "${APP_ID}" "${APP_URIS}"
+# This will be set to "unconfined" by desktop-exec if there is no confinement defined
+apparmor switch $APP_EXEC_POLICY
 
-script
+pre-start script
 	if pgrep -u system surfaceflinger ; then
-		APP_EXEC="$APP_EXEC --desktop_file_hint=/usr/share/applications/$APP_ID.desktop"
+		initctl set-env USING_SURFACE_FLINGER=1
 	fi
 
-	if [ -z $APP_EXEC_POLICY ]; then
-		exec $APP_EXEC
-	else
-		exec aa-exec-click -p "$APP_EXEC_POLICY" -- $APP_EXEC
-	fi
+	exec @pkglibexecdir@/desktop-exec
 end script
 
-post-start exec @pkglibexecdir@/zg-report-app open "application://${APP_ID}.desktop"
-post-stop exec @pkglibexecdir@/zg-report-app close "application://${APP_ID}.desktop"
+exec @pkglibexecdir@/exec-line-exec
+
+post-start exec @pkglibexecdir@/zg-report-app open
+post-stop exec @pkglibexecdir@/zg-report-app close
