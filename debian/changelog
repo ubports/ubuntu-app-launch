@@ -1,3 +1,15 @@
+upstart-app-launch (0.1+13.10.20130924.1-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Evil hack to allow "secondary activations" through killing the first
+    instance.
+  * Handle URLs with complex spacing by using C parsing. (LP: #1228387)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 63
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 24 Sep 2013 06:04:42 +0000
+
 upstart-app-launch (0.1+13.10.20130919.4-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
