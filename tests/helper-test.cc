@@ -246,6 +246,15 @@ TEST_F(HelperTest, KeyfileForAppid)
 	ASSERT_TRUE(desktop != NULL);
 	g_key_file_free(keyfile);
 	g_free(desktop);
+	desktop = NULL;
+
+	keyfile = keyfile_for_appid("no-exec", &desktop);
+	ASSERT_TRUE(keyfile == NULL);
+	ASSERT_TRUE(desktop == NULL);
+
+	keyfile = keyfile_for_appid("no-entry", &desktop);
+	ASSERT_TRUE(keyfile == NULL);
+	ASSERT_TRUE(desktop == NULL);
 
 	return;
 }
