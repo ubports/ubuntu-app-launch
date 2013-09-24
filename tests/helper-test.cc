@@ -128,6 +128,15 @@ TEST_F(HelperTest, DesktopExecParse)
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
 	g_array_free(output, TRUE);
 
+	output = desktop_exec_parse("foo %f \"%f\" %f%f %f\\ %f", "file:///proc/version");
+	ASSERT_EQ(output->len, 5);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
+	ASSERT_STREQ(g_array_index(output, gchar *, 2), "/proc/version");
+	ASSERT_STREQ(g_array_index(output, gchar *, 3), "/proc/version/proc/version");
+	ASSERT_STREQ(g_array_index(output, gchar *, 4), "/proc/version /proc/version");
+	g_array_free(output, TRUE);
+
 	output = desktop_exec_parse("foo %f", "file:///proc/version file:///proc/uptime");
 	ASSERT_EQ(output->len, 2);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
