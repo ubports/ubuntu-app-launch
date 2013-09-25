@@ -236,18 +236,18 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 int
 main (int argc, char * argv[])
 {
-	if (argc != 3) {
-		g_error("Should be called as: %s <app_id> <uri list>", argv[0]);
+	if (argc != 1) {
+		g_error("Should be called as: %s", argv[0]);
 		return 1;
 	}
 
-	appid = argv[1];
-	input_uris = argv[2];
+	appid = g_getenv("APP_ID");
+	input_uris = g_getenv("APP_URIS");
 
 	/* First figure out what we're looking for (and if there is something to look for) */
 	app_pid = upstart_app_launch_get_primary_pid(appid);
 	if (app_pid == 0) {
-		g_warning("Unable to find pid for app id '%s'", argv[1]);
+		g_warning("Unable to find pid for app id '%s'", appid);
 		return 1;
 	}
 
