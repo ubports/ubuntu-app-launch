@@ -65,6 +65,8 @@ connection_count_dec (void)
 static void
 unity_resume_cb (GDBusConnection * connection, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
+	g_debug("Unity Completed Resume");
+
 	if (timer != 0) {
 		g_source_remove(timer);
 	}
@@ -350,6 +352,7 @@ main (int argc, char * argv[])
 	/* Loop and wait for everything to align */
 	if (connections_open != 0) {
 		g_main_loop_run(mainloop);
+		g_debug("Finishing main loop");
 	}
 
 	/* Now that we're done sending the info to the app, we can ask
@@ -367,6 +370,9 @@ main (int argc, char * argv[])
 		g_error_free(error);
 		error = NULL;
 	}
+
+	/* Make sure the signal hits the bus */
+	g_dbus_connection_flush_sync(session, NULL, NULL);
 
 	/* Clean up */
 	if (app_data != NULL) {
