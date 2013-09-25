@@ -30,7 +30,7 @@ script
 		if @pkglibexecdir@/desktop-single $APP_ID ; then
 			if ! start application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}" ; then
 				# TODO: This is a little less, but still mostly evil.
-				stop application-legacy APP_ID="${APP_ID}" INSTANCE_ID=""
+				stop application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" || true
 				start application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}"
 			fi
 		else
