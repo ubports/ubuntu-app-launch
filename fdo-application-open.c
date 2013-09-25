@@ -50,6 +50,11 @@ parse_uris (void)
 		return;
 	}
 
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
 	GVariant * uris = NULL;
 	gchar ** uri_split = g_strsplit(input_uris, " ", 0);
 	if (uri_split[0] == NULL) {
