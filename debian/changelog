@@ -1,3 +1,13 @@
+upstart-app-launch (0.1+13.10.20130925.2-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Ensure a failed stop return doesn't block execution. (LP: #1229468)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 67
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 25 Sep 2013 18:03:51 +0000
+
 upstart-app-launch (0.1+13.10.20130925.1-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
