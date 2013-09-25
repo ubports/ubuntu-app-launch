@@ -257,6 +257,7 @@ struct _observer_t {
 static GArray * start_array = NULL;
 static GArray * stop_array = NULL;
 static GArray * focus_array = NULL;
+static GArray * resume_array = NULL;
 
 static void
 observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
@@ -405,10 +406,33 @@ upstart_app_launch_observer_add_app_focus (upstart_app_launch_app_observer_t obs
 	return add_session_generic(observer, user_data, "UnityFocusRequest", &focus_array, focus_signal_cb);
 }
 
+/* Handle the resume signal when it occurs, call the observer, then send a signal back when we're done */
+static void
+resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+
+	GError * error = NULL;
+	g_dbus_connection_emit_signal(conn,
+		sender, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityResumeResponse", /* signal */
+		params, /* params, the same */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to emit response signal: %s", error->message);
+		g_error_free(error);
+	}
+
+	return;
+}
+
 gboolean
 upstart_app_launch_observer_add_app_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return FALSE;
+	return add_session_generic(observer, user_data, "UnityResumeRequest", &resume_array, resume_signal_cb);
 }
 
 gboolean
