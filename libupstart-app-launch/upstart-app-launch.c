@@ -485,13 +485,13 @@ upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t o
 gboolean
 upstart_app_launch_observer_delete_app_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return FALSE;
+	return delete_app_generic(observer, user_data, &resume_array);
 }
 
 gboolean
 upstart_app_launch_observer_delete_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return FALSE;
+	return delete_app_generic(observer, user_data, &focus_array);
 }
 
 gboolean
