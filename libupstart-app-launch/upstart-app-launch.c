@@ -256,6 +256,7 @@ struct _observer_t {
 /* The Arrays of Observers */
 static GArray * start_array = NULL;
 static GArray * stop_array = NULL;
+static GArray * focus_array = NULL;
 
 static void
 observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
@@ -347,10 +348,61 @@ upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t obse
 	return add_app_generic(observer, user_data, "stopped", &stop_array);
 }
 
+/* Creates the observer structure and registers for the signal with
+   GDBus so that we can get a callback */
+static gboolean
+add_session_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GArray ** array, GDBusSignalCallback session_cb)
+{
+	observer_t observert;
+	observert.conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+
+	if (observert.conn == NULL) {
+		return FALSE;
+	}
+
+	observert.func = observer;
+	observert.user_data = user_data;
+
+	if (*array == NULL) {
+		*array = g_array_new(FALSE, FALSE, sizeof(observer_t));
+	}
+	g_array_append_val(*array, observert);
+	observer_t * pobserver = &g_array_index(*array, observer_t, (*array)->len - 1);
+
+	pobserver->sighandle = g_dbus_connection_signal_subscribe(observert.conn,
+		NULL, /* sender */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		signal, /* signal */
+		"/", /* path */
+		NULL, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		session_cb,
+		pobserver,
+		NULL); /* user data destroy */
+
+	return TRUE;
+}
+
+/* Handle the focus signal when it occurs, call the observer */
+static void
+focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	observer_t * observer = (observer_t *)user_data;
+	const gchar * appid = NULL;
+
+	g_variant_get(params, "(&s)", &appid);
+
+	if (observer->func != NULL) {
+		observer->func(appid, observer->user_data);
+	}
+
+	return;
+}
+
 gboolean
 upstart_app_launch_observer_add_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return FALSE;
+	return add_session_generic(observer, user_data, "UnityFocusRequest", &focus_array, focus_signal_cb);
 }
 
 gboolean
