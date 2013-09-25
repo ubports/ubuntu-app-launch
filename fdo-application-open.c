@@ -18,6 +18,8 @@
  */
 
 #include <gio/gio.h>
+#include <nih/alloc.h>
+#include <libnih-dbus.h>
 #include "libupstart-app-launch/upstart-app-launch.h"
 #include "helpers.h"
 
@@ -99,21 +101,8 @@ app_id_to_dbus_path (void)
 		return;
 	}
 
-	/* If it's an app id, use the application name, otherwise
-	   assume legacy and it's the desktop file name */
-	gchar * application = NULL;
-	if (!app_id_to_triplet(appid, NULL, &application, NULL)) {
-		application = g_strdup(appid);
-	}
+	dbus_path = nih_dbus_path(NULL, "/", appid, NULL);
 
-	gchar * dot = g_utf8_strchr(application, -1, '.');
-	while (dot != NULL) {
-		dot[0] = '/';
-		dot = g_utf8_strchr(application, -1, '.');
-	}
-
-	dbus_path = g_strdup_printf("/%s", application);
-	g_free(application);
 	return;
 }
 
@@ -292,7 +281,7 @@ main (int argc, char * argv[])
 
 	g_main_loop_unref(mainloop);
 	g_object_unref(session);
-	g_free(dbus_path);
+	nih_free(dbus_path);
 
 	return 0;
 }
