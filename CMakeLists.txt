@@ -188,6 +188,13 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" DESTINATION "
 add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
 
 ####################
+# application-failed.conf
+####################
+
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/application-failed.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
+add_test(application-failed.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_SOURCE_DIR}/application-failed.conf")
+
+####################
 # upstart-app-launch-desktop.click-hook
 ####################
 
