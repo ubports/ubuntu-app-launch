@@ -28,7 +28,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	GKeyFile * keyfile = keyfile_for_appid(argv[1]);
+	GKeyFile * keyfile = keyfile_for_appid(argv[1], NULL);
 
 	if (keyfile == NULL) {
 		g_error("Unable to find keyfile for application '%s'", argv[0]);

@@ -3,6 +3,7 @@ author "Ted Gould <ted@canonical.com>"
 
 start on application-start
 
+# Events aren't emitted directly, but start is used to create them
 emits application-legacy-start
 emits application-click-start
 
@@ -20,12 +21,16 @@ script
 	fi
 
 	if [ ! -z $CLICK_DIR ] && [ -d $CLICK_DIR ] ; then
-		initctl emit application-click-start APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"
+		if ! start application-click APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"; then
+			@pkglibexecdir@/second-exec
+		fi
 	else
 		if @pkglibexecdir@/desktop-single $APP_ID ; then
-			initctl emit application-legacy-start APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}"
+			if ! start application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}" ; then
+				@pkglibexecdir@/second-exec
+			fi
 		else
-			initctl emit application-legacy-start APP_ID="${APP_ID}" INSTANCE_ID=`date -u +%s` APP_URIS="${APP_URIS}"
+			start application-legacy APP_ID="${APP_ID}" INSTANCE_ID=`date -u +%s` APP_URIS="${APP_URIS}"
 		fi
 	fi
 end script

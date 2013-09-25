@@ -227,6 +227,7 @@ set_upstart_variable (const gchar * variable, const gchar * value)
 		NULL
 	};
 
+	g_debug("Setting Upstart variable '%s' to '%s'", variable, value);
 	gchar * variablestr = g_strdup_printf("%s=%s", variable, value);
 	command[2] = variablestr;
 
@@ -282,6 +283,11 @@ free_string (gpointer value)
 static gchar *
 build_file_list (const gchar * uri_list)
 {
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
 	gchar ** uri_split = g_strsplit(uri_list, " ", 0);
 
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(gchar *));
@@ -313,19 +319,27 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 		return;
 	}
 
-	*single_uri = g_strdup(uri_list);
-	gchar * first_space = g_utf8_strchr(*single_uri, -1, ' ');
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
+
+	gchar * first_uri = g_strdup(uri_list);
+	gchar * first_space = g_utf8_strchr(first_uri, -1, ' ');
 	
 	if (first_space != NULL) {
 		first_space[0] = '\0';
 	}
+
+	*single_uri = first_uri;
 
 	return;
 }
 
 /* Make sure we have a single file variable */
 static inline void
-ensure_singlefile (gchar ** single_file, gchar ** single_uri, const gchar * uri_list)
+ensure_singlefile (gchar ** single_file, const gchar * uri_list)
 {
 	if (uri_list == NULL) {
 		return;
@@ -335,18 +349,34 @@ ensure_singlefile (gchar ** single_file, gchar ** single_uri, const gchar * uri_
 		return;
 	}
 
-	ensure_singleuri(single_uri, uri_list);
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
 
-	if (single_uri != NULL) {
-		*single_file = uri2file(*single_uri);
+	gchar * first_uri = g_strdup(uri_list);
+	gchar * first_space = g_utf8_strchr(first_uri, -1, ' ');
+	
+	if (first_space != NULL) {
+		first_space[0] = '\0';
+	}
+
+	gchar * first_file = NULL;
+	if (first_uri != NULL) {
+		first_file = uri2file(first_uri);
+	}
+
+	if (first_file != NULL) {
+		*single_file = first_file;
 	}
 
 	return;
 }
 
 /* Parse a desktop exec line and return the next string */
-gchar *
-desktop_exec_parse (const gchar * execline, const gchar * uri_list)
+static gchar *
+desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
 {
 	gchar ** execsplit = g_strsplit(execline, "%", 0);
 
@@ -397,7 +427,7 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'f':
-			ensure_singlefile(&single_file, &single_uri, uri_list);
+			ensure_singlefile(&single_file, uri_list);
 
 			if (single_file != NULL) {
 				g_array_append_val(outarray, single_file);
@@ -422,6 +452,11 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'U':
+			/* TODO: Joining only with space could cause issues with breaking them
+			   back out.  We don't have any cases of more than one today.  But, this
+			   isn't good.
+			   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+			   */
 			if (uri_list != NULL) {
 				g_array_append_val(outarray, uri_list);
 			}
@@ -452,6 +487,40 @@ desktop_exec_parse (const gchar * execline, const gchar * uri_list)
 	g_strfreev(execsplit);
 
 	return output;
+}
+
+/* Take a full exec line, split it out, parse the segments and return
+   it to the caller */
+GArray *
+desktop_exec_parse (const gchar * execline, const gchar * urilist)
+{
+	GError * error = NULL;
+	gchar ** splitexec = NULL;
+	gint execitems = 0;
+
+	/* This returns from desktop file style quoting to straight strings with
+	   the appropriate characters split by the spaces that were meant for
+	   splitting.  Trickier than it sounds.  But now we should be able to assume
+	   that each string in the array is expected to be its own parameter. */
+	g_shell_parse_argv(execline, &execitems, &splitexec, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to parse exec line '%s': %s", execline, error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	GArray * newargv = g_array_new(TRUE, FALSE, sizeof(gchar *));
+	int i;
+	for (i = 0; i < execitems; i++) {
+		gchar * execinserted = desktop_exec_segment_parse(splitexec[i], urilist);
+		g_array_append_val(newargv, execinserted);
+	}
+	g_strfreev(splitexec);
+
+	/* Each string here should be its own param */
+
+	return newargv;
 }
 
 /* Check to make sure we have the sections and keys we want */
@@ -502,7 +571,7 @@ try_dir (const char * dir, const gchar * desktop)
 /* Find the keyfile that we need for a particular AppID and return it.
    Or NULL if we can't find it. */
 GKeyFile *
-keyfile_for_appid (const gchar * appid)
+keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 {
 	gchar * desktop = g_strdup_printf("%s.desktop", appid);
 
@@ -511,12 +580,63 @@ keyfile_for_appid (const gchar * appid)
 	int i;
 
 	keyfile = try_dir(g_get_user_data_dir(), desktop);
+	if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
+		*desktopfile = g_build_filename(g_get_user_data_dir(), "applications", desktop, NULL);
+	}
 
 	for (i = 0; data_dirs[i] != NULL && keyfile == NULL; i++) {
 		keyfile = try_dir(data_dirs[i], desktop);
+
+		if (keyfile != NULL && desktopfile != NULL && *desktopfile == NULL) {
+			*desktopfile = g_build_filename(data_dirs[i], "applications", desktop, NULL);
+		}
 	}
 
 	g_free(desktop);
 
 	return keyfile;
+}
+
+/* Set environment various variables to make apps work under
+ * confinement according to:
+ * https://wiki.ubuntu.com/SecurityTeam/Specifications/ApplicationConfinement
+ */
+void
+set_confined_envvars (const gchar * package)
+{
+	g_debug("Setting 'UBUNTU_APPLICATION_ISOLATION' to '1'");
+	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1");
+
+	/* Make sure the XDG base dirs are set for the application using
+	 * the user's current values/system defaults. We could set these to
+	 * what is expected in the AppArmor profile, but that might be too
+	 * brittle if someone uses different base dirs.
+	 */
+	g_debug("Setting 'XDG_CACHE_HOME' using g_get_user_cache_dir()");
+	set_upstart_variable("XDG_CACHE_HOME", g_get_user_cache_dir());
+
+	g_debug("Setting 'XDG_CONFIG_HOME' using g_get_user_config_dir()");
+	set_upstart_variable("XDG_CONFIG_HOME", g_get_user_config_dir());
+
+	g_debug("Setting 'XDG_DATA_HOME' using g_get_user_data_dir()");
+	set_upstart_variable("XDG_DATA_HOME", g_get_user_data_dir());
+
+	g_debug("Setting 'XDG_RUNTIME_DIR' using g_get_user_runtime_dir()");
+	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
+
+	/* Set TMPDIR to something sane and application-specific */
+	gchar * tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package);
+	g_debug("Setting 'TMPDIR' to '%s'", tmpdir);
+	set_upstart_variable("TMPDIR", tmpdir);
+	g_debug("Creating '%s'", tmpdir);
+	g_mkdir_with_parents(tmpdir, 0700);
+	g_free(tmpdir);
+
+	/* Do the same for nvidia */
+	gchar * nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package);
+	g_debug("Setting '__GL_SHADER_DISK_CACHE_PATH' to '%s'", nv_shader_cachedir);
+	set_upstart_variable("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
+	g_free(nv_shader_cachedir);
+
+	return;
 }

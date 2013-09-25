@@ -106,7 +106,7 @@ install(TARGETS upstart-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDI
 
 add_executable(desktop-exec desktop-exec.c)
 set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
-target_link_libraries(desktop-exec helpers)
+target_link_libraries(desktop-exec helpers ${APPARMOR_LIBRARIES})
 install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
@@ -137,6 +137,15 @@ target_link_libraries(desktop-single helpers)
 install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# exec-line-exec
+####################
+
+add_executable(exec-line-exec exec-line-exec.c)
+set_target_properties(exec-line-exec PROPERTIES OUTPUT_NAME "exec-line-exec")
+target_link_libraries(exec-line-exec helpers)
+install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # zg-report-app
 ####################
 
@@ -144,6 +153,15 @@ add_executable(zg-report-app zg-report-app.c)
 set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
 target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
+
+#######################
+# second-exec
+#######################
+
+add_executable(second-exec second-exec.c)
+set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
+target_link_libraries(second-exec helpers upstart-launcher)
+install(TARGETS second-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # application.conf
