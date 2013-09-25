@@ -209,13 +209,6 @@ main (int argc, char * argv[])
 	appid = argv[1];
 	input_uris = argv[2];
 
-	/* First figure out what we're looking for (and if there is something to look for) */
-	app_pid = upstart_app_launch_get_primary_pid(appid);
-	if (app_pid == 0) {
-		g_warning("Unable to find pid for app id '%s'", argv[1]);
-		return 1;
-	}
-
 	/* DBus tell us! */
 	GError * error = NULL;
 	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
@@ -243,6 +236,16 @@ main (int argc, char * argv[])
 	if (error != NULL) {
 		g_warning("Unable to get list of names from DBus: %s", error->message);
 		g_error_free(error);
+		return 1;
+	}
+
+	/* Next figure out what we're looking for (and if there is something to look for) */
+	/* NOTE: We're getting the PID *after* the list of connections so
+	   that some new process can't come in, be the same PID as it's
+	   connection will not be in teh list we just got. */
+	app_pid = upstart_app_launch_get_primary_pid(appid);
+	if (app_pid == 0) {
+		g_warning("Unable to find pid for app id '%s'", argv[1]);
 		return 1;
 	}
 
