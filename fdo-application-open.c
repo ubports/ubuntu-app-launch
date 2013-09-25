@@ -132,14 +132,14 @@ send_open_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 
 /* Sends the Open message to the connection with the URIs we were given */
 static void
-contact_app (GDBusConnection * bus, const gchar * connection)
+contact_app (GDBusConnection * bus, const gchar * dbus_name)
 {
 	parse_uris();
 	app_id_to_dbus_path();
 
 	/* Using the FD.o Application interface */
 	g_dbus_connection_call(bus,
-		connection,
+		dbus_name,
 		dbus_path,
 		"org.freedesktop.Application",
 		"Open",
@@ -150,7 +150,7 @@ contact_app (GDBusConnection * bus, const gchar * connection)
 		NULL,
 		send_open_cb, NULL);
 
-	g_debug("Sending Open request to: %s", connection);
+	g_debug("Sending Open request to: %s", dbus_name);
 
 	return;
 }
@@ -160,16 +160,16 @@ contact_app (GDBusConnection * bus, const gchar * connection)
 static void
 get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 {
-	gchar * connection = (gchar *)user_data;
+	gchar * dbus_name = (gchar *)user_data;
 	GError * error = NULL;
 	GVariant * vpid = NULL;
 
 	vpid = g_dbus_connection_call_finish(G_DBUS_CONNECTION(object), res, &error);
 
 	if (error != NULL) {
-		g_warning("Unable to query PID for connection '%s': %s", connection, error->message);
+		g_warning("Unable to query PID for dbus name '%s': %s", dbus_name, error->message);
 		g_error_free(error);
-		g_free(connection);
+		g_free(dbus_name);
 
 		/* Lowering the connection count, this one is terminal, even if in error */
 		connection_count_dec();
@@ -182,13 +182,13 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 
 	if (pid == app_pid) {
 		/* Trying to send a message to the connection */
-		contact_app(G_DBUS_CONNECTION(object), connection);
+		contact_app(G_DBUS_CONNECTION(object), dbus_name);
 	} else {
 		/* See if we can quit now */
 		connection_count_dec();
 	}
 
-	g_free(connection);
+	g_free(dbus_name);
 
 	return;
 }
