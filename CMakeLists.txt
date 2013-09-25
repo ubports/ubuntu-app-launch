@@ -155,13 +155,13 @@ target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
 #######################
-# fdo-application-open
+# second-exec
 #######################
 
-add_executable(fdo-application-open fdo-application-open.c)
-set_target_properties(fdo-application-open PROPERTIES OUTPUT_NAME "fdo-application-open")
-target_link_libraries(fdo-application-open helpers upstart-launcher)
-install(TARGETS fdo-application-open RUNTIME DESTINATION "${pkglibexecdir}")
+add_executable(second-exec second-exec.c)
+set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
+target_link_libraries(second-exec helpers upstart-launcher)
+install(TARGETS second-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # application.conf
