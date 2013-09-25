@@ -235,7 +235,7 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 
 /* Starts to look for the PID and the connections for that PID */
 void
-find_appid_pid (void)
+find_appid_pid (GDBusConnection * session)
 {
 	GError * error = NULL;
 
@@ -358,8 +358,8 @@ main (int argc, char * argv[])
 	}
 
 	/* If we've got something to give out, start looking for how */
-	if (app_uris != NULL) {
-		find_appid_pid();
+	if (input_uris != NULL) {
+		find_appid_pid(session);
 	}
 
 	/* Loop and wait for everything to align */
