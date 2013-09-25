@@ -233,6 +233,67 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 	return;
 }
 
+/* Starts to look for the PID and the connections for that PID */
+void
+find_appid_pid (void)
+{
+	GError * error = NULL;
+
+	/* List all the connections on dbus.  This sucks that we have to do
+	   this, but in the future we should add DBus API to do this lookup
+	   instead of having to do it with a bunch of requests */
+	GVariant * listnames = g_dbus_connection_call_sync(session,
+		"org.freedesktop.DBus",
+		"/",
+		"org.freedesktop.DBus",
+		"ListNames",
+		NULL,
+		G_VARIANT_TYPE("(as)"),
+		G_DBUS_CALL_FLAGS_NONE,
+		-1,
+		NULL,
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to get list of names from DBus: %s", error->message);
+		g_error_free(error);
+		return;
+	}
+
+	/* Now as we know we're going async */
+	GVariant * names = g_variant_get_child_value(listnames, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, names);
+	gchar * name = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &name)) {
+		/* We only want to ask each connection once, this makes that so */
+		if (!g_dbus_is_unique_name(name)) {
+			continue;
+		}
+
+		/* Get the PIDs */
+		g_dbus_connection_call(session,
+			"org.freedesktop.DBus",
+			"/",
+			"org.freedesktop.DBus",
+			"GetConnectionUnixProcessID",
+			g_variant_new("(s)", name),
+			G_VARIANT_TYPE("(u)"),
+			G_DBUS_CALL_FLAGS_NONE,
+			-1,
+			NULL,
+			get_pid_cb, g_strdup(name));
+
+		connections_open++;
+	}
+
+	g_variant_unref(names);
+	g_variant_unref(listnames);
+
+	return;
+}
+
 int
 main (int argc, char * argv[])
 {
@@ -296,64 +357,14 @@ main (int argc, char * argv[])
 		unity_starttime = 0;
 	}
 
-
-	/* List all the connections on dbus.  This sucks that we have to do
-	   this, but in the future we should add DBus API to do this lookup
-	   instead of having to do it with a bunch of requests */
-	GVariant * listnames = g_dbus_connection_call_sync(session,
-		"org.freedesktop.DBus",
-		"/",
-		"org.freedesktop.DBus",
-		"ListNames",
-		NULL,
-		G_VARIANT_TYPE("(as)"),
-		G_DBUS_CALL_FLAGS_NONE,
-		-1,
-		NULL,
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to get list of names from DBus: %s", error->message);
-		g_error_free(error);
-		return 1;
+	/* If we've got something to give out, start looking for how */
+	if (app_uris != NULL) {
+		find_appid_pid();
 	}
-
-	/* Now as we know we're going async */
-	GVariant * names = g_variant_get_child_value(listnames, 0);
-	GVariantIter iter;
-	g_variant_iter_init(&iter, names);
-	gchar * name = NULL;
-
-	while (g_variant_iter_loop(&iter, "s", &name)) {
-		/* We only want to ask each connection once, this makes that so */
-		if (!g_dbus_is_unique_name(name)) {
-			continue;
-		}
-
-		/* Get the PIDs */
-		g_dbus_connection_call(session,
-			"org.freedesktop.DBus",
-			"/",
-			"org.freedesktop.DBus",
-			"GetConnectionUnixProcessID",
-			g_variant_new("(s)", name),
-			G_VARIANT_TYPE("(u)"),
-			G_DBUS_CALL_FLAGS_NONE,
-			-1,
-			NULL,
-			get_pid_cb, g_strdup(name));
-
-		connections_open++;
-	}
-
-	g_variant_unref(names);
-	g_variant_unref(listnames);
 
 	/* Loop and wait for everything to align */
-	if (connections_open != 0) {
-		g_main_loop_run(mainloop);
-		g_debug("Finishing main loop");
-	}
+	g_main_loop_run(mainloop);
+	g_debug("Finishing main loop");
 
 	/* Now that we're done sending the info to the app, we can ask
 	   Unity to focus the application. */
