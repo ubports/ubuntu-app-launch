@@ -253,11 +253,11 @@ struct _observer_t {
 	gpointer user_data;
 };
 
-/* The Arrays of Observers */
-static GArray * start_array = NULL;
-static GArray * stop_array = NULL;
-static GArray * focus_array = NULL;
-static GArray * resume_array = NULL;
+/* The lists of Observers */
+static GList * start_array = NULL;
+static GList * stop_array = NULL;
+static GList * focus_array = NULL;
+static GList * resume_array = NULL;
 
 static void
 observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
@@ -305,25 +305,23 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 /* Creates the observer structure and registers for the signal with
    GDBus so that we can get a callback */
 static gboolean
-add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GArray ** array)
+add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list)
 {
-	observer_t observert;
-	observert.conn = gdbus_upstart_ref();
+	GDBusConnection * conn = gdbus_upstart_ref();
 
-	if (observert.conn == NULL) {
+	if (conn == NULL) {
 		return FALSE;
 	}
 
-	observert.func = observer;
-	observert.user_data = user_data;
+	observer_t * observert = g_new0(observer_t, 1);
 
-	if (*array == NULL) {
-		*array = g_array_new(FALSE, FALSE, sizeof(observer_t));
-	}
-	g_array_append_val(*array, observert);
-	observer_t * pobserver = &g_array_index(*array, observer_t, (*array)->len - 1);
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
 
-	pobserver->sighandle = g_dbus_connection_signal_subscribe(observert.conn,
+	*list = g_list_prepend(*list, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
 		NULL, /* sender */
 		DBUS_INTERFACE_UPSTART, /* interface */
 		"EventEmitted", /* signal */
@@ -331,7 +329,7 @@ add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data,
 		signal, /* arg0 */
 		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
 		observer_cb,
-		pobserver,
+		observert,
 		NULL); /* user data destroy */
 
 	return TRUE;
@@ -352,25 +350,23 @@ upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t obse
 /* Creates the observer structure and registers for the signal with
    GDBus so that we can get a callback */
 static gboolean
-add_session_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GArray ** array, GDBusSignalCallback session_cb)
+add_session_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list, GDBusSignalCallback session_cb)
 {
-	observer_t observert;
-	observert.conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
-	if (observert.conn == NULL) {
+	if (conn == NULL) {
 		return FALSE;
 	}
 
-	observert.func = observer;
-	observert.user_data = user_data;
+	observer_t * observert = g_new0(observer_t, 1);
 
-	if (*array == NULL) {
-		*array = g_array_new(FALSE, FALSE, sizeof(observer_t));
-	}
-	g_array_append_val(*array, observert);
-	observer_t * pobserver = &g_array_index(*array, observer_t, (*array)->len - 1);
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
 
-	pobserver->sighandle = g_dbus_connection_signal_subscribe(observert.conn,
+	*list = g_list_prepend(*list, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
 		NULL, /* sender */
 		"com.canonical.UpstartAppLaunch", /* interface */
 		signal, /* signal */
@@ -378,7 +374,7 @@ add_session_generic (upstart_app_launch_app_observer_t observer, gpointer user_d
 		NULL, /* arg0 */
 		G_DBUS_SIGNAL_FLAGS_NONE,
 		session_cb,
-		pobserver,
+		observert,
 		NULL); /* user data destroy */
 
 	return TRUE;
@@ -391,9 +387,8 @@ focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * obj
 	observer_t * observer = (observer_t *)user_data;
 	const gchar * appid = NULL;
 
-	g_variant_get(params, "(&s)", &appid);
-
 	if (observer->func != NULL) {
+		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
 
@@ -442,30 +437,28 @@ upstart_app_launch_observer_add_app_failed (upstart_app_launch_app_failed_observ
 }
 
 static gboolean
-delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, GArray ** array)
+delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, GList ** list)
 {
-	int i;
 	observer_t * observert = NULL;
-	for (i = 0; i < (*array)->len; i++) {
-		observert = &g_array_index(*array, observer_t, i);
+	GList * look;
+
+	for (look = *list; look != NULL; look = g_list_next(look)) {
+		observert = (observer_t *)look->data;
 
 		if (observert->func == observer && observert->user_data == user_data) {
 			break;
 		}
 	}
 
-	if (i == (*array)->len) {
+	if (look == NULL) {
 		return FALSE;
 	}
 
 	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
 	g_object_unref(observert->conn);
-	g_array_remove_index_fast(*array, i);
 
-	if ((*array)->len == 0) {
-		g_array_free(*array, TRUE);
-		*array = NULL;
-	}
+	g_free(observert);
+	*list = g_list_delete_link(*list, look);
 
 	return TRUE;
 }

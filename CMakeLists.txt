@@ -1,5 +1,8 @@
-project(upstart-app-launch C)
+project(upstart-app-launch C CXX)
 cmake_minimum_required(VERSION 2.8.9)
+
+option (enable_tests "Build tests" ON)
+option (enable_lcov "Generate Coverage Reports" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
 
@@ -201,3 +204,16 @@ add_test(application-failed.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${
 configure_file("upstart-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/upstart-app-launch-desktop.click-hook" @ONLY)
 
 add_subdirectory(libupstart-app-launch)
+
+# testing & coverage
+if (${enable_tests})
+  set (GTEST_SOURCE_DIR /usr/src/gtest/src)
+  set (GTEST_INCLUDE_DIR ${GTEST_SOURCE_DIR}/..)
+  set (GTEST_LIBS -lpthread)
+  enable_testing ()
+  if (${enable_lcov})
+#    include(GCov)
+  endif ()
+  add_subdirectory(tests)
+endif ()
+

@@ -18,6 +18,8 @@
  */
 
 #include <gio/gio.h>
+#include <nih/alloc.h>
+#include <libnih-dbus.h>
 #include "libupstart-app-launch/upstart-app-launch.h"
 #include "helpers.h"
 
@@ -90,6 +92,11 @@ parse_uris (void)
 		return;
 	}
 
+	/* TODO: Joining only with space could cause issues with breaking them
+	   back out.  We don't have any cases of more than one today.  But, this
+	   isn't good.
+	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
+	   */
 	GVariant * uris = NULL;
 	gchar ** uri_split = g_strsplit(input_uris, " ", 0);
 	if (uri_split[0] == NULL) {
@@ -134,21 +141,8 @@ app_id_to_dbus_path (void)
 		return;
 	}
 
-	/* If it's an app id, use the application name, otherwise
-	   assume legacy and it's the desktop file name */
-	gchar * application = NULL;
-	if (!app_id_to_triplet(appid, NULL, &application, NULL)) {
-		application = g_strdup(appid);
-	}
+	dbus_path = nih_dbus_path(NULL, "/", appid, NULL);
 
-	gchar * dot = g_utf8_strchr(application, -1, '.');
-	while (dot != NULL) {
-		dot[0] = '/';
-		dot = g_utf8_strchr(application, -1, '.');
-	}
-
-	dbus_path = g_strdup_printf("/%s", application);
-	g_free(application);
 	return;
 }
 
@@ -172,14 +166,14 @@ send_open_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 
 /* Sends the Open message to the connection with the URIs we were given */
 static void
-contact_app (GDBusConnection * bus, const gchar * connection)
+contact_app (GDBusConnection * bus, const gchar * dbus_name)
 {
 	parse_uris();
 	app_id_to_dbus_path();
 
 	/* Using the FD.o Application interface */
 	g_dbus_connection_call(bus,
-		connection,
+		dbus_name,
 		dbus_path,
 		"org.freedesktop.Application",
 		"Open",
@@ -190,7 +184,7 @@ contact_app (GDBusConnection * bus, const gchar * connection)
 		NULL,
 		send_open_cb, NULL);
 
-	g_debug("Sending Open request to: %s", connection);
+	g_debug("Sending Open request to: %s", dbus_name);
 
 	return;
 }
@@ -200,16 +194,16 @@ contact_app (GDBusConnection * bus, const gchar * connection)
 static void
 get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 {
-	gchar * connection = (gchar *)user_data;
+	gchar * dbus_name = (gchar *)user_data;
 	GError * error = NULL;
 	GVariant * vpid = NULL;
 
 	vpid = g_dbus_connection_call_finish(G_DBUS_CONNECTION(object), res, &error);
 
 	if (error != NULL) {
-		g_warning("Unable to query PID for connection '%s': %s", connection, error->message);
+		g_warning("Unable to query PID for dbus name '%s': %s", dbus_name, error->message);
 		g_error_free(error);
-		g_free(connection);
+		g_free(dbus_name);
 
 		/* Lowering the connection count, this one is terminal, even if in error */
 		connection_count_dec();
@@ -222,13 +216,13 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 
 	if (pid == app_pid) {
 		/* Trying to send a message to the connection */
-		contact_app(G_DBUS_CONNECTION(object), connection);
+		contact_app(G_DBUS_CONNECTION(object), dbus_name);
 	} else {
 		/* See if we can quit now */
 		connection_count_dec();
 	}
 
-	g_free(connection);
+	g_free(dbus_name);
 
 	return;
 }
@@ -260,7 +254,19 @@ find_appid_pid (GDBusConnection * session)
 		return;
 	}
 
-	/* Now as we know we're going async */
+	/* Next figure out what we're looking for (and if there is something to look for) */
+	/* NOTE: We're getting the PID *after* the list of connections so
+	   that some new process can't come in, be the same PID as it's
+	   connection will not be in teh list we just got. */
+	app_pid = upstart_app_launch_get_primary_pid(appid);
+	if (app_pid == 0) {
+		g_warning("Unable to find pid for app id '%s'", appid);
+		return;
+	}
+
+	/* Allocate the mainloop now as we know we're going async */
+	mainloop = g_main_loop_new(NULL, FALSE);
+
 	GVariant * names = g_variant_get_child_value(listnames, 0);
 	GVariantIter iter;
 	g_variant_iter_init(&iter, names);
@@ -304,13 +310,6 @@ main (int argc, char * argv[])
 
 	appid = g_getenv("APP_ID");
 	input_uris = g_getenv("APP_URIS");
-
-	/* First figure out what we're looking for (and if there is something to look for) */
-	app_pid = upstart_app_launch_get_primary_pid(appid);
-	if (app_pid == 0) {
-		g_warning("Unable to find pid for app id '%s'", appid);
-		return 1;
-	}
 
 	/* DBus tell us! */
 	GError * error = NULL;
@@ -363,7 +362,9 @@ main (int argc, char * argv[])
 	}
 
 	/* Loop and wait for everything to align */
-	g_main_loop_run(mainloop);
+	if (connections_open > 0 || unity_starttime > 0) {
+		g_main_loop_run(mainloop);
+	}
 	g_debug("Finishing main loop");
 
 	/* Now that we're done sending the info to the app, we can ask
@@ -392,7 +393,7 @@ main (int argc, char * argv[])
 
 	g_main_loop_unref(mainloop);
 	g_object_unref(session);
-	g_free(dbus_path);
+	nih_free(dbus_path);
 
 	return 0;
 }

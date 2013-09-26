@@ -33,11 +33,11 @@ extern "C" {
  *
  * Types of failure that we report.
  */
-typedef enum _upstart_app_launch_app_failed_t upstart_app_launch_app_failed_t;
 enum _upstart_app_launch_app_failed_t {
 	UPSTART_APP_LAUNCH_APP_FAILED_CRASH,
 	UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE,
 };
+typedef enum _upstart_app_launch_app_failed_t upstart_app_launch_app_failed_t;
 
 /**
  * upstart_app_launch_app_observer_t:
@@ -119,7 +119,7 @@ gboolean   upstart_app_launch_observer_add_app_focus    (upstart_app_launch_app_
 
 /**
  * upstart_app_launch_observer_add_app_resume:
- * @observer: Callback when an application is started an possibly asleep
+ * @observer: Callback when an application is started and possibly asleep
  * @user_data: (allow none): Data to pass to the observer
  *
  * Sets up a callback to get called each time an app gets called
