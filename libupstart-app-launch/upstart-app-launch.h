@@ -33,11 +33,11 @@ extern "C" {
  *
  * Types of failure that we report.
  */
-typedef enum _upstart_app_launch_app_failed_t upstart_app_launch_app_failed_t;
 enum _upstart_app_launch_app_failed_t {
 	UPSTART_APP_LAUNCH_APP_FAILED_CRASH,
 	UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE,
 };
+typedef enum _upstart_app_launch_app_failed_t upstart_app_launch_app_failed_t;
 
 /**
  * upstart_app_launch_app_observer_t:
