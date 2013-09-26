@@ -391,9 +391,8 @@ focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * obj
 	observer_t * observer = (observer_t *)user_data;
 	const gchar * appid = NULL;
 
-	g_variant_get(params, "(&s)", &appid);
-
 	if (observer->func != NULL) {
+		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
 
