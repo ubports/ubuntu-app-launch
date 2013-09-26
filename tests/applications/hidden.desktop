@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Foo
+Type=Application
+Exec=foo
+NoDisplay=false
+Hidden=true
+Terminal=false
