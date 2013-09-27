@@ -173,3 +173,41 @@ TEST_F(SecondExecTest, UnityTimeoutUriTest)
 	ASSERT_STREQ(this->last_resume_appid, "foo");
 }
 
+GDBusMessage *
+filter_respawn (GDBusConnection * conn, GDBusMessage * message, gboolean incomming, gpointer user_data)
+{
+	if (g_strcmp0(g_dbus_message_get_member(message), "UnityResumeResponse") == 0) {
+		g_object_unref(message);
+		return NULL;
+	}
+
+	return message;
+}
+
+TEST_F(SecondExecTest, UnityLostTest)
+{
+	upstart_app_launch_mock_set_primary_pid(getpid());
+
+	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	guint filter = g_dbus_connection_add_filter(session,
+		filter_respawn,
+		NULL,
+		NULL);
+
+	guint start = g_get_monotonic_time();
+
+	ASSERT_TRUE(second_exec("foo", "http://www.test.com"));
+
+	guint end = g_get_monotonic_time();
+
+	ASSERT_LT(end - start, 600 * 1000);
+
+	pause(100); /* Ensure all the events come through */
+	ASSERT_STREQ(this->last_focus_appid, "foo");
+	ASSERT_STREQ(this->last_resume_appid, "foo");
+
+	g_dbus_connection_remove_filter(session, filter);
+	g_object_unref(session);
+}
+
+
