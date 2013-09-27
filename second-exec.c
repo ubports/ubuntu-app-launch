@@ -264,9 +264,7 @@ find_appid_pid (GDBusConnection * session)
 		return;
 	}
 
-	/* Allocate the mainloop now as we know we're going async */
-	mainloop = g_main_loop_new(NULL, FALSE);
-
+	/* Get the names */
 	GVariant * names = g_variant_get_child_value(listnames, 0);
 	GVariantIter iter;
 	g_variant_iter_init(&iter, names);
