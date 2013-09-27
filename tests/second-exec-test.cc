@@ -67,11 +67,35 @@ class SecondExecTest : public ::testing::Test
 
 			return;
 		}
+
+		static gboolean pause_helper (gpointer pmainloop) {
+			g_main_loop_quit((GMainLoop *)pmainloop);
+			return G_SOURCE_REMOVE;
+		}
+
+		void pause (guint time) {
+			if (time > 0) {
+				GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
+				guint timer = g_timeout_add(time, pause_helper, mainloop);
+
+				g_main_loop_run(mainloop);
+
+				g_source_remove(timer);
+				g_main_loop_unref(mainloop);
+			}
+
+			while (g_main_pending()) {
+				g_main_iteration(TRUE);
+			}
+
+			return;
+		}
 };
 
 TEST_F(SecondExecTest, AppIdTest)
 {
 	second_exec("foo", NULL);
+	pause(0); /* Ensure all the events come through */
 	ASSERT_STREQ(this->last_focus_appid, "foo");
 	ASSERT_STREQ(this->last_resume_appid, "foo");
 }
