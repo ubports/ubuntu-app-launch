@@ -49,6 +49,7 @@ connection_count_dec (void)
 {
 	connections_open--;
 	if (connections_open == 0) {
+		g_debug("Finished finding connections");
 		/* Check time here, either we've already heard from
 		   Unity and we should send the data to the app (quit) or
 		   we should wait some more */
@@ -56,6 +57,7 @@ connection_count_dec (void)
 		if (timespent > 500 /* ms */ * 1000 /* ms to us */) {
 			g_main_loop_quit(mainloop);
 		} else {
+			g_debug("Timer Set");
 			timer = g_timeout_add(500 - (timespent / 1000), timer_cb, NULL);
 		}
 	}
