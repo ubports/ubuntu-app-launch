@@ -161,7 +161,7 @@ install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 # second-exec
 #######################
 
-add_executable(second-exec second-exec.c)
+add_executable(second-exec second-exec.c second-exec-core.c second-exec-core.h)
 set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
 target_link_libraries(second-exec helpers upstart-launcher)
 install(TARGETS second-exec RUNTIME DESTINATION "${pkglibexecdir}")

@@ -17,22 +17,23 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "second-exec-core.h"
+#include "upstart-app-launch.h"
+#include "upstart-app-launch-mock.h"
 
-int
-main (int argc, char * argv[])
+static GPid primary_pid = 0;
+static gchar * primary_pid_appid = NULL;
+
+GPid
+upstart_app_launch_get_primary_pid (const gchar * appid)
 {
-	if (argc != 1) {
-		g_error("Should be called as: %s", argv[0]);
-		return 1;
-	}
+	g_free(primary_pid_appid);
+	primary_pid_appid = g_strdup(appid);
+	return primary_pid;
+}
 
-	const gchar * appid = g_getenv("APP_ID");
-	const gchar * appuris = g_getenv("APP_URIS");
-
-	if (second_exec(appid, appuris)) {
-		return 0;
-	} else {
-		return 1;
-	}
+void
+upstart_app_launch_mock_set_primary_pid (GPid pid)
+{
+	primary_pid = pid;
+	return;
 }
