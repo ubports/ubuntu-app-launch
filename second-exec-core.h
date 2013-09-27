@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2013 Canonical Ltd.
  *
@@ -17,22 +18,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "second-exec-core.h"
+#include <glib.h>
 
-int
-main (int argc, char * argv[])
-{
-	if (argc != 1) {
-		g_error("Should be called as: %s", argv[0]);
-		return 1;
-	}
+gboolean second_exec (const gchar * app_id, const gchar * appuris);
 
-	const gchar * appid = g_getenv("APP_ID");
-	const gchar * appuris = g_getenv("APP_URIS");
-
-	if (second_exec(appid, appuris)) {
-		return 0;
-	} else {
-		return 1;
-	}
-}
