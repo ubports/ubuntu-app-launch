@@ -21,6 +21,7 @@
 
 extern "C" {
 #include "../second-exec-core.h"
+#include "upstart-app-launch-mock.h"
 }
 
 class SecondExecTest : public ::testing::Test
