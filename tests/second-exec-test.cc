@@ -136,3 +136,14 @@ TEST_F(SecondExecTest, UrlSendTest)
 	g_dbus_connection_remove_filter(session, filter);
 	g_object_unref(session);
 }
+
+TEST_F(SecondExecTest, UrlSendNoObjectTest)
+{
+	upstart_app_launch_mock_set_primary_pid(getpid());
+
+	ASSERT_TRUE(second_exec("foo", "http://www.test.com"));
+	pause(100); /* Ensure all the events come through */
+
+	ASSERT_STREQ(this->last_focus_appid, "foo");
+	ASSERT_STREQ(this->last_resume_appid, "foo");
+}
