@@ -99,3 +99,40 @@ TEST_F(SecondExecTest, AppIdTest)
 	ASSERT_STREQ(this->last_focus_appid, "foo");
 	ASSERT_STREQ(this->last_resume_appid, "foo");
 }
+
+GDBusMessage *
+filter_func_good (GDBusConnection * conn, GDBusMessage * message, gboolean incomming, gpointer user_data)
+{
+	if (!incomming) {
+		return message;
+	}
+
+	if (g_strcmp0(g_dbus_message_get_path(message), (gchar *)user_data) == 0) {
+		GDBusMessage * reply = g_dbus_message_new_method_reply(message);
+		g_dbus_connection_send_message(conn, reply, G_DBUS_SEND_MESSAGE_FLAGS_NONE, NULL, NULL);
+		g_object_unref(message);
+		return NULL;
+	}
+
+	return message;
+}
+
+TEST_F(SecondExecTest, UrlSendTest)
+{
+	upstart_app_launch_mock_set_primary_pid(getpid());
+
+	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	guint filter = g_dbus_connection_add_filter(session,
+		filter_func_good,
+		(gpointer)"/foo",
+		NULL);
+
+	ASSERT_TRUE(second_exec("foo", "http://www.test.com"));
+	pause(100); /* Ensure all the events come through */
+
+	ASSERT_STREQ(this->last_focus_appid, "foo");
+	ASSERT_STREQ(this->last_resume_appid, "foo");
+
+	g_dbus_connection_remove_filter(session, filter);
+	g_object_unref(session);
+}
