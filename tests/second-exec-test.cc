@@ -30,9 +30,12 @@ class SecondExecTest : public ::testing::Test
 {
 	private:
 		GTestDBus * testbus = NULL;
+
+	protected:
 		gchar * last_focus_appid = NULL;
 		gchar * last_resume_appid = NULL;
 
+	private:
 		static void focus_cb (const gchar * appid, gpointer user_data) {
 			SecondExecTest * _this = static_cast<SecondExecTest *>(user_data);
 			g_free(_this->last_focus_appid);
@@ -66,7 +69,9 @@ class SecondExecTest : public ::testing::Test
 		}
 };
 
-TEST_F(SecondExecTest, StubTest)
+TEST_F(SecondExecTest, AppIdTest)
 {
-	ASSERT_TRUE(TRUE);
+	second_exec("foo", NULL);
+	ASSERT_STREQ(this->last_focus_appid, "foo");
+	ASSERT_STREQ(this->last_resume_appid, "foo");
 }
