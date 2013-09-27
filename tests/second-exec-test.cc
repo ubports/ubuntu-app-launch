@@ -18,6 +18,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <gio/gio.h>
 
 extern "C" {
 #include "../second-exec-core.h"
@@ -28,6 +29,7 @@ extern "C" {
 class SecondExecTest : public ::testing::Test
 {
 	private:
+		GTestDBus * testbus = NULL;
 		gchar * last_focus_appid = NULL;
 		gchar * last_resume_appid = NULL;
 
@@ -45,6 +47,9 @@ class SecondExecTest : public ::testing::Test
 
 	protected:
 		virtual void SetUp() {
+			testbus = g_test_dbus_new(G_TEST_DBUS_NONE);
+			g_test_dbus_up(testbus);
+
 			upstart_app_launch_observer_add_app_focus(focus_cb, this);
 			upstart_app_launch_observer_add_app_resume(resume_cb, this);
 
@@ -53,6 +58,9 @@ class SecondExecTest : public ::testing::Test
 		virtual void TearDown() {
 			upstart_app_launch_observer_delete_app_focus(focus_cb, this);
 			upstart_app_launch_observer_delete_app_resume(resume_cb, this);
+
+			g_test_dbus_down(testbus);
+			g_object_unref(testbus);
 
 			return;
 		}
