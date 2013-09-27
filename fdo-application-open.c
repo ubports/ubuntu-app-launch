@@ -101,7 +101,8 @@ app_id_to_dbus_path (void)
 		return;
 	}
 
-	dbus_path = nih_dbus_path(NULL, "/", appid, NULL);
+	dbus_path = nih_dbus_path(NULL, "", appid, NULL);
+	g_debug("DBus Path: %s", dbus_path);
 
 	return;
 }
@@ -281,7 +282,10 @@ main (int argc, char * argv[])
 
 	g_main_loop_unref(mainloop);
 	g_object_unref(session);
-	nih_free(dbus_path);
+
+	if (dbus_path != NULL) {
+		nih_free(dbus_path);
+	}
 
 	return 0;
 }
