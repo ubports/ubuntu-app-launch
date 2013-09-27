@@ -34,6 +34,7 @@ class SecondExecTest : public ::testing::Test
 	protected:
 		gchar * last_focus_appid = NULL;
 		gchar * last_resume_appid = NULL;
+		guint resume_timeout = 0;
 
 	private:
 		static void focus_cb (const gchar * appid, gpointer user_data) {
@@ -46,6 +47,10 @@ class SecondExecTest : public ::testing::Test
 			SecondExecTest * _this = static_cast<SecondExecTest *>(user_data);
 			g_free(_this->last_resume_appid);
 			_this->last_resume_appid = g_strdup(appid);
+
+			if (_this->resume_timeout > 0) {
+				_this->pause(_this->resume_timeout);
+			}
 		}
 
 	protected:
@@ -147,3 +152,24 @@ TEST_F(SecondExecTest, UrlSendNoObjectTest)
 	ASSERT_STREQ(this->last_focus_appid, "foo");
 	ASSERT_STREQ(this->last_resume_appid, "foo");
 }
+
+TEST_F(SecondExecTest, UnityTimeoutTest)
+{
+	this->resume_timeout = 100;
+
+	ASSERT_TRUE(second_exec("foo", NULL));
+	pause(100); /* Ensure all the events come through */
+	ASSERT_STREQ(this->last_focus_appid, "foo");
+	ASSERT_STREQ(this->last_resume_appid, "foo");
+}
+
+TEST_F(SecondExecTest, UnityTimeoutUriTest)
+{
+	this->resume_timeout = 200;
+
+	ASSERT_TRUE(second_exec("foo", "http://www.test.com"));
+	pause(100); /* Ensure all the events come through */
+	ASSERT_STREQ(this->last_focus_appid, "foo");
+	ASSERT_STREQ(this->last_resume_appid, "foo");
+}
+
