@@ -24,5 +24,5 @@ add_executable (second-exec-test
 	"${CMAKE_SOURCE_DIR}/second-exec-core.c"
 	upstart-app-launch-mock.c)
 target_link_libraries (second-exec-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} upstart-launcher)
-add_test (second-exec-test helper-test)
+add_test (second-exec-test second-exec-test)
 
