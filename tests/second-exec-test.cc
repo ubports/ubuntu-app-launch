@@ -99,7 +99,7 @@ class SecondExecTest : public ::testing::Test
 
 TEST_F(SecondExecTest, AppIdTest)
 {
-	second_exec("foo", NULL);
+	ASSERT_TRUE(second_exec("foo", NULL));
 	pause(0); /* Ensure all the events come through */
 	ASSERT_STREQ(this->last_focus_appid, "foo");
 	ASSERT_STREQ(this->last_resume_appid, "foo");
