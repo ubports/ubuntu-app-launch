@@ -141,7 +141,8 @@ app_id_to_dbus_path (void)
 		return;
 	}
 
-	dbus_path = nih_dbus_path(NULL, "/", appid, NULL);
+	dbus_path = nih_dbus_path(NULL, "", appid, NULL);
+	g_debug("DBus Path: %s", dbus_path);
 
 	return;
 }
