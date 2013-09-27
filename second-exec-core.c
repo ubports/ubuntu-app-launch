@@ -386,6 +386,7 @@ second_exec (const gchar * app_id, const gchar * appuris)
 	/* Clean up */
 	if (app_data != NULL) {
 		g_variant_unref(app_data);
+		app_data = NULL;
 	}
 
 	g_main_loop_unref(mainloop);
@@ -393,6 +394,7 @@ second_exec (const gchar * app_id, const gchar * appuris)
 
 	if (dbus_path != NULL) {
 		nih_free(dbus_path);
+		dbus_path = NULL;
 	}
 
 	return TRUE;
