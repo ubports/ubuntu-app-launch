@@ -253,9 +253,11 @@ struct _observer_t {
 	gpointer user_data;
 };
 
-/* The Arrays of Observers */
-static GArray * start_array = NULL;
-static GArray * stop_array = NULL;
+/* The lists of Observers */
+static GList * start_array = NULL;
+static GList * stop_array = NULL;
+static GList * focus_array = NULL;
+static GList * resume_array = NULL;
 
 static void
 observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
@@ -303,25 +305,23 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 /* Creates the observer structure and registers for the signal with
    GDBus so that we can get a callback */
 static gboolean
-add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GArray ** array)
+add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list)
 {
-	observer_t observert;
-	observert.conn = gdbus_upstart_ref();
+	GDBusConnection * conn = gdbus_upstart_ref();
 
-	if (observert.conn == NULL) {
+	if (conn == NULL) {
 		return FALSE;
 	}
 
-	observert.func = observer;
-	observert.user_data = user_data;
+	observer_t * observert = g_new0(observer_t, 1);
 
-	if (*array == NULL) {
-		*array = g_array_new(FALSE, FALSE, sizeof(observer_t));
-	}
-	g_array_append_val(*array, observert);
-	observer_t * pobserver = &g_array_index(*array, observer_t, (*array)->len - 1);
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
 
-	pobserver->sighandle = g_dbus_connection_signal_subscribe(observert.conn,
+	*list = g_list_prepend(*list, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
 		NULL, /* sender */
 		DBUS_INTERFACE_UPSTART, /* interface */
 		"EventEmitted", /* signal */
@@ -329,7 +329,7 @@ add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data,
 		signal, /* arg0 */
 		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
 		observer_cb,
-		pobserver,
+		observert,
 		NULL); /* user data destroy */
 
 	return TRUE;
@@ -347,31 +347,118 @@ upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t obse
 	return add_app_generic(observer, user_data, "stopped", &stop_array);
 }
 
+/* Creates the observer structure and registers for the signal with
+   GDBus so that we can get a callback */
 static gboolean
-delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, GArray ** array)
+add_session_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list, GDBusSignalCallback session_cb)
 {
-	int i;
+	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+
+	if (conn == NULL) {
+		return FALSE;
+	}
+
+	observer_t * observert = g_new0(observer_t, 1);
+
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
+
+	*list = g_list_prepend(*list, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
+		NULL, /* sender */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		signal, /* signal */
+		"/", /* path */
+		NULL, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		session_cb,
+		observert,
+		NULL); /* user data destroy */
+
+	return TRUE;
+}
+
+/* Handle the focus signal when it occurs, call the observer */
+static void
+focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	observer_t * observer = (observer_t *)user_data;
+	const gchar * appid = NULL;
+
+	if (observer->func != NULL) {
+		g_variant_get(params, "(&s)", &appid);
+		observer->func(appid, observer->user_data);
+	}
+
+	return;
+}
+
+gboolean
+upstart_app_launch_observer_add_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return add_session_generic(observer, user_data, "UnityFocusRequest", &focus_array, focus_signal_cb);
+}
+
+/* Handle the resume signal when it occurs, call the observer, then send a signal back when we're done */
+static void
+resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+
+	GError * error = NULL;
+	g_dbus_connection_emit_signal(conn,
+		sender, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityResumeResponse", /* signal */
+		params, /* params, the same */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to emit response signal: %s", error->message);
+		g_error_free(error);
+	}
+
+	return;
+}
+
+gboolean
+upstart_app_launch_observer_add_app_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return add_session_generic(observer, user_data, "UnityResumeRequest", &resume_array, resume_signal_cb);
+}
+
+gboolean
+upstart_app_launch_observer_add_app_failed (upstart_app_launch_app_failed_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
+static gboolean
+delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, GList ** list)
+{
 	observer_t * observert = NULL;
-	for (i = 0; i < (*array)->len; i++) {
-		observert = &g_array_index(*array, observer_t, i);
+	GList * look;
+
+	for (look = *list; look != NULL; look = g_list_next(look)) {
+		observert = (observer_t *)look->data;
 
 		if (observert->func == observer && observert->user_data == user_data) {
 			break;
 		}
 	}
 
-	if (i == (*array)->len) {
+	if (look == NULL) {
 		return FALSE;
 	}
 
 	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
 	g_object_unref(observert->conn);
-	g_array_remove_index_fast(*array, i);
 
-	if ((*array)->len == 0) {
-		g_array_free(*array, TRUE);
-		*array = NULL;
-	}
+	g_free(observert);
+	*list = g_list_delete_link(*list, look);
 
 	return TRUE;
 }
@@ -386,6 +473,24 @@ gboolean
 upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &stop_array);
+}
+
+gboolean
+upstart_app_launch_observer_delete_app_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return delete_app_generic(observer, user_data, &resume_array);
+}
+
+gboolean
+upstart_app_launch_observer_delete_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return delete_app_generic(observer, user_data, &focus_array);
+}
+
+gboolean
+upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_observer_t observer, gpointer user_data)
+{
+	return FALSE;
 }
 
 /* Get all the instances for a given job name */
