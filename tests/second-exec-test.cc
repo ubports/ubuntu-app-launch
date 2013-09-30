@@ -32,21 +32,19 @@ class SecondExecTest : public ::testing::Test
 		GTestDBus * testbus = NULL;
 
 	protected:
-		gchar * last_focus_appid = NULL;
-		gchar * last_resume_appid = NULL;
+		std::string last_focus_appid;
+		std::string last_resume_appid;
 		guint resume_timeout = 0;
 
 	private:
 		static void focus_cb (const gchar * appid, gpointer user_data) {
 			SecondExecTest * _this = static_cast<SecondExecTest *>(user_data);
-			g_free(_this->last_focus_appid);
-			_this->last_focus_appid = g_strdup(appid);
+			_this->last_focus_appid = appid;
 		}
 
 		static void resume_cb (const gchar * appid, gpointer user_data) {
 			SecondExecTest * _this = static_cast<SecondExecTest *>(user_data);
-			g_free(_this->last_resume_appid);
-			_this->last_resume_appid = g_strdup(appid);
+			_this->last_resume_appid = appid;
 
 			if (_this->resume_timeout > 0) {
 				_this->pause(_this->resume_timeout);
@@ -101,8 +99,8 @@ TEST_F(SecondExecTest, AppIdTest)
 {
 	ASSERT_TRUE(second_exec("foo", NULL));
 	pause(0); /* Ensure all the events come through */
-	ASSERT_STREQ(this->last_focus_appid, "foo");
-	ASSERT_STREQ(this->last_resume_appid, "foo");
+	ASSERT_STREQ(this->last_focus_appid.c_str(), "foo");
+	ASSERT_STREQ(this->last_resume_appid.c_str(), "foo");
 }
 
 GDBusMessage *
@@ -135,8 +133,8 @@ TEST_F(SecondExecTest, UrlSendTest)
 	ASSERT_TRUE(second_exec("foo", "http://www.test.com"));
 	pause(100); /* Ensure all the events come through */
 
-	ASSERT_STREQ(this->last_focus_appid, "foo");
-	ASSERT_STREQ(this->last_resume_appid, "foo");
+	ASSERT_STREQ(this->last_focus_appid.c_str(), "foo");
+	ASSERT_STREQ(this->last_resume_appid.c_str(), "foo");
 
 	g_dbus_connection_remove_filter(session, filter);
 	g_object_unref(session);
@@ -149,8 +147,8 @@ TEST_F(SecondExecTest, UrlSendNoObjectTest)
 	ASSERT_TRUE(second_exec("foo", "http://www.test.com"));
 	pause(100); /* Ensure all the events come through */
 
-	ASSERT_STREQ(this->last_focus_appid, "foo");
-	ASSERT_STREQ(this->last_resume_appid, "foo");
+	ASSERT_STREQ(this->last_focus_appid.c_str(), "foo");
+	ASSERT_STREQ(this->last_resume_appid.c_str(), "foo");
 }
 
 TEST_F(SecondExecTest, UnityTimeoutTest)
@@ -159,8 +157,8 @@ TEST_F(SecondExecTest, UnityTimeoutTest)
 
 	ASSERT_TRUE(second_exec("foo", NULL));
 	pause(100); /* Ensure all the events come through */
-	ASSERT_STREQ(this->last_focus_appid, "foo");
-	ASSERT_STREQ(this->last_resume_appid, "foo");
+	ASSERT_STREQ(this->last_focus_appid.c_str(), "foo");
+	ASSERT_STREQ(this->last_resume_appid.c_str(), "foo");
 }
 
 TEST_F(SecondExecTest, UnityTimeoutUriTest)
@@ -169,8 +167,8 @@ TEST_F(SecondExecTest, UnityTimeoutUriTest)
 
 	ASSERT_TRUE(second_exec("foo", "http://www.test.com"));
 	pause(100); /* Ensure all the events come through */
-	ASSERT_STREQ(this->last_focus_appid, "foo");
-	ASSERT_STREQ(this->last_resume_appid, "foo");
+	ASSERT_STREQ(this->last_focus_appid.c_str(), "foo");
+	ASSERT_STREQ(this->last_resume_appid.c_str(), "foo");
 }
 
 GDBusMessage *
@@ -203,8 +201,8 @@ TEST_F(SecondExecTest, UnityLostTest)
 	ASSERT_LT(end - start, 600 * 1000);
 
 	pause(100); /* Ensure all the events come through */
-	ASSERT_STREQ(this->last_focus_appid, "foo");
-	ASSERT_STREQ(this->last_resume_appid, "foo");
+	ASSERT_STREQ(this->last_focus_appid.c_str(), "foo");
+	ASSERT_STREQ(this->last_resume_appid.c_str(), "foo");
 
 	g_dbus_connection_remove_filter(session, filter);
 	g_object_unref(session);
