@@ -12,27 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors:
- *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "second-exec-core.h"
+void upstart_app_launch_mock_set_primary_pid (GPid pid);
 
-int
-main (int argc, char * argv[])
-{
-	if (argc != 1) {
-		g_error("Should be called as: %s", argv[0]);
-		return 1;
-	}
-
-	const gchar * appid = g_getenv("APP_ID");
-	const gchar * appuris = g_getenv("APP_URIS");
-
-	if (second_exec(appid, appuris)) {
-		return 0;
-	} else {
-		return 1;
-	}
-}
