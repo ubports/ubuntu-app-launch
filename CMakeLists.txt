@@ -157,6 +157,15 @@ set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
 target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
+#######################
+# fdo-application-open
+#######################
+
+add_executable(fdo-application-open fdo-application-open.c)
+set_target_properties(fdo-application-open PROPERTIES OUTPUT_NAME "fdo-application-open")
+target_link_libraries(fdo-application-open helpers upstart-launcher)
+install(TARGETS fdo-application-open RUNTIME DESTINATION "${pkglibexecdir}")
+
 ####################
 # application.conf
 ####################
