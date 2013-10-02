@@ -26,5 +26,8 @@ end script
 # Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec
 
-post-start exec @pkglibexecdir@/zg-report-app open
-post-stop exec @pkglibexecdir@/zg-report-app close
+# Disabled for Phone 1.0 which doesn't yet have ZG installed on it,
+# so we don't need to log the data.
+#
+# post-start exec @pkglibexecdir@/zg-report-app open
+# post-stop exec @pkglibexecdir@/zg-report-app close
