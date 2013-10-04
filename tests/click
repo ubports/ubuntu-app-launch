@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/bin/cat "${XDG_DATA_DIRS}/click-app-dir/.click/info/${2}.manifest"
