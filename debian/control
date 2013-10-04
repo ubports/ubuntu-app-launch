@@ -25,7 +25,7 @@ Package: upstart-app-launch
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         click,
+         click (>= 0.4.9),
          click-apparmor,
 Description: Upstart Job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
