@@ -1,3 +1,18 @@
+upstart-app-launch (0.1+13.10.20131008.1-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * On second activations send a message to the FD.o application
+    interface. (LP: #1228345)
+  * Add observers for focused and resume.
+  * Testing of the second exec logic.
+  * Disable ZG logging for Phone 1.0.
+  * Need a little longer time on recent ARM builds.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 73
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 08 Oct 2013 10:07:25 +0000
+
 upstart-app-launch (0.1+13.10.20130925.2-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
