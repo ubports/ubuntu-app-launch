@@ -338,7 +338,7 @@ add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data,
 gboolean
 upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return add_app_generic(observer, user_data, "starting", &start_array);
+	return add_app_generic(observer, user_data, "started", &start_array);
 }
 
 gboolean
