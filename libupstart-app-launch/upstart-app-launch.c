@@ -208,6 +208,7 @@ upstart_app_launch_stop_application (const gchar * appid)
 	g_free(appiddash);
 
 	g_array_free(apps, TRUE);
+	nih_unref(proxy, NULL);
 
 	return found;
 }
