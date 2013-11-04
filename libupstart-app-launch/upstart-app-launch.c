@@ -229,18 +229,23 @@ gdbus_upstart_ref (void) {
 		return g_object_ref(gdbus_upstart);
 	}
 
-	const gchar * upstart_addr = g_getenv("UPSTART_SESSION");
-	if (upstart_addr == NULL) {
-		g_print("Doesn't appear to be an upstart user session\n");
-		return NULL;
-	}
-
 	GError * error = NULL;
-	gdbus_upstart = g_dbus_connection_new_for_address_sync(upstart_addr,
-	                                                       G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
-	                                                       NULL, /* auth */
-	                                                       NULL, /* cancel */
-	                                                       &error);
+
+	if (g_getenv("UPSTART_APP_LAUNCH_USE_SESSION") == NULL) {
+		const gchar * upstart_addr = g_getenv("UPSTART_SESSION");
+		if (upstart_addr == NULL) {
+			g_print("Doesn't appear to be an upstart user session\n");
+			return NULL;
+		}
+
+		gdbus_upstart = g_dbus_connection_new_for_address_sync(upstart_addr,
+															   G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
+															   NULL, /* auth */
+															   NULL, /* cancel */
+															   &error);
+	} else {
+		gdbus_upstart = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	}
 
 	if (error != NULL) {
 		g_warning("Unable to connect to Upstart bus: %s", error->message);
