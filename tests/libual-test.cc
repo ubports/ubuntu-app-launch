@@ -28,14 +28,34 @@ extern "C" {
 class LibUAL : public ::testing::Test
 {
 	protected:
+		DbusTestService * service;
+		DbusTestDbusMock * mock;
+
+	protected:
 		virtual void SetUp() {
 			g_setenv("UPSTART_APP_LAUNCH_USE_SESSION", "1", TRUE);
 
-			/* NOTE: We're doing the bus in each test here */
+			service = dbus_test_service_new(NULL);
+			mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
+
+			DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, obj,
+				"EmitEvent",
+				G_VARIANT_TYPE("(sasb)"),
+				NULL,
+				"",
+				NULL);
+
+			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
+			dbus_test_service_start_tasks(service);
 
 			return;
 		}
+
 		virtual void TearDown() {
+			g_clear_object(&mock);
+			g_clear_object(&service);
 
 			return;
 		}
@@ -67,19 +87,7 @@ class LibUAL : public ::testing::Test
 
 TEST_F(LibUAL, StartApplication)
 {
-	DbusTestService * service = dbus_test_service_new(NULL);
-	DbusTestDbusMock * mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
-
-	dbus_test_dbus_mock_object_add_method(mock, obj,
-		"EmitEvent",
-		G_VARIANT_TYPE("(sasb)"),
-		NULL,
-		"",
-		NULL);
-
-	dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
-	dbus_test_service_start_tasks(service);
 
 	/* Basic make sure we can send the event */
 	ASSERT_TRUE(upstart_app_launch_start_application("foo", NULL));
@@ -133,10 +141,6 @@ TEST_F(LibUAL, StartApplication)
 	g_free(joined);
 	g_variant_unref(env);
 
-
-	/* cleanup */
-	g_object_unref(mock);
-	g_object_unref(service);
 
 	return;
 }
