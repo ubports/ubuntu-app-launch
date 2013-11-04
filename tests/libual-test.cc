@@ -42,7 +42,7 @@ class LibUAL : public ::testing::Test
 
 };
 
-TEST_F(LibUAL, StartApplication)
+TEST_F(LibUAL, BasicApplicationControl)
 {
 	DbusTestService * service = dbus_test_service_new(NULL);
 	DbusTestDbusMock * mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
@@ -59,6 +59,11 @@ TEST_F(LibUAL, StartApplication)
 	dbus_test_service_start_tasks(service);
 
 	ASSERT_TRUE(upstart_app_launch_start_application("foo", NULL));
+	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "EmitEvent", NULL, NULL), 1);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj));
+
+	ASSERT_TRUE(upstart_app_launch_stop_application("foo"));
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "EmitEvent", NULL, NULL), 1);
 
 	g_object_unref(mock);
