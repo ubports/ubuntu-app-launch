@@ -31,16 +31,25 @@ nih_proxy_create (void)
 	NihDBusProxy *   upstart;
 	DBusConnection * conn;
 	DBusError        error;
-	const gchar *    upstart_session;
-
-	upstart_session = g_getenv("UPSTART_SESSION");
-	if (upstart_session == NULL) {
-		g_warning("Not running under Upstart User Session");
-		return NULL;
-	}
+	const gchar *    bus_name = NULL;
 
 	dbus_error_init(&error);
-	conn = dbus_connection_open(upstart_session, &error);
+
+	if (g_getenv("UPSTART_APP_LAUNCH_USE_SESSION") == NULL) {
+		const gchar *    upstart_session;
+
+		upstart_session = g_getenv("UPSTART_SESSION");
+		if (upstart_session == NULL) {
+			g_warning("Not running under Upstart User Session");
+			dbus_error_free(&error);
+			return NULL;
+		}
+
+		conn = dbus_connection_open(upstart_session, &error);
+	} else {
+		conn = dbus_bus_get(DBUS_BUS_SESSION, &error);
+		bus_name = "com.ubuntu.Upstart";
+	}
 
 	if (conn == NULL) {
 		g_warning("Unable to connect to the Upstart Session: %s", error.message);
@@ -51,7 +60,7 @@ nih_proxy_create (void)
 	dbus_error_free(&error);
 
 	upstart = nih_dbus_proxy_new(NULL, conn,
-		NULL,
+		bus_name,
 		DBUS_PATH_UPSTART,
 		NULL, NULL);
 
