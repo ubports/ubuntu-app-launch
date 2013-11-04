@@ -32,10 +32,12 @@ nih_proxy_create (void)
 	DBusConnection * conn;
 	DBusError        error;
 	const gchar *    bus_name = NULL;
+	gboolean         use_private = FALSE;
 
 	dbus_error_init(&error);
+	use_private = (g_getenv("UPSTART_APP_LAUNCH_USE_SESSION") == NULL);
 
-	if (g_getenv("UPSTART_APP_LAUNCH_USE_SESSION") == NULL) {
+	if (use_private) {
 		const gchar *    upstart_session;
 
 		upstart_session = g_getenv("UPSTART_SESSION");
@@ -66,7 +68,8 @@ nih_proxy_create (void)
 
 	if (upstart == NULL) {
 		g_warning("Unable to build proxy to Upstart");
-		dbus_connection_close(conn);
+		if (use_private)
+			dbus_connection_close(conn);
 		dbus_connection_unref(conn);
 		return NULL;
 	}
