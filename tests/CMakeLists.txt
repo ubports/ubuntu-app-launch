@@ -34,5 +34,5 @@ include_directories("${CMAKE_SOURCE_DIR}/libupstart-app-launch")
 
 add_executable (libual-test
 	libual-test.cc)
-target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} upstart-launcher)
+target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} upstart-launcher)
 add_test (libual-test libual-test)
