@@ -97,6 +97,11 @@ class LibUAL : public ::testing::Test
 				G_VARIANT_TYPE_STRING,
 				g_variant_new_string("foo"),
 				NULL);
+			dbus_test_dbus_mock_object_add_property(mock, instobj,
+				"processes",
+				G_VARIANT_TYPE("a(si)"),
+				g_variant_new_parsed("[('main', 1234)]"),
+				NULL);
 
 			DbusTestDbusMockObject * ljobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
 
@@ -119,6 +124,11 @@ class LibUAL : public ::testing::Test
 				"name",
 				G_VARIANT_TYPE_STRING,
 				g_variant_new_string("bar-2342345"),
+				NULL);
+			dbus_test_dbus_mock_object_add_property(mock, linstobj,
+				"processes",
+				G_VARIANT_TYPE("a(si)"),
+				g_variant_new_parsed("[('main', 5678)]"),
 				NULL);
 
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
@@ -237,4 +247,10 @@ TEST_F(LibUAL, StopApplication)
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
+}
+
+TEST_F(LibUAL, ApplicationPid)
+{
+	ASSERT_EQ(upstart_app_launch_get_primary_pid("foo"), 1234);
+	ASSERT_EQ(upstart_app_launch_get_primary_pid("bar"), 5678);
 }
