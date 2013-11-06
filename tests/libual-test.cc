@@ -253,4 +253,6 @@ TEST_F(LibUAL, ApplicationPid)
 {
 	ASSERT_EQ(upstart_app_launch_get_primary_pid("foo"), 1234);
 	ASSERT_EQ(upstart_app_launch_get_primary_pid("bar"), 5678);
+	ASSERT_TRUE(upstart_app_launch_pid_in_app_id(1234, "foo"));
+	ASSERT_FALSE(upstart_app_launch_pid_in_app_id(5678, "foo"));
 }
