@@ -20,6 +20,7 @@
 #include "upstart-app-launch.h"
 #include <upstart.h>
 #include <nih/alloc.h>
+#include <nih/error.h>
 #include <gio/gio.h>
 #include <string.h>
 
@@ -134,7 +135,7 @@ stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * appname, 
 	}
 
 	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		NULL,
+		upstart->name,
 		job_path,
 		NULL, NULL);
 
@@ -520,8 +521,8 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolea
 		return;
 	}
 
-	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		NULL,
+	nih_local NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
+		upstart->name,
 		job_path,
 		NULL, NULL);
 
@@ -532,15 +533,16 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolea
 
 	nih_local char ** instances;
 	if (job_class_get_all_instances_sync(NULL, job_proxy, &instances) != 0) {
-		g_warning("Unable to get instances for job '%s'", name);
-		nih_unref(job_proxy, NULL);
+		NihError * error = nih_error_get();
+		g_warning("Unable to get instances for job '%s': %s", name, error->message);
+		nih_free(error);
 		return;
 	}
 
 	int jobnum;
 	for (jobnum = 0; instances[jobnum] != NULL; jobnum++) {
 		NihDBusProxy * instance_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-			NULL,
+			upstart->name,
 			instances[jobnum],
 			NULL, NULL);
 
@@ -562,8 +564,6 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolea
 
 		nih_unref(instance_proxy, NULL);
 	}
-
-	nih_unref(job_proxy, NULL);
 
 	return;
 }
@@ -599,7 +599,7 @@ pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 	}
 
 	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		NULL,
+		upstart->name,
 		job_path,
 		NULL, NULL);
 
@@ -619,7 +619,7 @@ pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 	int jobnum;
 	for (jobnum = 0; instances[jobnum] != NULL && pid == 0; jobnum++) {
 		NihDBusProxy * instance_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-			NULL,
+			upstart->name,
 			instances[jobnum],
 			NULL, NULL);
 
