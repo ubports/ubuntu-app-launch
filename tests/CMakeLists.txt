@@ -35,4 +35,7 @@ include_directories("${CMAKE_SOURCE_DIR}/libupstart-app-launch")
 add_executable (libual-test
 	libual-test.cc)
 target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} upstart-launcher)
-add_test (libual-test libual-test)
+
+# NOTE: Tests are broken into individual runs to avoid problems with libdbus
+add_test (NAME libual-test-start COMMAND libual-test --gtest_filter=*StartApplication)
+add_test (NAME libual-test-stop COMMAND libual-test --gtest_filter=*StopApplication)
