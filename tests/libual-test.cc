@@ -28,14 +28,32 @@ extern "C" {
 class LibUAL : public ::testing::Test
 {
 	protected:
-		DbusTestService * service;
-		DbusTestDbusMock * mock;
+		DbusTestService * service = NULL;
+		DbusTestDbusMock * mock = NULL;
+		GDBusConnection * bus = NULL;
 
 	protected:
+		/* Useful debugging stuff, but not on by default.  You really want to
+		   not get all this noise typically */
+		void debugConnection() {
+			if (true) return;
+
+			DbusTestBustle * bustle = dbus_test_bustle_new("test.bustle");
+			dbus_test_service_add_task(service, DBUS_TEST_TASK(bustle));
+			g_object_unref(bustle);
+
+			DbusTestProcess * monitor = dbus_test_process_new("dbus-monitor");
+			dbus_test_service_add_task(service, DBUS_TEST_TASK(monitor));
+			g_object_unref(monitor);
+		}
+
 		virtual void SetUp() {
 			g_setenv("UPSTART_APP_LAUNCH_USE_SESSION", "1", TRUE);
 
 			service = dbus_test_service_new(NULL);
+
+			debugConnection();
+
 			mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
 
 			DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
@@ -47,17 +65,84 @@ class LibUAL : public ::testing::Test
 				"",
 				NULL);
 
+			dbus_test_dbus_mock_object_add_method(mock, obj,
+				"GetJobByName",
+				G_VARIANT_TYPE("s"),
+				G_VARIANT_TYPE("o"),
+				"if args[0] == 'application-click':\n"
+				"	ret = dbus.ObjectPath('/com/test/application_click')\n"
+				"else:\n"
+				"	ret = dbus.ObjectPath('/com/test/application_legacy')\n",
+				NULL);
+
+			DbusTestDbusMockObject * jobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, jobobj,
+				"Stop",
+				G_VARIANT_TYPE("(asb)"),
+				NULL,
+				"",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, jobobj,
+				"GetAllInstances",
+				NULL,
+				G_VARIANT_TYPE("ao"),
+				"ret = [ dbus.ObjectPath('/com/test/app_instance') ]",
+				NULL);
+
+			DbusTestDbusMockObject * instobj = dbus_test_dbus_mock_get_object(mock, "/com/test/app_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
+			dbus_test_dbus_mock_object_add_property(mock, instobj,
+				"name",
+				G_VARIANT_TYPE_STRING,
+				g_variant_new_string("foo"),
+				NULL);
+
+			DbusTestDbusMockObject * ljobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, ljobobj,
+				"Stop",
+				G_VARIANT_TYPE("(asb)"),
+				NULL,
+				"",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, ljobobj,
+				"GetAllInstances",
+				NULL,
+				G_VARIANT_TYPE("ao"),
+				"ret = [ dbus.ObjectPath('/com/test/legacy_app_instance') ]",
+				NULL);
+
+			DbusTestDbusMockObject * linstobj = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
+			dbus_test_dbus_mock_object_add_property(mock, linstobj,
+				"name",
+				G_VARIANT_TYPE_STRING,
+				g_variant_new_string("bar-2342345"),
+				NULL);
+
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
 			dbus_test_service_start_tasks(service);
 
-			return;
+			bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+			g_dbus_connection_set_exit_on_close(bus, FALSE);
+			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 		}
 
 		virtual void TearDown() {
 			g_clear_object(&mock);
 			g_clear_object(&service);
 
-			return;
+			g_object_unref(bus);
+
+			unsigned int cleartry = 0;
+			while (bus != NULL && cleartry < 100) {
+				g_usleep(100000);
+				while (g_main_pending()) {
+					g_main_iteration(TRUE);
+				}
+				cleartry++;
+			}
 		}
 
 		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {
@@ -141,7 +226,15 @@ TEST_F(LibUAL, StartApplication)
 	g_free(joined);
 	g_variant_unref(env);
 
-
 	return;
 }
 
+TEST_F(LibUAL, StopApplication)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	ASSERT_TRUE(upstart_app_launch_stop_application("foo"));
+
+	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
+
+}
