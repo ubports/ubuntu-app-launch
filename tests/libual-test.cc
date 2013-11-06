@@ -311,6 +311,7 @@ TEST_F(LibUAL, StartStopObserver)
 
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
+	/* Basic start */
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
@@ -324,6 +325,7 @@ TEST_F(LibUAL, StartStopObserver)
 
 	ASSERT_EQ(start_data.count, 1);
 
+	/* Basic stop */
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
@@ -336,6 +338,41 @@ TEST_F(LibUAL, StartStopObserver)
 		g_main_iteration(TRUE);
 
 	ASSERT_EQ(stop_data.count, 1);
+
+	/* Start legacy */
+	start_data.count = 0;
+	start_data.name = "bar";
+
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('starting', ['JOB=application-legacy', 'INSTANCE=bar-234235'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	ASSERT_EQ(start_data.count, 1);
+
+	/* Legacy stop */
+	stop_data.count = 0;
+	stop_data.name = "bar";
+
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('stopped', ['JOB=application-legacy', 'INSTANCE=bar-9344321'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	ASSERT_EQ(stop_data.count, 1);
+
 
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_start(observer_cb, &start_data));
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
