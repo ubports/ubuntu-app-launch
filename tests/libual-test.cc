@@ -256,3 +256,23 @@ TEST_F(LibUAL, ApplicationPid)
 	ASSERT_TRUE(upstart_app_launch_pid_in_app_id(1234, "foo"));
 	ASSERT_FALSE(upstart_app_launch_pid_in_app_id(5678, "foo"));
 }
+
+TEST_F(LibUAL, ApplicationList)
+{
+	gchar ** apps = upstart_app_launch_list_running_apps();
+
+	ASSERT_NE(apps, nullptr);
+	ASSERT_EQ(g_strv_length(apps), 2);
+
+	/* Not enforcing order, but wanting to use the GTest functions
+	   for "actually testing" so the errors look right. */
+	if (g_strcmp0(apps[0], "foo") == 0) {
+		ASSERT_STREQ(apps[0], "foo");
+		ASSERT_STREQ(apps[1], "bar");
+	} else {
+		ASSERT_STREQ(apps[0], "bar");
+		ASSERT_STREQ(apps[1], "foo");
+	}
+
+	g_strfreev(apps);
+}
