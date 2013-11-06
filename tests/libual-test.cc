@@ -373,7 +373,48 @@ TEST_F(LibUAL, StartStopObserver)
 
 	ASSERT_EQ(stop_data.count, 1);
 
+	/* Test Noise Start */
+	start_data.count = 0;
+	start_data.name = "foo";
+	stop_data.count = 0;
+	stop_data.name = "foo";
 
+	/* A full lifecycle */
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('starting', ['JOB=application-click', 'INSTANCE=foo'])"),
+		NULL
+	);
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('started', ['JOB=application-click', 'INSTANCE=foo'])"),
+		NULL
+	);
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('stopping', ['JOB=application-click', 'INSTANCE=foo'])"),
+		NULL
+	);
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=foo'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	/* Ensure we just signaled once for each */
+	ASSERT_EQ(start_data.count, 1);
+	ASSERT_EQ(stop_data.count, 1);
+
+
+	/* Remove */
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_start(observer_cb, &start_data));
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
 	ASSERT_FALSE(upstart_app_launch_observer_delete_app_failed(NULL, NULL)); /* Not yet implemented */
