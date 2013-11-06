@@ -345,7 +345,7 @@ add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data,
 		"EventEmitted", /* signal */
 		DBUS_PATH_UPSTART, /* path */
 		signal, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
+		G_DBUS_SIGNAL_FLAGS_NONE,
 		observer_cb,
 		observert,
 		NULL); /* user data destroy */

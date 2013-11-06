@@ -41,3 +41,4 @@ add_test (NAME libual-test-start COMMAND libual-test --gtest_filter=*StartApplic
 add_test (NAME libual-test-stop COMMAND libual-test --gtest_filter=*StopApplication)
 add_test (NAME libual-test-pid COMMAND libual-test --gtest_filter=*ApplicationPid)
 add_test (NAME libual-test-list COMMAND libual-test --gtest_filter=*ApplicationList)
+add_test (NAME libual-test-observer COMMAND libual-test --gtest_filter=*StartStopObserver)

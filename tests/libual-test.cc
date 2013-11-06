@@ -276,3 +276,66 @@ TEST_F(LibUAL, ApplicationList)
 
 	g_strfreev(apps);
 }
+
+typedef struct {
+	unsigned int count;
+	const gchar * name;
+} observer_data_t;
+
+static void
+observer_cb (const gchar * appid, gpointer user_data)
+{
+	observer_data_t * data = (observer_data_t *)user_data;
+
+	if (data->name == NULL) {
+		data->count++;
+	} else if (g_strcmp0(data->name, appid) == 0) {
+		data->count++;
+	}
+}
+
+TEST_F(LibUAL, StartStopObserver)
+{
+	observer_data_t start_data = {
+		.count = 0,
+		.name = nullptr
+	};
+	observer_data_t stop_data = {
+		.count = 0,
+		.name = nullptr
+	};
+
+	ASSERT_TRUE(upstart_app_launch_observer_add_app_start(observer_cb, &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_add_app_stop(observer_cb, &stop_data));
+
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('starting', ['JOB=application-click', 'INSTANCE=foo'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	ASSERT_EQ(start_data.count, 1);
+
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=foo'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	ASSERT_EQ(stop_data.count, 1);
+
+	ASSERT_TRUE(upstart_app_launch_observer_delete_app_start(observer_cb, &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
+}
