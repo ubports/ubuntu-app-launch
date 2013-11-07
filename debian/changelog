@@ -1,9 +1,28 @@
-upstart-app-launch (0.2-0ubuntu1) UNRELEASED; urgency=low
+upstart-app-launch (0.2+13.10.20131014-0ubuntu1) saucy; urgency=low
 
+  [ Ricardo Mendoza ]
+  * Currently we are signalling observers that app started on the
+    "starting" signal. This is racy, as the final exec might not have
+    happened yet, so if a client tries to get the primary PID before the
+    process has fully started, it might get one of the transitional PIDs
+    of the scripts that run in between.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 78
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 14 Oct 2013 07:55:55 +0000
+
+upstart-app-launch (0.2+13.10.20131011-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
   * Bumping to version 0.2
   * Adding a libupstart-app-launch1.symbols file to match
+  * Use 'click info' to get manifests. (LP: #1232118)
 
- -- Ted Gould <ted@ubuntu.com>  Tue, 08 Oct 2013 14:37:31 -0500
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 76
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 11 Oct 2013 02:09:14 +0000
 
 upstart-app-launch (0.1+13.10.20131008.1-0ubuntu1) saucy; urgency=low
 
