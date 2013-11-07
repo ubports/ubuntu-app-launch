@@ -25,6 +25,12 @@ endif()
 
 set(pkglibexecdir "${CMAKE_INSTALL_FULL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
 
+execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
+	OUTPUT_VARIABLE UPSTART_APP_LAUNCH_ARCH
+	OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+set(upstart_app_launch_arch "${UPSTART_APP_LAUNCH_ARCH}")
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
 
 enable_testing()
