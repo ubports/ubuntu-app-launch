@@ -315,7 +315,7 @@ TEST_F(LibUAL, StartStopObserver)
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('starting', ['JOB=application-click', 'INSTANCE=foo'])"),
+		g_variant_new_parsed("('started', ['JOB=application-click', 'INSTANCE=foo'])"),
 		NULL
 	);
 
@@ -346,7 +346,7 @@ TEST_F(LibUAL, StartStopObserver)
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('starting', ['JOB=application-legacy', 'INSTANCE=bar-234235'])"),
+		g_variant_new_parsed("('started', ['JOB=application-legacy', 'INSTANCE=bar-234235'])"),
 		NULL
 	);
 
