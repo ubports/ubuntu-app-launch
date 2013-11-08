@@ -42,3 +42,13 @@ add_test (NAME libual-test-stop COMMAND libual-test --gtest_filter=*StopApplicat
 add_test (NAME libual-test-pid COMMAND libual-test --gtest_filter=*ApplicationPid)
 add_test (NAME libual-test-list COMMAND libual-test --gtest_filter=*ApplicationList)
 add_test (NAME libual-test-observer COMMAND libual-test --gtest_filter=*StartStopObserver)
+
+# ZG Test
+
+add_definitions ( -DZG_EVENT_TOOL="${CMAKE_BINARY_DIR}/zg-report-app" )
+
+add_executable (zg-test
+	zg-test.cc)
+target_link_libraries (zg-test gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
+add_test (zg-test zg-test)
+
