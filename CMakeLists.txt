@@ -41,7 +41,7 @@ include_directories(${GIO2_INCLUDE_DIRS})
 pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
 include_directories(${JSONGLIB_INCLUDE_DIRS})
 
-pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-1.0)
+pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
 pkg_check_modules(LIBUPSTART REQUIRED libupstart libnih libnih-dbus dbus-1)

@@ -13,7 +13,7 @@ Build-Depends: click-dev (>= 0.2.2),
                libnih-dbus-dev,
                libnih-dev,
                libupstart-dev,
-               libzeitgeist-dev,
+               libzeitgeist-2.0-dev,
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/upstart-app-launch
 # If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
