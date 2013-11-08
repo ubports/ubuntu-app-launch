@@ -151,6 +151,13 @@ TEST_F(HelperTest, DesktopExecParse)
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "");
 	g_array_free(output, TRUE);
 
+	/* Big U with URLs that have spaces */
+	output = desktop_exec_parse("foo %u", "'http://bob.com/foo bar/' http://slashdot.org");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://bob.com/foo bar/");
+	g_array_free(output, TRUE);
+
 	/* %f with a valid file */
 	output = desktop_exec_parse("foo %f", "file:///proc/version");
 	ASSERT_EQ(output->len, 2);
