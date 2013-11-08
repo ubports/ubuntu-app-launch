@@ -1,3 +1,10 @@
+upstart-app-launch (0.3-0ubuntu1) UNRELEASED; urgency=low
+
+  * Bumping to 0.3 to reflect that we added a new env var to the library
+    which is needed for testing URL Dispatcher
+
+ -- Ted Gould <ted@ubuntu.com>  Thu, 07 Nov 2013 10:32:58 -0600
+
 upstart-app-launch (0.2+13.10.20131014-0ubuntu1) saucy; urgency=low
 
   [ Ricardo Mendoza ]
