@@ -36,6 +36,7 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          upstart-app-launch (= ${binary:Version}),
+         zeitgeist,
 Description: Tools for working wtih launched applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
