@@ -125,10 +125,10 @@ TEST_F(HelperTest, DesktopExecParse)
 	g_array_free(output, TRUE);
 
 	/* Lots of quotes, escaped and not */
-	output = desktop_exec_parse("foo \\\"\"%u\"", "\"");
+	output = desktop_exec_parse("foo \\\"\"%u\"", "'\"'");
 	ASSERT_EQ(output->len, 2);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"\"");
 	g_array_free(output, TRUE);
 
 	/* Let's have no params, but a little %u */
