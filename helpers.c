@@ -287,7 +287,9 @@ static gchar *
 build_file_list (const gchar * uri_list)
 {
 	gchar ** uri_split = NULL;
-	g_shell_parse_argv(uri_list, NULL, &uri_split, NULL);
+	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
+		return g_strdup("");
+	}
 
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(gchar *));
 	g_array_set_clear_func(outarray, free_string);
@@ -319,9 +321,14 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 	}
 
 	gchar ** uri_split = NULL;
-	g_shell_parse_argv(uri_list, NULL, &uri_split, NULL);
+	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
+		return;
+	}
 
-	*single_uri = g_strdup(uri_split[0]);
+	if (uri_split[0] != NULL) {
+		*single_uri = g_strdup(uri_split[0]);
+	}
+
 	g_strfreev(uri_split);
 
 	return;
@@ -340,7 +347,9 @@ ensure_singlefile (gchar ** single_file, const gchar * uri_list)
 	}
 
 	gchar ** uri_split = NULL;
-	g_shell_parse_argv(uri_list, NULL, &uri_split, NULL);
+	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
+		return;
+	}
 
 	gchar * first_file = NULL;
 	if (uri_split[0] != NULL) {
