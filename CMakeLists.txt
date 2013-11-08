@@ -154,7 +154,7 @@ install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 add_executable(zg-report-app zg-report-app.c)
 set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
-target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES})
+target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
 #######################
