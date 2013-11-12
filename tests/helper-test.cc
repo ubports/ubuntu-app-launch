@@ -18,6 +18,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <glib/gstdio.h>
 
 extern "C" {
 #include "../helpers.h"
@@ -31,6 +32,7 @@ class HelperTest : public ::testing::Test
 		virtual void SetUp() {
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
 			g_setenv("PATH", CMAKE_SOURCE_DIR, TRUE);
+			g_setenv("DATA_WRITE_DIR", CMAKE_BINARY_DIR, TRUE);
 			return;
 		}
 };
@@ -261,6 +263,8 @@ TEST_F(HelperTest, KeyfileForAppid)
 
 TEST_F(HelperTest, SetConfinedEnvvars)
 {
+	g_unlink(CMAKE_BINARY_DIR "/initctl-output.txt");
+
 	/* Not a test other than "don't crash" */
 	set_confined_envvars("pkg", "/usr/share");
 	return;
