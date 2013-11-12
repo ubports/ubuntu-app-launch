@@ -262,7 +262,7 @@ TEST_F(HelperTest, KeyfileForAppid)
 TEST_F(HelperTest, SetConfinedEnvvars)
 {
 	/* Not a test other than "don't crash" */
-	set_confined_envvars("pkg");
+	set_confined_envvars("pkg", "/usr/share");
 	return;
 }
 
