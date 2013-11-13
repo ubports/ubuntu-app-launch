@@ -267,6 +267,25 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 
 	/* Not a test other than "don't crash" */
 	set_confined_envvars("pkg", "/usr/share");
+
+	ASSERT_TRUE(g_file_test(CMAKE_BINARY_DIR "/initctl-output.txt", G_FILE_TEST_EXISTS));
+
+	gchar * contents = NULL;
+	ASSERT_TRUE(g_file_get_contents(CMAKE_BINARY_DIR "/initctl-output.txt", &contents, NULL, NULL));
+
+	gchar ** lines = g_strsplit(contents, "\n", 0);
+	g_free(contents);
+	unsigned int i;
+
+	for (i = 0; lines[i] != NULL; i++) {
+		g_debug("Checking: '%s'", lines[i]);
+		if (lines[i][0] == '\0') continue;
+
+		ASSERT_TRUE(g_str_has_prefix(lines[i], "set-env "));
+	}
+
+	g_strfreev(lines);
+
 	return;
 }
 
