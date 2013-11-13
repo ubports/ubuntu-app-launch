@@ -266,7 +266,7 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	g_unlink(CMAKE_BINARY_DIR "/initctl-output.txt");
 
 	/* Not a test other than "don't crash" */
-	set_confined_envvars("pkg", "/usr/share");
+	set_confined_envvars("foo-app-pkg", "/foo/bar");
 
 	ASSERT_TRUE(g_file_test(CMAKE_BINARY_DIR "/initctl-output.txt", G_FILE_TEST_EXISTS));
 
@@ -311,10 +311,13 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 		} else if (g_strcmp0(var, "XDG_RUNTIME_DIR") == 0) {
 			got_runtime_dir = true;
 		} else if (g_strcmp0(var, "XDG_DATA_DIRS") == 0) {
+			ASSERT_TRUE(g_str_has_prefix(value, "/foo/bar:"));
 			got_data_dirs = true;
 		} else if (g_strcmp0(var, "TMPDIR") == 0) {
+			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
 			got_temp_dir = true;
 		} else if (g_strcmp0(var, "__GL_SHADER_DISK_CACHE_PATH") == 0) {
+			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
 			got_shader_dir = true;
 		} else {
 			g_warning("Unknown variable! %s", lines[i]);
