@@ -24,6 +24,7 @@
 #include <string.h>
 
 static void apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolean truncate_legacy);
+static void free_helper (gpointer value);
 
 static NihDBusProxy *
 nih_proxy_create (void)
@@ -69,6 +70,26 @@ nih_proxy_create (void)
 	return upstart;
 }
 
+/* Function to take the urls and escape them so that they can be
+   parsed on the other side correctly. */
+static gchar *
+app_uris_string (const gchar * const * uris)
+{
+	guint i = 0;
+	GArray * array = g_array_new(TRUE, TRUE, sizeof(gchar *));
+	g_array_set_clear_func(array, free_helper);
+
+	for (i = 0; i < g_strv_length((gchar**)uris); i++) {
+		gchar * escaped = g_shell_quote(uris[i]);
+		g_array_append_val(array, escaped);
+	}
+
+	gchar * urisjoin = g_strjoinv(" ", (gchar**)array->data);
+	g_array_unref(array);
+
+	return urisjoin;
+}
+
 gboolean
 upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
@@ -82,13 +103,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	gchar * env_appid = g_strdup_printf("APP_ID=%s", appid);
 	gchar * env_uris = NULL;
 
-	/* TODO: Joining only with space could cause issues with breaking them
-	   back out.  We don't have any cases of more than one today.  But, this
-	   isn't good.
-	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
-	   */
 	if (uris != NULL) {
-		gchar * urisjoin = g_strjoinv(" ", (gchar **)uris);
+		gchar * urisjoin = app_uris_string(uris);
 		env_uris = g_strdup_printf("APP_URIS=%s", urisjoin);
 		g_free(urisjoin);
 	}
