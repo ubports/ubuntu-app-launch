@@ -18,6 +18,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <glib/gstdio.h>
 
 extern "C" {
 #include "../helpers.h"
@@ -31,6 +32,7 @@ class HelperTest : public ::testing::Test
 		virtual void SetUp() {
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
 			g_setenv("PATH", CMAKE_SOURCE_DIR, TRUE);
+			g_setenv("DATA_WRITE_DIR", CMAKE_BINARY_DIR, TRUE);
 			return;
 		}
 };
@@ -268,8 +270,79 @@ TEST_F(HelperTest, KeyfileForAppid)
 
 TEST_F(HelperTest, SetConfinedEnvvars)
 {
+	g_unlink(CMAKE_BINARY_DIR "/initctl-output.txt");
+
 	/* Not a test other than "don't crash" */
-	set_confined_envvars("pkg");
+	set_confined_envvars("foo-app-pkg", "/foo/bar");
+
+	ASSERT_TRUE(g_file_test(CMAKE_BINARY_DIR "/initctl-output.txt", G_FILE_TEST_EXISTS));
+
+	gchar * contents = NULL;
+	ASSERT_TRUE(g_file_get_contents(CMAKE_BINARY_DIR "/initctl-output.txt", &contents, NULL, NULL));
+
+	gchar ** lines = g_strsplit(contents, "\n", 0);
+	g_free(contents);
+	unsigned int i;
+
+	bool got_app_isolation = false;
+	bool got_cache_home = false;
+	bool got_config_home = false;
+	bool got_data_home = false;
+	bool got_runtime_dir = false;
+	bool got_data_dirs = false;
+	bool got_temp_dir = false;
+	bool got_shader_dir = false;
+
+	for (i = 0; lines[i] != NULL; i++) {
+		g_debug("Checking: '%s'", lines[i]);
+		if (lines[i][0] == '\0') continue;
+
+		ASSERT_TRUE(g_str_has_prefix(lines[i], "set-env "));
+
+		gchar * var = lines[i] + strlen("set-env ");
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "UBUNTU_APPLICATION_ISOLATION") == 0) {
+			ASSERT_STREQ(value, "1");
+			got_app_isolation = true;
+		} else if (g_strcmp0(var, "XDG_CACHE_HOME") == 0) {
+			got_cache_home = true;
+		} else if (g_strcmp0(var, "XDG_CONFIG_HOME") == 0) {
+			got_config_home = true;
+		} else if (g_strcmp0(var, "XDG_DATA_HOME") == 0) {
+			got_data_home = true;
+		} else if (g_strcmp0(var, "XDG_RUNTIME_DIR") == 0) {
+			got_runtime_dir = true;
+		} else if (g_strcmp0(var, "XDG_DATA_DIRS") == 0) {
+			ASSERT_TRUE(g_str_has_prefix(value, "/foo/bar:"));
+			got_data_dirs = true;
+		} else if (g_strcmp0(var, "TMPDIR") == 0) {
+			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
+			got_temp_dir = true;
+		} else if (g_strcmp0(var, "__GL_SHADER_DISK_CACHE_PATH") == 0) {
+			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
+			got_shader_dir = true;
+		} else {
+			g_warning("Unknown variable! %s", lines[i]);
+			ASSERT_TRUE(false);
+		}
+	}
+
+	g_strfreev(lines);
+
+	ASSERT_TRUE(got_app_isolation);
+	ASSERT_TRUE(got_cache_home);
+	ASSERT_TRUE(got_config_home);
+	ASSERT_TRUE(got_data_home);
+	ASSERT_TRUE(got_runtime_dir);
+	ASSERT_TRUE(got_data_dirs);
+	ASSERT_TRUE(got_temp_dir);
+	ASSERT_TRUE(got_shader_dir);
+
 	return;
 }
 

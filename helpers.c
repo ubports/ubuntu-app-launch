@@ -588,8 +588,11 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
  * https://wiki.ubuntu.com/SecurityTeam/Specifications/ApplicationConfinement
  */
 void
-set_confined_envvars (const gchar * package)
+set_confined_envvars (const gchar * package, const gchar * app_dir)
 {
+	g_return_if_fail(package != NULL);
+	g_return_if_fail(app_dir != NULL);
+
 	g_debug("Setting 'UBUNTU_APPLICATION_ISOLATION' to '1'");
 	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1");
 
@@ -609,6 +612,11 @@ set_confined_envvars (const gchar * package)
 
 	g_debug("Setting 'XDG_RUNTIME_DIR' using g_get_user_runtime_dir()");
 	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
+
+	/* Add the application's dir to the list of sources for data */
+	gchar * datadirs = g_strjoin(":", app_dir, g_getenv("XDG_DATA_DIRS"), NULL);
+	set_upstart_variable("XDG_DATA_DIRS", datadirs);
+	g_free(datadirs);
 
 	/* Set TMPDIR to something sane and application-specific */
 	gchar * tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package);
