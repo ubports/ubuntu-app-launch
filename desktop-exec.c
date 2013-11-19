@@ -64,7 +64,7 @@ main (int argc, char * argv[])
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "X-Ubuntu-AppArmor-Profile", NULL);
 	if (apparmor != NULL) {
 		set_upstart_variable("APP_EXEC_POLICY", apparmor);
-		set_confined_envvars(app_id);
+		set_confined_envvars(app_id, "/usr/share");
 		g_free(apparmor);
 	} else {
 		set_upstart_variable("APP_EXEC_POLICY", "unconfined");
