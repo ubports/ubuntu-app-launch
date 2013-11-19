@@ -237,9 +237,7 @@ TEST_F(LibUAL, StartApplication)
 
 	env = g_variant_get_child_value(calls->params, 1);
 	ASSERT_TRUE(check_env(env, "APP_ID", "foo"));
-	gchar * joined = g_strjoinv(" ", (gchar **)urls);
-	ASSERT_TRUE(check_env(env, "APP_URIS", joined));
-	g_free(joined);
+	ASSERT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
 	g_variant_unref(env);
 
 	return;
