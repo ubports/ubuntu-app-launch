@@ -176,8 +176,11 @@ class LibUAL : public ::testing::Test
 				}
 			}
 
-			if (!found)
-				g_warning("Unable to find '%s' with value '%s'", var, value);
+			if (!found) {
+				gchar * envstr = g_variant_print(env_array, FALSE);
+				g_warning("Unable to find '%s' with value '%s' in '%s'", var, value, envstr);
+				g_free(envstr);
+			}
 
 			return found;
 		}
