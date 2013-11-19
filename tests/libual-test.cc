@@ -176,6 +176,9 @@ class LibUAL : public ::testing::Test
 				}
 			}
 
+			if (!found)
+				g_warning("Unable to find '%s' with value '%s'", var, value);
+
 			return found;
 		}
 };
