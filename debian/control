@@ -15,7 +15,7 @@ Build-Depends: click-dev (>= 0.2.2),
                libnih-dbus-dev,
                libnih-dev,
                libupstart-dev,
-               libzeitgeist-dev,
+               libzeitgeist-2.0-dev,
                python3-dbusmock,
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/upstart-app-launch
@@ -30,6 +30,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          click (>= 0.4.9),
          click-apparmor,
+         zeitgeist,
 Description: Upstart Job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
