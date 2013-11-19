@@ -29,3 +29,17 @@ add_executable (second-exec-test
 target_link_libraries (second-exec-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} upstart-launcher)
 add_test (second-exec-test second-exec-test)
 
+# libUAL Test
+
+include_directories("${CMAKE_SOURCE_DIR}/libupstart-app-launch")
+
+add_executable (libual-test
+	libual-test.cc)
+target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} upstart-launcher)
+
+# NOTE: Tests are broken into individual runs to avoid problems with libdbus
+add_test (NAME libual-test-start COMMAND libual-test --gtest_filter=*StartApplication)
+add_test (NAME libual-test-stop COMMAND libual-test --gtest_filter=*StopApplication)
+add_test (NAME libual-test-pid COMMAND libual-test --gtest_filter=*ApplicationPid)
+add_test (NAME libual-test-list COMMAND libual-test --gtest_filter=*ApplicationList)
+add_test (NAME libual-test-observer COMMAND libual-test --gtest_filter=*StartStopObserver)

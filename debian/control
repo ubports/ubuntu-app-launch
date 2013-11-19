@@ -5,8 +5,10 @@ Maintainer: Ted Gould <ted@ubuntu.com>
 Build-Depends: click-dev (>= 0.2.2),
                cmake,
                dbus-x11,
+               dbus-test-runner,
                debhelper (>= 9),
                libdbus-1-dev,
+               libdbustest1-dev (>= 14.04.0),
                libglib2.0-dev,
                libgtest-dev,
                libjson-glib-dev,
@@ -14,6 +16,7 @@ Build-Depends: click-dev (>= 0.2.2),
                libnih-dev,
                libupstart-dev,
                libzeitgeist-dev,
+               python3-dbusmock,
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/upstart-app-launch
 # If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
