@@ -53,14 +53,23 @@ main (int argc, char * argv[])
 		}
 
 		const gchar * path = g_getenv("PATH");
-		gchar * libpath = g_build_filename(appdir, "lib", UPSTART_APP_LAUNCH_ARCH, "bin", NULL);
+		gchar * libpath = NULL;
 
-		const gchar * joinable[] = {
-			libpath,
-			appdir,
-			path,
-			NULL
-		};
+		const gchar * joinable[4] = { 0 };
+
+		/* If we've got an architecture set insert that into the
+		   path before everything else */
+		const gchar * archdir = g_getenv("UPSTART_APP_LAUNCH_ARCH");
+		if (archdir != NULL) {
+			libpath = g_build_filename(appdir, "lib", archdir, "bin", NULL);
+			joinable[0] = libpath;
+			joinable[1] = appdir;
+			joinable[2] = path;
+		} else {
+			joinable[0] = appdir;
+			joinable[1] = path;
+		}
+
 		gchar * newpath = g_strjoinv(":", (gchar**)joinable);
 		g_setenv("PATH", newpath, TRUE);
 		g_free(libpath);
