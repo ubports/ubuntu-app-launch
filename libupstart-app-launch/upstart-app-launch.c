@@ -20,10 +20,12 @@
 #include "upstart-app-launch.h"
 #include <upstart.h>
 #include <nih/alloc.h>
+#include <nih/error.h>
 #include <gio/gio.h>
 #include <string.h>
 
 static void apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolean truncate_legacy);
+static void free_helper (gpointer value);
 
 static NihDBusProxy *
 nih_proxy_create (void)
@@ -31,16 +33,27 @@ nih_proxy_create (void)
 	NihDBusProxy *   upstart;
 	DBusConnection * conn;
 	DBusError        error;
-	const gchar *    upstart_session;
-
-	upstart_session = g_getenv("UPSTART_SESSION");
-	if (upstart_session == NULL) {
-		g_warning("Not running under Upstart User Session");
-		return NULL;
-	}
+	const gchar *    bus_name = NULL;
+	gboolean         use_private = FALSE;
 
 	dbus_error_init(&error);
-	conn = dbus_connection_open(upstart_session, &error);
+	use_private = (g_getenv("UPSTART_APP_LAUNCH_USE_SESSION") == NULL);
+
+	if (use_private) {
+		const gchar *    upstart_session;
+
+		upstart_session = g_getenv("UPSTART_SESSION");
+		if (upstart_session == NULL) {
+			g_warning("Not running under Upstart User Session");
+			dbus_error_free(&error);
+			return NULL;
+		}
+
+		conn = dbus_connection_open(upstart_session, &error);
+	} else {
+		conn = dbus_bus_get(DBUS_BUS_SESSION, &error);
+		bus_name = "com.ubuntu.Upstart";
+	}
 
 	if (conn == NULL) {
 		g_warning("Unable to connect to the Upstart Session: %s", error.message);
@@ -51,13 +64,14 @@ nih_proxy_create (void)
 	dbus_error_free(&error);
 
 	upstart = nih_dbus_proxy_new(NULL, conn,
-		NULL,
+		bus_name,
 		DBUS_PATH_UPSTART,
 		NULL, NULL);
 
 	if (upstart == NULL) {
 		g_warning("Unable to build proxy to Upstart");
-		dbus_connection_close(conn);
+		if (use_private)
+			dbus_connection_close(conn);
 		dbus_connection_unref(conn);
 		return NULL;
 	}
@@ -67,6 +81,26 @@ nih_proxy_create (void)
 	upstart->auto_start = FALSE;
 
 	return upstart;
+}
+
+/* Function to take the urls and escape them so that they can be
+   parsed on the other side correctly. */
+static gchar *
+app_uris_string (const gchar * const * uris)
+{
+	guint i = 0;
+	GArray * array = g_array_new(TRUE, TRUE, sizeof(gchar *));
+	g_array_set_clear_func(array, free_helper);
+
+	for (i = 0; i < g_strv_length((gchar**)uris); i++) {
+		gchar * escaped = g_shell_quote(uris[i]);
+		g_array_append_val(array, escaped);
+	}
+
+	gchar * urisjoin = g_strjoinv(" ", (gchar**)array->data);
+	g_array_unref(array);
+
+	return urisjoin;
 }
 
 gboolean
@@ -82,13 +116,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	gchar * env_appid = g_strdup_printf("APP_ID=%s", appid);
 	gchar * env_uris = NULL;
 
-	/* TODO: Joining only with space could cause issues with breaking them
-	   back out.  We don't have any cases of more than one today.  But, this
-	   isn't good.
-	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
-	   */
 	if (uris != NULL) {
-		gchar * urisjoin = g_strjoinv(" ", (gchar **)uris);
+		gchar * urisjoin = app_uris_string(uris);
 		env_uris = g_strdup_printf("APP_URIS=%s", urisjoin);
 		g_free(urisjoin);
 	}
@@ -122,7 +151,7 @@ stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * appname, 
 	}
 
 	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		NULL,
+		upstart->name,
 		job_path,
 		NULL, NULL);
 
@@ -221,18 +250,23 @@ gdbus_upstart_ref (void) {
 		return g_object_ref(gdbus_upstart);
 	}
 
-	const gchar * upstart_addr = g_getenv("UPSTART_SESSION");
-	if (upstart_addr == NULL) {
-		g_print("Doesn't appear to be an upstart user session\n");
-		return NULL;
-	}
-
 	GError * error = NULL;
-	gdbus_upstart = g_dbus_connection_new_for_address_sync(upstart_addr,
-	                                                       G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
-	                                                       NULL, /* auth */
-	                                                       NULL, /* cancel */
-	                                                       &error);
+
+	if (g_getenv("UPSTART_APP_LAUNCH_USE_SESSION") == NULL) {
+		const gchar * upstart_addr = g_getenv("UPSTART_SESSION");
+		if (upstart_addr == NULL) {
+			g_print("Doesn't appear to be an upstart user session\n");
+			return NULL;
+		}
+
+		gdbus_upstart = g_dbus_connection_new_for_address_sync(upstart_addr,
+															   G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
+															   NULL, /* auth */
+															   NULL, /* cancel */
+															   &error);
+	} else {
+		gdbus_upstart = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	}
 
 	if (error != NULL) {
 		g_warning("Unable to connect to Upstart bus: %s", error->message);
@@ -328,7 +362,7 @@ add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data,
 		"EventEmitted", /* signal */
 		DBUS_PATH_UPSTART, /* path */
 		signal, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NO_MATCH_RULE,
+		G_DBUS_SIGNAL_FLAGS_NONE,
 		observer_cb,
 		observert,
 		NULL); /* user data destroy */
@@ -504,8 +538,8 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolea
 		return;
 	}
 
-	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		NULL,
+	nih_local NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
+		upstart->name,
 		job_path,
 		NULL, NULL);
 
@@ -516,15 +550,16 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolea
 
 	nih_local char ** instances;
 	if (job_class_get_all_instances_sync(NULL, job_proxy, &instances) != 0) {
-		g_warning("Unable to get instances for job '%s'", name);
-		nih_unref(job_proxy, NULL);
+		NihError * error = nih_error_get();
+		g_warning("Unable to get instances for job '%s': %s", name, error->message);
+		nih_free(error);
 		return;
 	}
 
 	int jobnum;
 	for (jobnum = 0; instances[jobnum] != NULL; jobnum++) {
 		NihDBusProxy * instance_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-			NULL,
+			upstart->name,
 			instances[jobnum],
 			NULL, NULL);
 
@@ -546,8 +581,6 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolea
 
 		nih_unref(instance_proxy, NULL);
 	}
-
-	nih_unref(job_proxy, NULL);
 
 	return;
 }
@@ -583,7 +616,7 @@ pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 	}
 
 	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		NULL,
+		upstart->name,
 		job_path,
 		NULL, NULL);
 
@@ -603,7 +636,7 @@ pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
 	int jobnum;
 	for (jobnum = 0; instances[jobnum] != NULL && pid == 0; jobnum++) {
 		NihDBusProxy * instance_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-			NULL,
+			upstart->name,
 			instances[jobnum],
 			NULL, NULL);
 

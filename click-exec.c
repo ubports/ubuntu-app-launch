@@ -60,8 +60,6 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	set_confined_envvars(package);
-
 	/* Check click to find out where the files are */
 	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
 	g_free(package);
@@ -91,6 +89,8 @@ main (int argc, char * argv[])
 
 	g_debug("Setting 'APP_DIR' to '%s'", output);
 	set_upstart_variable("APP_DIR", output);
+
+	set_confined_envvars(package, output);
 
 	gchar * desktopfile = manifest_to_desktop(output, app_id);
 	g_free(output);

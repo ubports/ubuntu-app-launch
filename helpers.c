@@ -286,12 +286,10 @@ free_string (gpointer value)
 static gchar *
 build_file_list (const gchar * uri_list)
 {
-	/* TODO: Joining only with space could cause issues with breaking them
-	   back out.  We don't have any cases of more than one today.  But, this
-	   isn't good.
-	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
-	   */
-	gchar ** uri_split = g_strsplit(uri_list, " ", 0);
+	gchar ** uri_split = NULL;
+	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
+		return g_strdup("");
+	}
 
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(gchar *));
 	g_array_set_clear_func(outarray, free_string);
@@ -322,20 +320,16 @@ ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
 		return;
 	}
 
-	/* TODO: Joining only with space could cause issues with breaking them
-	   back out.  We don't have any cases of more than one today.  But, this
-	   isn't good.
-	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
-	   */
-
-	gchar * first_uri = g_strdup(uri_list);
-	gchar * first_space = g_utf8_strchr(first_uri, -1, ' ');
-	
-	if (first_space != NULL) {
-		first_space[0] = '\0';
+	gchar ** uri_split = NULL;
+	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
+		return;
 	}
 
-	*single_uri = first_uri;
+	if (uri_split[0] != NULL) {
+		*single_uri = g_strdup(uri_split[0]);
+	}
+
+	g_strfreev(uri_split);
 
 	return;
 }
@@ -352,23 +346,17 @@ ensure_singlefile (gchar ** single_file, const gchar * uri_list)
 		return;
 	}
 
-	/* TODO: Joining only with space could cause issues with breaking them
-	   back out.  We don't have any cases of more than one today.  But, this
-	   isn't good.
-	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
-	   */
-
-	gchar * first_uri = g_strdup(uri_list);
-	gchar * first_space = g_utf8_strchr(first_uri, -1, ' ');
-	
-	if (first_space != NULL) {
-		first_space[0] = '\0';
+	gchar ** uri_split = NULL;
+	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
+		return;
 	}
 
 	gchar * first_file = NULL;
-	if (first_uri != NULL) {
-		first_file = uri2file(first_uri);
+	if (uri_split[0] != NULL) {
+		first_file = uri2file(uri_split[0]);
 	}
+
+	g_strfreev(uri_split);
 
 	if (first_file != NULL) {
 		*single_file = first_file;
@@ -455,11 +443,6 @@ desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'U':
-			/* TODO: Joining only with space could cause issues with breaking them
-			   back out.  We don't have any cases of more than one today.  But, this
-			   isn't good.
-			   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
-			   */
 			if (uri_list != NULL) {
 				g_array_append_val(outarray, uri_list);
 			}
@@ -605,8 +588,11 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
  * https://wiki.ubuntu.com/SecurityTeam/Specifications/ApplicationConfinement
  */
 void
-set_confined_envvars (const gchar * package)
+set_confined_envvars (const gchar * package, const gchar * app_dir)
 {
+	g_return_if_fail(package != NULL);
+	g_return_if_fail(app_dir != NULL);
+
 	g_debug("Setting 'UBUNTU_APPLICATION_ISOLATION' to '1'");
 	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1");
 
@@ -626,6 +612,11 @@ set_confined_envvars (const gchar * package)
 
 	g_debug("Setting 'XDG_RUNTIME_DIR' using g_get_user_runtime_dir()");
 	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
+
+	/* Add the application's dir to the list of sources for data */
+	gchar * datadirs = g_strjoin(":", app_dir, g_getenv("XDG_DATA_DIRS"), NULL);
+	set_upstart_variable("XDG_DATA_DIRS", datadirs);
+	g_free(datadirs);
 
 	/* Set TMPDIR to something sane and application-specific */
 	gchar * tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package);

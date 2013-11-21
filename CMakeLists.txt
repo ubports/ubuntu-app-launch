@@ -31,7 +31,7 @@ execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
 )
 set(upstart_app_launch_arch "${UPSTART_APP_LAUNCH_ARCH}")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function")
 
 enable_testing()
 
@@ -47,11 +47,14 @@ include_directories(${GIO2_INCLUDE_DIRS})
 pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
 include_directories(${JSONGLIB_INCLUDE_DIRS})
 
-pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-1.0)
+pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
 pkg_check_modules(LIBUPSTART REQUIRED libupstart libnih libnih-dbus dbus-1)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
+
+pkg_check_modules(DBUSTEST REQUIRED dbustest-1>=14.04.0)
+include_directories(${DBUSTEST_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -160,7 +163,7 @@ install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 add_executable(zg-report-app zg-report-app.c)
 set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
-target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES})
+target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
 #######################

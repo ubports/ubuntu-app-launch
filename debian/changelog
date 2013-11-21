@@ -1,3 +1,23 @@
+upstart-app-launch (0.3-0ubuntu1) UNRELEASED; urgency=low
+
+  * Bumping to 0.3 to reflect that we added a new env var to the library
+    which is needed for testing URL Dispatcher
+
+ -- Ted Gould <ted@ubuntu.com>  Thu, 07 Nov 2013 10:32:58 -0600
+
+upstart-app-launch (0.2+14.04.20131119-0ubuntu1) trusty; urgency=low
+
+  [ Ted Gould ]
+  * Unref the proxy after stopping an application.
+  * Use shell escaping to ensure we can handle spaces. (LP: #1229354)
+  * Set the XDG Data Dirs to include the application install directory.
+    (LP: #1250546)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 82
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 19 Nov 2013 08:19:25 +0000
+
 upstart-app-launch (0.2+13.10.20131014-0ubuntu1) saucy; urgency=low
 
   [ Ricardo Mendoza ]
