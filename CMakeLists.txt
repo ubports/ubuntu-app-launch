@@ -152,6 +152,7 @@ install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
 # exec-line-exec
 ####################
 
+add_definitions(-DUPSTART_APP_LAUNCH_ARCH="${UPSTART_APP_LAUNCH_ARCH}")
 add_executable(exec-line-exec exec-line-exec.c)
 set_target_properties(exec-line-exec PROPERTIES OUTPUT_NAME "exec-line-exec")
 target_link_libraries(exec-line-exec helpers)

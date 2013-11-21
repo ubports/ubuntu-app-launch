@@ -53,8 +53,17 @@ main (int argc, char * argv[])
 		}
 
 		const gchar * path = g_getenv("PATH");
-		gchar * newpath = g_strdup_printf("%s:%s", appdir, path);
+		gchar * libpath = g_build_filename(appdir, "lib", UPSTART_APP_LAUNCH_ARCH, "bin", NULL);
+
+		const gchar * joinable[] = {
+			libpath,
+			appdir,
+			path,
+			NULL
+		};
+		gchar * newpath = g_strjoinv(":", (gchar**)joinable);
 		g_setenv("PATH", newpath, TRUE);
+		g_free(libpath);
 		g_free(newpath);
 	}
 
