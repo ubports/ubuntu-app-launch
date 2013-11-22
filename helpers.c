@@ -293,6 +293,10 @@ file_list_handling (GArray * outarray, gchar ** list, gchar * (*dup_func) (const
 static void
 desktop_exec_segment_parse (GArray * finalarray, const gchar * execsegment, gchar ** uri_list)
 {
+	/* No NULL strings */
+	if (execsegment == NULL || execsegment[0] == '\0')
+		return;
+
 	/* Handle %F and %U as an argument on their own as per the spec */
 	if (g_strcmp0(execsegment, "%U") == 0) {
 		return file_list_handling(finalarray, uri_list, g_strdup);
