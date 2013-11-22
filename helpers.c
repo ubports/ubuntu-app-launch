@@ -429,7 +429,7 @@ desktop_exec_parse (const gchar * execline, const gchar * urilist)
 		return NULL;
 	}
 
-	if (urilist != NULL) {
+	if (urilist != NULL && urilist[0] != '\0') {
 		g_shell_parse_argv(urilist, NULL, &splituris, &error);
 
 		if (error != NULL) {
