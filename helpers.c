@@ -285,7 +285,13 @@ file_list_handling (GArray * outarray, gchar ** list, gchar * (*dup_func) (const
 	int i;
 	for (i = 0; list[i] != NULL; i++) {
 		gchar * entry = dup_func(list[i]);
-		g_array_append_val(outarray, entry);
+
+		/* No NULLs */
+		if (entry != NULL && entry[0] != '\0') {
+			g_array_append_val(outarray, entry);
+		} else {
+			g_free(entry);
+		}
 	}
 }
 
