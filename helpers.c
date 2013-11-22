@@ -385,8 +385,13 @@ desktop_exec_segment_parse (GArray * finalarray, const gchar * execsegment, gcha
 	}
 
 	gchar * output = g_strjoinv(NULL, (gchar **)outarray->data);
-	g_array_append_val(finalarray, output);
 	g_array_free(outarray, TRUE);
+
+	if (output != NULL && output[0] != '\0') {
+		g_array_append_val(finalarray, output);
+	} else {
+		g_free(output);
+	}
 
 	g_free(single_file);
 	g_strfreev(execsplit);
