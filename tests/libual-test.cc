@@ -48,8 +48,6 @@ class LibUAL : public ::testing::Test
 		}
 
 		virtual void SetUp() {
-			g_setenv("UPSTART_APP_LAUNCH_USE_SESSION", "1", TRUE);
-
 			service = dbus_test_service_new(NULL);
 
 			debugConnection();
