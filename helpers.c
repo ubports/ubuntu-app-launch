@@ -273,121 +273,61 @@ uri2file (const gchar * uri)
 	return retval;
 }
 
-/* free a string in an array */
-static void
-free_string (gpointer value)
+/* Put the list of files into the argument array */
+static inline void
+file_list_handling (GArray * outarray, gchar ** list, gchar * (*dup_func) (const gchar * in))
 {
-	gchar ** str = (gchar **)value;
-	g_free(*str);
-	return;
-}
-
-/* Builds the file list from the URI list */
-static gchar *
-build_file_list (const gchar * uri_list)
-{
-	gchar ** uri_split = NULL;
-	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
-		return g_strdup("");
+	/* No URLs, cool, this is a noop */
+	if (list == NULL || list[0] == NULL) {
+		return;
 	}
-
-	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(gchar *));
-	g_array_set_clear_func(outarray, free_string);
 
 	int i;
-	for (i = 0; uri_split[i] != NULL; i++) {
-		gchar * path = uri2file(uri_split[i]);
-		g_array_append_val(outarray, path);
+	for (i = 0; list[i] != NULL; i++) {
+		gchar * entry = dup_func(list[i]);
+
+		/* No NULLs */
+		if (entry != NULL && entry[0] != '\0') {
+			g_array_append_val(outarray, entry);
+		} else {
+			g_free(entry);
+		}
 	}
-
-	gchar * filelist = g_strjoinv(" ", (gchar **)outarray->data);
-	g_array_free(outarray, TRUE);
-
-	g_strfreev(uri_split);
-
-	return filelist;
-}
-
-/* Make sure we have the single URI variable */
-static inline void
-ensure_singleuri (gchar ** single_uri, const gchar * uri_list)
-{
-	if (uri_list == NULL) {
-		return;
-	}
-
-	if (*single_uri != NULL) {
-		return;
-	}
-
-	gchar ** uri_split = NULL;
-	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
-		return;
-	}
-
-	if (uri_split[0] != NULL) {
-		*single_uri = g_strdup(uri_split[0]);
-	}
-
-	g_strfreev(uri_split);
-
-	return;
-}
-
-/* Make sure we have a single file variable */
-static inline void
-ensure_singlefile (gchar ** single_file, const gchar * uri_list)
-{
-	if (uri_list == NULL) {
-		return;
-	}
-
-	if (*single_file != NULL) {
-		return;
-	}
-
-	gchar ** uri_split = NULL;
-	if (!g_shell_parse_argv(uri_list, NULL, &uri_split, NULL)) {
-		return;
-	}
-
-	gchar * first_file = NULL;
-	if (uri_split[0] != NULL) {
-		first_file = uri2file(uri_split[0]);
-	}
-
-	g_strfreev(uri_split);
-
-	if (first_file != NULL) {
-		*single_file = first_file;
-	}
-
-	return;
 }
 
 /* Parse a desktop exec line and return the next string */
-static gchar *
-desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
+static void
+desktop_exec_segment_parse (GArray * finalarray, const gchar * execsegment, gchar ** uri_list)
 {
-	gchar ** execsplit = g_strsplit(execline, "%", 0);
+	/* No NULL strings */
+	if (execsegment == NULL || execsegment[0] == '\0')
+		return;
+
+	/* Handle %F and %U as an argument on their own as per the spec */
+	if (g_strcmp0(execsegment, "%U") == 0) {
+		return file_list_handling(finalarray, uri_list, g_strdup);
+	}
+	if (g_strcmp0(execsegment, "%F") == 0) {
+		return file_list_handling(finalarray, uri_list, uri2file);
+	}
+
+	/* Start looking at individual codes */
+	gchar ** execsplit = g_strsplit(execsegment, "%", 0);
 
 	/* If we didn't have any codes, just exit here */
 	if (execsplit[1] == NULL) {
 		g_strfreev(execsplit);
-		return g_strdup(execline);
-	}
-
-	if (uri_list != NULL && uri_list[0] == '\0') {
-		uri_list = NULL;
+		gchar * dup = g_strdup(execsegment);
+		g_array_append_val(finalarray, dup);
+		return;
 	}
 
 	int i;
-	gchar * single_uri = NULL;
-	gchar * single_file = NULL;
-	gchar * file_list = NULL;
+
 	gboolean previous_percent = FALSE;
 	GArray * outarray = g_array_new(TRUE, FALSE, sizeof(const gchar *));
 	g_array_append_val(outarray, execsplit[0]);
+	gchar * single_file = NULL;
 
 	/* The variables allowed in an exec line from the Freedesktop.org Desktop
 	   File specification: http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
@@ -418,22 +358,16 @@ desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'f':
-			ensure_singlefile(&single_file, uri_list);
-
-			if (single_file != NULL) {
+			if (uri_list != NULL && uri_list[0] != NULL) {
+				if (single_file == NULL)
+					single_file = uri2file(uri_list[0]);
 				g_array_append_val(outarray, single_file);
 			}
 
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'F':
-			if (uri_list != NULL) {
-				if (file_list == NULL) {
-					file_list = build_file_list(uri_list);
-				}
-				g_array_append_val(outarray, file_list);
-			}
-
+			g_warning("Exec line segment has a '%%F' that isn't its own argument '%s', ignoring.", execsegment);
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'i':
@@ -443,16 +377,12 @@ desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'U':
-			if (uri_list != NULL) {
-				g_array_append_val(outarray, uri_list);
-			}
+			g_warning("Exec line segment has a '%%U' that isn't its own argument '%s', ignoring.", execsegment);
 			g_array_append_val(outarray, skipchar);
 			break;
 		case 'u':
-			ensure_singleuri(&single_uri, uri_list);
-
-			if (single_uri != NULL) {
-				g_array_append_val(outarray, single_uri);
+			if (uri_list != NULL && uri_list[0] != NULL) {
+				g_array_append_val(outarray, uri_list[0]);
 			}
 
 			g_array_append_val(outarray, skipchar);
@@ -467,12 +397,14 @@ desktop_exec_segment_parse (const gchar * execline, const gchar * uri_list)
 	gchar * output = g_strjoinv(NULL, (gchar **)outarray->data);
 	g_array_free(outarray, TRUE);
 
-	g_free(single_uri);
-	g_free(single_file);
-	g_free(file_list);
-	g_strfreev(execsplit);
+	if (output != NULL && output[0] != '\0') {
+		g_array_append_val(finalarray, output);
+	} else {
+		g_free(output);
+	}
 
-	return output;
+	g_free(single_file);
+	g_strfreev(execsplit);
 }
 
 /* Take a full exec line, split it out, parse the segments and return
@@ -482,6 +414,7 @@ desktop_exec_parse (const gchar * execline, const gchar * urilist)
 {
 	GError * error = NULL;
 	gchar ** splitexec = NULL;
+	gchar ** splituris = NULL;
 	gint execitems = 0;
 
 	/* This returns from desktop file style quoting to straight strings with
@@ -496,13 +429,28 @@ desktop_exec_parse (const gchar * execline, const gchar * urilist)
 		return NULL;
 	}
 
+	if (urilist != NULL && urilist[0] != '\0') {
+		g_shell_parse_argv(urilist, NULL, &splituris, &error);
+
+		if (error != NULL) {
+			g_warning("Unable to parse URIs '%s': %s", urilist, error->message);
+			g_error_free(error);
+			/* Continuing without URIs */
+			splituris = NULL;
+		}
+	}
+
+
 	GArray * newargv = g_array_new(TRUE, FALSE, sizeof(gchar *));
 	int i;
 	for (i = 0; i < execitems; i++) {
-		gchar * execinserted = desktop_exec_segment_parse(splitexec[i], urilist);
-		g_array_append_val(newargv, execinserted);
+		desktop_exec_segment_parse(newargv, splitexec[i], splituris);
 	}
 	g_strfreev(splitexec);
+
+	if (splituris != NULL) {
+		g_strfreev(splituris);
+	}
 
 	/* Each string here should be its own param */
 
