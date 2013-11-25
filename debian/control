@@ -30,6 +30,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          click (>= 0.4.9),
          click-apparmor,
+         upstart (>= 1.11.0),
          zeitgeist,
 Description: Upstart Job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
