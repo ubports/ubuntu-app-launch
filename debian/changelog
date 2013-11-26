@@ -1,9 +1,16 @@
-upstart-app-launch (0.3-0ubuntu1) UNRELEASED; urgency=low
+upstart-app-launch (0.3+14.04.20131126-0ubuntu1) trusty; urgency=low
 
+  [ Ted Gould ]
   * Bumping to 0.3 to reflect that we added a new env var to the library
     which is needed for testing URL Dispatcher
+  * Reenable ZG and port to libzg-2.0. (LP: #1197569)
+  * Ensure quoted single URIs passed to a %U are unquoted. (LP:
+    #1253703)
 
- -- Ted Gould <ted@ubuntu.com>  Thu, 07 Nov 2013 10:32:58 -0600
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 86
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 26 Nov 2013 02:07:13 +0000
 
 upstart-app-launch (0.2+14.04.20131119-0ubuntu1) trusty; urgency=low
 
