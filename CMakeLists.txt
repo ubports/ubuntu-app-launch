@@ -50,6 +50,9 @@ include_directories(${LIBUPSTART_INCLUDE_DIRS})
 pkg_check_modules(DBUSTEST REQUIRED dbustest-1>=14.04.0)
 include_directories(${DBUSTEST_INCLUDE_DIRS})
 
+pkg_check_modules(LTTNG REQUIRED lttng-ust)
+include_directories(${LTTNG_INCLUDE_DIRS})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
