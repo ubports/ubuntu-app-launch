@@ -24,6 +24,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
+#include "exec-line-exec-trace.h"
 #include "helpers.h"
 
 int
@@ -37,6 +38,8 @@ main (int argc, char * argv[])
 		g_warning("No exec line given, nothing to do except fail");
 		return 1;
 	}
+
+	tracepoint(upstart_app_launch, exec_start);
 
 	/* URIs */
 	const gchar * app_uris = g_getenv("APP_URIS");

@@ -16,6 +16,7 @@ include(Coverage)
 include(UseGlibGeneration)
 include(UseGdbusCodegen)
 include(UseConstantBuilder)
+include(UseLttngGenTp)
 
 # Workaround for libexecdir on debian
 if (EXISTS "/etc/debian_version") 
@@ -149,9 +150,10 @@ install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
 # exec-line-exec
 ####################
 
-add_executable(exec-line-exec exec-line-exec.c)
+add_lttng_gen_tp(NAME exec-line-exec-trace)
+add_executable(exec-line-exec exec-line-exec.c "${CMAKE_CURRENT_BINARY_DIR}/exec-line-exec-trace.c")
 set_target_properties(exec-line-exec PROPERTIES OUTPUT_NAME "exec-line-exec")
-target_link_libraries(exec-line-exec helpers)
+target_link_libraries(exec-line-exec helpers ${LTTNG_LIBRARIES})
 install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
