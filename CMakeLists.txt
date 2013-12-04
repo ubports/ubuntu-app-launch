@@ -143,9 +143,10 @@ install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 # desktop-single
 ####################
 
-add_executable(desktop-single desktop-single.c)
+add_lttng_gen_tp(NAME desktop-single-trace)
+add_executable(desktop-single desktop-single.c desktop-single-trace.c)
 set_target_properties(desktop-single PROPERTIES OUTPUT_NAME "desktop-single")
-target_link_libraries(desktop-single helpers)
+target_link_libraries(desktop-single helpers ${LTTNG_LIBRARIES})
 install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################

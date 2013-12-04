@@ -18,6 +18,7 @@
  */
 
 #include "helpers.h"
+#include "desktop-single-trace.h"
 
 int
 main (int argc, char * argv[])
@@ -28,12 +29,16 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	tracepoint(upstart_app_launch, desktop_single_start);
+
 	GKeyFile * keyfile = keyfile_for_appid(argv[1], NULL);
 
 	if (keyfile == NULL) {
 		g_error("Unable to find keyfile for application '%s'", argv[0]);
 		return 1;
 	}
+
+	tracepoint(upstart_app_launch, desktop_single_found);
 
 	gboolean singleinstance = FALSE;
 
@@ -51,6 +56,8 @@ main (int argc, char * argv[])
 	}
 	
 	g_key_file_free(keyfile);
+
+	tracepoint(upstart_app_launch, desktop_single_finished);
 
 	if (singleinstance) {
 		return 0;
