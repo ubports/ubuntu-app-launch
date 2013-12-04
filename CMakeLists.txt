@@ -114,9 +114,10 @@ install(TARGETS upstart-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDI
 # desktop-exec
 ####################
 
-add_executable(desktop-exec desktop-exec.c)
+add_lttng_gen_tp(NAME desktop-exec-trace)
+add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c)
 set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
-target_link_libraries(desktop-exec helpers ${APPARMOR_LIBRARIES})
+target_link_libraries(desktop-exec helpers ${LTTNG_LIBRARIES})
 install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################

@@ -24,6 +24,7 @@
 #include <gio/gio.h>
 
 #include "helpers.h"
+#include "desktop-exec-trace.h"
 
 int
 main (int argc, char * argv[])
@@ -40,6 +41,8 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	tracepoint(upstart_app_launch, desktop_start);
+
 	gchar * desktopfilename = NULL;
 	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
@@ -47,6 +50,8 @@ main (int argc, char * argv[])
 		g_error("Unable to find keyfile for application '%s'", app_id);
 		return 1;
 	}
+
+	tracepoint(upstart_app_launch, desktop_found);
 
 	/* This string is quoted using desktop file quoting:
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
@@ -77,6 +82,8 @@ main (int argc, char * argv[])
 		set_upstart_variable("APP_DESKTOP_FILE", desktopfilename);
 		g_free(desktopfilename);
 	}
+
+	tracepoint(upstart_app_launch, desktop_finished);
 
 	return 0;
 }
