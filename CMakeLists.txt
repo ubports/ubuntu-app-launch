@@ -151,6 +151,7 @@ install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
 ####################
 
 add_lttng_gen_tp(NAME exec-line-exec-trace)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_executable(exec-line-exec exec-line-exec.c "${CMAKE_CURRENT_BINARY_DIR}/exec-line-exec-trace.c")
 set_target_properties(exec-line-exec PROPERTIES OUTPUT_NAME "exec-line-exec")
 target_link_libraries(exec-line-exec helpers ${LTTNG_LIBRARIES})
