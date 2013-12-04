@@ -23,6 +23,7 @@
 #include "libupstart-app-launch/upstart-app-launch.h"
 #include "helpers.h"
 #include "second-exec-core.h"
+#include "second-exec-trace.h"
 
 /* Globals */
 GPid app_pid = 0;
@@ -39,6 +40,7 @@ guint timer = 0;
 static gboolean
 timer_cb (gpointer user_data)
 {
+	tracepoint(upstart_app_launch, second_exec_resume_timeout);
 	g_warning("Unity didn't respond in 500ms to resume the app");
 	g_main_loop_quit(mainloop);
 	return G_SOURCE_REMOVE;
@@ -48,6 +50,7 @@ timer_cb (gpointer user_data)
 static void
 connection_count_dec (void)
 {
+	tracepoint(upstart_app_launch, second_exec_connection_complete);
 	connections_open--;
 	if (connections_open == 0) {
 		g_debug("Finished finding connections");
@@ -71,6 +74,7 @@ static void
 unity_resume_cb (GDBusConnection * connection, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
 	g_debug("Unity Completed Resume");
+	tracepoint(upstart_app_launch, second_exec_resume_complete);
 
 	if (timer != 0) {
 		g_source_remove(timer);
@@ -156,9 +160,12 @@ send_open_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 {
 	GError * error = NULL;
 
+	tracepoint(upstart_app_launch, second_exec_app_contacted);
+
 	g_dbus_connection_call_finish(G_DBUS_CONNECTION(object), res, &error);
 
 	if (error != NULL) {
+		tracepoint(upstart_app_launch, second_exec_app_error);
 		/* Mostly just to free the error, but printing for debugging */
 		g_debug("Unable to send Open: %s", error->message);
 		g_error_free(error);
@@ -172,6 +179,8 @@ send_open_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 static void
 contact_app (GDBusConnection * bus, const gchar * dbus_name)
 {
+	tracepoint(upstart_app_launch, second_exec_contact_app);
+
 	parse_uris();
 	app_id_to_dbus_path();
 
@@ -201,6 +210,8 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 	gchar * dbus_name = (gchar *)user_data;
 	GError * error = NULL;
 	GVariant * vpid = NULL;
+
+	tracepoint(upstart_app_launch, second_exec_got_pid);
 
 	vpid = g_dbus_connection_call_finish(G_DBUS_CONNECTION(object), res, &error);
 
@@ -258,6 +269,8 @@ find_appid_pid (GDBusConnection * session)
 		return;
 	}
 
+	tracepoint(upstart_app_launch, second_exec_got_dbus_names);
+
 	/* Next figure out what we're looking for (and if there is something to look for) */
 	/* NOTE: We're getting the PID *after* the list of connections so
 	   that some new process can't come in, be the same PID as it's
@@ -267,6 +280,8 @@ find_appid_pid (GDBusConnection * session)
 		g_warning("Unable to find pid for app id '%s'", appid);
 		return;
 	}
+
+	tracepoint(upstart_app_launch, second_exec_got_primary_pid);
 
 	/* Get the names */
 	GVariant * names = g_variant_get_child_value(listnames, 0);
@@ -279,6 +294,8 @@ find_appid_pid (GDBusConnection * session)
 		if (!g_dbus_is_unique_name(name)) {
 			continue;
 		}
+
+		tracepoint(upstart_app_launch, second_exec_request_pid);
 
 		/* Get the PIDs */
 		g_dbus_connection_call(session,
@@ -308,6 +325,8 @@ second_exec (const gchar * app_id, const gchar * appuris)
 	appid = app_id;
 	input_uris = appuris;
 
+	tracepoint(upstart_app_launch, second_exec_start);
+
 	/* DBus tell us! */
 	GError * error = NULL;
 	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
@@ -330,6 +349,8 @@ second_exec (const gchar * app_id, const gchar * appuris)
 		G_DBUS_SIGNAL_FLAGS_NONE,
 		unity_resume_cb, mainloop,
 		NULL); /* user data destroy */
+
+	tracepoint(upstart_app_launch, second_exec_emit_resume);
 
 	/* Send unfreeze to to Unity */
 	g_dbus_connection_emit_signal(session,
@@ -364,6 +385,8 @@ second_exec (const gchar * app_id, const gchar * appuris)
 	}
 	g_debug("Finishing main loop");
 
+	tracepoint(upstart_app_launch, second_exec_emit_focus);
+
 	/* Now that we're done sending the info to the app, we can ask
 	   Unity to focus the application. */
 	g_dbus_connection_emit_signal(session,
@@ -396,6 +419,8 @@ second_exec (const gchar * app_id, const gchar * appuris)
 		nih_free(dbus_path);
 		dbus_path = NULL;
 	}
+
+	tracepoint(upstart_app_launch, second_exec_finish);
 
 	return TRUE;
 }
