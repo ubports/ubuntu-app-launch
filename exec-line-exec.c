@@ -68,6 +68,8 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	tracepoint(upstart_app_launch, exec_parse_complete);
+
 	/* Surface flinger check */
 	if (g_getenv("USING_SURFACE_FLINGER") != NULL && app_desktop != NULL) {
 		gchar * sf = g_strdup_printf("--desktop_file_hint=%s", app_desktop);
@@ -76,6 +78,8 @@ main (int argc, char * argv[])
 
 	/* Now exec */
 	gchar ** nargv = (gchar**)g_array_free(newargv, FALSE);
+
+	tracepoint(upstart_app_launch, exec_pre_exec);
 
 	int execret = execvp(nargv[0], nargv);
 
