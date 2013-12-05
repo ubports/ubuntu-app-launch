@@ -10,5 +10,11 @@
 		<signal name="UnityFocusRequest">
 			<arg type="s" name="appid" />
 		</method>
+		<signal name="UnityStartingBroadcast">
+			<arg type="s" name="appid" />
+		</method>
+		<signal name="UnityStartingSignal">
+			<arg type="s" name="appid" />
+		</method>
 	</interface>
 </node>
