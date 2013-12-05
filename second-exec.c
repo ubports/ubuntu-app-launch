@@ -30,6 +30,8 @@ main (int argc, char * argv[])
 	const gchar * appid = g_getenv("APP_ID");
 	const gchar * appuris = g_getenv("APP_URIS");
 
+	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
+
 	if (second_exec(appid, appuris)) {
 		return 0;
 	} else {

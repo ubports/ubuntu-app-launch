@@ -39,6 +39,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
 	tracepoint(upstart_app_launch, exec_start);
 
 	/* URIs */
