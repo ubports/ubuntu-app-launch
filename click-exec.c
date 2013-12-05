@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <gio/gio.h>
+#include <glib.h>
 #include "helpers.h"
 
 /*
