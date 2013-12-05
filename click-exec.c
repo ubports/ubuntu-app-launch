@@ -37,21 +37,6 @@ https://click-package.readthedocs.org/en/latest/
 
 */
 
-static void
-unity_signal_cb (GDBusConnection * con, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	GMainLoop * mainloop = (GMainLoop *)user_data;
-	g_main_loop_quit(mainloop);
-}
-
-static gboolean
-unity_too_slow_cb (gpointer user_data)
-{
-	GMainLoop * mainloop = (GMainLoop *)user_data;
-	g_main_loop_quit(mainloop);
-	return G_SOURCE_REMOVE;
-}
-
 int
 main (int argc, char * argv[])
 {
@@ -67,39 +52,12 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
-
-	GError * error = NULL;
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-	if (error != NULL) {
-		g_critical("Unable to connect to session bus: %s", error->message);
-		g_error_free(error);
-		return 1;
+	handshake_t * handshake = starting_handshake_start(app_id);
+	if (handshake == NULL) {
+		g_warning("Unable to setup starting handshake");
 	}
 
-	/* Set up listening for the unfrozen signal from Unity */
-	g_dbus_connection_signal_subscribe(con,
-		NULL, /* sender */
-		"com.canonical.UpstartAppLaunch", /* interface */
-		"UnityStartingSignal", /* signal */
-		"/", /* path */
-		app_id, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NONE,
-		unity_signal_cb, mainloop,
-		NULL); /* user data destroy */
-
-	/* Send unfreeze to to Unity */
-	g_dbus_connection_emit_signal(con,
-		NULL, /* destination */
-		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
-		"UnityStartingBroadcast", /* signal */
-		g_variant_new("(s)", app_id),
-		&error);
-
-	/* Really, Unity? */
-	g_timeout_add_seconds(1, unity_too_slow_cb, mainloop);
-
+	GError * error = NULL;
 	gchar * package = NULL;
 	/* 'Parse' the App ID */
 	if (!app_id_to_triplet(app_id, &package, NULL, NULL)) {
@@ -176,10 +134,7 @@ main (int argc, char * argv[])
 	g_free(userdesktopfile);
 	g_free(userdesktoppath);
 
-	g_main_loop_run(mainloop);
-
-	g_main_loop_unref(mainloop);
-	g_object_unref(con);
+	starting_handshake_wait(handshake);
 
 	return 0;
 }
