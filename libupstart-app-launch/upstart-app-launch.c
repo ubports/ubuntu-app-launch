@@ -294,6 +294,18 @@ static GList * stop_array = NULL;
 static GList * focus_array = NULL;
 static GList * resume_array = NULL;
 
+gboolean
+upstart_app_launch_observer_add_app_starting (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_delete_app_starting (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return FALSE;
+}
+
 static void
 observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {

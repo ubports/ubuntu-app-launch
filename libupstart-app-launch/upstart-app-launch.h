@@ -80,6 +80,19 @@ gboolean   upstart_app_launch_start_application         (const gchar *          
 gboolean   upstart_app_launch_stop_application         (const gchar *                     appid);
 
 /**
+ * upstart_app_launch_observer_add_app_starting:
+ * @observer: Callback when an application is about to start
+ * @user_data: (allow none): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * is about to start.  The application will not start until the
+ * function returns.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_add_app_starting (upstart_app_launch_app_observer_t observer,
+                                                         gpointer                          user_data);
+/**
  * upstart_app_launch_observer_add_app_start:
  * @observer: Callback when an application starts
  * @user_data: (allow none): Data to pass to the observer
@@ -144,6 +157,18 @@ gboolean   upstart_app_launch_observer_add_app_resume   (upstart_app_launch_app_
 gboolean   upstart_app_launch_observer_add_app_failed   (upstart_app_launch_app_failed_observer_t observer,
                                                          gpointer                                 user_data);
 
+/**
+ * upstart_app_launch_observer_delete_app_starting:
+ * @observer: Callback to remove
+ * @user_data: (allow none): Data that was passed to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_delete_app_starting (upstart_app_launch_app_observer_t observer,
+                                                            gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_app_start:
  * @observer: Callback to remove
