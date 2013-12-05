@@ -95,16 +95,23 @@ parse_uris (void)
 		return;
 	}
 
-	/* TODO: Joining only with space could cause issues with breaking them
-	   back out.  We don't have any cases of more than one today.  But, this
-	   isn't good.
-	   https://bugs.launchpad.net/upstart-app-launch/+bug/1229354
-	   */
 	GVariant * uris = NULL;
-	gchar ** uri_split = g_strsplit(input_uris, " ", 0);
-	if (uri_split[0] == NULL) {
-		g_free(uri_split);
+	gchar ** uri_split = NULL;
+	GError * error = NULL;
+
+	g_shell_parse_argv(input_uris, NULL, &uri_split, &error);
+
+	if (uri_split == NULL || uri_split[0] == NULL || error != NULL) {
+		if (error != NULL) {
+			g_warning("Unable to parse URLs '%s': %s", input_uris, error->message);
+			g_error_free(error);
+		}
+
 		uris = g_variant_new_array(G_VARIANT_TYPE_STRING, NULL, 0);
+
+		if (uri_split != NULL) {
+			g_strfreev(uri_split);
+		}
 	} else {
 		GVariantBuilder builder;
 		g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
