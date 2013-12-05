@@ -93,16 +93,16 @@ gboolean   upstart_app_launch_stop_application         (const gchar *           
 gboolean   upstart_app_launch_observer_add_app_starting (upstart_app_launch_app_observer_t observer,
                                                          gpointer                          user_data);
 /**
- * upstart_app_launch_observer_add_app_start:
- * @observer: Callback when an application starts
+ * upstart_app_launch_observer_add_app_started:
+ * @observer: Callback when an application started
  * @user_data: (allow none): Data to pass to the observer
  *
  * Sets up a callback to get called each time an application
- * starts.
+ * has been started.
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_start    (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_add_app_started  (upstart_app_launch_app_observer_t observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_add_app_stop:
@@ -170,7 +170,7 @@ gboolean   upstart_app_launch_observer_add_app_failed   (upstart_app_launch_app_
 gboolean   upstart_app_launch_observer_delete_app_starting (upstart_app_launch_app_observer_t observer,
                                                             gpointer                          user_data);
 /**
- * upstart_app_launch_observer_delete_app_start:
+ * upstart_app_launch_observer_delete_app_started:
  * @observer: Callback to remove
  * @user_data: (allow none): Data that was passed to the observer
  *
@@ -179,7 +179,7 @@ gboolean   upstart_app_launch_observer_delete_app_starting (upstart_app_launch_a
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_start (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_started (upstart_app_launch_app_observer_t observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_app_stop:

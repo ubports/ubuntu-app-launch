@@ -290,7 +290,7 @@ struct _observer_t {
 
 /* The lists of Observers */
 static GList * starting_array = NULL;
-static GList * start_array = NULL;
+static GList * started_array = NULL;
 static GList * stop_array = NULL;
 static GList * focus_array = NULL;
 static GList * resume_array = NULL;
@@ -372,9 +372,9 @@ add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data,
 }
 
 gboolean
-upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
+upstart_app_launch_observer_add_app_started (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return add_app_generic(observer, user_data, "started", &start_array);
+	return add_app_generic(observer, user_data, "started", &started_array);
 }
 
 gboolean
@@ -529,9 +529,9 @@ delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_da
 }
 
 gboolean
-upstart_app_launch_observer_delete_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
+upstart_app_launch_observer_delete_app_started (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return delete_app_generic(observer, user_data, &start_array);
+	return delete_app_generic(observer, user_data, &started_array);
 }
 
 gboolean

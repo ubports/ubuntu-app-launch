@@ -29,7 +29,7 @@ starting (const gchar * appid, gpointer user_data)
 void
 started (const gchar * appid, gpointer user_data)
 {
-	g_print("Start    %s\n", appid);
+	g_print("Started  %s\n", appid);
 	return;
 }
 
@@ -76,7 +76,7 @@ int
 main (int argc, gchar * argv[])
 {
 	upstart_app_launch_observer_add_app_starting(starting, NULL);
-	upstart_app_launch_observer_add_app_start(started, NULL);
+	upstart_app_launch_observer_add_app_started(started, NULL);
 	upstart_app_launch_observer_add_app_stop(stopped, NULL);
 	upstart_app_launch_observer_add_app_focus(focus, NULL);
 	upstart_app_launch_observer_add_app_resume(resume, NULL);
@@ -86,7 +86,7 @@ main (int argc, gchar * argv[])
 	g_main_loop_run(mainloop);
 
 	upstart_app_launch_observer_delete_app_starting(starting, NULL);
-	upstart_app_launch_observer_delete_app_start(started, NULL);
+	upstart_app_launch_observer_delete_app_started(started, NULL);
 	upstart_app_launch_observer_delete_app_stop(stopped, NULL);
 	upstart_app_launch_observer_delete_app_focus(focus, NULL);
 	upstart_app_launch_observer_delete_app_resume(resume, NULL);

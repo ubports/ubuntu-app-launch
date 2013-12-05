@@ -309,7 +309,7 @@ TEST_F(LibUAL, StartStopObserver)
 		.name = nullptr
 	};
 
-	ASSERT_TRUE(upstart_app_launch_observer_add_app_start(observer_cb, &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_add_app_started(observer_cb, &start_data));
 	ASSERT_TRUE(upstart_app_launch_observer_add_app_stop(observer_cb, &stop_data));
 	ASSERT_FALSE(upstart_app_launch_observer_add_app_failed(NULL, NULL)); /* Not yet implemented */
 
@@ -419,7 +419,7 @@ TEST_F(LibUAL, StartStopObserver)
 
 
 	/* Remove */
-	ASSERT_TRUE(upstart_app_launch_observer_delete_app_start(observer_cb, &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_delete_app_started(observer_cb, &start_data));
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
 	ASSERT_FALSE(upstart_app_launch_observer_delete_app_failed(NULL, NULL)); /* Not yet implemented */
 }
