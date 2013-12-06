@@ -486,8 +486,8 @@ TEST_F(LibUAL, StartingResponses)
 
 	pause(100);
 
-	EXPECT_EQ(last_observer, "foo");
-	EXPECT_EQ(starting_count, 1);
+	EXPECT_EQ("foo", last_observer);
+	EXPECT_EQ(1, starting_count);
 
 	EXPECT_TRUE(upstart_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
 
