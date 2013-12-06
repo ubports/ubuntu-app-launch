@@ -71,6 +71,8 @@ Depends: ${misc:Depends},
          libupstart-app-launch2 (= ${binary:Version}),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
+Replaces: libupstart-app-launch1-dev
+Conflicts: libupstart-app-launch1-dev
 Description: library for sending requests to the upstart app launch
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
