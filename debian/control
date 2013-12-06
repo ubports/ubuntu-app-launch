@@ -68,7 +68,7 @@ Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          libglib2.0-dev,
-         libupstart-app-launch1 (= ${binary:Version}),
+         libupstart-app-launch2 (= ${binary:Version}),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
 Description: library for sending requests to the upstart app launch
