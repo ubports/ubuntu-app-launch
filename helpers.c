@@ -602,6 +602,7 @@ struct _handshake_t {
 	GDBusConnection * con;
 	GMainLoop * mainloop;
 	guint signal_subscribe;
+	guint timeout;
 };
 
 handshake_t *
@@ -641,7 +642,7 @@ starting_handshake_start (const gchar *   app_id)
 		&error);
 
 	/* Really, Unity? */
-	g_timeout_add_seconds(1, unity_too_slow_cb, handshake->mainloop);
+	handshake->timeout = g_timeout_add_seconds(1, unity_too_slow_cb, handshake->mainloop);
 
 	return handshake;
 }
@@ -654,6 +655,7 @@ starting_handshake_wait (handshake_t * handshake)
 
 	g_main_loop_run(handshake->mainloop);
 
+	g_source_remove(handshake->timeout);
 	g_main_loop_unref(handshake->mainloop);
 	g_dbus_connection_signal_unsubscribe(handshake->con, handshake->signal_subscribe);
 	g_object_unref(handshake->con);
