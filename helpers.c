@@ -590,20 +590,21 @@ unity_signal_cb (GDBusConnection * con, const gchar * sender, const gchar * path
 	g_main_loop_quit(mainloop);
 }
 
-static gboolean
-unity_too_slow_cb (gpointer user_data)
-{
-	GMainLoop * mainloop = (GMainLoop *)user_data;
-	g_main_loop_quit(mainloop);
-	return G_SOURCE_REMOVE;
-}
-
 struct _handshake_t {
 	GDBusConnection * con;
 	GMainLoop * mainloop;
 	guint signal_subscribe;
 	guint timeout;
 };
+
+static gboolean
+unity_too_slow_cb (gpointer user_data)
+{
+	handshake_t * handshake = (handshake_t *)user_data;
+	g_main_loop_quit(handshake->mainloop);
+	handshake->timeout = 0;
+	return G_SOURCE_REMOVE;
+}
 
 handshake_t *
 starting_handshake_start (const gchar *   app_id)
@@ -642,7 +643,7 @@ starting_handshake_start (const gchar *   app_id)
 		&error);
 
 	/* Really, Unity? */
-	handshake->timeout = g_timeout_add_seconds(1, unity_too_slow_cb, handshake->mainloop);
+	handshake->timeout = g_timeout_add_seconds(1, unity_too_slow_cb, handshake);
 
 	return handshake;
 }
@@ -655,7 +656,8 @@ starting_handshake_wait (handshake_t * handshake)
 
 	g_main_loop_run(handshake->mainloop);
 
-	g_source_remove(handshake->timeout);
+	if (handshake->timeout != 0)
+		g_source_remove(handshake->timeout);
 	g_main_loop_unref(handshake->mainloop);
 	g_dbus_connection_signal_unsubscribe(handshake->con, handshake->signal_subscribe);
 	g_object_unref(handshake->con);
