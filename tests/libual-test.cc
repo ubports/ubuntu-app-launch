@@ -202,8 +202,6 @@ class LibUAL : public ::testing::Test
 			while (g_main_pending()) {
 				g_main_iteration(TRUE);
 			}
-
-			return;
 		}
 };
 
