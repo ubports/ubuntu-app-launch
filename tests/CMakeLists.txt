@@ -21,8 +21,6 @@ add_test (helper-test helper-test)
 # Helper test
 
 add_executable (helper-handshake-test helper-handshake-test.cc)
-add_definitions ( -DCMAKE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}" )
-add_definitions ( -DCMAKE_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}" )
 target_link_libraries (helper-handshake-test helpers gtest ${GTEST_LIBS})
 
 add_test (helper-handshake-test helper-handshake-test)
