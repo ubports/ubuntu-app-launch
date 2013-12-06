@@ -163,8 +163,6 @@ stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * appname, 
 	g_free(app);
 	g_free(inst);
 	nih_unref(job_proxy, NULL);
-
-	return;
 }
 
 static void
@@ -302,8 +300,6 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 	}
 
 	g_free(instance);
-
-	return;
 }
 
 /* Creates the observer structure and registers for the signal with
@@ -395,8 +391,6 @@ focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * obj
 		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
-
-	return;
 }
 
 gboolean
@@ -424,8 +418,6 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		g_warning("Unable to emit response signal: %s", error->message);
 		g_error_free(error);
 	}
-
-	return;
 }
 
 gboolean
@@ -453,8 +445,6 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 		g_warning("Unable to emit response signal: %s", error->message);
 		g_error_free(error);
 	}
-
-	return;
 }
 
 gboolean
@@ -585,8 +575,6 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolea
 
 		nih_unref(instance_proxy, NULL);
 	}
-
-	return;
 }
 
 gchar **
