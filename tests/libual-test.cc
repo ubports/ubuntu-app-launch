@@ -182,6 +182,27 @@ class LibUAL : public ::testing::Test
 
 			return found;
 		}
+
+		static gboolean pause_helper (gpointer pmainloop) {
+			g_main_loop_quit((GMainLoop *)pmainloop);
+			return G_SOURCE_REMOVE;
+		}
+
+		void pause (guint time) {
+			if (time > 0) {
+				GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
+				guint timer = g_timeout_add(time, pause_helper, mainloop);
+
+				g_main_loop_run(mainloop);
+
+				g_source_remove(timer);
+				g_main_loop_unref(mainloop);
+			}
+
+			while (g_main_pending()) {
+				g_main_iteration(TRUE);
+			}
+		}
 };
 
 TEST_F(LibUAL, StartApplication)
@@ -307,7 +328,7 @@ TEST_F(LibUAL, StartStopObserver)
 		.name = nullptr
 	};
 
-	ASSERT_TRUE(upstart_app_launch_observer_add_app_start(observer_cb, &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_add_app_started(observer_cb, &start_data));
 	ASSERT_TRUE(upstart_app_launch_observer_add_app_stop(observer_cb, &stop_data));
 	ASSERT_FALSE(upstart_app_launch_observer_add_app_failed(NULL, NULL)); /* Not yet implemented */
 
@@ -417,7 +438,59 @@ TEST_F(LibUAL, StartStopObserver)
 
 
 	/* Remove */
-	ASSERT_TRUE(upstart_app_launch_observer_delete_app_start(observer_cb, &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_delete_app_started(observer_cb, &start_data));
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
 	ASSERT_FALSE(upstart_app_launch_observer_delete_app_failed(NULL, NULL)); /* Not yet implemented */
+}
+
+static GDBusMessage *
+filter_starting (GDBusConnection * conn, GDBusMessage * message, gboolean incomming, gpointer user_data)
+{
+	if (g_strcmp0(g_dbus_message_get_member(message), "UnityStartingSignal") == 0) {
+		unsigned int * count = static_cast<unsigned int *>(user_data);
+		(*count)++;
+		g_object_unref(message);
+		return NULL;
+	}
+
+	return message;
+}
+
+static void
+starting_observer (const gchar * appid, gpointer user_data)
+{
+	std::string * last = static_cast<std::string *>(user_data);
+	*last = appid;
+	return;
+}
+
+TEST_F(LibUAL, StartingResponses)
+{
+	std::string last_observer;
+	unsigned int starting_count = 0;
+	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	guint filter = g_dbus_connection_add_filter(session,
+		filter_starting,
+		&starting_count,
+		NULL);
+
+	EXPECT_TRUE(upstart_app_launch_observer_add_app_starting(starting_observer, &last_observer));
+
+	g_dbus_connection_emit_signal(session,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityStartingBroadcast", /* signal */
+		g_variant_new("(s)", "foo"), /* params, the same */
+		NULL);
+
+	pause(100);
+
+	EXPECT_EQ("foo", last_observer);
+	EXPECT_EQ(1, starting_count);
+
+	EXPECT_TRUE(upstart_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
+
+	g_dbus_connection_remove_filter(session, filter);
+	g_object_unref(session);
 }

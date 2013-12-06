@@ -582,3 +582,85 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 
 	return;
 }
+
+static void
+unity_signal_cb (GDBusConnection * con, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	GMainLoop * mainloop = (GMainLoop *)user_data;
+	g_main_loop_quit(mainloop);
+}
+
+struct _handshake_t {
+	GDBusConnection * con;
+	GMainLoop * mainloop;
+	guint signal_subscribe;
+	guint timeout;
+};
+
+static gboolean
+unity_too_slow_cb (gpointer user_data)
+{
+	handshake_t * handshake = (handshake_t *)user_data;
+	g_main_loop_quit(handshake->mainloop);
+	handshake->timeout = 0;
+	return G_SOURCE_REMOVE;
+}
+
+handshake_t *
+starting_handshake_start (const gchar *   app_id)
+{
+	GError * error = NULL;
+	handshake_t * handshake = g_new0(handshake_t, 1);
+
+	handshake->mainloop = g_main_loop_new(NULL, FALSE);
+	handshake->con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+
+	if (error != NULL) {
+		g_critical("Unable to connect to session bus: %s", error->message);
+		g_error_free(error);
+		g_free(handshake);
+		return NULL;
+	}
+
+	/* Set up listening for the unfrozen signal from Unity */
+	handshake->signal_subscribe = g_dbus_connection_signal_subscribe(handshake->con,
+		NULL, /* sender */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityStartingSignal", /* signal */
+		"/", /* path */
+		app_id, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		unity_signal_cb, handshake->mainloop,
+		NULL); /* user data destroy */
+
+	/* Send unfreeze to to Unity */
+	g_dbus_connection_emit_signal(handshake->con,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityStartingBroadcast", /* signal */
+		g_variant_new("(s)", app_id),
+		&error);
+
+	/* Really, Unity? */
+	handshake->timeout = g_timeout_add_seconds(1, unity_too_slow_cb, handshake);
+
+	return handshake;
+}
+
+void
+starting_handshake_wait (handshake_t * handshake)
+{
+	if (handshake == NULL)
+		return;
+
+	g_main_loop_run(handshake->mainloop);
+
+	if (handshake->timeout != 0)
+		g_source_remove(handshake->timeout);
+	g_main_loop_unref(handshake->mainloop);
+	g_dbus_connection_signal_unsubscribe(handshake->con, handshake->signal_subscribe);
+	g_object_unref(handshake->con);
+
+	g_free(handshake);
+}

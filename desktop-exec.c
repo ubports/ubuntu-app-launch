@@ -44,6 +44,13 @@ main (int argc, char * argv[])
 	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
 	tracepoint(upstart_app_launch, desktop_start);
 
+	handshake_t * handshake = starting_handshake_start(app_id);
+	if (handshake == NULL) {
+		g_warning("Unable to setup starting handshake");
+	}
+
+	tracepoint(upstart_app_launch, desktop_starting_sent);
+
 	gchar * desktopfilename = NULL;
 	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
@@ -84,7 +91,11 @@ main (int argc, char * argv[])
 		g_free(desktopfilename);
 	}
 
-	tracepoint(upstart_app_launch, desktop_finished);
+	tracepoint(upstart_app_launch, desktop_handshake_wait);
+
+	starting_handshake_wait(handshake);
+
+	tracepoint(upstart_app_launch, desktop_handshake_complete);
 
 	return 0;
 }

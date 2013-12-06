@@ -163,8 +163,6 @@ stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * appname, 
 	g_free(app);
 	g_free(inst);
 	nih_unref(job_proxy, NULL);
-
-	return;
 }
 
 static void
@@ -257,7 +255,8 @@ struct _observer_t {
 };
 
 /* The lists of Observers */
-static GList * start_array = NULL;
+static GList * starting_array = NULL;
+static GList * started_array = NULL;
 static GList * stop_array = NULL;
 static GList * focus_array = NULL;
 static GList * resume_array = NULL;
@@ -301,8 +300,6 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 	}
 
 	g_free(instance);
-
-	return;
 }
 
 /* Creates the observer structure and registers for the signal with
@@ -339,9 +336,9 @@ add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data,
 }
 
 gboolean
-upstart_app_launch_observer_add_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
+upstart_app_launch_observer_add_app_started (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return add_app_generic(observer, user_data, "started", &start_array);
+	return add_app_generic(observer, user_data, "started", &started_array);
 }
 
 gboolean
@@ -394,8 +391,6 @@ focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * obj
 		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
-
-	return;
 }
 
 gboolean
@@ -423,14 +418,39 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		g_warning("Unable to emit response signal: %s", error->message);
 		g_error_free(error);
 	}
-
-	return;
 }
 
 gboolean
 upstart_app_launch_observer_add_app_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return add_session_generic(observer, user_data, "UnityResumeRequest", &resume_array, resume_signal_cb);
+}
+
+/* Handle the starting signal when it occurs, call the observer, then send a signal back when we're done */
+static void
+starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+
+	GError * error = NULL;
+	g_dbus_connection_emit_signal(conn,
+		sender, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityStartingSignal", /* signal */
+		params, /* params, the same */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to emit response signal: %s", error->message);
+		g_error_free(error);
+	}
+}
+
+gboolean
+upstart_app_launch_observer_add_app_starting (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
 
 gboolean
@@ -467,9 +487,9 @@ delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_da
 }
 
 gboolean
-upstart_app_launch_observer_delete_app_start (upstart_app_launch_app_observer_t observer, gpointer user_data)
+upstart_app_launch_observer_delete_app_started (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
-	return delete_app_generic(observer, user_data, &start_array);
+	return delete_app_generic(observer, user_data, &started_array);
 }
 
 gboolean
@@ -488,6 +508,12 @@ gboolean
 upstart_app_launch_observer_delete_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &focus_array);
+}
+
+gboolean
+upstart_app_launch_observer_delete_app_starting (upstart_app_launch_app_observer_t observer, gpointer user_data)
+{
+	return delete_app_generic(observer, user_data, &starting_array);
 }
 
 gboolean
@@ -549,8 +575,6 @@ apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolea
 
 		nih_unref(instance_proxy, NULL);
 	}
-
-	return;
 }
 
 gchar **

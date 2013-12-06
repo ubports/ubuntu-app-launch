@@ -55,6 +55,13 @@ main (int argc, char * argv[])
 
 	tracepoint(upstart_app_launch, click_start);
 
+	handshake_t * handshake = starting_handshake_start(app_id);
+	if (handshake == NULL) {
+		g_warning("Unable to setup starting handshake");
+	}
+
+	tracepoint(upstart_app_launch, click_starting_sent);
+
 	GError * error = NULL;
 	gchar * package = NULL;
 	/* 'Parse' the App ID */
@@ -139,6 +146,12 @@ main (int argc, char * argv[])
 	set_upstart_variable("APP_DESKTOP_FILE", userdesktoppath);
 	g_free(userdesktopfile);
 	g_free(userdesktoppath);
+
+	tracepoint(upstart_app_launch, click_handshake_wait);
+
+	starting_handshake_wait(handshake);
+
+	tracepoint(upstart_app_launch, click_handshake_complete);
 
 	return 0;
 }

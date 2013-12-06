@@ -1,15 +1,17 @@
-libupstart-app-launch.so.1 libupstart-app-launch1 #MINVER#
+libupstart-app-launch.so.2 libupstart-app-launch2 #MINVER#
  upstart_app_launch_get_primary_pid@Base 0.2
  upstart_app_launch_list_running_apps@Base 0.2
  upstart_app_launch_observer_add_app_failed@Base 0.2
  upstart_app_launch_observer_add_app_focus@Base 0.2
  upstart_app_launch_observer_add_app_resume@Base 0.2
- upstart_app_launch_observer_add_app_start@Base 0.2
+ upstart_app_launch_observer_add_app_started@Base 0replaceme
+ upstart_app_launch_observer_add_app_starting@Base 0replaceme
  upstart_app_launch_observer_add_app_stop@Base 0.2
  upstart_app_launch_observer_delete_app_failed@Base 0.2
  upstart_app_launch_observer_delete_app_focus@Base 0.2
  upstart_app_launch_observer_delete_app_resume@Base 0.2
- upstart_app_launch_observer_delete_app_start@Base 0.2
+ upstart_app_launch_observer_delete_app_started@Base 0replaceme
+ upstart_app_launch_observer_delete_app_starting@Base 0replaceme
  upstart_app_launch_observer_delete_app_stop@Base 0.2
  upstart_app_launch_pid_in_app_id@Base 0.2
  upstart_app_launch_start_application@Base 0.2
