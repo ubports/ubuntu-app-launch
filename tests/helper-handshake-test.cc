@@ -96,3 +96,24 @@ TEST_F(HelperHandshakeTest, BaseHandshake)
 
 	return;
 }
+
+static gboolean
+two_second_reached (gpointer user_data)
+{
+	bool * reached = static_cast<bool *>(user_data);
+	*reached = true;
+}
+
+TEST_F(HelperHandshakeTest, HandshakeTimeout)
+{
+	bool timeout_reached = false;
+	handshake_t * handshake = starting_handshake_start("fooapp");
+
+	guint outertimeout = g_timeout_add_seconds(2, two_second_reached, &timeout_reached);
+
+	starting_handshake_wait(handshake);
+
+	ASSERT_FALSE(timeout_reached);
+
+	return;
+}
