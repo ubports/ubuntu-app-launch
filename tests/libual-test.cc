@@ -423,3 +423,39 @@ TEST_F(LibUAL, StartStopObserver)
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
 	ASSERT_FALSE(upstart_app_launch_observer_delete_app_failed(NULL, NULL)); /* Not yet implemented */
 }
+
+static GDBusMessage *
+filter_starting (GDBusConnection * conn, GDBusMessage * message, gboolean incomming, gpointer user_data)
+{
+	if (g_strcmp0(g_dbus_message_get_member(message), "UnityStartingSignal") == 0) {
+		unsigned int * count = static_cast<unsigned int *>(user_data);
+		*count++;
+		g_object_unref(message);
+		return NULL;
+	}
+
+	return message;
+}
+
+static void
+starting_observer (const gchar * appid, gpointer user_data)
+{
+	return;
+}
+
+TEST_F(LibUAL, StartingResponses)
+{
+	unsigned int starting_count = 0;
+	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	guint filter = g_dbus_connection_add_filter(session,
+		filter_starting,
+		&starting_count,
+		NULL);
+
+	ASSERT_TRUE(upstart_app_launch_observer_add_app_starting(starting_observer, NULL));
+
+
+	ASSERT_TRUE(upstart_app_launch_observer_delete_app_starting(starting_observer, NULL));
+
+	g_object_unref(session);
+}
