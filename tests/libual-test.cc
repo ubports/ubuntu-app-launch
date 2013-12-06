@@ -491,5 +491,6 @@ TEST_F(LibUAL, StartingResponses)
 
 	EXPECT_TRUE(upstart_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
 
+	g_dbus_connection_remove_filter(session, filter);
 	g_object_unref(session);
 }
