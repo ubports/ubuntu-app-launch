@@ -3,18 +3,18 @@
 	<interface name="com.canonical.UpstartAppLaunch">
 		<signal name="UnityResumeRequest">
 			<arg type="s" name="appid" />
-		</method>
+		</signal>
 		<signal name="UnityResumeResponse">
 			<arg type="s" name="appid" />
-		</method>
+		</signal>
 		<signal name="UnityFocusRequest">
 			<arg type="s" name="appid" />
-		</method>
+		</signal>
 		<signal name="UnityStartingBroadcast">
 			<arg type="s" name="appid" />
-		</method>
+		</signal>
 		<signal name="UnityStartingSignal">
 			<arg type="s" name="appid" />
-		</method>
+		</signal>
 	</interface>
 </node>
