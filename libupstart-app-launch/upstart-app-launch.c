@@ -34,26 +34,11 @@ nih_proxy_create (void)
 	DBusConnection * conn;
 	DBusError        error;
 	const gchar *    bus_name = NULL;
-	gboolean         use_private = FALSE;
 
 	dbus_error_init(&error);
-	use_private = (g_getenv("UPSTART_APP_LAUNCH_USE_SESSION") == NULL);
 
-	if (use_private) {
-		const gchar *    upstart_session;
-
-		upstart_session = g_getenv("UPSTART_SESSION");
-		if (upstart_session == NULL) {
-			g_warning("Not running under Upstart User Session");
-			dbus_error_free(&error);
-			return NULL;
-		}
-
-		conn = dbus_connection_open(upstart_session, &error);
-	} else {
-		conn = dbus_bus_get(DBUS_BUS_SESSION, &error);
-		bus_name = "com.ubuntu.Upstart";
-	}
+	conn = dbus_bus_get(DBUS_BUS_SESSION, &error);
+	bus_name = "com.ubuntu.Upstart";
 
 	if (conn == NULL) {
 		g_warning("Unable to connect to the Upstart Session: %s", error.message);
@@ -70,8 +55,6 @@ nih_proxy_create (void)
 
 	if (upstart == NULL) {
 		g_warning("Unable to build proxy to Upstart");
-		if (use_private)
-			dbus_connection_close(conn);
 		dbus_connection_unref(conn);
 		return NULL;
 	}
@@ -251,22 +234,7 @@ gdbus_upstart_ref (void) {
 	}
 
 	GError * error = NULL;
-
-	if (g_getenv("UPSTART_APP_LAUNCH_USE_SESSION") == NULL) {
-		const gchar * upstart_addr = g_getenv("UPSTART_SESSION");
-		if (upstart_addr == NULL) {
-			g_print("Doesn't appear to be an upstart user session\n");
-			return NULL;
-		}
-
-		gdbus_upstart = g_dbus_connection_new_for_address_sync(upstart_addr,
-															   G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
-															   NULL, /* auth */
-															   NULL, /* cancel */
-															   &error);
-	} else {
-		gdbus_upstart = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-	}
+	gdbus_upstart = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 
 	if (error != NULL) {
 		g_warning("Unable to connect to Upstart bus: %s", error->message);

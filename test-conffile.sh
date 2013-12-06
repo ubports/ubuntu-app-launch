@@ -5,7 +5,7 @@ UPSTARTVERSION=`initctl version | sed 's/[[:alpha:]\)|(|[:space:]]//g' | awk -F-
 # Only test on newer versions of Upstart, like not the
 # versions on the builders
 if [ ${UPSTARTVERSION} -gt 7 ] ; then
-	init-checkconf $1
+	dbus-test-runner --task init-checkconf --parameter "$1" --task-name init-checkconf
 else
 	echo "Upstart Version: $UPSTARTVERSION"
 	echo "  ....Skipping Tests"
