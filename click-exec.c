@@ -19,6 +19,7 @@
 
 #include <glib.h>
 #include "helpers.h"
+#include "click-exec-trace.h"
 
 /*
 
@@ -52,10 +53,14 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	tracepoint(upstart_app_launch, click_start);
+
 	handshake_t * handshake = starting_handshake_start(app_id);
 	if (handshake == NULL) {
 		g_warning("Unable to setup starting handshake");
 	}
+
+	tracepoint(upstart_app_launch, click_starting_sent);
 
 	GError * error = NULL;
 	gchar * package = NULL;
@@ -72,6 +77,8 @@ main (int argc, char * argv[])
 	gchar * output = NULL;
 	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
 	g_free(cmdline);
+
+	tracepoint(upstart_app_launch, click_found_pkgdir);
 
 	/* If we have an extra newline, we can delete it. */
 	gchar * newline = g_strstr_len(output, -1, "\n");
@@ -97,12 +104,16 @@ main (int argc, char * argv[])
 
 	set_confined_envvars(package, output);
 
+	tracepoint(upstart_app_launch, click_configured_env);
+
 	gchar * desktopfile = manifest_to_desktop(output, app_id);
 	g_free(output);
 	if (desktopfile == NULL) {
 		g_warning("Desktop file unable to be found");
 		return 1;
 	}
+
+	tracepoint(upstart_app_launch, click_read_manifest);
 
 	GKeyFile * keyfile = g_key_file_new();
 
@@ -120,6 +131,8 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	tracepoint(upstart_app_launch, click_read_desktop);
+
 	g_debug("Setting 'APP_EXEC' to '%s'", exec);
 	set_upstart_variable("APP_EXEC", exec);
 
@@ -134,7 +147,11 @@ main (int argc, char * argv[])
 	g_free(userdesktopfile);
 	g_free(userdesktoppath);
 
+	tracepoint(upstart_app_launch, click_handshake_wait);
+
 	starting_handshake_wait(handshake);
+
+	tracepoint(upstart_app_launch, click_handshake_complete);
 
 	return 0;
 }
