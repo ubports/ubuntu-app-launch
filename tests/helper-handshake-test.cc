@@ -41,7 +41,9 @@ class HelperHandshakeTest : public ::testing::Test
 
 		virtual void TearDown() {
 			g_test_dbus_down(testbus);
-			g_object_unref(testbus);
+			g_clear_object(&testbus);
+			g_main_loop_unref(mainloop);
+			mainloop = NULL;
 			return;
 		}
 
@@ -80,7 +82,6 @@ TEST_F(HelperHandshakeTest, BaseHandshake)
 	g_main_loop_run(mainloop);
 
 	g_dbus_connection_remove_filter(con, filter);
-	g_main_loop_unref(mainloop);
 
 	g_dbus_connection_emit_signal(con,
 		g_dbus_connection_get_unique_name(con), /* destination */
