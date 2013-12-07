@@ -567,9 +567,10 @@ upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_obs
 	return FALSE;
 }
 
-/* Get all the instances for a given job name */
+typedef void (*per_instance_func_t) (GDBusConnection * con, const gchar * instance_name, gpointer user_data);
+
 static void
-apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gboolean truncate_legacy)
+foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance_func_t func, gpointer user_data)
 {
 	GError * error = NULL;
 	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
@@ -639,24 +640,54 @@ apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gbool
 			continue;
 		}
 
-		gchar * instance_name = NULL;
+		const gchar * instance_name = NULL;
 		GVariant * instance_name_variant;
 		g_variant_get(name_variant, "(v)", &instance_name_variant);
-		instance_name = g_variant_dup_string(instance_name_variant, NULL);
+		instance_name = g_variant_get_string(instance_name_variant, NULL);
+
+		func(con, instance_name, user_data);
+
 		g_variant_unref(instance_name_variant);
 		g_variant_unref(name_variant);
 
-		if (truncate_legacy && g_strcmp0(jobname, "application-legacy") == 0) {
-			gchar * last_dash = g_strrstr(instance_name, "-");
-			if (last_dash != NULL) {
-				last_dash[0] = '\0';
-			}
-		}
-
-		g_array_append_val(apps, instance_name);
 	}
 
 	g_variant_unref(instance_list);
+}
+
+typedef struct {
+	GArray * apps;
+	gboolean truncate_legacy;
+	const gchar * jobname;
+} apps_for_job_t;
+
+static void
+apps_for_job_instance (GDBusConnection * con, const gchar * instance, gpointer user_data)
+{
+	apps_for_job_t * data = (apps_for_job_t *)user_data;
+	gchar * instance_name = g_strdup(instance);
+
+	if (data->truncate_legacy && g_strcmp0(data->jobname, "application-legacy") == 0) {
+		gchar * last_dash = g_strrstr(instance_name, "-");
+		if (last_dash != NULL) {
+			last_dash[0] = '\0';
+		}
+	}
+
+	g_array_append_val(data->apps, instance_name);
+}
+
+/* Get all the instances for a given job name */
+static void
+apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gboolean truncate_legacy)
+{
+	apps_for_job_t data = {
+		.jobname = jobname,
+		.apps = apps,
+		.truncate_legacy = truncate_legacy
+	};
+
+	foreach_job_instance(con, jobname, apps_for_job_instance, &data);
 }
 
 gchar **
