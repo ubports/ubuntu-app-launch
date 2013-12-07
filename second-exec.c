@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "second-exec-core.h"
+#include "libupstart-app-launch/second-exec-core.h"
 
 int
 main (int argc, char * argv[])

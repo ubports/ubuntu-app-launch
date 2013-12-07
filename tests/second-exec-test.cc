@@ -21,7 +21,7 @@
 #include <gio/gio.h>
 
 extern "C" {
-#include "../second-exec-core.h"
+#include "second-exec-core.h"
 #include "upstart-app-launch.h"
 #include "upstart-app-launch-mock.h"
 }

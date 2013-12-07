@@ -47,6 +47,14 @@ install(
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
+#######################
+# second-exec
+#######################
+
+add_lttng_gen_tp(NAME second-exec-trace)
+add_library(second-exec-core STATIC second-exec-core.c second-exec-trace.c)
+target_link_libraries(second-exec-core helpers upstart-launcher ${LTTNG_LIBRARIES})
+
 ##########################
 # Pkg Config
 ##########################

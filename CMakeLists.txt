@@ -173,10 +173,6 @@ install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 # second-exec
 #######################
 
-add_lttng_gen_tp(NAME second-exec-trace)
-add_library(second-exec-core STATIC second-exec-core.c second-exec-trace.c)
-target_link_libraries(second-exec-core helpers upstart-launcher ${LTTNG_LIBRARIES})
-
 add_executable(second-exec second-exec.c)
 set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
 target_link_libraries(second-exec second-exec-core)
