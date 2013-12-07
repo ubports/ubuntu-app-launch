@@ -765,6 +765,8 @@ upstart_app_launch_get_primary_pid (const gchar * appid)
 gboolean
 upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 {
+	g_return_val_if_fail(appid != NULL, FALSE);
+
 	if (pid == 0) {
 		return FALSE;
 	}
