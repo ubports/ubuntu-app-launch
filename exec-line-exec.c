@@ -52,28 +52,51 @@ main (int argc, char * argv[])
 			g_warning("Unable to change directory to '%s'", appdir);
 		}
 
-		const gchar * path = g_getenv("PATH");
-		gchar * libpath = NULL;
+		const gchar * path_path = g_getenv("PATH");
+		gchar * path_libpath = NULL;
+		const gchar * path_joinable[4] = { 0 };
 
-		const gchar * joinable[4] = { 0 };
+		const gchar * import_path = g_getenv("QML2_IMPORT_PATH");
+		gchar * import_libpath = NULL;
+		const gchar * import_joinable[4] = { 0 };
 
 		/* If we've got an architecture set insert that into the
 		   path before everything else */
 		const gchar * archdir = g_getenv("UPSTART_APP_LAUNCH_ARCH");
 		if (archdir != NULL) {
-			libpath = g_build_filename(appdir, "lib", archdir, "bin", NULL);
-			joinable[0] = libpath;
-			joinable[1] = appdir;
-			joinable[2] = path;
+			path_libpath = g_build_filename(appdir, "lib", archdir, "bin", NULL);
+			import_libpath = g_build_filename(appdir, "lib", archdir, NULL);
+
+			path_joinable[0] = path_libpath;
+			path_joinable[1] = appdir;
+			path_joinable[2] = path_path;
+
+			/* Need to check whether the original is NULL because we're
+			   appending instead of prepending */
+			if (import_path == NULL) {
+				import_joinable[0] = import_libpath;
+			} else {
+				import_joinable[0] = import_path;
+				import_joinable[1] = import_libpath;
+			}
 		} else {
-			joinable[0] = appdir;
-			joinable[1] = path;
+			path_joinable[0] = appdir;
+			path_joinable[1] = path_path;
+
+			import_joinable[0] = import_path;
 		}
 
-		gchar * newpath = g_strjoinv(":", (gchar**)joinable);
+		gchar * newpath = g_strjoinv(":", (gchar**)path_joinable);
 		g_setenv("PATH", newpath, TRUE);
-		g_free(libpath);
+		g_free(path_libpath);
 		g_free(newpath);
+
+		if (import_joinable[0] != NULL) {
+			gchar * newimport = g_strjoinv(":", (gchar**)import_joinable);
+			g_setenv("QML2_IMPORT_PATH", newimport, TRUE);
+			g_free(newimport);
+		}
+		g_free(import_libpath);
 	}
 
 	/* Parse the execiness of it all */
