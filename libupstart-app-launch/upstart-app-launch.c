@@ -86,41 +86,66 @@ app_uris_string (const gchar * const * uris)
 	return urisjoin;
 }
 
+static void
+application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+	GVariant * result = NULL;
+
+	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+
+	if (result != NULL)
+		g_variant_unref(result);
+	
+	if (error != NULL) {
+		g_warning("Unable to emit event to start application: %s", error->message);
+		g_error_free(error);
+	}
+}
+
 gboolean
 upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
-	NihDBusProxy * proxy = NULL;
+	g_return_val_if_fail(appid != NULL, FALSE);
 
-	proxy = nih_proxy_create();
-	if (proxy == NULL) {
-		return FALSE;
-	}
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
 
-	gchar * env_appid = g_strdup_printf("APP_ID=%s", appid);
-	gchar * env_uris = NULL;
+	GVariantBuilder builder;
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+	g_variant_builder_add_value(&builder, g_variant_new_string("application-start"));
+
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
 
 	if (uris != NULL) {
+		gchar * env_uris = NULL;
 		gchar * urisjoin = app_uris_string(uris);
 		env_uris = g_strdup_printf("APP_URIS=%s", urisjoin);
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(env_uris));
 		g_free(urisjoin);
 	}
 
-	gchar * env[3];
-	env[0] = env_appid;
-	env[1] = env_uris;
-	env[2] = NULL;
+	g_variant_builder_close(&builder);
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
 
-	gboolean retval = TRUE;
-	if (upstart_emit_event_sync(NULL, proxy, "application-start", env, 0) != 0) {
-		g_warning("Unable to emit signal 'application-start'");
-		retval = FALSE;
-	}
+	g_dbus_connection_call(con,
+	                       DBUS_SERVICE_UPSTART,
+	                       DBUS_PATH_UPSTART,
+	                       DBUS_INTERFACE_UPSTART,
+	                       "EmitEvent",
+	                       g_variant_builder_end(&builder),
+	                       NULL,
+	                       G_DBUS_CALL_FLAGS_NONE,
+	                       -1,
+	                       NULL, /* cancelable */
+	                       application_start_cb,
+	                       g_strdup(appid));
 
-	g_free(env_appid);
-	g_free(env_uris);
-	nih_unref(proxy, NULL);
+	g_object_unref(con);
 
-	return retval;
+	return TRUE;
 }
 
 static void
