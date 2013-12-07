@@ -24,7 +24,7 @@
 #include <gio/gio.h>
 #include <string.h>
 
-static void apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolean truncate_legacy);
+static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 
 static NihDBusProxy *
@@ -149,45 +149,66 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 }
 
 static void
-stop_job (NihDBusProxy * upstart, const gchar * jobname, const gchar * appname, const gchar * instanceid)
+stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, const gchar * instanceid)
 {
 	g_debug("Stopping job %s app_id %s instance_id %s", jobname, appname, instanceid);
-	nih_local char * job_path = NULL;
-	if (upstart_get_job_by_name_sync(NULL, upstart, jobname, &job_path) != 0) {
-		g_warning("Unable to find job '%s'", jobname);
+
+	GError * error = NULL;
+	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
+		DBUS_SERVICE_UPSTART,
+		DBUS_PATH_UPSTART,
+		DBUS_INTERFACE_UPSTART,
+		"GetJobByName",
+		g_variant_new("(s)", jobname),
+		G_VARIANT_TYPE("(o)"),
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout: default */
+		NULL, /* cancelable */
+		&error);
+
+	if (error != NULL) {	
+		g_warning("Unable to find job '%s': %s", jobname, error->message);
+		g_error_free(error);
 		return;
 	}
 
-	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		upstart->name,
-		job_path,
-		NULL, NULL);
+	const gchar * job_path = NULL;
+	g_variant_get(job_path_variant, "(&o)", &job_path);
 
-	if (job_proxy == NULL) {
-		g_warning("Unable to build proxy to Job '%s'", jobname);
-		return;
-	}
+	GVariantBuilder builder;
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 
-	gchar * app = g_strdup_printf("APP_ID=%s", appname);
-	gchar * inst = NULL;
+	g_variant_builder_add_value(&builder,
+		g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appname)));
 	
 	if (instanceid != NULL) {
-		inst = g_strdup_printf("INSTANCE_ID=%s", instanceid);
+		g_variant_builder_add_value(&builder,
+			g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instanceid)));
 	}
 
-	gchar * env[3] = {
-		app,
-		inst,
-		NULL
-	};
+	g_variant_builder_close(&builder);
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
 
-	if (job_class_stop_sync(NULL, job_proxy, env, 0) != 0) {
-		g_warning("Unable to stop job %s app %s instance %s", jobname, appname, instanceid);
+	GVariant * stop_variant = g_dbus_connection_call_sync(con,
+		DBUS_SERVICE_UPSTART,
+		job_path,
+		DBUS_INTERFACE_UPSTART_JOB,
+		"Stop",
+		g_variant_builder_end(&builder),
+		NULL,
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout: default */
+		NULL, /* cancelable */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to stop job %s app_id %s instance_id %s: %s", jobname, appname, instanceid, error->message);
+		g_error_free(error);
 	}
 
-	g_free(app);
-	g_free(inst);
-	nih_unref(job_proxy, NULL);
+	g_variant_unref(job_path_variant);
+	g_variant_unref(stop_variant);
 }
 
 static void
@@ -200,25 +221,24 @@ free_helper (gpointer value)
 gboolean
 upstart_app_launch_stop_application (const gchar * appid)
 {
+	g_return_val_if_fail(appid != NULL, FALSE);
+
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
 	gboolean found = FALSE;
 	int i;
-	NihDBusProxy * proxy = NULL;
-
-	proxy = nih_proxy_create();
-	if (proxy == NULL) {
-		return FALSE;
-	}
 
 	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
 	g_array_set_clear_func(apps, free_helper);
 
 	/* Look through the click jobs and see if any match.  There can
 	   only be one instance for each ID in the click world */
-	apps_for_job(proxy, "application-click", apps, FALSE);
+	apps_for_job(con, "application-click", apps, FALSE);
 	for (i = 0; i < apps->len; i++) {
 		const gchar * array_id = g_array_index(apps, const gchar *, i);
 		if (g_strcmp0(array_id, appid) == 0) {
-			stop_job(proxy, "application-click", appid, NULL);
+			stop_job(con, "application-click", appid, NULL);
 			found = TRUE;
 			break; /* There can be only one with click */
 		}
@@ -230,20 +250,20 @@ upstart_app_launch_stop_application (const gchar * appid)
 	/* Look through the legacy apps.  Trickier because we know that there
 	   can be many instances of the legacy jobs out there, so we might
 	   have to kill more than one of them. */
-	apps_for_job(proxy, "application-legacy", apps, FALSE);
+	apps_for_job(con, "application-legacy", apps, FALSE);
 	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
 	for (i = 0; i < apps->len; i++) {
 		const gchar * array_id = g_array_index(apps, const gchar *, i);
 		if (g_str_has_prefix(array_id, appiddash)) {
 			gchar * instanceid = g_strrstr(array_id, "-");
-			stop_job(proxy, "application-legacy", appid, &(instanceid[1]));
+			stop_job(con, "application-legacy", appid, &(instanceid[1]));
 			found = TRUE;
 		}
 	}
 	g_free(appiddash);
 
 	g_array_free(apps, TRUE);
-	nih_unref(proxy, NULL);
+	g_object_unref(con);
 
 	return found;
 }
@@ -549,75 +569,108 @@ upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_obs
 
 /* Get all the instances for a given job name */
 static void
-apps_for_job (NihDBusProxy * upstart, const gchar * name, GArray * apps, gboolean truncate_legacy)
+apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gboolean truncate_legacy)
 {
-	nih_local char * job_path = NULL;
-	if (upstart_get_job_by_name_sync(NULL, upstart, name, &job_path) != 0) {
-		g_warning("Unable to find job '%s'", name);
+	GError * error = NULL;
+	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
+		DBUS_SERVICE_UPSTART,
+		DBUS_PATH_UPSTART,
+		DBUS_INTERFACE_UPSTART,
+		"GetJobByName",
+		g_variant_new("(s)", jobname),
+		G_VARIANT_TYPE("(o)"),
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout: default */
+		NULL, /* cancelable */
+		&error);
+
+	if (error != NULL) {	
+		g_warning("Unable to find job '%s': %s", jobname, error->message);
+		g_error_free(error);
 		return;
 	}
 
-	nih_local NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		upstart->name,
+	const gchar * job_path = NULL;
+	g_variant_get(job_path_variant, "(&o)", &job_path);
+
+	GVariant * instance_tuple = g_dbus_connection_call_sync(con,
+		DBUS_SERVICE_UPSTART,
 		job_path,
-		NULL, NULL);
+		DBUS_INTERFACE_UPSTART_JOB,
+		"GetAllInstances",
+		NULL,
+		G_VARIANT_TYPE("(ao)"),
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout: default */
+		NULL, /* cancelable */
+		&error);
 
-	if (job_proxy == NULL) {
-		g_warning("Unable to build proxy to Job '%s'", name);
+	g_variant_unref(job_path_variant);
+	if (error != NULL) {
+		g_warning("Unable to get instances of job '%s': %s", jobname, error->message);
+		g_error_free(error);
 		return;
 	}
 
-	nih_local char ** instances;
-	if (job_class_get_all_instances_sync(NULL, job_proxy, &instances) != 0) {
-		NihError * error = nih_error_get();
-		g_warning("Unable to get instances for job '%s': %s", name, error->message);
-		nih_free(error);
-		return;
-	}
+	GVariant * instance_list = g_variant_get_child_value(instance_tuple, 0);
+	g_variant_unref(instance_tuple);
 
-	int jobnum;
-	for (jobnum = 0; instances[jobnum] != NULL; jobnum++) {
-		NihDBusProxy * instance_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-			upstart->name,
-			instances[jobnum],
-			NULL, NULL);
+	GVariantIter instance_iter;
+	g_variant_iter_init(&instance_iter, instance_list);
+	const gchar * instance_path = NULL;
 
-		nih_local char * instance_name = NULL;
-		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
-			gchar * dup = g_strdup(instance_name);
+	while (g_variant_iter_loop(&instance_iter, "&o", &instance_path)) {
+		GVariant * name_variant = g_dbus_connection_call_sync(con,
+			DBUS_SERVICE_UPSTART,
+			instance_path,
+			"org.freedesktop.DBus.Properties",
+			"Get",
+			g_variant_new("(ss)", DBUS_INTERFACE_UPSTART_INSTANCE, "name"),
+			G_VARIANT_TYPE("(v)"),
+			G_DBUS_CALL_FLAGS_NONE,
+			-1, /* timeout: default */
+			NULL, /* cancelable */
+			&error);
 
-			if (truncate_legacy && g_strcmp0(name, "application-legacy") == 0) {
-				gchar * last_dash = g_strrstr(dup, "-");
-				if (last_dash != NULL) {
-					last_dash[0] = '\0';
-				}
-			}
-
-			g_array_append_val(apps, dup);
-		} else {
-			g_warning("Unable to get name for instance '%s' of job '%s'", instances[jobnum], name);
+		if (error != NULL) {
+			g_warning("Unable to name of instance '%s': %s", instance_path, error->message);
+			g_error_free(error);
+			error = NULL;
+			continue;
 		}
 
-		nih_unref(instance_proxy, NULL);
+		gchar * instance_name = NULL;
+		GVariant * instance_name_variant;
+		g_variant_get(name_variant, "(v)", &instance_name_variant);
+		instance_name = g_variant_dup_string(instance_name_variant, NULL);
+		g_variant_unref(instance_name_variant);
+		g_variant_unref(name_variant);
+
+		if (truncate_legacy && g_strcmp0(jobname, "application-legacy") == 0) {
+			gchar * last_dash = g_strrstr(instance_name, "-");
+			if (last_dash != NULL) {
+				last_dash[0] = '\0';
+			}
+		}
+
+		g_array_append_val(apps, instance_name);
 	}
+
+	g_variant_unref(instance_list);
 }
 
 gchar **
 upstart_app_launch_list_running_apps (void)
 {
-	NihDBusProxy * proxy = NULL;
-
-	proxy = nih_proxy_create();
-	if (proxy == NULL) {
-		return g_new0(gchar *, 1);
-	}
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, g_new0(gchar *, 1));
 
 	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
 
-	apps_for_job(proxy, "application-legacy", apps, TRUE);
-	apps_for_job(proxy, "application-click", apps, FALSE);
+	apps_for_job(con, "application-legacy", apps, TRUE);
+	apps_for_job(con, "application-click", apps, FALSE);
 
-	nih_unref(proxy, NULL);
+	g_object_unref(con);
 
 	return (gchar **)g_array_free(apps, FALSE);
 }
