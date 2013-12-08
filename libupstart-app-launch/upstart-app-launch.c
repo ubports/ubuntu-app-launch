@@ -138,6 +138,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 		jobpath = get_jobpath(con, "application-legacy");
 	}
 
+	if (jobpath == NULL)
+		return FALSE;
 
 	/* Build up our environment */
 	GVariantBuilder builder;
