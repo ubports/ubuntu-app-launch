@@ -162,15 +162,6 @@ set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
 target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
-#######################
-# second-exec
-#######################
-
-add_executable(second-exec second-exec.c)
-set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
-target_link_libraries(second-exec second-exec-core)
-install(TARGETS second-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
 ####################
 # application.conf
 ####################
