@@ -19,8 +19,6 @@
 
 #include "upstart-app-launch.h"
 #include <upstart.h>
-#include <nih/alloc.h>
-#include <nih/error.h>
 #include <gio/gio.h>
 #include <string.h>
 
