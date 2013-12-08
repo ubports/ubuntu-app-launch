@@ -1,4 +1,6 @@
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 ##########################
 # Version Info
 ##########################
@@ -22,6 +24,8 @@ upstart-app-launch.h
 set(LAUNCHER_SOURCES
 upstart-app-launch.c
 desktop-single-trace.c
+second-exec-core.c
+second-exec-trace.c
 )
 
 add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
