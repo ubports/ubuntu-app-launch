@@ -48,6 +48,9 @@ include_directories(${ZEITGEIST_INCLUDE_DIRS})
 pkg_check_modules(LIBUPSTART REQUIRED libupstart)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
 
+pkg_check_modules(DBUS REQUIRED dbus-1)
+include_directories(${DBUS_INCLUDE_DIRS})
+
 pkg_check_modules(DBUSTEST REQUIRED dbustest-1>=14.04.0)
 include_directories(${DBUSTEST_INCLUDE_DIRS})
 
