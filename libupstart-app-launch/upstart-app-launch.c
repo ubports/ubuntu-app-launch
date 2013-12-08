@@ -22,6 +22,7 @@
 #include <gio/gio.h>
 #include <string.h>
 
+#include "second-exec-core.h"
 #include "desktop-single-trace.h"
 #include "../helpers.h"
 
@@ -48,14 +49,19 @@ app_uris_string (const gchar * const * uris)
 	return urisjoin;
 }
 
+typedef struct {
+	gchar * appid;
+	gchar * uris;
+} app_start_t;
+
 static void
 application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 {
-	gchar * appid = (gchar *)user_data;
+	app_start_t * data = (app_start_t *)user_data;
 	GError * error = NULL;
 	GVariant * result = NULL;
 
-	g_debug("Application Started: %s", appid);
+	g_debug("Application Started: %s", data->appid);
 
 	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
@@ -63,11 +69,20 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 		g_variant_unref(result);
 	
 	if (error != NULL) {
-		g_warning("Unable to emit event to start application: %s", error->message);
+		if (g_dbus_error_is_remote_error(error)) {
+			gchar * remote_error = g_dbus_error_get_remote_error(error);
+			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
+				second_exec(data->appid, data->uris);
+			}
+		} else {
+			g_warning("Unable to emit event to start application: %s", error->message);
+		}
 		g_error_free(error);
 	}
 
-	g_free(appid);
+	g_free(data->appid);
+	g_free(data->uris);
+	g_free(data);
 }
 
 /* Get the path of the job from Upstart, if we've got it already, we'll just
@@ -178,6 +193,10 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	if (jobpath == NULL)
 		return FALSE;
 
+	/* Callback data */
+	app_start_t * app_start_data = g_new0(app_start_t, 1);
+	app_start_data->appid = g_strdup(appid);
+
 	/* Build up our environment */
 	GVariantBuilder builder;
 	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
@@ -187,10 +206,9 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
 
 	if (uris != NULL) {
-		gchar * env_uris = NULL;
 		gchar * urisjoin = app_uris_string(uris);
-		env_uris = g_strdup_printf("APP_URIS=%s", urisjoin);
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(env_uris));
+		app_start_data->uris = g_strdup_printf("APP_URIS=%s", urisjoin);
+		g_variant_builder_add_value(&builder, g_variant_new_string(app_start_data->uris));
 		g_free(urisjoin);
 	}
 
@@ -205,7 +223,7 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 
 	g_variant_builder_close(&builder);
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-
+	
 	/* Call the job start function */
 	g_dbus_connection_call(con,
 	                       DBUS_SERVICE_UPSTART,
@@ -218,7 +236,7 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	                       -1,
 	                       NULL, /* cancelable */
 	                       application_start_cb,
-	                       g_strdup(appid));
+	                       app_start_data);
 
 	g_object_unref(con);
 
