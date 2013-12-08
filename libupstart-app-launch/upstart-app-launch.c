@@ -51,8 +51,11 @@ app_uris_string (const gchar * const * uris)
 static void
 application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 {
+	gchar * appid = (gchar *)user_data;
 	GError * error = NULL;
 	GVariant * result = NULL;
+
+	g_debug("Application Started: %s", appid);
 
 	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
@@ -63,6 +66,8 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 		g_warning("Unable to emit event to start application: %s", error->message);
 		g_error_free(error);
 	}
+
+	g_free(appid);
 }
 
 /* Get the path of the job from Upstart, if we've got it already, we'll just
