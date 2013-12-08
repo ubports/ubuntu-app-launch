@@ -163,6 +163,15 @@ target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES}
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# application-job
+####################
+
+add_executable(application-job application-job.c)
+set_target_properties(application-job PROPERTIES OUTPUT_NAME "application-job")
+target_link_libraries(application-job upstart-launcher)
+install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # application.conf
 ####################
 
