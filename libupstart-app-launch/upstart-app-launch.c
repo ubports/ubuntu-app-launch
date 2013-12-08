@@ -567,7 +567,7 @@ upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_obs
 	return FALSE;
 }
 
-typedef void (*per_instance_func_t) (GDBusConnection * con, const gchar * instance_name, gpointer user_data);
+typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);
 
 static void
 foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance_func_t func, gpointer user_data)
@@ -621,13 +621,13 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 	const gchar * instance_path = NULL;
 
 	while (g_variant_iter_loop(&instance_iter, "&o", &instance_path)) {
-		GVariant * name_variant = g_dbus_connection_call_sync(con,
+		GVariant * props_tuple = g_dbus_connection_call_sync(con,
 			DBUS_SERVICE_UPSTART,
 			instance_path,
 			"org.freedesktop.DBus.Properties",
-			"Get",
+			"GetAll",
 			g_variant_new("(ss)", DBUS_INTERFACE_UPSTART_INSTANCE, "name"),
-			G_VARIANT_TYPE("(v)"),
+			G_VARIANT_TYPE("(a{sv})"),
 			G_DBUS_CALL_FLAGS_NONE,
 			-1, /* timeout: default */
 			NULL, /* cancelable */
@@ -640,15 +640,12 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 			continue;
 		}
 
-		const gchar * instance_name = NULL;
-		GVariant * instance_name_variant;
-		g_variant_get(name_variant, "(v)", &instance_name_variant);
-		instance_name = g_variant_get_string(instance_name_variant, NULL);
+		GVariant * props_dict = g_variant_get_child_value(props_tuple, 0);
 
-		func(con, instance_name, user_data);
+		func(con, props_dict, user_data);
 
-		g_variant_unref(instance_name_variant);
-		g_variant_unref(name_variant);
+		g_variant_unref(props_dict);
+		g_variant_unref(props_tuple);
 
 	}
 
@@ -662,10 +659,16 @@ typedef struct {
 } apps_for_job_t;
 
 static void
-apps_for_job_instance (GDBusConnection * con, const gchar * instance, gpointer user_data)
+apps_for_job_instance (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
 {
+	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+	if (namev == NULL) {
+		return;
+	}
+
 	apps_for_job_t * data = (apps_for_job_t *)user_data;
-	gchar * instance_name = g_strdup(instance);
+	gchar * instance_name = g_variant_dup_string(namev, NULL);
+	g_variant_unref(namev);
 
 	if (data->truncate_legacy && g_strcmp0(data->jobname, "application-legacy") == 0) {
 		gchar * last_dash = g_strrstr(instance_name, "-");
