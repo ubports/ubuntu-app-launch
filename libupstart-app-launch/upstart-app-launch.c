@@ -191,27 +191,9 @@ stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, c
 {
 	g_debug("Stopping job %s app_id %s instance_id %s", jobname, appname, instanceid);
 
-	GError * error = NULL;
-	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
-		DBUS_SERVICE_UPSTART,
-		DBUS_PATH_UPSTART,
-		DBUS_INTERFACE_UPSTART,
-		"GetJobByName",
-		g_variant_new("(s)", jobname),
-		G_VARIANT_TYPE("(o)"),
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout: default */
-		NULL, /* cancelable */
-		&error);
-
-	if (error != NULL) {	
-		g_warning("Unable to find job '%s': %s", jobname, error->message);
-		g_error_free(error);
+	const gchar * job_path = get_jobpath(con, jobname);
+	if (job_path == NULL)
 		return;
-	}
-
-	const gchar * job_path = NULL;
-	g_variant_get(job_path_variant, "(&o)", &job_path);
 
 	GVariantBuilder builder;
 	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
@@ -228,6 +210,7 @@ stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, c
 	g_variant_builder_close(&builder);
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
 
+	GError * error = NULL;
 	GVariant * stop_variant = g_dbus_connection_call_sync(con,
 		DBUS_SERVICE_UPSTART,
 		job_path,
@@ -245,7 +228,6 @@ stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, c
 		g_error_free(error);
 	}
 
-	g_variant_unref(job_path_variant);
 	g_variant_unref(stop_variant);
 }
 
@@ -610,28 +592,11 @@ typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict
 static void
 foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance_func_t func, gpointer user_data)
 {
-	GError * error = NULL;
-	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
-		DBUS_SERVICE_UPSTART,
-		DBUS_PATH_UPSTART,
-		DBUS_INTERFACE_UPSTART,
-		"GetJobByName",
-		g_variant_new("(s)", jobname),
-		G_VARIANT_TYPE("(o)"),
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout: default */
-		NULL, /* cancelable */
-		&error);
-
-	if (error != NULL) {	
-		g_warning("Unable to find job '%s': %s", jobname, error->message);
-		g_error_free(error);
+	const gchar * job_path = get_jobpath(con, jobname);
+	if (job_path == NULL)
 		return;
-	}
 
-	const gchar * job_path = NULL;
-	g_variant_get(job_path_variant, "(&o)", &job_path);
-
+	GError * error = NULL;
 	GVariant * instance_tuple = g_dbus_connection_call_sync(con,
 		DBUS_SERVICE_UPSTART,
 		job_path,
@@ -644,7 +609,6 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 		NULL, /* cancelable */
 		&error);
 
-	g_variant_unref(job_path_variant);
 	if (error != NULL) {
 		g_warning("Unable to get instances of job '%s': %s", jobname, error->message);
 		g_error_free(error);
