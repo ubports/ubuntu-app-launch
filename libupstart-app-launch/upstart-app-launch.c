@@ -27,45 +27,6 @@
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 
-static NihDBusProxy *
-nih_proxy_create (void)
-{
-	NihDBusProxy *   upstart;
-	DBusConnection * conn;
-	DBusError        error;
-	const gchar *    bus_name = NULL;
-
-	dbus_error_init(&error);
-
-	conn = dbus_bus_get(DBUS_BUS_SESSION, &error);
-	bus_name = "com.ubuntu.Upstart";
-
-	if (conn == NULL) {
-		g_warning("Unable to connect to the Upstart Session: %s", error.message);
-		dbus_error_free(&error);
-		return NULL;
-	}
-
-	dbus_error_free(&error);
-
-	upstart = nih_dbus_proxy_new(NULL, conn,
-		bus_name,
-		DBUS_PATH_UPSTART,
-		NULL, NULL);
-
-	if (upstart == NULL) {
-		g_warning("Unable to build proxy to Upstart");
-		dbus_connection_unref(conn);
-		return NULL;
-	}
-
-	dbus_connection_unref(conn);
-
-	upstart->auto_start = FALSE;
-
-	return upstart;
-}
-
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
 static gchar *
@@ -709,89 +670,86 @@ upstart_app_launch_list_running_apps (void)
 	return (gchar **)g_array_free(apps, FALSE);
 }
 
+typedef struct {
+	GPid pid;
+	const gchar * appid;
+	const gchar * jobname;
+} pid_for_job_t;
+
+static void
+pid_for_job_instance (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
+{
+	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+	if (namev == NULL) {
+		return;
+	}
+
+	pid_for_job_t * data = (pid_for_job_t *)user_data;
+	gchar * instance_name = g_variant_dup_string(namev, NULL);
+	g_variant_unref(namev);
+
+	if (g_strcmp0(data->jobname, "application-legacy") == 0) {
+		gchar * last_dash = g_strrstr(instance_name, "-");
+		if (last_dash != NULL) {
+			last_dash[0] = '\0';
+		}
+	}
+
+	if (g_strcmp0(instance_name, data->appid) == 0) {
+		GVariant * processv = g_variant_lookup_value(props_dict, "processes", G_VARIANT_TYPE("a(si)"));
+
+		if (processv != NULL) {
+			if (g_variant_n_children(processv) > 0) {
+				GVariant * first_entry = g_variant_get_child_value(processv, 0);
+				GVariant * pidv = g_variant_get_child_value(first_entry, 1);
+
+				data->pid = g_variant_get_int32(pidv);
+
+				g_variant_unref(pidv);
+				g_variant_unref(first_entry);
+			}
+
+			g_variant_unref(processv);
+		}
+	}
+
+	g_free(instance_name);
+}
+
 /* Look for the app for a job */
 static GPid
-pid_for_job (NihDBusProxy * upstart, const gchar * job, const gchar * appid)
+pid_for_job (GDBusConnection * con, const gchar * jobname, const gchar * appid)
 {
-	nih_local char * job_path = NULL;
-	if (upstart_get_job_by_name_sync(NULL, upstart, job, &job_path) != 0) {
-		g_warning("Unable to find job '%s'", job);
-		return 0;
-	}
+	pid_for_job_t data = {
+		.jobname = jobname,
+		.appid = appid,
+		.pid = 0
+	};
 
-	NihDBusProxy * job_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-		upstart->name,
-		job_path,
-		NULL, NULL);
+	foreach_job_instance(con, jobname, pid_for_job_instance, &data);
 
-	if (job_proxy == NULL) {
-		g_warning("Unable to build proxy to Job '%s'", job);
-		return 0;
-	}
-
-	nih_local char ** instances;
-	if (job_class_get_all_instances_sync(NULL, job_proxy, &instances) != 0) {
-		g_warning("Unable to get instances for job '%s'", job);
-		nih_unref(job_proxy, NULL);
-		return 0;
-	}
-
-	GPid pid = 0;
-	int jobnum;
-	for (jobnum = 0; instances[jobnum] != NULL && pid == 0; jobnum++) {
-		NihDBusProxy * instance_proxy = nih_dbus_proxy_new(NULL, upstart->connection,
-			upstart->name,
-			instances[jobnum],
-			NULL, NULL);
-
-		nih_local char * instance_name = NULL;
-		if (job_get_name_sync(NULL, instance_proxy, &instance_name) == 0) {
-			if (g_strcmp0(job, "application-legacy") == 0) {
-				gchar * last_dash = g_strrstr(instance_name, "-");
-				if (last_dash != NULL) {
-					last_dash[0] = '\0';
-				}
-			}
-		} else {
-			g_warning("Unable to get name for instance '%s' of job '%s'", instances[jobnum], job);
-		}
-
-		if (g_strcmp0(instance_name, appid) == 0) {
-			nih_local JobProcessesElement ** elements;
-			if (job_get_processes_sync(NULL, instance_proxy, &elements) == 0) {
-				pid = elements[0]->item1;
-			}
-		}
-
-		nih_unref(instance_proxy, NULL);
-	}
-
-	nih_unref(job_proxy, NULL);
-
-	return pid;
+	return data.pid;
 }
 
 GPid
 upstart_app_launch_get_primary_pid (const gchar * appid)
 {
-	NihDBusProxy * proxy = NULL;
+	g_return_val_if_fail(appid != NULL, 0);
 
-	proxy = nih_proxy_create();
-	if (proxy == NULL) {
-		return 0;
-	}
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, 0);
 
 	GPid pid = 0;
 
 	if (pid == 0) {
-		pid = pid_for_job(proxy, "application-legacy", appid);
+		pid = pid_for_job(con, "application-legacy", appid);
 	}
 
 	if (pid == 0) {
-		pid = pid_for_job(proxy, "application-click", appid);
+		pid = pid_for_job(con, "application-click", appid);
 	}
 
-	nih_unref(proxy, NULL);
+	g_object_unref(con);
 
 	return pid;
 }
