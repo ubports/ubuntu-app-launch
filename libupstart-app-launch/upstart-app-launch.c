@@ -62,6 +62,58 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	}
 }
 
+/* Get the path of the job from Upstart, if we've got it already, we'll just
+   use the cache of the value */
+const gchar *
+get_jobpath (GDBusConnection * con, const gchar * jobname)
+{
+	gchar * cachepath = g_strdup_printf("upstart-app-lauch-job-path-cache-%s", jobname);
+	gpointer cachedata = g_object_get_data(G_OBJECT(con), cachepath);
+
+	if (cachedata != NULL) {
+		g_free(cachepath);
+		return cachedata;
+	}
+
+	GError * error = NULL;
+	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
+		DBUS_SERVICE_UPSTART,
+		DBUS_PATH_UPSTART,
+		DBUS_INTERFACE_UPSTART,
+		"GetJobByName",
+		g_variant_new("(s)", jobname),
+		G_VARIANT_TYPE("(o)"),
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout: default */
+		NULL, /* cancelable */
+		&error);
+
+	if (error != NULL) {	
+		g_warning("Unable to find job '%s': %s", jobname, error->message);
+		g_error_free(error);
+		g_free(cachepath);
+		return NULL;
+	}
+
+	gchar * job_path = NULL;
+	g_variant_get(job_path_variant, "(o)", job_path);
+	g_variant_unref(job_path_variant);
+
+	g_object_set_data_full(G_OBJECT(con), cachepath, job_path, g_free);
+	g_free(cachepath);
+
+	return job_path;
+}
+
+/* Check to see if a legacy app wants us to manage whether they're
+   single instance or not */
+gboolean
+legacy_single_instance (const gchar * appid)
+{
+	/* TODO: All of it */
+	return FALSE;
+}
+
 gboolean
 upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
@@ -70,9 +122,26 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
 
+	/* Determine whether it's a click package by looking for the symlink
+	   that is created by the desktop hook */
+	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
+	gchar * click_link = g_build_filename(g_get_home_dir(), ".cache", "upstart-app-launch", "desktop", appiddesktop, NULL);
+	g_free(appiddesktop);
+	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
+	g_free(click_link);
+
+	/* Figure out the DBus path for the job */
+	const gchar * jobpath = NULL;
+	if (click) {
+		jobpath = get_jobpath(con, "application-click");
+	} else {
+		jobpath = get_jobpath(con, "application-legacy");
+	}
+
+
+	/* Build up our environment */
 	GVariantBuilder builder;
 	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-	g_variant_builder_add_value(&builder, g_variant_new_string("application-start"));
 
 	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 
@@ -86,14 +155,24 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 		g_free(urisjoin);
 	}
 
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
+	if (!click) {
+		if (legacy_single_instance(appid)) {
+			g_variant_builder_add_value(&builder, g_variant_new_string("INSTANCE_ID="));
+		} else {
+			gchar * instanceid = g_strdup_printf("INSTANCE_ID=%" G_GUINT64_FORMAT, g_get_real_time());
+			g_variant_builder_add_value(&builder, g_variant_new_take_string(instanceid));
+		}
+	}
 
+	g_variant_builder_close(&builder);
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+	/* Call the job start function */
 	g_dbus_connection_call(con,
 	                       DBUS_SERVICE_UPSTART,
-	                       DBUS_PATH_UPSTART,
+	                       jobpath,
 	                       DBUS_INTERFACE_UPSTART,
-	                       "EmitEvent",
+	                       "Start",
 	                       g_variant_builder_end(&builder),
 	                       NULL,
 	                       G_DBUS_CALL_FLAGS_NONE,
