@@ -11,6 +11,8 @@ set(ABI_VERSION 2)
 # Library
 ##########################
 
+add_lttng_gen_tp(NAME desktop-single-trace)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
 set(LAUNCHER_HEADERS
@@ -19,6 +21,7 @@ upstart-app-launch.h
 
 set(LAUNCHER_SOURCES
 upstart-app-launch.c
+desktop-single-trace.c
 )
 
 add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
@@ -34,6 +37,8 @@ target_link_libraries(upstart-launcher
 	${GOBJECT2_LIBRARIES}
 	${LIBUPSTART_LIBRARIES}
 	${GIO2_LIBRARIES}
+	${LTTNG_LIBRARIES}
+	helpers
 	-Wl,--no-undefined
 )
 

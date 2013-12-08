@@ -22,6 +22,9 @@
 #include <gio/gio.h>
 #include <string.h>
 
+#include "desktop-single-trace.h"
+#include "../helpers.h"
+
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 
@@ -110,8 +113,37 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 gboolean
 legacy_single_instance (const gchar * appid)
 {
-	/* TODO: All of it */
-	return FALSE;
+	tracepoint(upstart_app_launch, desktop_single_start);
+
+	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
+
+	if (keyfile == NULL) {
+		g_error("Unable to find keyfile for application '%s'", appid);
+		return FALSE;
+	}
+
+	tracepoint(upstart_app_launch, desktop_single_found);
+
+	gboolean singleinstance = FALSE;
+
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", NULL)) {
+		GError * error = NULL;
+
+		singleinstance = g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", &error);
+
+		if (error != NULL) {
+			g_warning("Unable to get single instance key for app '%s': %s", appid, error->message);
+			g_error_free(error);
+			/* Ensure that if we got an error, we assume standard case */
+			singleinstance = FALSE;
+		}
+	}
+	
+	g_key_file_free(keyfile);
+
+	tracepoint(upstart_app_launch, desktop_single_finished);
+
+	return singleinstance;
 }
 
 gboolean
