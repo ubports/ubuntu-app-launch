@@ -87,5 +87,7 @@ main (int argc, char * argv[])
 	g_main_loop_run(mainloop);
 	g_main_loop_unref(mainloop);
 
+	g_object_unref(con);
+
 	return retval;
 }
