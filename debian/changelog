@@ -1,3 +1,21 @@
+upstart-app-launch (0.3+14.04.20131209-0ubuntu1) trusty; urgency=low
+
+  [ Ubuntu daily release ]
+  * debian/*symbols: auto-update new symbols to released version
+
+  [ Ted Gould ]
+  * Use the parsing of the line to split appart the URLs. (LP: #1253703)
+  * Use Upstart on the session bus instead of the private bus.
+  * Adding tracing support to application startup.
+  * Hide click error printed in the Upstart log.
+  * Handshake for starting applications. (LP: #1243665)
+  * Link to the right version of upstart-app-launch.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 93
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 09 Dec 2013 02:05:27 +0000
+
 upstart-app-launch (0.3+14.04.20131126-0ubuntu1) trusty; urgency=low
 
   [ Ted Gould ]
