@@ -1,3 +1,9 @@
+upstart-app-launch (0.3+14.04.20131209-0ubuntu2) trusty; urgency=low
+
+  * Restrict on which arch we build url-dispatcher due to the ust build-dep
+
+ -- Didier Roche <didrocks@ubuntu.com>  Mon, 09 Dec 2013 13:47:51 +0100
+
 upstart-app-launch (0.3+14.04.20131209-0ubuntu1) trusty; urgency=low
 
   [ Ubuntu daily release ]
