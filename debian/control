@@ -27,8 +27,7 @@ Vcs-Bzr: https://code.launchpad.net/~indicator-applet-developers/upstart-app-lau
 Vcs-Browser: http://bazaar.launchpad.net/~indicator-applet-developers/upstart-app-launch/trunk.13.10/files
 
 Package: upstart-app-launch
-# Architecture list matches ust arch restriction
-Architecture: amd64 armel armhf i386 mips mipsel powerpc s390x
+Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          click (>= 0.4.9),
@@ -40,7 +39,7 @@ Description: Upstart Job for Launching Applications
  applications in a standard and confined way.
 
 Package: upstart-app-launch-tools
-Architecture: amd64 armel armhf i386 mips mipsel powerpc s390x
+Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          upstart-app-launch (= ${binary:Version}),
@@ -52,7 +51,7 @@ Description: Tools for working wtih launched applications
 
 Package: libupstart-app-launch2
 Section: libs
-Architecture: amd64 armel armhf i386 mips mipsel powerpc s390x
+Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          upstart-app-launch (= ${binary:Version}),
@@ -66,7 +65,7 @@ Description: library for sending requests to the upstart app launch
 
 Package: libupstart-app-launch2-dev
 Section: libdevel
-Architecture: amd64 armel armhf i386 mips mipsel powerpc s390x
+Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          libglib2.0-dev,
