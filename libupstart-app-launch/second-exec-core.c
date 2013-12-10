@@ -23,7 +23,7 @@
 #include "libupstart-app-launch/upstart-app-launch.h"
 #include "helpers.h"
 #include "second-exec-core.h"
-#include "second-exec-trace.h"
+#include "upstart-app-launch-trace.h"
 
 /* Globals */
 GPid app_pid = 0;

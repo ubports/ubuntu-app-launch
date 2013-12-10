@@ -22,8 +22,8 @@
 #include <gio/gio.h>
 #include <string.h>
 
+#include "upstart-app-launch-trace.h"
 #include "second-exec-core.h"
-#include "desktop-single-trace.h"
 #include "../helpers.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
