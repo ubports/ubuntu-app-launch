@@ -686,7 +686,7 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 			instance_path,
 			"org.freedesktop.DBus.Properties",
 			"GetAll",
-			g_variant_new("(ss)", DBUS_INTERFACE_UPSTART_INSTANCE, "name"),
+			g_variant_new("(s)", DBUS_INTERFACE_UPSTART_INSTANCE),
 			G_VARIANT_TYPE("(a{sv})"),
 			G_DBUS_CALL_FLAGS_NONE,
 			-1, /* timeout: default */
