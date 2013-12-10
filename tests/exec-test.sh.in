@@ -1,6 +1,10 @@
 #!/bin/bash -e
 
-export PATH=@CMAKE_CURRENT_BINARY_DIR@
-export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-internal.sh
+export PATH=/path
+export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-full.sh
+export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@
+export QML2_IMPORT_PATH=/bar/qml/import
+export UPSTART_APP_LAUNCH_ARCH=64bit-amazing
 
+echo "Testing Full Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
