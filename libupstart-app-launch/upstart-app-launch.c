@@ -61,7 +61,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GError * error = NULL;
 	GVariant * result = NULL;
 
-	g_debug("Application Started: %s", data->appid);
+	g_debug("Started Message Callback: %s", data->appid);
 
 	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
