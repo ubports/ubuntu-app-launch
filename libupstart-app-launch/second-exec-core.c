@@ -291,6 +291,7 @@ find_appid_pid (GDBusConnection * session)
 		return;
 	}
 
+	g_debug("Got bus names");
 	tracepoint(upstart_app_launch, second_exec_got_dbus_names);
 
 	/* Next figure out what we're looking for (and if there is something to look for) */
@@ -303,6 +304,7 @@ find_appid_pid (GDBusConnection * session)
 		return;
 	}
 
+	g_debug("Primary PID: %d", app_pid);
 	tracepoint(upstart_app_launch, second_exec_got_primary_pid);
 
 	/* Get the names */
@@ -372,6 +374,7 @@ second_exec (const gchar * app_id, const gchar * appuris)
 		unity_resume_cb, mainloop,
 		NULL); /* user data destroy */
 
+	g_debug("Sending resume request");
 	tracepoint(upstart_app_launch, second_exec_emit_resume);
 
 	/* Send unfreeze to to Unity */
