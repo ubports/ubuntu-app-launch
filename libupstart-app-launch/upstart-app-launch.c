@@ -228,7 +228,7 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	g_dbus_connection_call(con,
 	                       DBUS_SERVICE_UPSTART,
 	                       jobpath,
-	                       DBUS_INTERFACE_UPSTART,
+	                       DBUS_INTERFACE_UPSTART_JOB,
 	                       "Start",
 	                       g_variant_builder_end(&builder),
 	                       NULL,
