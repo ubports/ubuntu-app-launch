@@ -17,3 +17,13 @@ unset UPSTART_APP_LAUNCH_ARCH
 
 echo "Testing Noarch Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
+
+unset PATH
+export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-noinit.sh
+export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@
+unset QML2_IMPORT_PATH
+export UPSTART_APP_LAUNCH_ARCH=64bit-amazing
+
+echo "Testing Uninitialized Test"
+@CMAKE_BINARY_DIR@/exec-line-exec
+
