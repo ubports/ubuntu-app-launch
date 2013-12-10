@@ -119,7 +119,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 	}
 
 	gchar * job_path = NULL;
-	g_variant_get(job_path_variant, "(o)", job_path);
+	g_variant_get(job_path_variant, "(o)", &job_path);
 	g_variant_unref(job_path_variant);
 
 	g_object_set_data_full(G_OBJECT(con), cachepath, job_path, g_free);
