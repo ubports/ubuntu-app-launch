@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+export PATH=@CMAKE_CURRENT_BINARY_DIR@
+export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-internal.sh
+
+@CMAKE_BINARY_DIR@/exec-line-exec

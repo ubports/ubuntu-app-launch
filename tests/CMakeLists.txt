@@ -53,3 +53,7 @@ add_executable (zg-test
 target_link_libraries (zg-test gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (zg-test zg-test)
 
+# Exec Line Exec Test
+
+configure_file("exec-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh" @ONLY) 
+add_test (exec-test "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh")
