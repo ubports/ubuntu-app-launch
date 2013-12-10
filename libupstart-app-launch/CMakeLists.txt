@@ -1,5 +1,6 @@
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 ##########################
 # Version Info
@@ -26,8 +27,6 @@ upstart-app-launch.c
 second-exec-core.c
 upstart-app-launch-trace.c
 )
-
-add_custom_target(upstart-app-launch.c DEPENDS upstart-app-launch-trace.h)
 
 add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
 
