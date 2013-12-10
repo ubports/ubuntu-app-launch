@@ -28,7 +28,7 @@ app_started (const gchar * appid, gpointer user_data)
 {
 	if (g_strcmp0(appid, global_appid) != 0)
 		return;
-	g_debug("Application Started");
+	g_debug("Application Started: %s", appid);
 	g_main_loop_quit((GMainLoop *)user_data);
 }
 
