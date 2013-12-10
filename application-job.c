@@ -81,9 +81,11 @@ main (int argc, char * argv[])
 	upstart_app_launch_observer_add_app_focus(app_focus, mainloop);
 	upstart_app_launch_observer_add_app_failed(app_failed, mainloop);
 
+	g_debug("Start Application: %s", global_appid);
 	upstart_app_launch_start_application(global_appid, (const gchar * const *)uris);
 	g_strfreev(uris);
 
+	g_debug("Wait for results");
 	g_main_loop_run(mainloop);
 	g_main_loop_unref(mainloop);
 
