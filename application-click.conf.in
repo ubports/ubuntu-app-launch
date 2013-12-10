@@ -14,7 +14,7 @@ env APP_DIR
 env APP_DESKTOP_FILE
 
 env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
-export UPSTART_APP_LAUNCH
+export UPSTART_APP_LAUNCH_ARCH
 
 apparmor switch ${APP_ID}
 
