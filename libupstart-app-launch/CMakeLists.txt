@@ -27,6 +27,8 @@ second-exec-core.c
 upstart-app-launch-trace.c
 )
 
+add_custom_target(upstart-app-launch.c DEPENDS upstart-app-launch-trace.h)
+
 add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
 
 set_target_properties(upstart-launcher PROPERTIES
