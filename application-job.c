@@ -82,13 +82,17 @@ main (int argc, char * argv[])
 	upstart_app_launch_observer_add_app_failed(app_failed, mainloop);
 
 	g_debug("Start Application: %s", global_appid);
-	upstart_app_launch_start_application(global_appid, (const gchar * const *)uris);
+	g_return_val_if_fail(upstart_app_launch_start_application(global_appid, (const gchar * const *)uris), -1);
 	g_strfreev(uris);
 
 	g_debug("Wait for results");
 	g_main_loop_run(mainloop);
-	g_main_loop_unref(mainloop);
 
+	upstart_app_launch_observer_delete_app_started(app_started, mainloop);
+	upstart_app_launch_observer_delete_app_focus(app_focus, mainloop);
+	upstart_app_launch_observer_delete_app_failed(app_failed, mainloop);
+
+	g_main_loop_unref(mainloop);
 	g_object_unref(con);
 
 	return retval;
