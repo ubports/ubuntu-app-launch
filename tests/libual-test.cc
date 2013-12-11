@@ -66,6 +66,10 @@ class LibUAL : public ::testing::Test
 		}
 
 		virtual void SetUp() {
+			gchar * linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
+			g_setenv("UPSTART_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
+			g_free(linkfarmpath);
+
 			service = dbus_test_service_new(NULL);
 
 			debugConnection();

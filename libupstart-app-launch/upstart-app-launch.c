@@ -178,7 +178,13 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	/* Determine whether it's a click package by looking for the symlink
 	   that is created by the desktop hook */
 	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
-	gchar * click_link = g_build_filename(g_get_home_dir(), ".cache", "upstart-app-launch", "desktop", appiddesktop, NULL);
+	gchar * click_link = NULL;
+	const gchar * link_farm_dir = g_getenv("UPSTART_APP_LAUNCH_LINK_FARM");
+	if (G_LIKELY(link_farm_dir == NULL)) {
+		click_link = g_build_filename(g_get_home_dir(), ".cache", "upstart-app-launch", "desktop", appiddesktop, NULL);
+	} else {
+		click_link = g_build_filename(link_farm_dir, appiddesktop, NULL);
+	}
 	g_free(appiddesktop);
 	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
 	g_free(click_link);
