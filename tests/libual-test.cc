@@ -37,11 +37,13 @@ class LibUAL : public ::testing::Test
 
 	private:
 		static void focus_cb (const gchar * appid, gpointer user_data) {
+			g_debug("Focus Callback: %s", appid);
 			LibUAL * _this = static_cast<LibUAL *>(user_data);
 			_this->last_focus_appid = appid;
 		}
 
 		static void resume_cb (const gchar * appid, gpointer user_data) {
+			g_debug("Resume Callback: %s", appid);
 			LibUAL * _this = static_cast<LibUAL *>(user_data);
 			_this->last_resume_appid = appid;
 
@@ -125,11 +127,13 @@ class LibUAL : public ::testing::Test
 				G_VARIANT_TYPE_STRING,
 				g_variant_new_string("foo"),
 				NULL);
+			gchar * process_var = g_strdup_printf("[('main', %d)]", getpid());
 			dbus_test_dbus_mock_object_add_property(mock, instobj,
 				"processes",
 				G_VARIANT_TYPE("a(si)"),
-				g_variant_new_parsed("[('main', 1234)]"),
+				g_variant_new_parsed(process_var),
 				NULL);
+			g_free(process_var);
 
 			DbusTestDbusMockObject * ljobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
 
@@ -166,8 +170,8 @@ class LibUAL : public ::testing::Test
 			g_dbus_connection_set_exit_on_close(bus, FALSE);
 			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 
-			upstart_app_launch_observer_add_app_focus(focus_cb, this);
-			upstart_app_launch_observer_add_app_resume(resume_cb, this);
+			ASSERT_TRUE(upstart_app_launch_observer_add_app_focus(focus_cb, this));
+			ASSERT_TRUE(upstart_app_launch_observer_add_app_resume(resume_cb, this));
 		}
 
 		virtual void TearDown() {
@@ -181,12 +185,10 @@ class LibUAL : public ::testing::Test
 
 			unsigned int cleartry = 0;
 			while (bus != NULL && cleartry < 100) {
-				g_usleep(100000);
-				while (g_main_pending()) {
-					g_main_iteration(TRUE);
-				}
+				pause(100);
 				cleartry++;
 			}
+			ASSERT_EQ(bus, nullptr);
 		}
 
 		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {
@@ -220,18 +222,17 @@ class LibUAL : public ::testing::Test
 		}
 
 		static gboolean pause_helper (gpointer pmainloop) {
-			g_main_loop_quit((GMainLoop *)pmainloop);
+			g_main_loop_quit(static_cast<GMainLoop *>(pmainloop));
 			return G_SOURCE_REMOVE;
 		}
 
 		void pause (guint time) {
 			if (time > 0) {
 				GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
-				guint timer = g_timeout_add(time, pause_helper, mainloop);
+				g_timeout_add(time, pause_helper, mainloop);
 
 				g_main_loop_run(mainloop);
 
-				g_source_remove(timer);
 				g_main_loop_unref(mainloop);
 			}
 
@@ -306,10 +307,10 @@ TEST_F(LibUAL, StopApplication)
 
 TEST_F(LibUAL, ApplicationPid)
 {
-	ASSERT_EQ(upstart_app_launch_get_primary_pid("foo"), 1234);
-	ASSERT_EQ(upstart_app_launch_get_primary_pid("bar"), 5678);
-	ASSERT_TRUE(upstart_app_launch_pid_in_app_id(1234, "foo"));
-	ASSERT_FALSE(upstart_app_launch_pid_in_app_id(5678, "foo"));
+	EXPECT_EQ(upstart_app_launch_get_primary_pid("foo"), getpid());
+	EXPECT_EQ(upstart_app_launch_get_primary_pid("bar"), 5678);
+	EXPECT_TRUE(upstart_app_launch_pid_in_app_id(getpid(), "foo"));
+	EXPECT_FALSE(upstart_app_launch_pid_in_app_id(5678, "foo"));
 }
 
 TEST_F(LibUAL, ApplicationList)
@@ -526,3 +527,131 @@ TEST_F(LibUAL, StartingResponses)
 	g_dbus_connection_remove_filter(session, filter);
 	g_object_unref(session);
 }
+
+TEST_F(LibUAL, AppIdTest)
+{
+	ASSERT_TRUE(upstart_app_launch_start_application("foo", NULL));
+	pause(50); /* Ensure all the events come through */
+	EXPECT_EQ("foo", this->last_focus_appid);
+	EXPECT_EQ("foo", this->last_resume_appid);
+}
+
+GDBusMessage *
+filter_func_good (GDBusConnection * conn, GDBusMessage * message, gboolean incomming, gpointer user_data)
+{
+	if (!incomming) {
+		return message;
+	}
+
+	if (g_strcmp0(g_dbus_message_get_path(message), (gchar *)user_data) == 0) {
+		GDBusMessage * reply = g_dbus_message_new_method_reply(message);
+		g_dbus_connection_send_message(conn, reply, G_DBUS_SEND_MESSAGE_FLAGS_NONE, NULL, NULL);
+		g_object_unref(message);
+		return NULL;
+	}
+
+	return message;
+}
+
+TEST_F(LibUAL, UrlSendTest)
+{
+	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	guint filter = g_dbus_connection_add_filter(session,
+		filter_func_good,
+		(gpointer)"/foo",
+		NULL);
+
+	const gchar * uris[] = {
+		"http://www.test.com",
+		NULL
+	};
+	ASSERT_TRUE(upstart_app_launch_start_application("foo", uris));
+	pause(100); /* Ensure all the events come through */
+
+	EXPECT_EQ("foo", this->last_focus_appid);
+	EXPECT_EQ("foo", this->last_resume_appid);
+
+	g_dbus_connection_remove_filter(session, filter);
+	g_object_unref(session);
+}
+
+TEST_F(LibUAL, UrlSendNoObjectTest)
+{
+	const gchar * uris[] = {
+		"http://www.test.com",
+		NULL
+	};
+
+	ASSERT_TRUE(upstart_app_launch_start_application("foo", uris));
+	pause(100); /* Ensure all the events come through */
+
+	EXPECT_EQ("foo", this->last_focus_appid);
+	EXPECT_EQ("foo", this->last_resume_appid);
+}
+
+TEST_F(LibUAL, UnityTimeoutTest)
+{
+	this->resume_timeout = 100;
+
+	ASSERT_TRUE(upstart_app_launch_start_application("foo", NULL));
+	pause(1000); /* Ensure all the events come through */
+	EXPECT_EQ("foo", this->last_focus_appid);
+	EXPECT_EQ("foo", this->last_resume_appid);
+}
+
+TEST_F(LibUAL, UnityTimeoutUriTest)
+{
+	this->resume_timeout = 200;
+
+	const gchar * uris[] = {
+		"http://www.test.com",
+		NULL
+	};
+
+	ASSERT_TRUE(upstart_app_launch_start_application("foo", uris));
+	pause(1000); /* Ensure all the events come through */
+	EXPECT_EQ("foo", this->last_focus_appid);
+	EXPECT_EQ("foo", this->last_resume_appid);
+}
+
+GDBusMessage *
+filter_respawn (GDBusConnection * conn, GDBusMessage * message, gboolean incomming, gpointer user_data)
+{
+	if (g_strcmp0(g_dbus_message_get_member(message), "UnityResumeResponse") == 0) {
+		g_object_unref(message);
+		return NULL;
+	}
+
+	return message;
+}
+
+TEST_F(LibUAL, UnityLostTest)
+{
+	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	guint filter = g_dbus_connection_add_filter(session,
+		filter_respawn,
+		NULL,
+		NULL);
+
+	guint start = g_get_monotonic_time();
+
+	const gchar * uris[] = {
+		"http://www.test.com",
+		NULL
+	};
+
+	ASSERT_TRUE(upstart_app_launch_start_application("foo", uris));
+
+	guint end = g_get_monotonic_time();
+
+	EXPECT_LT(end - start, 600 * 1000);
+
+	pause(1000); /* Ensure all the events come through */
+
+	EXPECT_EQ("foo", this->last_focus_appid);
+	EXPECT_EQ("foo", this->last_resume_appid);
+
+	g_dbus_connection_remove_filter(session, filter);
+	g_object_unref(session);
+}
+

@@ -429,7 +429,12 @@ second_exec (const gchar * app_id, const gchar * appuris)
 	}
 
 	/* Make sure the signal hits the bus */
-	g_dbus_connection_flush_sync(session, NULL, NULL);
+	g_dbus_connection_flush_sync(session, NULL, &error);
+	if (error != NULL) {
+		g_warning("Unable to flush session bus: %s", error->message);
+		g_error_free(error);
+		error = NULL;
+	}
 
 	/* Clean up */
 	if (app_data != NULL) {
