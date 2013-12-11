@@ -167,7 +167,7 @@ app_id_to_dbus_path (void)
 			continue;
 		}
 
-		g_string_append_printf(str, "_%2X", appid[i]);
+		g_string_append_printf(str, "_%2x", appid[i]);
 	}
 
 	dbus_path = g_string_free(str, FALSE);
