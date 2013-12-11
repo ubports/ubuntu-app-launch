@@ -98,6 +98,14 @@ class LibUAL : public ::testing::Test
 			DbusTestDbusMockObject * jobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, jobobj,
+				"Start",
+				G_VARIANT_TYPE("(asb)"),
+				NULL,
+				"if args[0][0] == 'APP_ID=foo':"
+				"    raise dbus.exceptions.DBusException('Foo running', name='com.ubuntu.Upstart0_6.Error.AlreadyStarted')",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, jobobj,
 				"Stop",
 				G_VARIANT_TYPE("(asb)"),
 				NULL,
@@ -235,35 +243,31 @@ class LibUAL : public ::testing::Test
 
 TEST_F(LibUAL, StartApplication)
 {
-	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", NULL));
-	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "EmitEvent", NULL, NULL), 1);
+	ASSERT_TRUE(upstart_app_launch_start_application("foolike", NULL));
+	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now look at the details of the call */
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", NULL));
+	ASSERT_TRUE(upstart_app_launch_start_application("foolike", NULL));
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "EmitEvent", &len, NULL);
-	ASSERT_NE(calls, nullptr);
-	ASSERT_EQ(len, 1);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
 
-	ASSERT_STREQ(calls->name, "EmitEvent");
-	ASSERT_EQ(g_variant_n_children(calls->params), 3);
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
 
-	GVariant * name = g_variant_get_child_value(calls->params, 0);
-	ASSERT_STREQ(g_variant_get_string(name, NULL), "application-start");
-	g_variant_unref(name);
-
-	GVariant * block = g_variant_get_child_value(calls->params, 2);
-	ASSERT_FALSE(g_variant_get_boolean(block));
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
 	g_variant_unref(block);
 
-	GVariant * env = g_variant_get_child_value(calls->params, 1);
-	ASSERT_TRUE(check_env(env, "APP_ID", "foo"));
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
 	g_variant_unref(env);
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
@@ -275,16 +279,16 @@ TEST_F(LibUAL, StartApplication)
 		"file:///home/phablet/test.txt",
 		NULL
 	};
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", urls));
+	ASSERT_TRUE(upstart_app_launch_start_application("foolike", urls));
 
 	len = 0;
-	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "EmitEvent", &len, NULL);
-	ASSERT_NE(calls, nullptr);
-	ASSERT_EQ(len, 1);
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
 
-	env = g_variant_get_child_value(calls->params, 1);
-	ASSERT_TRUE(check_env(env, "APP_ID", "foo"));
-	ASSERT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
+	env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
 	g_variant_unref(env);
 
 	return;
