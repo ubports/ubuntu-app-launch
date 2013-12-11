@@ -31,6 +31,24 @@ class LibUAL : public ::testing::Test
 		DbusTestService * service = NULL;
 		DbusTestDbusMock * mock = NULL;
 		GDBusConnection * bus = NULL;
+		std::string last_focus_appid;
+		std::string last_resume_appid;
+		guint resume_timeout = 0;
+
+	private:
+		static void focus_cb (const gchar * appid, gpointer user_data) {
+			LibUAL * _this = static_cast<LibUAL *>(user_data);
+			_this->last_focus_appid = appid;
+		}
+
+		static void resume_cb (const gchar * appid, gpointer user_data) {
+			LibUAL * _this = static_cast<LibUAL *>(user_data);
+			_this->last_resume_appid = appid;
+
+			if (_this->resume_timeout > 0) {
+				_this->pause(_this->resume_timeout);
+			}
+		}
 
 	protected:
 		/* Useful debugging stuff, but not on by default.  You really want to
@@ -135,9 +153,15 @@ class LibUAL : public ::testing::Test
 			bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 			g_dbus_connection_set_exit_on_close(bus, FALSE);
 			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
+
+			upstart_app_launch_observer_add_app_focus(focus_cb, this);
+			upstart_app_launch_observer_add_app_resume(resume_cb, this);
 		}
 
 		virtual void TearDown() {
+			upstart_app_launch_observer_delete_app_focus(focus_cb, this);
+			upstart_app_launch_observer_delete_app_resume(resume_cb, this);
+
 			g_clear_object(&mock);
 			g_clear_object(&service);
 
