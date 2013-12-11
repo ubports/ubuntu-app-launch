@@ -25,16 +25,19 @@
 #include "second-exec-core.h"
 #include "upstart-app-launch-trace.h"
 
-/* Globals */
-GPid app_pid = 0;
-GMainLoop * mainloop = NULL;
-guint connections_open = 0;
-const gchar * appid = NULL;
-const gchar * input_uris = NULL;
-GVariant * app_data = NULL;
-gchar * dbus_path = NULL;
-guint64 unity_starttime = 0;
-guint timer = 0;
+typedef struct {
+	GDBusConnection * bus;
+	gchar * appid;
+	gchar * input_uris;
+	GPid app_pid;
+	guint connections_open;
+	GVariant * app_data;
+	gchar * dbus_path;
+	guint64 unity_starttime;
+	guint timer;
+} second_exec_t;
+
+static void second_exec_complete (second_exec_t * data);
 
 /* Unity didn't respond in time, continue on */
 static gboolean
@@ -42,27 +45,27 @@ timer_cb (gpointer user_data)
 {
 	tracepoint(upstart_app_launch, second_exec_resume_timeout);
 	g_warning("Unity didn't respond in 500ms to resume the app");
-	g_main_loop_quit(mainloop);
+	second_exec_complete(user_data);
 	return G_SOURCE_REMOVE;
 }
 
 /* Lower the connection count and process if it gets to zero */
 static void
-connection_count_dec (void)
+connection_count_dec (second_exec_t * data)
 {
 	tracepoint(upstart_app_launch, second_exec_connection_complete);
-	connections_open--;
-	if (connections_open == 0) {
+	data->connections_open--;
+	if (data->connections_open == 0) {
 		g_debug("Finished finding connections");
 		/* Check time here, either we've already heard from
 		   Unity and we should send the data to the app (quit) or
 		   we should wait some more */
-		guint64 timespent = g_get_monotonic_time() - unity_starttime;
+		guint64 timespent = g_get_monotonic_time() - data->unity_starttime;
 		if (timespent > 500 /* ms */ * 1000 /* ms to us */) {
-			g_main_loop_quit(mainloop);
+			second_exec_complete(data);
 		} else {
 			g_debug("Timer Set");
-			timer = g_timeout_add(500 - (timespent / 1000), timer_cb, NULL);
+			data->timer = g_timeout_add(500 - (timespent / 1000), timer_cb, data);
 		}
 	}
 	return;
@@ -73,18 +76,20 @@ connection_count_dec (void)
 static void
 unity_resume_cb (GDBusConnection * connection, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
+	second_exec_t * data = (second_exec_t *)user_data;
 	g_debug("Unity Completed Resume");
 	tracepoint(upstart_app_launch, second_exec_resume_complete);
 
-	if (timer != 0) {
-		g_source_remove(timer);
+	if (data->timer != 0) {
+		g_source_remove(data->timer);
+		data->timer = 0;
 	}
 
-	if (connections_open == 0) {
-		g_main_loop_quit(mainloop);
+	if (data->connections_open == 0) {
+		second_exec_complete(data);
 	} else {
 		/* Make it look like we started *forever* ago */
-		unity_starttime = 0;
+		data->unity_starttime = 0;
 	}
 
 	return;
@@ -92,9 +97,9 @@ unity_resume_cb (GDBusConnection * connection, const gchar * sender, const gchar
 
 /* Turn the input string into something we can send to apps */
 static void
-parse_uris (void)
+parse_uris (second_exec_t * data)
 {
-	if (app_data != NULL) {
+	if (data->app_data != NULL) {
 		/* Already done */
 		return;
 	}
@@ -103,11 +108,11 @@ parse_uris (void)
 	gchar ** uri_split = NULL;
 	GError * error = NULL;
 
-	g_shell_parse_argv(input_uris, NULL, &uri_split, &error);
+	g_shell_parse_argv(data->input_uris, NULL, &uri_split, &error);
 
 	if (uri_split == NULL || uri_split[0] == NULL || error != NULL) {
 		if (error != NULL) {
-			g_warning("Unable to parse URLs '%s': %s", input_uris, error->message);
+			g_warning("Unable to parse URLs '%s': %s", data->input_uris, error->message);
 			g_error_free(error);
 		}
 
@@ -136,8 +141,8 @@ parse_uris (void)
 	g_variant_builder_add_value(&tuple, uris);
 	g_variant_builder_add_value(&tuple, platform);
 
-	app_data = g_variant_builder_end(&tuple);
-	g_variant_ref_sink(app_data);
+	data->app_data = g_variant_builder_end(&tuple);
+	g_variant_ref_sink(data->app_data);
 
 	return;
 }
@@ -149,29 +154,29 @@ parse_uris (void)
    http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#dbus   
 */
 static void
-app_id_to_dbus_path (void)
+app_id_to_dbus_path (second_exec_t * data)
 {
-	if (dbus_path != NULL) {
+	if (data->dbus_path != NULL) {
 		return;
 	}
 
-	GString * str = g_string_sized_new(strlen(appid) + 2); /* base case, we just need a / and a null */
+	GString * str = g_string_sized_new(strlen(data->appid) + 2); /* base case, we just need a / and a null */
 	g_string_append_c(str, '/');
 
 	int i;
-	for (i = 0; appid[i] != '\0'; i++) {
-		if ((appid[i] >= 'a' && appid[i] <= 'z') ||
-			(appid[i] >= 'A' && appid[i] <= 'Z') ||
-			(appid[i] >= '0' && appid[i] <= '9' && i != 0)) {
-			g_string_append_c(str, appid[i]);
+	for (i = 0; data->appid[i] != '\0'; i++) {
+		if ((data->appid[i] >= 'a' && data->appid[i] <= 'z') ||
+			(data->appid[i] >= 'A' && data->appid[i] <= 'Z') ||
+			(data->appid[i] >= '0' && data->appid[i] <= '9' && i != 0)) {
+			g_string_append_c(str, data->appid[i]);
 			continue;
 		}
 
-		g_string_append_printf(str, "_%2x", appid[i]);
+		g_string_append_printf(str, "_%2x", data->appid[i]);
 	}
 
-	dbus_path = g_string_free(str, FALSE);
-	g_debug("DBus Path: %s", dbus_path);
+	data->dbus_path = g_string_free(str, FALSE);
+	g_debug("DBus Path: %s", data->dbus_path);
 
 	return;
 }
@@ -193,43 +198,48 @@ send_open_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 		g_error_free(error);
 	}
 
-	connection_count_dec();
+	connection_count_dec(user_data);
 	return;
 }
 
 /* Sends the Open message to the connection with the URIs we were given */
 static void
-contact_app (GDBusConnection * bus, const gchar * dbus_name)
+contact_app (GDBusConnection * bus, const gchar * dbus_name, second_exec_t * data)
 {
 	tracepoint(upstart_app_launch, second_exec_contact_app);
 
-	parse_uris();
-	app_id_to_dbus_path();
+	parse_uris(data);
+	app_id_to_dbus_path(data);
 
 	/* Using the FD.o Application interface */
 	g_dbus_connection_call(bus,
 		dbus_name,
-		dbus_path,
+		data->dbus_path,
 		"org.freedesktop.Application",
 		"Open",
-		app_data,
+		data->app_data,
 		NULL,
 		G_DBUS_CALL_FLAGS_NONE,
 		-1,
 		NULL,
-		send_open_cb, NULL);
+		send_open_cb, data);
 
 	g_debug("Sending Open request to: %s", dbus_name);
 
 	return;
 }
 
+typedef struct {
+	gchar * name;
+	second_exec_t * data;
+} get_pid_t;
+
 /* Gets the PID for a connection, and if it matches the one we're looking
    for then it tries to send a message to that connection */
 static void
 get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 {
-	gchar * dbus_name = (gchar *)user_data;
+	get_pid_t * data = (get_pid_t *)user_data;
 	GError * error = NULL;
 	GVariant * vpid = NULL;
 
@@ -238,12 +248,15 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 	vpid = g_dbus_connection_call_finish(G_DBUS_CONNECTION(object), res, &error);
 
 	if (error != NULL) {
-		g_warning("Unable to query PID for dbus name '%s': %s", dbus_name, error->message);
+		g_warning("Unable to query PID for dbus name '%s': %s", data->name, error->message);
 		g_error_free(error);
-		g_free(dbus_name);
 
 		/* Lowering the connection count, this one is terminal, even if in error */
-		connection_count_dec();
+		connection_count_dec(data->data);
+
+		g_free(data->name);
+		g_free(data);
+
 		return;
 	}
 
@@ -251,22 +264,23 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 	g_variant_get(vpid, "(u)", &pid);
 	g_variant_unref(vpid);
 
-	if (pid == app_pid) {
+	if (pid == data->data->app_pid) {
 		/* Trying to send a message to the connection */
-		contact_app(G_DBUS_CONNECTION(object), dbus_name);
+		contact_app(G_DBUS_CONNECTION(object), data->name, data->data);
 	} else {
 		/* See if we can quit now */
-		connection_count_dec();
+		connection_count_dec(data->data);
 	}
 
-	g_free(dbus_name);
+	g_free(data->name);
+	g_free(data);
 
 	return;
 }
 
 /* Starts to look for the PID and the connections for that PID */
 void
-find_appid_pid (GDBusConnection * session)
+find_appid_pid (GDBusConnection * session, second_exec_t * data)
 {
 	GError * error = NULL;
 
@@ -298,13 +312,13 @@ find_appid_pid (GDBusConnection * session)
 	/* NOTE: We're getting the PID *after* the list of connections so
 	   that some new process can't come in, be the same PID as it's
 	   connection will not be in teh list we just got. */
-	app_pid = upstart_app_launch_get_primary_pid(appid);
-	if (app_pid == 0) {
-		g_warning("Unable to find pid for app id '%s'", appid);
+	data->app_pid = upstart_app_launch_get_primary_pid(data->appid);
+	if (data->app_pid == 0) {
+		g_warning("Unable to find pid for app id '%s'", data->appid);
 		return;
 	}
 
-	g_debug("Primary PID: %d", app_pid);
+	g_debug("Primary PID: %d", data->app_pid);
 	tracepoint(upstart_app_launch, second_exec_got_primary_pid);
 
 	/* Get the names */
@@ -318,6 +332,10 @@ find_appid_pid (GDBusConnection * session)
 		if (!g_dbus_is_unique_name(name)) {
 			continue;
 		}
+		
+		get_pid_t * pid_data = g_new0(get_pid_t, 1);
+		pid_data->data = data;
+		pid_data->name = g_strdup(name);
 
 		tracepoint(upstart_app_launch, second_exec_request_pid);
 
@@ -332,9 +350,9 @@ find_appid_pid (GDBusConnection * session)
 			G_DBUS_CALL_FLAGS_NONE,
 			-1,
 			NULL,
-			get_pid_cb, g_strdup(name));
+			get_pid_cb, pid_data);
 
-		connections_open++;
+		data->connections_open++;
 	}
 
 	g_variant_unref(names);
@@ -346,9 +364,6 @@ find_appid_pid (GDBusConnection * session)
 gboolean
 second_exec (const gchar * app_id, const gchar * appuris)
 {
-	appid = app_id;
-	input_uris = appuris;
-
 	tracepoint(upstart_app_launch, second_exec_start);
 
 	/* DBus tell us! */
@@ -360,8 +375,11 @@ second_exec (const gchar * app_id, const gchar * appuris)
 		return FALSE;
 	}
 
-	/* Allocate main loop */
-	mainloop = g_main_loop_new(NULL, FALSE);
+	/* Setup our continuation data */
+	second_exec_t * data = g_new0(second_exec_t, 1);
+	data->appid = g_strdup(app_id);
+	data->input_uris = g_strdup(appuris);
+	data->bus = session;
 
 	/* Set up listening for the unfrozen signal from Unity */
 	g_dbus_connection_signal_subscribe(session,
@@ -369,9 +387,9 @@ second_exec (const gchar * app_id, const gchar * appuris)
 		"com.canonical.UpstartAppLaunch", /* interface */
 		"UnityResumeResponse", /* signal */
 		"/", /* path */
-		appid, /* arg0 */
+		app_id, /* arg0 */
 		G_DBUS_SIGNAL_FLAGS_NONE,
-		unity_resume_cb, mainloop,
+		unity_resume_cb, data,
 		NULL); /* user data destroy */
 
 	g_debug("Sending resume request");
@@ -383,43 +401,49 @@ second_exec (const gchar * app_id, const gchar * appuris)
 		"/", /* path */
 		"com.canonical.UpstartAppLaunch", /* interface */
 		"UnityResumeRequest", /* signal */
-		g_variant_new("(s)", appid),
+		g_variant_new("(s)", app_id),
 		&error);
 
 	/* Now we start a race, we try to get to the point of knowing who
 	   to send things to, and Unity is unfrezing it.  When both are
 	   done we can send something to the app */
-	unity_starttime = g_get_monotonic_time();
+	data->unity_starttime = g_get_monotonic_time();
 
 	if (error != NULL) {
 		/* On error let's not wait for Unity */
 		g_warning("Unable to signal Unity: %s", error->message);
 		g_error_free(error);
 		error = NULL;
-		unity_starttime = 0;
+		data->unity_starttime = 0;
 	}
 
 	/* If we've got something to give out, start looking for how */
-	if (input_uris != NULL) {
-		find_appid_pid(session);
+	if (data->input_uris != NULL) {
+		find_appid_pid(session, data);
 	}
 
 	/* Loop and wait for everything to align */
-	if (connections_open > 0 || unity_starttime > 0) {
-		g_main_loop_run(mainloop);
+	if (data->connections_open == 0 && data->unity_starttime == 0) {
+		second_exec_complete(data);
 	}
-	g_debug("Finishing main loop");
 
+	return TRUE;
+}
+
+static void
+second_exec_complete (second_exec_t * data)
+{
+	GError * error = NULL;
 	tracepoint(upstart_app_launch, second_exec_emit_focus);
 
 	/* Now that we're done sending the info to the app, we can ask
 	   Unity to focus the application. */
-	g_dbus_connection_emit_signal(session,
+	g_dbus_connection_emit_signal(data->bus,
 		NULL, /* destination */
 		"/", /* path */
 		"com.canonical.UpstartAppLaunch", /* interface */
 		"UnityFocusRequest", /* signal */
-		g_variant_new("(s)", appid),
+		g_variant_new("(s)", data->appid),
 		&error);
 
 	if (error != NULL) {
@@ -429,7 +453,7 @@ second_exec (const gchar * app_id, const gchar * appuris)
 	}
 
 	/* Make sure the signal hits the bus */
-	g_dbus_connection_flush_sync(session, NULL, &error);
+	g_dbus_connection_flush_sync(data->bus, NULL, &error);
 	if (error != NULL) {
 		g_warning("Unable to flush session bus: %s", error->message);
 		g_error_free(error);
@@ -437,16 +461,15 @@ second_exec (const gchar * app_id, const gchar * appuris)
 	}
 
 	/* Clean up */
-	if (app_data != NULL) {
-		g_variant_unref(app_data);
-		app_data = NULL;
-	}
-
-	g_main_loop_unref(mainloop);
-	g_object_unref(session);
-	g_clear_pointer(&dbus_path, g_free);
+	g_object_unref(data->bus);
+	if (data->app_data != NULL)
+		g_variant_unref(data->app_data);
+	g_free(data->appid);
+	g_free(data->input_uris);
+	g_free(data->dbus_path);
+	g_free(data);
 
 	tracepoint(upstart_app_launch, second_exec_finish);
 
-	return TRUE;
+	return;
 }
