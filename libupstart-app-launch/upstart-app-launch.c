@@ -214,9 +214,9 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 
 	if (uris != NULL) {
 		gchar * urisjoin = app_uris_string(uris);
-		app_start_data->uris = g_strdup_printf("APP_URIS=%s", urisjoin);
-		g_variant_builder_add_value(&builder, g_variant_new_string(app_start_data->uris));
-		g_free(urisjoin);
+		gchar * urienv = g_strdup_printf("APP_URIS=%s", urisjoin);
+		app_start_data->uris = urisjoin;
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(urienv));
 	}
 
 	if (!click) {
