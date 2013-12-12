@@ -26,6 +26,7 @@ set(LAUNCHER_SOURCES
 upstart-app-launch.c
 second-exec-core.c
 upstart-app-launch-trace.c
+"${CMAKE_SOURCE_DIR}/helpers-keyfile.c"
 )
 
 add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
@@ -42,7 +43,6 @@ target_link_libraries(upstart-launcher
 	${LIBUPSTART_LIBRARIES}
 	${GIO2_LIBRARIES}
 	${LTTNG_LIBRARIES}
-	helpers
 	-Wl,--no-undefined
 )
 
