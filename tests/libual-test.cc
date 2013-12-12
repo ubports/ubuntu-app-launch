@@ -72,6 +72,8 @@ class LibUAL : public ::testing::Test
 			g_setenv("UPSTART_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
 			g_free(linkfarmpath);
 
+			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+
 			service = dbus_test_service_new(NULL);
 
 			debugConnection();
@@ -136,6 +138,13 @@ class LibUAL : public ::testing::Test
 			g_free(process_var);
 
 			DbusTestDbusMockObject * ljobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, ljobobj,
+				"Start",
+				G_VARIANT_TYPE("(asb)"),
+				NULL,
+				"",
+				NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, ljobobj,
 				"Stop",
@@ -655,3 +664,50 @@ TEST_F(LibUAL, UnityLostTest)
 	g_object_unref(session);
 }
 
+
+TEST_F(LibUAL, LegacySingleInstance)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	/* Check for a single-instance app */
+	ASSERT_TRUE(upstart_app_launch_start_application("single", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "single"));
+	EXPECT_TRUE(check_env(env, "INSTANCE_ID", ""));
+	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Check for a multi-instance app */
+	ASSERT_TRUE(upstart_app_launch_start_application("multiple", NULL));
+
+	len = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "multiple"));
+	EXPECT_FALSE(check_env(env, "INSTANCE_ID", ""));
+	g_variant_unref(env);
+}
