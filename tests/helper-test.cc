@@ -38,6 +38,7 @@ class HelperTest : public ::testing::Test
 			g_setenv("PATH", newpath, TRUE);
 			g_free(newpath);
 			g_setenv("DATA_WRITE_DIR", CMAKE_BINARY_DIR, TRUE);
+			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			return;
 		}
 };
