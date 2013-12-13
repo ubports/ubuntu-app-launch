@@ -23,7 +23,7 @@
 static gboolean
 watchdog_timeout (gpointer user_data)
 {
-	g_error("Watchdog triggered, took too long to submit into Zeitgeist Database!");
+	g_warning("Watchdog triggered, took too long to submit into Zeitgeist Database!");
 	g_main_loop_quit((GMainLoop *)user_data);
 
 	return G_SOURCE_REMOVE;
