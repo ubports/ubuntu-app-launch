@@ -84,7 +84,7 @@ main (int argc, char * argv[])
 	GMainLoop * main_loop = g_main_loop_new(NULL, FALSE);
 
 	zeitgeist_log_insert_event(log, event, NULL, insert_complete, main_loop);
-	g_timeout_add_seconds(4, watchdog_timeout, main_loop);
+	g_timeout_add_seconds(2, watchdog_timeout, main_loop);
 
 	g_main_loop_run(main_loop);
 
