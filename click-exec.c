@@ -72,7 +72,6 @@ main (int argc, char * argv[])
 
 	/* Check click to find out where the files are */
 	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
-	g_free(package);
 
 	gchar * output = NULL;
 	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
@@ -90,12 +89,14 @@ main (int argc, char * argv[])
 		g_warning("Unable to get the package directory from click: %s", error->message);
 		g_error_free(error);
 		g_free(output); /* Probably not set, but just in case */
+		g_free(package);
 		return 1;
 	}
 
 	if (!g_file_test(output, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("Application directory '%s' doesn't exist", output);
 		g_free(output);
+		g_free(package);
 		return 1;
 	}
 
@@ -107,7 +108,10 @@ main (int argc, char * argv[])
 	tracepoint(upstart_app_launch, click_configured_env);
 
 	gchar * desktopfile = manifest_to_desktop(output, app_id);
+
 	g_free(output);
+	g_free(package);
+
 	if (desktopfile == NULL) {
 		g_warning("Desktop file unable to be found");
 		return 1;
