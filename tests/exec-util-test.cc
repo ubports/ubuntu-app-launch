@@ -30,9 +30,25 @@ class ExecUtil : public ::testing::Test
 
 	protected:
 		virtual void SetUp() {
+			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
+			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+			const gchar * oldpath = g_getenv("PATH");
+			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
+			g_setenv("PATH", newpath, TRUE);
+			g_free(newpath);
+
 			service = dbus_test_service_new(NULL);
 
 			mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
+
+			DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, obj,
+				"SetEnv",
+				G_VARIANT_TYPE("(assb)"),
+				NULL,
+				"",
+				NULL);
 
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
 			dbus_test_service_start_tasks(service);
@@ -59,7 +75,92 @@ class ExecUtil : public ::testing::Test
 		}
 };
 
-TEST_F(ExecUtil, Dummy)
+TEST_F(ExecUtil, ClickExec)
 {
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
+	g_setenv("APP_ID", "com.test.good_application_1.2.3", TRUE);
+
+	g_spawn_command_line_sync(CLICK_EXEC_TOOL, NULL, NULL, NULL, NULL);
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+
+	ASSERT_EQ(11, len);
+	ASSERT_NE(nullptr, calls);
+
+	unsigned int i;
+
+	bool got_app_isolation = false;
+	bool got_cache_home = false;
+	bool got_config_home = false;
+	bool got_data_home = false;
+	bool got_runtime_dir = false;
+	bool got_data_dirs = false;
+	bool got_temp_dir = false;
+	bool got_shader_dir = false;
+	bool got_app_dir = false;
+	bool got_app_exec = false;
+	bool got_app_desktop = false;
+
+	for (i = 0; i < len; i++) {
+		EXPECT_STREQ("SetEnv", calls[i].name);
+
+		GVariant * envvar = g_variant_get_child_value(calls[i].params, 1);
+		gchar * var = g_variant_dup_string(envvar, NULL);
+		g_variant_unref(envvar);
+
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "UBUNTU_APPLICATION_ISOLATION") == 0) {
+			EXPECT_STREQ("1", value);
+			got_app_isolation = true;
+		} else if (g_strcmp0(var, "XDG_CACHE_HOME") == 0) {
+			got_cache_home = true;
+		} else if (g_strcmp0(var, "XDG_CONFIG_HOME") == 0) {
+			got_config_home = true;
+		} else if (g_strcmp0(var, "XDG_DATA_HOME") == 0) {
+			got_data_home = true;
+		} else if (g_strcmp0(var, "XDG_RUNTIME_DIR") == 0) {
+			got_runtime_dir = true;
+		} else if (g_strcmp0(var, "XDG_DATA_DIRS") == 0) {
+			EXPECT_TRUE(g_str_has_prefix(value, CMAKE_SOURCE_DIR "/click-app-dir:"));
+			got_data_dirs = true;
+		} else if (g_strcmp0(var, "TMPDIR") == 0) {
+			EXPECT_TRUE(g_str_has_suffix(value, "com.test.good"));
+			got_temp_dir = true;
+		} else if (g_strcmp0(var, "__GL_SHADER_DISK_CACHE_PATH") == 0) {
+			EXPECT_TRUE(g_str_has_suffix(value, "com.test.good"));
+			got_shader_dir = true;
+		} else if (g_strcmp0(var, "APP_DIR") == 0) {
+			EXPECT_STREQ(CMAKE_SOURCE_DIR "/click-app-dir", value);
+			got_app_dir = true;
+		} else if (g_strcmp0(var, "APP_EXEC") == 0) {
+			EXPECT_STREQ("foo", value);
+			got_app_exec = true;
+		} else if (g_strcmp0(var, "APP_DESKTOP_FILE") == 0) {
+			got_app_desktop = true;
+		} else {
+			g_warning("Unknown variable! %s", var);
+			EXPECT_TRUE(false);
+		}
+
+		g_free(var);
+	}
+
+	EXPECT_TRUE(got_app_isolation);
+	EXPECT_TRUE(got_cache_home);
+	EXPECT_TRUE(got_config_home);
+	EXPECT_TRUE(got_data_home);
+	EXPECT_TRUE(got_runtime_dir);
+	EXPECT_TRUE(got_data_dirs);
+	EXPECT_TRUE(got_temp_dir);
+	EXPECT_TRUE(got_shader_dir);
+	EXPECT_TRUE(got_app_dir);
+	EXPECT_TRUE(got_app_exec);
+	EXPECT_TRUE(got_app_desktop);
 }
