@@ -14,7 +14,7 @@ add_library (gtest STATIC
 add_executable (helper-test helper-test.cc)
 add_definitions ( -DCMAKE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}" )
 add_definitions ( -DCMAKE_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}" )
-target_link_libraries (helper-test helpers gtest ${GTEST_LIBS})
+target_link_libraries (helper-test helpers gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES})
 
 add_test (helper-test helper-test)
 
