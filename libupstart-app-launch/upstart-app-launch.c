@@ -22,6 +22,10 @@
 #include <gio/gio.h>
 #include <string.h>
 
+#include "upstart-app-launch-trace.h"
+#include "second-exec-core.h"
+#include "../helpers.h"
+
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 
@@ -45,14 +49,19 @@ app_uris_string (const gchar * const * uris)
 	return urisjoin;
 }
 
+typedef struct {
+	gchar * appid;
+	gchar * uris;
+} app_start_t;
+
 static void
 application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 {
-	gchar * appid = (gchar *)user_data;
+	app_start_t * data = (app_start_t *)user_data;
 	GError * error = NULL;
 	GVariant * result = NULL;
 
-	g_debug("Application Started: %s", appid);
+	g_debug("Started Message Callback: %s", data->appid);
 
 	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
@@ -60,62 +69,35 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 		g_variant_unref(result);
 	
 	if (error != NULL) {
-		g_warning("Unable to emit event to start application: %s", error->message);
+		if (g_dbus_error_is_remote_error(error)) {
+			gchar * remote_error = g_dbus_error_get_remote_error(error);
+			g_debug("Remote error: %s", remote_error);
+			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
+				second_exec(data->appid, data->uris);
+			}
+		} else {
+			g_warning("Unable to emit event to start application: %s", error->message);
+		}
 		g_error_free(error);
 	}
 
-	g_free(appid);
+	g_free(data->appid);
+	g_free(data->uris);
+	g_free(data);
 }
 
-gboolean
-upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+/* Get the path of the job from Upstart, if we've got it already, we'll just
+   use the cache of the value */
+const gchar *
+get_jobpath (GDBusConnection * con, const gchar * jobname)
 {
-	g_return_val_if_fail(appid != NULL, FALSE);
+	gchar * cachepath = g_strdup_printf("upstart-app-lauch-job-path-cache-%s", jobname);
+	gpointer cachedata = g_object_get_data(G_OBJECT(con), cachepath);
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
-
-	GVariantBuilder builder;
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-	g_variant_builder_add_value(&builder, g_variant_new_string("application-start"));
-
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
-
-	if (uris != NULL) {
-		gchar * env_uris = NULL;
-		gchar * urisjoin = app_uris_string(uris);
-		env_uris = g_strdup_printf("APP_URIS=%s", urisjoin);
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(env_uris));
-		g_free(urisjoin);
+	if (cachedata != NULL) {
+		g_free(cachepath);
+		return cachedata;
 	}
-
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
-
-	g_dbus_connection_call(con,
-	                       DBUS_SERVICE_UPSTART,
-	                       DBUS_PATH_UPSTART,
-	                       DBUS_INTERFACE_UPSTART,
-	                       "EmitEvent",
-	                       g_variant_builder_end(&builder),
-	                       NULL,
-	                       G_DBUS_CALL_FLAGS_NONE,
-	                       -1,
-	                       NULL, /* cancelable */
-	                       application_start_cb,
-	                       g_strdup(appid));
-
-	g_object_unref(con);
-
-	return TRUE;
-}
-
-static void
-stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, const gchar * instanceid)
-{
-	g_debug("Stopping job %s app_id %s instance_id %s", jobname, appname, instanceid);
 
 	GError * error = NULL;
 	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
@@ -133,11 +115,149 @@ stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, c
 	if (error != NULL) {	
 		g_warning("Unable to find job '%s': %s", jobname, error->message);
 		g_error_free(error);
-		return;
+		g_free(cachepath);
+		return NULL;
 	}
 
-	const gchar * job_path = NULL;
-	g_variant_get(job_path_variant, "(&o)", &job_path);
+	gchar * job_path = NULL;
+	g_variant_get(job_path_variant, "(o)", &job_path);
+	g_variant_unref(job_path_variant);
+
+	g_object_set_data_full(G_OBJECT(con), cachepath, job_path, g_free);
+	g_free(cachepath);
+
+	return job_path;
+}
+
+/* Check to see if a legacy app wants us to manage whether they're
+   single instance or not */
+gboolean
+legacy_single_instance (const gchar * appid)
+{
+	tracepoint(upstart_app_launch, desktop_single_start);
+
+	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
+
+	if (keyfile == NULL) {
+		g_error("Unable to find keyfile for application '%s'", appid);
+		return FALSE;
+	}
+
+	tracepoint(upstart_app_launch, desktop_single_found);
+
+	gboolean singleinstance = FALSE;
+
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", NULL)) {
+		GError * error = NULL;
+
+		singleinstance = g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", &error);
+
+		if (error != NULL) {
+			g_warning("Unable to get single instance key for app '%s': %s", appid, error->message);
+			g_error_free(error);
+			/* Ensure that if we got an error, we assume standard case */
+			singleinstance = FALSE;
+		}
+	}
+	
+	g_key_file_free(keyfile);
+
+	tracepoint(upstart_app_launch, desktop_single_finished);
+
+	return singleinstance;
+}
+
+gboolean
+upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+{
+	g_return_val_if_fail(appid != NULL, FALSE);
+
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	/* Determine whether it's a click package by looking for the symlink
+	   that is created by the desktop hook */
+	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
+	gchar * click_link = NULL;
+	const gchar * link_farm_dir = g_getenv("UPSTART_APP_LAUNCH_LINK_FARM");
+	if (G_LIKELY(link_farm_dir == NULL)) {
+		click_link = g_build_filename(g_get_home_dir(), ".cache", "upstart-app-launch", "desktop", appiddesktop, NULL);
+	} else {
+		click_link = g_build_filename(link_farm_dir, appiddesktop, NULL);
+	}
+	g_free(appiddesktop);
+	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
+	g_free(click_link);
+
+	/* Figure out the DBus path for the job */
+	const gchar * jobpath = NULL;
+	if (click) {
+		jobpath = get_jobpath(con, "application-click");
+	} else {
+		jobpath = get_jobpath(con, "application-legacy");
+	}
+
+	if (jobpath == NULL)
+		return FALSE;
+
+	/* Callback data */
+	app_start_t * app_start_data = g_new0(app_start_t, 1);
+	app_start_data->appid = g_strdup(appid);
+
+	/* Build up our environment */
+	GVariantBuilder builder;
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
+
+	if (uris != NULL) {
+		gchar * urisjoin = app_uris_string(uris);
+		gchar * urienv = g_strdup_printf("APP_URIS=%s", urisjoin);
+		app_start_data->uris = urisjoin;
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(urienv));
+	}
+
+	if (!click) {
+		if (legacy_single_instance(appid)) {
+			g_variant_builder_add_value(&builder, g_variant_new_string("INSTANCE_ID="));
+		} else {
+			gchar * instanceid = g_strdup_printf("INSTANCE_ID=%" G_GUINT64_FORMAT, g_get_real_time());
+			g_variant_builder_add_value(&builder, g_variant_new_take_string(instanceid));
+		}
+	}
+
+	g_variant_builder_close(&builder);
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+	
+	/* Call the job start function */
+	g_dbus_connection_call(con,
+	                       DBUS_SERVICE_UPSTART,
+	                       jobpath,
+	                       DBUS_INTERFACE_UPSTART_JOB,
+	                       "Start",
+	                       g_variant_builder_end(&builder),
+	                       NULL,
+	                       G_DBUS_CALL_FLAGS_NONE,
+	                       -1,
+	                       NULL, /* cancelable */
+	                       application_start_cb,
+	                       app_start_data);
+
+	g_object_unref(con);
+
+	return TRUE;
+}
+
+static void
+stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, const gchar * instanceid)
+{
+	g_debug("Stopping job %s app_id %s instance_id %s", jobname, appname, instanceid);
+
+	const gchar * job_path = get_jobpath(con, jobname);
+	if (job_path == NULL)
+		return;
 
 	GVariantBuilder builder;
 	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
@@ -154,6 +274,7 @@ stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, c
 	g_variant_builder_close(&builder);
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
 
+	GError * error = NULL;
 	GVariant * stop_variant = g_dbus_connection_call_sync(con,
 		DBUS_SERVICE_UPSTART,
 		job_path,
@@ -171,7 +292,6 @@ stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, c
 		g_error_free(error);
 	}
 
-	g_variant_unref(job_path_variant);
 	g_variant_unref(stop_variant);
 }
 
@@ -536,28 +656,11 @@ typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict
 static void
 foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance_func_t func, gpointer user_data)
 {
-	GError * error = NULL;
-	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
-		DBUS_SERVICE_UPSTART,
-		DBUS_PATH_UPSTART,
-		DBUS_INTERFACE_UPSTART,
-		"GetJobByName",
-		g_variant_new("(s)", jobname),
-		G_VARIANT_TYPE("(o)"),
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout: default */
-		NULL, /* cancelable */
-		&error);
-
-	if (error != NULL) {	
-		g_warning("Unable to find job '%s': %s", jobname, error->message);
-		g_error_free(error);
+	const gchar * job_path = get_jobpath(con, jobname);
+	if (job_path == NULL)
 		return;
-	}
 
-	const gchar * job_path = NULL;
-	g_variant_get(job_path_variant, "(&o)", &job_path);
-
+	GError * error = NULL;
 	GVariant * instance_tuple = g_dbus_connection_call_sync(con,
 		DBUS_SERVICE_UPSTART,
 		job_path,
@@ -570,7 +673,6 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 		NULL, /* cancelable */
 		&error);
 
-	g_variant_unref(job_path_variant);
 	if (error != NULL) {
 		g_warning("Unable to get instances of job '%s': %s", jobname, error->message);
 		g_error_free(error);
