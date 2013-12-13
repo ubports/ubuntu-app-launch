@@ -164,3 +164,57 @@ TEST_F(ExecUtil, ClickExec)
 	EXPECT_TRUE(got_app_exec);
 	EXPECT_TRUE(got_app_desktop);
 }
+
+TEST_F(ExecUtil, DesktopExec)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+	g_setenv("APP_ID", "foo", TRUE);
+
+	g_spawn_command_line_sync(DESKTOP_EXEC_TOOL, NULL, NULL, NULL, NULL);
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+
+	ASSERT_EQ(3, len);
+	ASSERT_NE(nullptr, calls);
+
+	unsigned int i;
+
+	bool got_app_exec = false;
+	bool got_app_desktop = false;
+	bool got_app_exec_policy = false;
+
+	for (i = 0; i < len; i++) {
+		EXPECT_STREQ("SetEnv", calls[i].name);
+
+		GVariant * envvar = g_variant_get_child_value(calls[i].params, 1);
+		gchar * var = g_variant_dup_string(envvar, NULL);
+		g_variant_unref(envvar);
+
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "APP_EXEC") == 0) {
+			EXPECT_STREQ("foo", value);
+			got_app_exec = true;
+		} else if (g_strcmp0(var, "APP_DESKTOP_FILE") == 0) {
+			got_app_desktop = true;
+		} else if (g_strcmp0(var, "APP_EXEC_POLICY") == 0) {
+			EXPECT_STREQ("unconfined", value);
+			got_app_exec_policy = true;
+		} else {
+			g_warning("Unknown variable! %s", var);
+			EXPECT_TRUE(false);
+		}
+
+		g_free(var);
+	}
+
+	EXPECT_TRUE(got_app_exec);
+	EXPECT_TRUE(got_app_desktop);
+	EXPECT_TRUE(got_app_exec_policy);
+}
