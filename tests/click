@@ -1,3 +1,10 @@
 #!/bin/bash
 
-/bin/cat "${XDG_DATA_DIRS}/click-app-dir/.click/info/${2}.manifest"
+if [ ${1} == "info" ] ; then
+	/bin/cat "${XDG_DATA_DIRS}/click-app-dir/.click/info/${2}.manifest"
+else if [ ${2} == "pkgdir" ] ; then
+	echo "${XDG_DATA_DIRS}/click-app-dir"
+else
+	exit 1
+fi
+fi
