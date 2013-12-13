@@ -44,6 +44,16 @@ main (int argc, char * argv[])
 	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
 	tracepoint(upstart_app_launch, desktop_start);
 
+	/* Ensure we keep one connection open to the bus for the entire
+	   script even though different people need it throughout */
+	GError * error = NULL;
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	if (error != NULL) {
+		g_error("Unable to get session bus: %s", error->message);
+		g_error_free(error);
+		return 1;
+	}
+
 	handshake_t * handshake = starting_handshake_start(app_id);
 	if (handshake == NULL) {
 		g_warning("Unable to setup starting handshake");
@@ -96,6 +106,8 @@ main (int argc, char * argv[])
 	starting_handshake_wait(handshake);
 
 	tracepoint(upstart_app_launch, desktop_handshake_complete);
+
+	g_object_unref(bus);
 
 	return 0;
 }
