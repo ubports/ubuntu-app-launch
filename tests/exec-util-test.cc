@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include <libdbustest/dbus-test.h>
 #include <gio/gio.h>
+#include <libupstart-app-launch/upstart-app-launch.h>
 
 class ExecUtil : public ::testing::Test
 {
@@ -29,6 +30,10 @@ class ExecUtil : public ::testing::Test
 		GDBusConnection * bus = NULL;
 
 	protected:
+		static void starting_cb (const gchar * appid, gpointer user_data) {
+			g_debug("I'm too sexy to callback");
+		}
+
 		virtual void SetUp() {
 			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
@@ -56,9 +61,14 @@ class ExecUtil : public ::testing::Test
 			bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 			g_dbus_connection_set_exit_on_close(bus, FALSE);
 			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
+
+			/* Make the handshake clear faster */
+			upstart_app_launch_observer_add_app_starting(starting_cb, NULL);
 		}
 
 		virtual void TearDown() {
+			upstart_app_launch_observer_delete_app_starting(starting_cb, NULL);
+
 			g_clear_object(&mock);
 			g_clear_object(&service);
 
