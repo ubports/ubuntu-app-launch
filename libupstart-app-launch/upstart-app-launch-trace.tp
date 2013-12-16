@@ -1,9 +1,36 @@
 
-TRACEPOINT_EVENT(upstart_app_launch, libual_start, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, libual_determine_type, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, libual_job_path_determined, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_sent, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_callback, TP_ARGS(0), TP_FIELDS())
+TRACEPOINT_EVENT(upstart_app_launch, libual_start,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, libual_determine_type,
+	TP_ARGS(const char *, appid, const char *, type),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(type, type)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, libual_job_path_determined,
+	TP_ARGS(const char *, appid, const char *, job_path),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(job_path, job_path)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_sent,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_callback,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
 
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_start, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_emit_resume, TP_ARGS(0), TP_FIELDS())
