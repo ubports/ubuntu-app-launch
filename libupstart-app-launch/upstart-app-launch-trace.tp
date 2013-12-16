@@ -1,20 +1,152 @@
 
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_start, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_emit_resume, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_resume_complete, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_resume_timeout, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_emit_focus, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_finish, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_got_dbus_names, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_got_primary_pid, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_request_pid, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_got_pid, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_contact_app, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_app_contacted, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_app_error, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, second_exec_connection_complete, TP_ARGS(0), TP_FIELDS())
+/*******************************
+  LibUAL start function
+ *******************************/
+TRACEPOINT_EVENT(upstart_app_launch, libual_start,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, libual_determine_type,
+	TP_ARGS(const char *, appid, const char *, type),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(type, type)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, libual_job_path_determined,
+	TP_ARGS(const char *, appid, const char *, job_path),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(job_path, job_path)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_sent,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_callback,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
 
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_start, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_found, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_finished, TP_ARGS(0), TP_FIELDS())
+/*******************************
+  Second Exec tracking
+ *******************************/
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_start,
+	TP_ARGS(const char *, appid, const char *, appuris),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(appuris, appuris)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_emit_resume,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_resume_complete,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_resume_timeout,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_emit_focus,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_finish,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_got_dbus_names,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_got_primary_pid,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_request_pid,
+	TP_ARGS(const char *, appid, const char *, dbus_name),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(dbus_name, dbus_name)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_got_pid,
+	TP_ARGS(const char *, appid, const char *, dbus_name),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(dbus_name, dbus_name)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_contact_app,
+	TP_ARGS(const char *, appid, const char *, dbus_name),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(dbus_name, dbus_name)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_app_contacted,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_app_error,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, second_exec_connection_complete,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+
+/*******************************
+  Desktop File Single Instance
+ *******************************/
+TRACEPOINT_EVENT(upstart_app_launch, desktop_single_start,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, desktop_single_found,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, desktop_single_finished,
+	TP_ARGS(const char *, appid, const char *, apptype),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(apptype, apptype)
+	)
+)
 
