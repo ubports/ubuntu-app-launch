@@ -36,6 +36,24 @@ TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_callback,
 )
 
 /*******************************
+  LibUAL observers
+ *******************************/
+
+TRACEPOINT_EVENT(upstart_app_launch, observer_start,
+	TP_ARGS(const char *, type),
+	TP_FIELDS(
+		ctf_string(type, type)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, observer_finish,
+	TP_ARGS(const char *, type),
+	TP_FIELDS(
+		ctf_string(type, type)
+	)
+)
+
+
+/*******************************
   Second Exec tracking
  *******************************/
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_start,
