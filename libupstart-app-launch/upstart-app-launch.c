@@ -61,6 +61,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GError * error = NULL;
 	GVariant * result = NULL;
 
+	tracepoint(upstart_app_launch, libual_start_message_callback);
 	g_debug("Started Message Callback: %s", data->appid);
 
 	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
@@ -172,6 +173,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
+	tracepoint(upstart_app_launch, libual_start);
+
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
 
@@ -189,6 +192,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
 	g_free(click_link);
 
+	tracepoint(upstart_app_launch, libual_determine_type);
+
 	/* Figure out the DBus path for the job */
 	const gchar * jobpath = NULL;
 	if (click) {
@@ -199,6 +204,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 
 	if (jobpath == NULL)
 		return FALSE;
+
+	tracepoint(upstart_app_launch, libual_job_path_determined);
 
 	/* Callback data */
 	app_start_t * app_start_data = g_new0(app_start_t, 1);
@@ -244,6 +251,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	                       NULL, /* cancelable */
 	                       application_start_cb,
 	                       app_start_data);
+
+	tracepoint(upstart_app_launch, libual_start_message_sent);
 
 	g_object_unref(con);
 

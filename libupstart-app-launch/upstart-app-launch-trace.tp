@@ -1,4 +1,10 @@
 
+TRACEPOINT_EVENT(upstart_app_launch, libual_start, TP_ARGS(0), TP_FIELDS())
+TRACEPOINT_EVENT(upstart_app_launch, libual_determine_type, TP_ARGS(0), TP_FIELDS())
+TRACEPOINT_EVENT(upstart_app_launch, libual_job_path_determined, TP_ARGS(0), TP_FIELDS())
+TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_sent, TP_ARGS(0), TP_FIELDS())
+TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_callback, TP_ARGS(0), TP_FIELDS())
+
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_start, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_emit_resume, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_resume_complete, TP_ARGS(0), TP_FIELDS())
