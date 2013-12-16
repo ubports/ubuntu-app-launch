@@ -47,7 +47,23 @@ TRACEPOINT_EVENT(upstart_app_launch, second_exec_app_contacted, TP_ARGS(0), TP_F
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_app_error, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_connection_complete, TP_ARGS(0), TP_FIELDS())
 
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_start, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_found, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_finished, TP_ARGS(0), TP_FIELDS())
+TRACEPOINT_EVENT(upstart_app_launch, desktop_single_start,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, desktop_single_found,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, desktop_single_finished,
+	TP_ARGS(const char *, appid, const char *, apptype),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(apptype, apptype)
+	)
+)
 

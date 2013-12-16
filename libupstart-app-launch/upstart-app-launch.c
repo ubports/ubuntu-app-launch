@@ -135,7 +135,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 gboolean
 legacy_single_instance (const gchar * appid)
 {
-	tracepoint(upstart_app_launch, desktop_single_start);
+	tracepoint(upstart_app_launch, desktop_single_start, appid);
 
 	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
 
@@ -144,7 +144,7 @@ legacy_single_instance (const gchar * appid)
 		return FALSE;
 	}
 
-	tracepoint(upstart_app_launch, desktop_single_found);
+	tracepoint(upstart_app_launch, desktop_single_found, appid);
 
 	gboolean singleinstance = FALSE;
 
@@ -163,7 +163,7 @@ legacy_single_instance (const gchar * appid)
 	
 	g_key_file_free(keyfile);
 
-	tracepoint(upstart_app_launch, desktop_single_finished);
+	tracepoint(upstart_app_launch, desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
 
 	return singleinstance;
 }
