@@ -1,4 +1,7 @@
 
+/*******************************
+  LibUAL start function
+ *******************************/
 TRACEPOINT_EVENT(upstart_app_launch, libual_start,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
@@ -32,6 +35,9 @@ TRACEPOINT_EVENT(upstart_app_launch, libual_start_message_callback,
 	)
 )
 
+/*******************************
+  Second Exec tracking
+ *******************************/
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_start, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_emit_resume, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_resume_complete, TP_ARGS(0), TP_FIELDS())
@@ -47,6 +53,9 @@ TRACEPOINT_EVENT(upstart_app_launch, second_exec_app_contacted, TP_ARGS(0), TP_F
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_app_error, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, second_exec_connection_complete, TP_ARGS(0), TP_FIELDS())
 
+/*******************************
+  Desktop File Single Instance
+ *******************************/
 TRACEPOINT_EVENT(upstart_app_launch, desktop_single_start,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
