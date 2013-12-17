@@ -221,7 +221,7 @@ TEST_F(ExecUtil, DesktopExec)
 			got_app_desktop = true;
 		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
 			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/foo.desktop", value);
-			got_app_desktop = true;
+			got_app_desktop_path = true;
 		} else if (g_strcmp0(var, "APP_EXEC_POLICY") == 0) {
 			EXPECT_STREQ("unconfined", value);
 			got_app_exec_policy = true;
