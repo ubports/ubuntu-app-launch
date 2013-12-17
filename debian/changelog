@@ -1,3 +1,105 @@
+upstart-app-launch (0.3+14.04.20131209-0ubuntu2) trusty; urgency=low
+
+  * Restrict on which arch we build url-dispatcher due to the ust build-dep
+
+ -- Didier Roche <didrocks@ubuntu.com>  Mon, 09 Dec 2013 13:47:51 +0100
+
+upstart-app-launch (0.3+14.04.20131209-0ubuntu1) trusty; urgency=low
+
+  [ Ubuntu daily release ]
+  * debian/*symbols: auto-update new symbols to released version
+
+  [ Ted Gould ]
+  * Use the parsing of the line to split appart the URLs. (LP: #1253703)
+  * Use Upstart on the session bus instead of the private bus.
+  * Adding tracing support to application startup.
+  * Hide click error printed in the Upstart log.
+  * Handshake for starting applications. (LP: #1243665)
+  * Link to the right version of upstart-app-launch.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 93
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 09 Dec 2013 02:05:27 +0000
+
+upstart-app-launch (0.3+14.04.20131126-0ubuntu1) trusty; urgency=low
+
+  [ Ted Gould ]
+  * Bumping to 0.3 to reflect that we added a new env var to the library
+    which is needed for testing URL Dispatcher
+  * Reenable ZG and port to libzg-2.0. (LP: #1197569)
+  * Ensure quoted single URIs passed to a %U are unquoted. (LP:
+    #1253703)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 86
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 26 Nov 2013 02:07:13 +0000
+
+upstart-app-launch (0.2+14.04.20131119-0ubuntu1) trusty; urgency=low
+
+  [ Ted Gould ]
+  * Unref the proxy after stopping an application.
+  * Use shell escaping to ensure we can handle spaces. (LP: #1229354)
+  * Set the XDG Data Dirs to include the application install directory.
+    (LP: #1250546)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 82
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 19 Nov 2013 08:19:25 +0000
+
+upstart-app-launch (0.2+13.10.20131014-0ubuntu1) saucy; urgency=low
+
+  [ Ricardo Mendoza ]
+  * Currently we are signalling observers that app started on the
+    "starting" signal. This is racy, as the final exec might not have
+    happened yet, so if a client tries to get the primary PID before the
+    process has fully started, it might get one of the transitional PIDs
+    of the scripts that run in between.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 78
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 14 Oct 2013 07:55:55 +0000
+
+upstart-app-launch (0.2+13.10.20131011-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Bumping to version 0.2
+  * Adding a libupstart-app-launch1.symbols file to match
+  * Use 'click info' to get manifests. (LP: #1232118)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 76
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 11 Oct 2013 02:09:14 +0000
+
+upstart-app-launch (0.1+13.10.20131008.1-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * On second activations send a message to the FD.o application
+    interface. (LP: #1228345)
+  * Add observers for focused and resume.
+  * Testing of the second exec logic.
+  * Disable ZG logging for Phone 1.0.
+  * Need a little longer time on recent ARM builds.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 73
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 08 Oct 2013 10:07:25 +0000
+
+upstart-app-launch (0.1+13.10.20130925.2-0ubuntu1) saucy; urgency=low
+
+  [ Ted Gould ]
+  * Ensure a failed stop return doesn't block execution. (LP: #1229468)
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 67
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 25 Sep 2013 18:03:51 +0000
+
 upstart-app-launch (0.1+13.10.20130925.1-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]

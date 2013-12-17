@@ -18,6 +18,9 @@
  */
 
 #include <gtest/gtest.h>
+#include <glib/gstdio.h>
+#include <libdbustest/dbus-test.h>
+#include <gio/gio.h>
 
 extern "C" {
 #include "../helpers.h"
@@ -30,7 +33,12 @@ class HelperTest : public ::testing::Test
 	protected:
 		virtual void SetUp() {
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
-			g_setenv("PATH", CMAKE_SOURCE_DIR, TRUE);
+			const gchar * oldpath = g_getenv("PATH");
+			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
+			g_setenv("PATH", newpath, TRUE);
+			g_free(newpath);
+			g_setenv("DATA_WRITE_DIR", CMAKE_BINARY_DIR, TRUE);
+			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			return;
 		}
 };
@@ -82,9 +90,8 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* Little u with a NULL string */
 	output = desktop_exec_parse("foo %u", "");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(output->len, 1);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "");
 	g_array_free(output, TRUE);
 
 	/* Big %U with a single URL */
@@ -117,15 +124,14 @@ TEST_F(HelperTest, DesktopExecParse)
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"http://ubuntu.com");
 	g_array_free(output, TRUE);
 
-	/* URL is a quote, make sure we have it */
+	/* URL is a quote, make sure we handle the error */
 	output = desktop_exec_parse("foo %u", "\"");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(output->len, 1);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"");
 	g_array_free(output, TRUE);
 
 	/* Lots of quotes, escaped and not */
-	output = desktop_exec_parse("foo \\\"\"%u\"", "\"");
+	output = desktop_exec_parse("foo \\\"\"%u\"", "'\"'");
 	ASSERT_EQ(output->len, 2);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"\"");
@@ -139,16 +145,30 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* Big U with two URLs */
 	output = desktop_exec_parse("foo %U", "http://ubuntu.com http://slashdot.org");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(output->len, 3);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com http://slashdot.org");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
+	ASSERT_STREQ(g_array_index(output, gchar *, 2), "http://slashdot.org");
 	g_array_free(output, TRUE);
 
 	/* Big U with no URLs */
 	output = desktop_exec_parse("foo %U", NULL);
+	ASSERT_EQ(output->len, 1);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	g_array_free(output, TRUE);
+
+	/* Big U with quoted URL */
+	output = desktop_exec_parse("foo %U", "'http://ubuntu.com'");
 	ASSERT_EQ(output->len, 2);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
+	g_array_free(output, TRUE);
+
+	/* Big U with URLs that have spaces */
+	output = desktop_exec_parse("foo %u", "'http://bob.com/foo bar/' http://slashdot.org");
+	ASSERT_EQ(output->len, 2);
+	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://bob.com/foo bar/");
 	g_array_free(output, TRUE);
 
 	/* %f with a valid file */
@@ -160,16 +180,14 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* A %f with a NULL string */
 	output = desktop_exec_parse("foo %f", "");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(output->len, 1);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "");
 	g_array_free(output, TRUE);
 
 	/* %f with a URL that isn't a file */
 	output = desktop_exec_parse("foo %f", "torrent://moviephone.com/hot-new-movie");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(output->len, 1);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "");
 	g_array_free(output, TRUE);
 
 	/* Lots of %f combinations */
@@ -191,16 +209,16 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* Big F with two files */
 	output = desktop_exec_parse("foo %F", "file:///proc/version file:///proc/uptime");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(output->len, 3);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version /proc/uptime");
+	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
+	ASSERT_STREQ(g_array_index(output, gchar *, 2), "/proc/uptime");
 	g_array_free(output, TRUE);
 
 	/* Big F with no files */
 	output = desktop_exec_parse("foo %F", NULL);
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(output->len, 1);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "");
 	g_array_free(output, TRUE);
 
 	/* Groups of percents */
@@ -214,17 +232,8 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* All the % sequences we don't support */
 	output = desktop_exec_parse("foo %d %D %n %N %v %m %i %c %k", "file:///proc/version");
-	ASSERT_EQ(output->len, 10);
+	ASSERT_EQ(output->len, 1);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
-	ASSERT_STREQ(g_array_index(output, gchar *, 1), "");
-	ASSERT_STREQ(g_array_index(output, gchar *, 2), "");
-	ASSERT_STREQ(g_array_index(output, gchar *, 3), "");
-	ASSERT_STREQ(g_array_index(output, gchar *, 4), "");
-	ASSERT_STREQ(g_array_index(output, gchar *, 5), "");
-	ASSERT_STREQ(g_array_index(output, gchar *, 6), "");
-	ASSERT_STREQ(g_array_index(output, gchar *, 7), "");
-	ASSERT_STREQ(g_array_index(output, gchar *, 8), "");
-	ASSERT_STREQ(g_array_index(output, gchar *, 9), "");
 	g_array_free(output, TRUE);
 
 	return;
@@ -261,8 +270,99 @@ TEST_F(HelperTest, KeyfileForAppid)
 
 TEST_F(HelperTest, SetConfinedEnvvars)
 {
+	DbusTestService * service = dbus_test_service_new(NULL);
+	DbusTestDbusMock * mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
+
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+	dbus_test_dbus_mock_object_add_method(mock, obj,
+		"SetEnv",
+		G_VARIANT_TYPE("(assb)"),
+		NULL,
+		"",
+		NULL);
+
+	dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
+	dbus_test_service_start_tasks(service);
+
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_dbus_connection_set_exit_on_close(bus, FALSE);
+	g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
+
 	/* Not a test other than "don't crash" */
-	set_confined_envvars("pkg");
+	set_confined_envvars("foo-app-pkg", "/foo/bar");
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+
+	ASSERT_EQ(len, 8);
+	ASSERT_NE(calls, nullptr);
+
+	unsigned int i;
+
+	bool got_app_isolation = false;
+	bool got_cache_home = false;
+	bool got_config_home = false;
+	bool got_data_home = false;
+	bool got_runtime_dir = false;
+	bool got_data_dirs = false;
+	bool got_temp_dir = false;
+	bool got_shader_dir = false;
+
+	for (i = 0; i < len; i++) {
+		EXPECT_STREQ("SetEnv", calls[i].name);
+
+		GVariant * envvar = g_variant_get_child_value(calls[i].params, 1);
+		gchar * var = g_variant_dup_string(envvar, NULL);
+		g_variant_unref(envvar);
+
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "UBUNTU_APPLICATION_ISOLATION") == 0) {
+			ASSERT_STREQ(value, "1");
+			got_app_isolation = true;
+		} else if (g_strcmp0(var, "XDG_CACHE_HOME") == 0) {
+			got_cache_home = true;
+		} else if (g_strcmp0(var, "XDG_CONFIG_HOME") == 0) {
+			got_config_home = true;
+		} else if (g_strcmp0(var, "XDG_DATA_HOME") == 0) {
+			got_data_home = true;
+		} else if (g_strcmp0(var, "XDG_RUNTIME_DIR") == 0) {
+			got_runtime_dir = true;
+		} else if (g_strcmp0(var, "XDG_DATA_DIRS") == 0) {
+			ASSERT_TRUE(g_str_has_prefix(value, "/foo/bar:"));
+			got_data_dirs = true;
+		} else if (g_strcmp0(var, "TMPDIR") == 0) {
+			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
+			got_temp_dir = true;
+		} else if (g_strcmp0(var, "__GL_SHADER_DISK_CACHE_PATH") == 0) {
+			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
+			got_shader_dir = true;
+		} else {
+			g_warning("Unknown variable! %s", var);
+			ASSERT_TRUE(false);
+		}
+
+		g_free(var);
+	}
+
+	ASSERT_TRUE(got_app_isolation);
+	ASSERT_TRUE(got_cache_home);
+	ASSERT_TRUE(got_config_home);
+	ASSERT_TRUE(got_data_home);
+	ASSERT_TRUE(got_runtime_dir);
+	ASSERT_TRUE(got_data_dirs);
+	ASSERT_TRUE(got_temp_dir);
+	ASSERT_TRUE(got_shader_dir);
+
+	g_object_unref(bus);
+	g_object_unref(mock);
+	g_object_unref(service);
+
 	return;
 }
 

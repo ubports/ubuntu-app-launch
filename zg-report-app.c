@@ -23,7 +23,7 @@
 static gboolean
 watchdog_timeout (gpointer user_data)
 {
-	g_error("Watchdog triggered, took to long to submit into Zeitgeist Database!");
+	g_warning("Watchdog triggered, took too long to submit into Zeitgeist Database!");
 	g_main_loop_quit((GMainLoop *)user_data);
 
 	return G_SOURCE_REMOVE;
@@ -35,7 +35,7 @@ insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GError * error = NULL;
 	GArray * result = NULL;
 
-	result = zeitgeist_log_insert_events_finish(ZEITGEIST_LOG(obj), res, &error);
+	result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
 
 	if (error != NULL) {
 		g_error("Unable to submit Zeitgeist Event: %s", error->message);
@@ -83,8 +83,8 @@ main (int argc, char * argv[])
 
 	GMainLoop * main_loop = g_main_loop_new(NULL, FALSE);
 
-	zeitgeist_log_insert_events(log, NULL, insert_complete, main_loop, event, NULL);
-	g_timeout_add_seconds(4, watchdog_timeout, main_loop);
+	zeitgeist_log_insert_event(log, event, NULL, insert_complete, main_loop);
+	g_timeout_add_seconds(2, watchdog_timeout, main_loop);
 
 	g_main_loop_run(main_loop);
 

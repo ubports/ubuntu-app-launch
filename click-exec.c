@@ -17,8 +17,9 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <glib.h>
+#include <gio/gio.h>
 #include "helpers.h"
+#include "click-exec-trace.h"
 
 /*
 
@@ -52,7 +53,25 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	tracepoint(upstart_app_launch, click_start);
+
+	/* Ensure we keep one connection open to the bus for the entire
+	   script even though different people need it throughout */
 	GError * error = NULL;
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	if (error != NULL) {
+		g_error("Unable to get session bus: %s", error->message);
+		g_error_free(error);
+		return 1;
+	}
+
+	handshake_t * handshake = starting_handshake_start(app_id);
+	if (handshake == NULL) {
+		g_warning("Unable to setup starting handshake");
+	}
+
+	tracepoint(upstart_app_launch, click_starting_sent);
+
 	gchar * package = NULL;
 	/* 'Parse' the App ID */
 	if (!app_id_to_triplet(app_id, &package, NULL, NULL)) {
@@ -60,15 +79,14 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	set_confined_envvars(package);
-
 	/* Check click to find out where the files are */
 	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
-	g_free(package);
 
 	gchar * output = NULL;
 	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
 	g_free(cmdline);
+
+	tracepoint(upstart_app_launch, click_found_pkgdir);
 
 	/* If we have an extra newline, we can delete it. */
 	gchar * newline = g_strstr_len(output, -1, "\n");
@@ -80,24 +98,35 @@ main (int argc, char * argv[])
 		g_warning("Unable to get the package directory from click: %s", error->message);
 		g_error_free(error);
 		g_free(output); /* Probably not set, but just in case */
+		g_free(package);
 		return 1;
 	}
 
 	if (!g_file_test(output, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("Application directory '%s' doesn't exist", output);
 		g_free(output);
+		g_free(package);
 		return 1;
 	}
 
 	g_debug("Setting 'APP_DIR' to '%s'", output);
 	set_upstart_variable("APP_DIR", output);
 
+	set_confined_envvars(package, output);
+
+	tracepoint(upstart_app_launch, click_configured_env);
+
 	gchar * desktopfile = manifest_to_desktop(output, app_id);
+
 	g_free(output);
+	g_free(package);
+
 	if (desktopfile == NULL) {
 		g_warning("Desktop file unable to be found");
 		return 1;
 	}
+
+	tracepoint(upstart_app_launch, click_read_manifest);
 
 	GKeyFile * keyfile = g_key_file_new();
 
@@ -115,6 +144,8 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	tracepoint(upstart_app_launch, click_read_desktop);
+
 	g_debug("Setting 'APP_EXEC' to '%s'", exec);
 	set_upstart_variable("APP_EXEC", exec);
 
@@ -128,6 +159,14 @@ main (int argc, char * argv[])
 	set_upstart_variable("APP_DESKTOP_FILE", userdesktoppath);
 	g_free(userdesktopfile);
 	g_free(userdesktoppath);
+
+	tracepoint(upstart_app_launch, click_handshake_wait);
+
+	starting_handshake_wait(handshake);
+
+	tracepoint(upstart_app_launch, click_handshake_complete);
+
+	g_object_unref(bus);
 
 	return 0;
 }
