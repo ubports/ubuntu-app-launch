@@ -96,7 +96,7 @@ TEST_F(ExecUtil, ClickExec)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	ASSERT_EQ(11, len);
+	ASSERT_EQ(12, len);
 	ASSERT_NE(nullptr, calls);
 
 	unsigned int i;
@@ -191,7 +191,7 @@ TEST_F(ExecUtil, DesktopExec)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	ASSERT_EQ(3, len);
+	ASSERT_EQ(4, len);
 	ASSERT_NE(nullptr, calls);
 
 	unsigned int i;
