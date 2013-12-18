@@ -51,7 +51,10 @@ main (int argc, char * argv[])
 		if (g_chdir(appdir) != 0) {
 			g_warning("Unable to change directory to '%s'", appdir);
 		}
+	}
 
+	/* Protect against app directories that have ':' in them */
+	if (appdir != NULL && g_strstr_len(appdir, -1, ":") == NULL) {
 		const gchar * path_path = g_getenv("PATH");
 		gchar * path_libpath = NULL;
 		const gchar * path_joinable[4] = { 0 };
