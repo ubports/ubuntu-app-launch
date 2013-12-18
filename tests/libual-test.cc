@@ -372,7 +372,6 @@ TEST_F(LibUAL, StartStopObserver)
 
 	ASSERT_TRUE(upstart_app_launch_observer_add_app_started(observer_cb, &start_data));
 	ASSERT_TRUE(upstart_app_launch_observer_add_app_stop(observer_cb, &stop_data));
-	ASSERT_FALSE(upstart_app_launch_observer_add_app_failed(NULL, NULL)); /* Not yet implemented */
 
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
@@ -482,7 +481,6 @@ TEST_F(LibUAL, StartStopObserver)
 	/* Remove */
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_started(observer_cb, &start_data));
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
-	ASSERT_FALSE(upstart_app_launch_observer_delete_app_failed(NULL, NULL)); /* Not yet implemented */
 }
 
 static GDBusMessage *
