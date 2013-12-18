@@ -27,6 +27,9 @@ if (CMAKE_BUILD_TYPE MATCHES coverage)
       add_custom_target (coverage-html
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMAND "${LCOV_EXECUTABLE}" --directory ${CMAKE_BINARY_DIR} --capture --output-file coverage.info --no-checksum
+		COMMAND "${LCOV_EXECUTABLE}" --remove "${CMAKE_BINARY_DIR}/coverage.info" '/usr/*' --output-file "${CMAKE_BINARY_DIR}/coverage.info" 
+		COMMAND "${LCOV_EXECUTABLE}" --remove "${CMAKE_BINARY_DIR}/coverage.info" '${CMAKE_BINARY_DIR}/*' --output-file "${CMAKE_BINARY_DIR}/coverage.info" 
+		COMMAND "${LCOV_EXECUTABLE}" --remove "${CMAKE_BINARY_DIR}/coverage.info" '${CMAKE_SOURCE_DIR}/tests/*' --output-file "${CMAKE_BINARY_DIR}/coverage.info" 
         COMMAND "${GENHTML_EXECUTABLE}" --prefix ${CMAKE_BINARY_DIR} --output-directory coveragereport --title "Code Coverage" --legend --show-details coverage.info
         )
     endif()
