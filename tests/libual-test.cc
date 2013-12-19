@@ -713,8 +713,10 @@ TEST_F(LibUAL, LegacySingleInstance)
 static void
 failed_observer (const gchar * appid, upstart_app_launch_app_failed_t reason, gpointer user_data)
 {
-	std::string * last = static_cast<std::string *>(user_data);
-	*last = appid;
+	if (reason == UPSTART_APP_LAUNCH_APP_FAILED_CRASH) {
+		std::string * last = static_cast<std::string *>(user_data);
+		*last = appid;
+	}
 	return;
 }
 
@@ -736,6 +738,34 @@ TEST_F(LibUAL, FailingObserver)
 	pause(100);
 
 	EXPECT_EQ("foo", last_observer);
+
+	last_observer.clear();
+
+	g_dbus_connection_emit_signal(session,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"ApplicationFailed", /* signal */
+		g_variant_new("(ss)", "foo", "blahblah"), /* params, the same */
+		NULL);
+
+	pause(100);
+
+	EXPECT_EQ("foo", last_observer);
+
+	last_observer.clear();
+
+	g_dbus_connection_emit_signal(session,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"ApplicationFailed", /* signal */
+		g_variant_new("(ss)", "foo", "start-failure"), /* params, the same */
+		NULL);
+
+	pause(100);
+
+	EXPECT_TRUE(last_observer.empty());
 
 	EXPECT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
