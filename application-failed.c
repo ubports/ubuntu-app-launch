@@ -56,12 +56,15 @@ main (int argc, char * argv[])
 		g_variant_new("(ss)", appid, crashed ? "crash" : "start-failure"),
 		&error);
 
+	g_debug("Emitting failed event '%s' for app '%s'", crashed ? "crash" : "start-failure", appid);
+
 	if (error != NULL) {
 		g_warning("Unable to emit signal: %s", error->message);
 		g_error_free(error);
 		return -1;
 	}
 
+	g_dbus_connection_flush_sync(bus, NULL, NULL);
 	g_object_unref(bus);
 	g_free(appid);
 
