@@ -23,6 +23,47 @@
 int
 main (int argc, char * argv[])
 {
+	const gchar * job = g_getenv("JOB");
+	g_return_val_if_fail(job != NULL, -1);
+
+	const gchar * instance = g_getenv("INSTANCE");
+	g_return_val_if_fail(instance != NULL, -1);
+
+	gboolean crashed = FALSE;
+	if (g_getenv("EXIT_STATUS") != NULL || g_getenv("EXIT_SIGNAL") != NULL) {
+		crashed = TRUE;
+	}
+
+	gchar * appid = g_strdup(instance);
+	if (g_strcmp0(job, "application-legacy") == 0) {
+		gchar * lasthyphenstanding = g_strrstr(appid, "-");
+		if (lasthyphenstanding != NULL) {
+			lasthyphenstanding[0] = '\0';
+		} else {
+			g_warning("Legacy job instance '%s' is missing a hyphen", appid);
+		}
+	}
+
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(bus != NULL, -1);
+
+	GError * error = NULL;
+	g_dbus_connection_emit_signal(bus,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch",
+		"ApplicationFailed",
+		g_variant_new("(ss)", appid, crashed ? "crash" : "start-failure"),
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to emit signal: %s", error->message);
+		g_error_free(error);
+		return -1;
+	}
+
+	g_object_unref(bus);
+	g_free(appid);
 
 	return 0;
 }
