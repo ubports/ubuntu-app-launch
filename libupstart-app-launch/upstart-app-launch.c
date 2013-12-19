@@ -75,14 +75,6 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 			g_debug("Remote error: %s", remote_error);
 			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
 				second_exec(data->appid, data->uris);
-			} else {
-				g_dbus_connection_emit_signal(G_DBUS_CONNECTION(obj),
-					NULL, /* destination */
-					"/", /* path */
-					"com.canonical.UpstartAppLaunch", /* interface */
-					"ApplicationFailed", /* signal */
-					g_variant_new("(ss)", data->appid, "start"), /* params, the same */
-					&error);
 			}
 		} else {
 			g_warning("Unable to emit event to start application: %s", error->message);
