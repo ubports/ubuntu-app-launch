@@ -178,6 +178,15 @@ target_link_libraries(application-job upstart-launcher)
 install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# application-failed
+####################
+
+add_executable(application-failed application-failed.c)
+set_target_properties(application-failed PROPERTIES OUTPUT_NAME "application-failed")
+target_link_libraries(application-failed ${GIO2_LIBRARIES})
+install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # application.conf
 ####################
 
