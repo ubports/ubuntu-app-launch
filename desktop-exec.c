@@ -107,6 +107,7 @@ main (int argc, char * argv[])
 
 	tracepoint(upstart_app_launch, desktop_handshake_complete);
 
+	g_dbus_connection_flush_sync(bus, NULL, NULL);
 	g_object_unref(bus);
 
 	return 0;
