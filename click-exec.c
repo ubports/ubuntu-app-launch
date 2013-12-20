@@ -134,6 +134,8 @@ main (int argc, char * argv[])
 	if (error != NULL) {
 		g_warning("Unable to load desktop file '%s': %s", desktopfile, error->message);
 		g_error_free(error);
+		g_key_file_free(keyfile);
+		g_free(desktopfile);
 		return 1;
 	}
 
