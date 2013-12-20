@@ -79,12 +79,53 @@ TEST_F(FailureTest, CrashTest)
 	std::string last_observer;
 	ASSERT_TRUE(upstart_app_launch_observer_add_app_failed(failed_observer, &last_observer));
 
+	/* Status based */
+	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
+	pause(100);
+
+	EXPECT_EQ("foo", last_observer);
+
+	last_observer.clear();
+	g_unsetenv("EXIT_STATUS");
+	g_setenv("EXIT_SIGNAL", "KILL", TRUE);
+
+	/* Signal based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
 	pause(100);
 
 	EXPECT_EQ("foo", last_observer);
 
 	ASSERT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+
+	return;
+}
+
+static void
+failed_start_observer (const gchar * appid, upstart_app_launch_app_failed_t reason, gpointer user_data)
+{
+	if (reason == UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE) {
+		std::string * last = static_cast<std::string *>(user_data);
+		*last = appid;
+	}
+	return;
+}
+
+TEST_F(FailureTest, StartTest)
+{
+	g_setenv("JOB", "application-click", TRUE);
+	g_setenv("INSTANCE", "foo", TRUE);
+	g_unsetenv("EXIT_STATUS");
+	g_unsetenv("EXIT_SIGNAL");
+
+	std::string last_observer;
+	ASSERT_TRUE(upstart_app_launch_observer_add_app_failed(failed_start_observer, &last_observer));
+
+	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
+	pause(100);
+
+	EXPECT_EQ("foo", last_observer);
+
+	ASSERT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_start_observer, &last_observer));
 
 	return;
 }
