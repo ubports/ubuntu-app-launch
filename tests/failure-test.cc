@@ -100,6 +100,26 @@ TEST_F(FailureTest, CrashTest)
 	return;
 }
 
+TEST_F(FailureTest, LegacyTest)
+{
+	g_setenv("EXIT_STATUS", "-100", TRUE);
+	g_setenv("JOB", "application-legacy", TRUE);
+	g_setenv("INSTANCE", "foo-1234", TRUE);
+
+	std::string last_observer;
+	ASSERT_TRUE(upstart_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+
+	/* Status based */
+	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
+	pause(100);
+
+	EXPECT_EQ("foo", last_observer);
+
+	ASSERT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+
+	return;
+}
+
 static void
 failed_start_observer (const gchar * appid, upstart_app_launch_app_failed_t reason, gpointer user_data)
 {
