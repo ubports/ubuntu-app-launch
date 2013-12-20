@@ -35,7 +35,9 @@ target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBR
 
 add_test (NAME libual-test COMMAND libual-test)
 
-# Exec Line Exec Test
+# Failure Test
+
+add_definitions ( -DAPP_FAILED_TOOL="${CMAKE_BINARY_DIR}/application-failed" )
 
 add_executable (failure-test
 	failure-test.cc)

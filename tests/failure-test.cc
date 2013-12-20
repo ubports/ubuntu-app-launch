@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include <glib/gstdio.h>
 #include <gio/gio.h>
+#include <upstart-app-launch.h>
 
 class FailureTest : public ::testing::Test
 {
@@ -27,10 +28,7 @@ class FailureTest : public ::testing::Test
 		GTestDBus * testbus = NULL;
 
 	protected:
-		GMainLoop * mainloop = NULL;
-
 		virtual void SetUp() {
-			mainloop = g_main_loop_new(NULL, FALSE);
 			testbus = g_test_dbus_new(G_TEST_DBUS_NONE);
 			g_test_dbus_up(testbus);
 		}
@@ -38,14 +36,55 @@ class FailureTest : public ::testing::Test
 		virtual void TearDown() {
 			g_test_dbus_down(testbus);
 			g_clear_object(&testbus);
-			g_main_loop_unref(mainloop);
-			mainloop = NULL;
 			return;
+		}
+
+		static gboolean pause_helper (gpointer pmainloop) {
+			g_main_loop_quit(static_cast<GMainLoop *>(pmainloop));
+			return G_SOURCE_REMOVE;
+		}
+
+		void pause (guint time) {
+			if (time > 0) {
+				GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
+				g_timeout_add(time, pause_helper, mainloop);
+
+				g_main_loop_run(mainloop);
+
+				g_main_loop_unref(mainloop);
+			}
+
+			while (g_main_pending()) {
+				g_main_iteration(TRUE);
+			}
 		}
 };
 
-TEST_F(FailureTest, DummyTest)
+static void
+failed_observer (const gchar * appid, upstart_app_launch_app_failed_t reason, gpointer user_data)
 {
+	if (reason == UPSTART_APP_LAUNCH_APP_FAILED_CRASH) {
+		std::string * last = static_cast<std::string *>(user_data);
+		*last = appid;
+	}
+	return;
+}
+
+TEST_F(FailureTest, CrashTest)
+{
+	g_setenv("EXIT_STATUS", "-100", TRUE);
+	g_setenv("JOB", "application-click", TRUE);
+	g_setenv("INSTANCE", "foo", TRUE);
+
+	std::string last_observer;
+	ASSERT_TRUE(upstart_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+
+	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
+	pause(100);
+
+	EXPECT_EQ("foo", last_observer);
+
+	ASSERT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
 	return;
 }
