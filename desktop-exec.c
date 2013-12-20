@@ -98,6 +98,8 @@ main (int argc, char * argv[])
 	/* TODO: This is for Surface Flinger.  When we drop support, we can drop this code */
 	if (desktopfilename != NULL) {
 		set_upstart_variable("APP_DESKTOP_FILE", desktopfilename);
+		/* This is not for SF, it's for platform API only above is for SF */
+		set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfilename);
 		g_free(desktopfilename);
 	}
 

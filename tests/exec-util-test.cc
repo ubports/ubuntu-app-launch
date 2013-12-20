@@ -96,7 +96,7 @@ TEST_F(ExecUtil, ClickExec)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	ASSERT_EQ(11, len);
+	ASSERT_EQ(12, len);
 	ASSERT_NE(nullptr, calls);
 
 	unsigned int i;
@@ -112,6 +112,7 @@ TEST_F(ExecUtil, ClickExec)
 	bool got_app_dir = false;
 	bool got_app_exec = false;
 	bool got_app_desktop = false;
+	bool got_app_desktop_path = false;
 
 	for (i = 0; i < len; i++) {
 		EXPECT_STREQ("SetEnv", calls[i].name);
@@ -154,6 +155,9 @@ TEST_F(ExecUtil, ClickExec)
 			got_app_exec = true;
 		} else if (g_strcmp0(var, "APP_DESKTOP_FILE") == 0) {
 			got_app_desktop = true;
+		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
+			EXPECT_STREQ(CMAKE_SOURCE_DIR "/click-app-dir/application.desktop", value);
+			got_app_desktop_path = true;
 		} else {
 			g_warning("Unknown variable! %s", var);
 			EXPECT_TRUE(false);
@@ -173,6 +177,7 @@ TEST_F(ExecUtil, ClickExec)
 	EXPECT_TRUE(got_app_dir);
 	EXPECT_TRUE(got_app_exec);
 	EXPECT_TRUE(got_app_desktop);
+	EXPECT_TRUE(got_app_desktop_path);
 }
 
 TEST_F(ExecUtil, DesktopExec)
@@ -186,13 +191,14 @@ TEST_F(ExecUtil, DesktopExec)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	ASSERT_EQ(3, len);
+	ASSERT_EQ(4, len);
 	ASSERT_NE(nullptr, calls);
 
 	unsigned int i;
 
 	bool got_app_exec = false;
 	bool got_app_desktop = false;
+	bool got_app_desktop_path = false;
 	bool got_app_exec_policy = false;
 
 	for (i = 0; i < len; i++) {
@@ -213,6 +219,9 @@ TEST_F(ExecUtil, DesktopExec)
 			got_app_exec = true;
 		} else if (g_strcmp0(var, "APP_DESKTOP_FILE") == 0) {
 			got_app_desktop = true;
+		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
+			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/foo.desktop", value);
+			got_app_desktop_path = true;
 		} else if (g_strcmp0(var, "APP_EXEC_POLICY") == 0) {
 			EXPECT_STREQ("unconfined", value);
 			got_app_exec_policy = true;
@@ -226,5 +235,6 @@ TEST_F(ExecUtil, DesktopExec)
 
 	EXPECT_TRUE(got_app_exec);
 	EXPECT_TRUE(got_app_desktop);
+	EXPECT_TRUE(got_app_desktop_path);
 	EXPECT_TRUE(got_app_exec_policy);
 }
