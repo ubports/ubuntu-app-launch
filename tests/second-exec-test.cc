@@ -58,8 +58,6 @@ class SecondExecTest : public ::testing::Test
 
 			upstart_app_launch_observer_add_app_focus(focus_cb, this);
 			upstart_app_launch_observer_add_app_resume(resume_cb, this);
-
-			return;
 		}
 		virtual void TearDown() {
 			upstart_app_launch_observer_delete_app_focus(focus_cb, this);
@@ -67,8 +65,6 @@ class SecondExecTest : public ::testing::Test
 
 			g_test_dbus_down(testbus);
 			g_object_unref(testbus);
-
-			return;
 		}
 
 		static gboolean pause_helper (gpointer pmainloop) {
@@ -90,8 +86,6 @@ class SecondExecTest : public ::testing::Test
 			while (g_main_pending()) {
 				g_main_iteration(TRUE);
 			}
-
-			return;
 		}
 };
 

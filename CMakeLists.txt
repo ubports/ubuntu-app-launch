@@ -16,6 +16,7 @@ include(Coverage)
 include(UseGlibGeneration)
 include(UseGdbusCodegen)
 include(UseConstantBuilder)
+include(UseLttngGenTp)
 
 # Workaround for libexecdir on debian
 if (EXISTS "/etc/debian_version") 
@@ -55,6 +56,9 @@ include_directories(${LIBUPSTART_INCLUDE_DIRS})
 
 pkg_check_modules(DBUSTEST REQUIRED dbustest-1>=14.04.0)
 include_directories(${DBUSTEST_INCLUDE_DIRS})
+
+pkg_check_modules(LTTNG REQUIRED lttng-ust)
+include_directories(${LTTNG_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -116,18 +120,20 @@ install(TARGETS upstart-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDI
 # desktop-exec
 ####################
 
-add_executable(desktop-exec desktop-exec.c)
+add_lttng_gen_tp(NAME desktop-exec-trace)
+add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c)
 set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
-target_link_libraries(desktop-exec helpers ${APPARMOR_LIBRARIES})
+target_link_libraries(desktop-exec helpers ${LTTNG_LIBRARIES})
 install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # click-exec
 ####################
 
-add_executable(click-exec click-exec.c)
+add_lttng_gen_tp(NAME click-exec-trace)
+add_executable(click-exec click-exec.c click-exec-trace.c)
 set_target_properties(click-exec PROPERTIES OUTPUT_NAME "click-exec")
-target_link_libraries(click-exec helpers)
+target_link_libraries(click-exec helpers ${LTTNG_LIBRARIES})
 install(TARGETS click-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
@@ -143,18 +149,21 @@ install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 # desktop-single
 ####################
 
-add_executable(desktop-single desktop-single.c)
+add_lttng_gen_tp(NAME desktop-single-trace)
+add_executable(desktop-single desktop-single.c desktop-single-trace.c)
 set_target_properties(desktop-single PROPERTIES OUTPUT_NAME "desktop-single")
-target_link_libraries(desktop-single helpers)
+target_link_libraries(desktop-single helpers ${LTTNG_LIBRARIES})
 install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # exec-line-exec
 ####################
 
-add_executable(exec-line-exec exec-line-exec.c)
+add_lttng_gen_tp(NAME exec-line-exec-trace)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+add_executable(exec-line-exec exec-line-exec.c "${CMAKE_CURRENT_BINARY_DIR}/exec-line-exec-trace.c")
 set_target_properties(exec-line-exec PROPERTIES OUTPUT_NAME "exec-line-exec")
-target_link_libraries(exec-line-exec helpers)
+target_link_libraries(exec-line-exec helpers ${LTTNG_LIBRARIES})
 install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
@@ -170,9 +179,13 @@ install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 # second-exec
 #######################
 
-add_executable(second-exec second-exec.c second-exec-core.c second-exec-core.h)
+add_lttng_gen_tp(NAME second-exec-trace)
+add_library(second-exec-core STATIC second-exec-core.c second-exec-trace.c)
+target_link_libraries(second-exec-core helpers upstart-launcher ${LTTNG_LIBRARIES})
+
+add_executable(second-exec second-exec.c)
 set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
-target_link_libraries(second-exec helpers upstart-launcher)
+target_link_libraries(second-exec second-exec-core)
 install(TARGETS second-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################

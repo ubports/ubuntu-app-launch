@@ -12,11 +12,13 @@ Build-Depends: click-dev (>= 0.2.2),
                libglib2.0-dev,
                libgtest-dev,
                libjson-glib-dev,
+               liblttng-ust-dev,
                libnih-dbus-dev,
                libnih-dev,
                libupstart-dev,
                libzeitgeist-2.0-dev,
                python3-dbusmock,
+               upstart (>= 1.11),
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/upstart-app-launch
 # If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
@@ -30,6 +32,7 @@ Depends: ${shlibs:Depends},
          ${misc:Depends},
          click (>= 0.4.9),
          click-apparmor,
+         upstart (>= 1.11),
          zeitgeist,
 Description: Upstart Job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
@@ -46,7 +49,7 @@ Description: Tools for working wtih launched applications
  .
  This package provides tools for working with the Upstart App Launch.
 
-Package: libupstart-app-launch1
+Package: libupstart-app-launch2
 Section: libs
 Architecture: any
 Depends: ${misc:Depends},
@@ -59,15 +62,17 @@ Description: library for sending requests to the upstart app launch
  .
  This package contains shared libraries to be used by applications.
 
-Package: libupstart-app-launch1-dev
+Package: libupstart-app-launch2-dev
 Section: libdevel
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          libglib2.0-dev,
-         libupstart-app-launch1 (= ${binary:Version}),
+         libupstart-app-launch2 (= ${binary:Version}),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
+Replaces: libupstart-app-launch1-dev
+Conflicts: libupstart-app-launch1-dev
 Description: library for sending requests to the upstart app launch
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
