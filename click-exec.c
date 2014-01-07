@@ -130,10 +130,13 @@ main (int argc, char * argv[])
 
 	GKeyFile * keyfile = g_key_file_new();
 
+	set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfile);
 	g_key_file_load_from_file(keyfile, desktopfile, 0, &error);
 	if (error != NULL) {
 		g_warning("Unable to load desktop file '%s': %s", desktopfile, error->message);
 		g_error_free(error);
+		g_key_file_free(keyfile);
+		g_free(desktopfile);
 		return 1;
 	}
 

@@ -27,3 +27,21 @@ export UPSTART_APP_LAUNCH_ARCH=64bit-amazing
 echo "Testing Uninitialized Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
 
+export PATH=/path
+export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-colon.sh
+export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@/foo:bar
+export QML2_IMPORT_PATH=/bar/qml/import
+export UPSTART_APP_LAUNCH_ARCH=64bit-amazing
+
+echo "Testing Colon Test"
+@CMAKE_BINARY_DIR@/exec-line-exec
+
+export PATH=/path
+export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-archcolon.sh
+export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@
+export QML2_IMPORT_PATH=/bar/qml/import
+export UPSTART_APP_LAUNCH_ARCH=64bit-amazing:amazinger
+
+echo "Testing Arch Colon Test"
+@CMAKE_BINARY_DIR@/exec-line-exec
+

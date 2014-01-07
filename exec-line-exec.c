@@ -55,7 +55,10 @@ main (int argc, char * argv[])
 		if (g_chdir(appdir) != 0) {
 			g_warning("Unable to change directory to '%s'", appdir);
 		}
+	}
 
+	/* Protect against app directories that have ':' in them */
+	if (appdir != NULL && strchr(appdir, ':') == NULL) {
 		const gchar * path_path = g_getenv("PATH");
 		gchar * path_libpath = NULL;
 		const gchar * path_joinable[4] = { 0 };
@@ -67,7 +70,7 @@ main (int argc, char * argv[])
 		/* If we've got an architecture set insert that into the
 		   path before everything else */
 		const gchar * archdir = g_getenv("UPSTART_APP_LAUNCH_ARCH");
-		if (archdir != NULL) {
+		if (archdir != NULL && strchr(archdir, ':') == NULL) {
 			path_libpath = g_build_filename(appdir, "lib", archdir, "bin", NULL);
 			import_libpath = g_build_filename(appdir, "lib", archdir, NULL);
 
