@@ -14,7 +14,7 @@ add_library (gtest STATIC
 add_executable (helper-test helper-test.cc)
 add_definitions ( -DCMAKE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}" )
 add_definitions ( -DCMAKE_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}" )
-target_link_libraries (helper-test helpers gtest ${GTEST_LIBS})
+target_link_libraries (helper-test helpers gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES})
 
 add_test (helper-test helper-test)
 
@@ -43,4 +43,19 @@ add_executable (zg-test
 	zg-test.cc)
 target_link_libraries (zg-test gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (zg-test zg-test)
+
+# Exec Line Exec Test
+
+configure_file("exec-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh" @ONLY) 
+add_test (exec-test "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh")
+
+# Exec Utils
+
+add_definitions ( -DCLICK_EXEC_TOOL="${CMAKE_BINARY_DIR}/click-exec" )
+add_definitions ( -DDESKTOP_EXEC_TOOL="${CMAKE_BINARY_DIR}/desktop-exec" )
+
+add_executable (exec-util-test
+	exec-util-test.cc)
+target_link_libraries (exec-util-test gtest upstart-launcher ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
+add_test (exec-util-test exec-util-test)
 
