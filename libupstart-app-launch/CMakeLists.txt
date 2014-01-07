@@ -62,3 +62,25 @@ install(
 	DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
+##########################
+# Introspection
+##########################
+
+include(UseGObjectIntrospection)
+
+set(INTROSPECTION_GIRS)
+set(_introspection_files ${LAUNCHER_HEADERS} ${LAUNCHER_SOURCES})
+set(UpstartAppLaunch_2_gir "upstart-app-launch")
+set(UpstartAppLaunch_2_gir_INCLUDES GObject-2.0)
+
+gir_get_cflags(_cflags)
+set(UpstartAppLaunch_2_gir_CFLAGS ${c_flags})
+set(UpstartAppLaunch_2_gir_LIBS upstart-launcher)
+
+list_make_absolute(_abs_introspection_files _introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
+set(UpstartAppLaunch_2_gir_FILES ${_abs_introspection_files})
+set(UpstartAppLaunch_2_gir_SCANNERFLAGS --c-include "upstart-app-launch.h")
+set(UpstartAppLaunch_2_gir_EXPORT_PACKAGES "upstart-app-launch-${API_VERSION}")
+
+gir_add_introspections(UpstartAppLaunch-2.gir)
+
