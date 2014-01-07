@@ -19,6 +19,8 @@
 
 #include <gtest/gtest.h>
 #include <glib/gstdio.h>
+#include <libdbustest/dbus-test.h>
+#include <gio/gio.h>
 
 extern "C" {
 #include "../helpers.h"
@@ -31,8 +33,12 @@ class HelperTest : public ::testing::Test
 	protected:
 		virtual void SetUp() {
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
-			g_setenv("PATH", CMAKE_SOURCE_DIR, TRUE);
+			const gchar * oldpath = g_getenv("PATH");
+			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
+			g_setenv("PATH", newpath, TRUE);
+			g_free(newpath);
 			g_setenv("DATA_WRITE_DIR", CMAKE_BINARY_DIR, TRUE);
+			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			return;
 		}
 };
@@ -264,18 +270,34 @@ TEST_F(HelperTest, KeyfileForAppid)
 
 TEST_F(HelperTest, SetConfinedEnvvars)
 {
-	g_unlink(CMAKE_BINARY_DIR "/initctl-output.txt");
+	DbusTestService * service = dbus_test_service_new(NULL);
+	DbusTestDbusMock * mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
+
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+	dbus_test_dbus_mock_object_add_method(mock, obj,
+		"SetEnv",
+		G_VARIANT_TYPE("(assb)"),
+		NULL,
+		"",
+		NULL);
+
+	dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
+	dbus_test_service_start_tasks(service);
+
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_dbus_connection_set_exit_on_close(bus, FALSE);
+	g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 
 	/* Not a test other than "don't crash" */
 	set_confined_envvars("foo-app-pkg", "/foo/bar");
 
-	ASSERT_TRUE(g_file_test(CMAKE_BINARY_DIR "/initctl-output.txt", G_FILE_TEST_EXISTS));
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	gchar * contents = NULL;
-	ASSERT_TRUE(g_file_get_contents(CMAKE_BINARY_DIR "/initctl-output.txt", &contents, NULL, NULL));
+	ASSERT_EQ(len, 8);
+	ASSERT_NE(calls, nullptr);
 
-	gchar ** lines = g_strsplit(contents, "\n", 0);
-	g_free(contents);
 	unsigned int i;
 
 	bool got_app_isolation = false;
@@ -287,13 +309,13 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	bool got_temp_dir = false;
 	bool got_shader_dir = false;
 
-	for (i = 0; lines[i] != NULL; i++) {
-		g_debug("Checking: '%s'", lines[i]);
-		if (lines[i][0] == '\0') continue;
+	for (i = 0; i < len; i++) {
+		EXPECT_STREQ("SetEnv", calls[i].name);
 
-		ASSERT_TRUE(g_str_has_prefix(lines[i], "set-env "));
+		GVariant * envvar = g_variant_get_child_value(calls[i].params, 1);
+		gchar * var = g_variant_dup_string(envvar, NULL);
+		g_variant_unref(envvar);
 
-		gchar * var = lines[i] + strlen("set-env ");
 		gchar * equal = g_strstr_len(var, -1, "=");
 		ASSERT_NE(equal, nullptr);
 
@@ -321,12 +343,12 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
 			got_shader_dir = true;
 		} else {
-			g_warning("Unknown variable! %s", lines[i]);
+			g_warning("Unknown variable! %s", var);
 			ASSERT_TRUE(false);
 		}
-	}
 
-	g_strfreev(lines);
+		g_free(var);
+	}
 
 	ASSERT_TRUE(got_app_isolation);
 	ASSERT_TRUE(got_cache_home);
@@ -336,6 +358,10 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	ASSERT_TRUE(got_data_dirs);
 	ASSERT_TRUE(got_temp_dir);
 	ASSERT_TRUE(got_shader_dir);
+
+	g_object_unref(bus);
+	g_object_unref(mock);
+	g_object_unref(service);
 
 	return;
 }

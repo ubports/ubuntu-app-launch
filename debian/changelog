@@ -1,3 +1,67 @@
+upstart-app-launch (0.3+14.04.20131218-0ubuntu1) trusty; urgency=low
+
+  [ Ken VanDine ]
+  * Multi-Arch: same libraries must not depend on run-time application,.
+    since this breaks cross-compilation. Furthermore, circular
+    dependencies are never needed: upstart-app-launch depends on
+    libupstart-app-launch2, which depends on upstart-app-launch. It's
+    the same reasoning why we do not make libgtk-3.0 depend on epiphany
+    webbrowser, even though gtk has functions to open URL in a
+    webbrowser. And in a multi-arch world libgtk-3.0 would never know
+    which architecture your web-browser is, it could be any. Libraries
+    should only ever depend on other linked shared libraries.
+
+  [ Ted Gould ]
+  * Make sure that 'package' sticks around until we setup the
+    environment. (LP: #1260079)
+  * Improve readability of the coverage report.
+
+  [ Didier Roche ]
+  * revert the archictecture specific list: britney doesn't use those
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 100
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 18 Dec 2013 19:40:19 +0000
+
+upstart-app-launch (0.3+14.04.20131209-0ubuntu3) trusty; urgency=low
+
+  * Multi-Arch: same libraries must not depend on run-time application,
+    since this breaks cross-compilation. Furthermore, circular
+    dependencies are never needed: upstart-app-launch depends on
+    libupstart-app-launch2, which depends on upstart-app-launch. It's the
+    same reasoning why we do not make libgtk-3.0 depend on epiphany
+    webbrowser, even though gtk has functions to open URL in a
+    webbrowser. And in a multi-arch world libgtk-3.0 would never know
+    which architecture your web-browser is, it could be any. Libraries
+    should only ever depend on other linked shared libraries.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 12 Dec 2013 22:32:34 +0000
+
+upstart-app-launch (0.3+14.04.20131209-0ubuntu2) trusty; urgency=low
+
+  * Restrict on which arch we build url-dispatcher due to the ust build-dep
+
+ -- Didier Roche <didrocks@ubuntu.com>  Mon, 09 Dec 2013 13:47:51 +0100
+
+upstart-app-launch (0.3+14.04.20131209-0ubuntu1) trusty; urgency=low
+
+  [ Ubuntu daily release ]
+  * debian/*symbols: auto-update new symbols to released version
+
+  [ Ted Gould ]
+  * Use the parsing of the line to split appart the URLs. (LP: #1253703)
+  * Use Upstart on the session bus instead of the private bus.
+  * Adding tracing support to application startup.
+  * Hide click error printed in the Upstart log.
+  * Handshake for starting applications. (LP: #1243665)
+  * Link to the right version of upstart-app-launch.
+
+  [ Ubuntu daily release ]
+  * Automatic snapshot from revision 93
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 09 Dec 2013 02:05:27 +0000
+
 upstart-app-launch (0.3+14.04.20131126-0ubuntu1) trusty; urgency=low
 
   [ Ted Gould ]
