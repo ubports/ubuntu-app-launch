@@ -75,12 +75,13 @@ set(UpstartAppLaunch_2_gir_INCLUDES GObject-2.0)
 
 gir_get_cflags(_cflags)
 set(UpstartAppLaunch_2_gir_CFLAGS ${c_flags})
-set(UpstartAppLaunch_2_gir_LIBS upstart-launcher)
+set(UpstartAppLaunch_2_gir_LIBS upstart-app-launch)
 
 list_make_absolute(_abs_introspection_files _introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
 set(UpstartAppLaunch_2_gir_FILES ${_abs_introspection_files})
 set(UpstartAppLaunch_2_gir_SCANNERFLAGS --c-include "upstart-app-launch.h")
 set(UpstartAppLaunch_2_gir_EXPORT_PACKAGES "upstart-app-launch-${API_VERSION}")
 
-gir_add_introspections(UpstartAppLaunch-2.gir)
+list(APPEND INTROSPECTION_GIRS UpstartAppLaunch-2.gir)
+gir_add_introspections(INTROSPECTION_GIRS)
 
