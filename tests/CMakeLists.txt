@@ -47,6 +47,7 @@ target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBR
 add_test (NAME libual-test-start COMMAND libual-test --gtest_filter=*StartApplication)
 add_test (NAME libual-test-stop COMMAND libual-test --gtest_filter=*StopApplication)
 add_test (NAME libual-test-pid COMMAND libual-test --gtest_filter=*ApplicationPid)
+add_test (NAME libual-test-app-id COMMAND libual-test --gtest_filter=*ApplicationId)
 add_test (NAME libual-test-list COMMAND libual-test --gtest_filter=*ApplicationList)
 add_test (NAME libual-test-observer COMMAND libual-test --gtest_filter=*StartStopObserver)
 add_test (NAME libual-test-starting COMMAND libual-test --gtest_filter=*StartingResponses)
