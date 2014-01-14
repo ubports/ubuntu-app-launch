@@ -707,11 +707,12 @@ get_manifest_file (const gchar * pkg)
 
         if (g_getenv("UAL_CLICK_EXEC") != NULL) {
                 click_exec = g_strdup(g_getenv("UAL_CLICK_EXEC"));
-        }
+        } else {
+		click_exec = "click";
+	}
 
         gchar * cmdline = g_strdup_printf("%s info \"%s\"",
-                click_exec == NULL ? "click" : click_exec,
-                pkg);
+                click_exec, pkg);
 
         gchar * output = NULL;
         g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
