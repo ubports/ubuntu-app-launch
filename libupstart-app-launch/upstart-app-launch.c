@@ -706,7 +706,7 @@ get_manifest_file (const gchar * pkg)
         const gchar * click_exec = NULL;
 
         if (g_getenv("UAL_CLICK_EXEC") != NULL) {
-                click_exec = g_strdup(g_getenv("UAL_CLICK_EXEC"));
+                click_exec = g_getenv("UAL_CLICK_EXEC");
         } else {
 		click_exec = "click";
 	}
