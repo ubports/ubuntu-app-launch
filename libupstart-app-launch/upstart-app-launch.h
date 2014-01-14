@@ -80,16 +80,29 @@ gboolean   upstart_app_launch_start_application         (const gchar *          
 gboolean   upstart_app_launch_stop_application         (const gchar *                     appid);
 
 /**
- * upstart_app_launch_observer_add_app_start:
- * @observer: Callback when an application starts
+ * upstart_app_launch_observer_add_app_starting:
+ * @observer: Callback when an application is about to start
  * @user_data: (allow none): Data to pass to the observer
  *
  * Sets up a callback to get called each time an application
- * starts.
+ * is about to start.  The application will not start until the
+ * function returns.
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_start    (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_add_app_starting (upstart_app_launch_app_observer_t observer,
+                                                         gpointer                          user_data);
+/**
+ * upstart_app_launch_observer_add_app_started:
+ * @observer: Callback when an application started
+ * @user_data: (allow none): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * has been started.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_add_app_started  (upstart_app_launch_app_observer_t observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_add_app_stop:
@@ -145,7 +158,7 @@ gboolean   upstart_app_launch_observer_add_app_failed   (upstart_app_launch_app_
                                                          gpointer                                 user_data);
 
 /**
- * upstart_app_launch_observer_delete_app_start:
+ * upstart_app_launch_observer_delete_app_starting:
  * @observer: Callback to remove
  * @user_data: (allow none): Data that was passed to the observer
  *
@@ -154,7 +167,19 @@ gboolean   upstart_app_launch_observer_add_app_failed   (upstart_app_launch_app_
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_start (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_starting (upstart_app_launch_app_observer_t observer,
+                                                            gpointer                          user_data);
+/**
+ * upstart_app_launch_observer_delete_app_started:
+ * @observer: Callback to remove
+ * @user_data: (allow none): Data that was passed to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_delete_app_started (upstart_app_launch_app_observer_t observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_app_stop:
@@ -245,6 +270,22 @@ GPid       upstart_app_launch_get_primary_pid           (const gchar *          
  */
 gboolean   upstart_app_launch_pid_in_app_id             (GPid                              pid,
                                                          const gchar *                     appid);
+
+/**
+ * upstart_app_launch_triplet_to_app_id:
+ * @pkg: Click package name
+ * @app: Application name
+ * @version: Specific version or "current-user-version"
+ *
+ * Constructs an appid from pkg, app, version triple.
+ *
+ * Return Value: Either the properly constructed @appid or NULL if it failed 
+ *     to find the version installed.
+ */
+gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *                     pkg,
+                                                         const gchar *                     app,
+                                                         const gchar *                     version);
+
 
 #ifdef __cplusplus
 }

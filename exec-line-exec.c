@@ -24,6 +24,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
+#include "exec-line-exec-trace.h"
 #include "helpers.h"
 
 int
@@ -38,6 +39,9 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
+	tracepoint(upstart_app_launch, exec_start);
+
 	/* URIs */
 	const gchar * app_uris = g_getenv("APP_URIS");
 	const gchar * app_desktop = g_getenv("APP_DESKTOP_FILE");
@@ -51,11 +55,55 @@ main (int argc, char * argv[])
 		if (g_chdir(appdir) != 0) {
 			g_warning("Unable to change directory to '%s'", appdir);
 		}
+	}
 
-		const gchar * path = g_getenv("PATH");
-		gchar * newpath = g_strdup_printf("%s:%s", appdir, path);
+	/* Protect against app directories that have ':' in them */
+	if (appdir != NULL && strchr(appdir, ':') == NULL) {
+		const gchar * path_path = g_getenv("PATH");
+		gchar * path_libpath = NULL;
+		const gchar * path_joinable[4] = { 0 };
+
+		const gchar * import_path = g_getenv("QML2_IMPORT_PATH");
+		gchar * import_libpath = NULL;
+		const gchar * import_joinable[4] = { 0 };
+
+		/* If we've got an architecture set insert that into the
+		   path before everything else */
+		const gchar * archdir = g_getenv("UPSTART_APP_LAUNCH_ARCH");
+		if (archdir != NULL && strchr(archdir, ':') == NULL) {
+			path_libpath = g_build_filename(appdir, "lib", archdir, "bin", NULL);
+			import_libpath = g_build_filename(appdir, "lib", archdir, NULL);
+
+			path_joinable[0] = path_libpath;
+			path_joinable[1] = appdir;
+			path_joinable[2] = path_path;
+
+			/* Need to check whether the original is NULL because we're
+			   appending instead of prepending */
+			if (import_path == NULL) {
+				import_joinable[0] = import_libpath;
+			} else {
+				import_joinable[0] = import_path;
+				import_joinable[1] = import_libpath;
+			}
+		} else {
+			path_joinable[0] = appdir;
+			path_joinable[1] = path_path;
+
+			import_joinable[0] = import_path;
+		}
+
+		gchar * newpath = g_strjoinv(":", (gchar**)path_joinable);
 		g_setenv("PATH", newpath, TRUE);
+		g_free(path_libpath);
 		g_free(newpath);
+
+		if (import_joinable[0] != NULL) {
+			gchar * newimport = g_strjoinv(":", (gchar**)import_joinable);
+			g_setenv("QML2_IMPORT_PATH", newimport, TRUE);
+			g_free(newimport);
+		}
+		g_free(import_libpath);
 	}
 
 	/* Parse the execiness of it all */
@@ -65,6 +113,8 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	tracepoint(upstart_app_launch, exec_parse_complete);
+
 	/* Surface flinger check */
 	if (g_getenv("USING_SURFACE_FLINGER") != NULL && app_desktop != NULL) {
 		gchar * sf = g_strdup_printf("--desktop_file_hint=%s", app_desktop);
@@ -73,6 +123,8 @@ main (int argc, char * argv[])
 
 	/* Now exec */
 	gchar ** nargv = (gchar**)g_array_free(newargv, FALSE);
+
+	tracepoint(upstart_app_launch, exec_pre_exec);
 
 	int execret = execvp(nargv[0], nargv);
 

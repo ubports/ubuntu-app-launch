@@ -18,6 +18,7 @@
  */
 
 #include <json-glib/json-glib.h>
+#include <upstart.h>
 #include "helpers.h"
 
 /* Take an app ID and validate it and then break it up
@@ -222,35 +223,45 @@ desktop_to_exec (GKeyFile * desktop_file, const gchar * from)
 void
 set_upstart_variable (const gchar * variable, const gchar * value)
 {
-	GError * error = NULL;
-	gchar * command[4] = {
-		"initctl",
-		"set-env",
-		NULL,
-		NULL
-	};
+	/* Check to see if we can get the job environment */
+	const gchar * job_name = g_getenv("UPSTART_JOB");
+	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
+	g_return_if_fail(job_name != NULL);
 
-	g_debug("Setting Upstart variable '%s' to '%s'", variable, value);
-	gchar * variablestr = g_strdup_printf("%s=%s", variable, value);
-	command[2] = variablestr;
+	/* Get a bus, let's go! */
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_if_fail(bus != NULL);
 
-	g_spawn_sync(NULL, /* working directory */
-		command,
-		NULL, /* environment */
-		G_SPAWN_SEARCH_PATH,
-		NULL, NULL, /* child setup */
-		NULL, /* stdout */
-		NULL, /* stderr */
-		NULL, /* exit status */
-		&error);
+	GVariantBuilder builder; /* Target: (assb) */
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
 
-	if (error != NULL) {
-		g_warning("Unable to set variable '%s' to '%s': %s", variable, value, error->message);
-		g_error_free(error);
-	}
+	/* Setup the job properties */
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
+	if (instance_name != NULL)
+		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
+	g_variant_builder_close(&builder);
 
-	g_free(variablestr);
-	return;
+	/* The value itself */
+	gchar * envstr = g_strdup_printf("%s=%s", variable, value);
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(envstr));
+
+	/* Do we want to replace?  Yes, we do! */
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+	g_dbus_connection_call(bus,
+		DBUS_SERVICE_UPSTART,
+		DBUS_PATH_UPSTART,
+		DBUS_INTERFACE_UPSTART,
+		"SetEnv",
+		g_variant_builder_end(&builder),
+		NULL, /* reply */
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout */
+		NULL, /* cancelable */
+		NULL, NULL); /* callback */
+
+	g_object_unref(bus);
 }
 
 /* Convert a URI into a file */
@@ -581,4 +592,86 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	g_free(nv_shader_cachedir);
 
 	return;
+}
+
+static void
+unity_signal_cb (GDBusConnection * con, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	GMainLoop * mainloop = (GMainLoop *)user_data;
+	g_main_loop_quit(mainloop);
+}
+
+struct _handshake_t {
+	GDBusConnection * con;
+	GMainLoop * mainloop;
+	guint signal_subscribe;
+	guint timeout;
+};
+
+static gboolean
+unity_too_slow_cb (gpointer user_data)
+{
+	handshake_t * handshake = (handshake_t *)user_data;
+	g_main_loop_quit(handshake->mainloop);
+	handshake->timeout = 0;
+	return G_SOURCE_REMOVE;
+}
+
+handshake_t *
+starting_handshake_start (const gchar *   app_id)
+{
+	GError * error = NULL;
+	handshake_t * handshake = g_new0(handshake_t, 1);
+
+	handshake->mainloop = g_main_loop_new(NULL, FALSE);
+	handshake->con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+
+	if (error != NULL) {
+		g_critical("Unable to connect to session bus: %s", error->message);
+		g_error_free(error);
+		g_free(handshake);
+		return NULL;
+	}
+
+	/* Set up listening for the unfrozen signal from Unity */
+	handshake->signal_subscribe = g_dbus_connection_signal_subscribe(handshake->con,
+		NULL, /* sender */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityStartingSignal", /* signal */
+		"/", /* path */
+		app_id, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		unity_signal_cb, handshake->mainloop,
+		NULL); /* user data destroy */
+
+	/* Send unfreeze to to Unity */
+	g_dbus_connection_emit_signal(handshake->con,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"UnityStartingBroadcast", /* signal */
+		g_variant_new("(s)", app_id),
+		&error);
+
+	/* Really, Unity? */
+	handshake->timeout = g_timeout_add_seconds(1, unity_too_slow_cb, handshake);
+
+	return handshake;
+}
+
+void
+starting_handshake_wait (handshake_t * handshake)
+{
+	if (handshake == NULL)
+		return;
+
+	g_main_loop_run(handshake->mainloop);
+
+	if (handshake->timeout != 0)
+		g_source_remove(handshake->timeout);
+	g_main_loop_unref(handshake->mainloop);
+	g_dbus_connection_signal_unsubscribe(handshake->con, handshake->signal_subscribe);
+	g_object_unref(handshake->con);
+
+	g_free(handshake);
 }

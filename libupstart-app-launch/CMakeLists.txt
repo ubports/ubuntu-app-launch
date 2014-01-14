@@ -3,8 +3,8 @@
 # Version Info
 ##########################
 
-set(API_VERSION 1)
-set(ABI_VERSION 1)
+set(API_VERSION 2)
+set(ABI_VERSION 2)
 
 
 ##########################
@@ -34,6 +34,7 @@ target_link_libraries(upstart-launcher
 	${GOBJECT2_LIBRARIES}
 	${LIBUPSTART_LIBRARIES}
 	${GIO2_LIBRARIES}
+	${JSONGLIB_LIBRARIES}
 	-Wl,--no-undefined
 )
 

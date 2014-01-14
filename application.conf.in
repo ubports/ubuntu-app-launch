@@ -17,7 +17,7 @@ script
 	CLICK_PKG=`echo "${APP_ID}" | cut -d _ -f 1`
 
 	if [ ! -z $CLICK_PKG ] ; then
-		CLICK_DIR=`click pkgdir "${CLICK_PKG}" || true`
+		CLICK_DIR=`click pkgdir "${CLICK_PKG}" 2> /dev/null || true`
 	fi
 
 	if [ ! -z $CLICK_DIR ] && [ -d $CLICK_DIR ] ; then

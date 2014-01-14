@@ -1,3 +1,0 @@
-#!/bin/bash
-
-echo $@ >> ${DATA_WRITE_DIR}/initctl-output.txt
