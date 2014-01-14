@@ -758,13 +758,13 @@ gchar *
 manifest_version (const gchar * pkg, const gchar * original_ver)
 {
 	if (g_strcmp0(original_ver, "current-user-version") != 0) {
-		return g_strdup_printf("%s", original_ver);
+		return g_strdup(original_ver);
 	} else  {
 		JsonParser * manifest = get_manifest_file(pkg);
 		g_return_val_if_fail(manifest != NULL, NULL);
 		JsonNode * node = json_parser_get_root(manifest);
 		JsonObject * obj = json_node_get_object(node);
-		gchar * ret = g_strdup_printf("%s", json_object_get_string_member(obj, "version"));
+		gchar * ret = g_strdup(json_object_get_string_member(obj, "version"));
 		g_object_unref(manifest);
 		return ret;
 	}
