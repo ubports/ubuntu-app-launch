@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 /**
- * upstart_app_launch_app_failed_t:
+ * UpstartAppLaunchAppFailed:
  *
  * Types of failure that we report.
  */
@@ -40,18 +40,24 @@ typedef enum { /*< prefix=UPSTART_APP_LAUNCH_APP_FAILED */
 typedef UpstartAppLaunchAppFailed upstart_app_launch_app_failed_t;
 
 /**
- * upstart_app_launch_app_observer_t:
+ * UpstartAppLaunchAppObserver:
  *
  * Function prototype for application observers.
  */
-typedef void (*upstart_app_launch_app_observer_t) (const gchar * appid, gpointer user_data);
+typedef void (*UpstartAppLaunchAppObserver) (const gchar * appid, gpointer user_data);
+
+/* Backwards compatible.  Drop when making API bump. */
+typedef UpstartAppLaunchAppObserver upstart_app_launch_app_observer_t;
 
 /**
- * upstart_app_launch_app_failed_observer_t:
+ * UpstartAppLaunchAppFailedObserver:
  *
  * Function prototype for application failed observers.
  */
-typedef void (*upstart_app_launch_app_failed_observer_t) (const gchar * appid, UpstartAppLaunchAppFailed failure_type, gpointer user_data);
+typedef void (*UpstartAppLaunchAppFailedObserver) (const gchar * appid, UpstartAppLaunchAppFailed failure_type, gpointer user_data);
+
+/* Backwards compatible.  Drop when making API bump. */
+typedef UpstartAppLaunchAppFailedObserver upstart_app_launch_app_failed_observer_t;
 
 
 /**
@@ -90,7 +96,7 @@ gboolean   upstart_app_launch_stop_application         (const gchar *           
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_starting (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_add_app_starting (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_add_app_started:
@@ -102,7 +108,7 @@ gboolean   upstart_app_launch_observer_add_app_starting (void                   
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_started  (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_add_app_started  (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_add_app_stop:
@@ -114,7 +120,7 @@ gboolean   upstart_app_launch_observer_add_app_started  (void                   
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_stop     (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_add_app_stop     (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 
 /**
@@ -127,7 +133,7 @@ gboolean   upstart_app_launch_observer_add_app_stop     (void                   
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_focus    (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_add_app_focus    (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 
 /**
@@ -141,7 +147,7 @@ gboolean   upstart_app_launch_observer_add_app_focus    (void                   
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_resume   (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_add_app_resume   (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 
 /**
@@ -154,7 +160,7 @@ gboolean   upstart_app_launch_observer_add_app_resume   (void                   
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_failed   (void                            (*observer) (const gchar * appid, upstart_app_launch_app_failed_t failed, gpointer user_data),
+gboolean   upstart_app_launch_observer_add_app_failed   (UpstartAppLaunchAppFailedObserver observer,
                                                          gpointer                          user_data);
 
 /**
@@ -167,7 +173,7 @@ gboolean   upstart_app_launch_observer_add_app_failed   (void                   
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_starting (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_delete_app_starting (UpstartAppLaunchAppObserver       observer,
                                                             gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_app_started:
@@ -179,7 +185,7 @@ gboolean   upstart_app_launch_observer_delete_app_starting (void                
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_started (void                          (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_delete_app_started (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_app_stop:
@@ -191,7 +197,7 @@ gboolean   upstart_app_launch_observer_delete_app_started (void                 
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_stop  (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_delete_app_stop  (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 
 /**
@@ -204,7 +210,7 @@ gboolean   upstart_app_launch_observer_delete_app_stop  (void                   
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_focus    (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_delete_app_focus    (UpstartAppLaunchAppObserver       observer,
                                                             gpointer                          user_data);
 
 /**
@@ -217,7 +223,7 @@ gboolean   upstart_app_launch_observer_delete_app_focus    (void                
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_resume   (void                            (*observer) (const gchar * appid, gpointer user_data),
+gboolean   upstart_app_launch_observer_delete_app_resume   (UpstartAppLaunchAppObserver       observer,
                                                             gpointer                          user_data);
 
 /**
@@ -230,7 +236,7 @@ gboolean   upstart_app_launch_observer_delete_app_resume   (void                
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_failed (void                                   (*observer) (const gchar * appid, upstart_app_launch_app_failed_t failed, gpointer user_data),
+gboolean   upstart_app_launch_observer_delete_app_failed (UpstartAppLaunchAppFailedObserver        observer,
                                                           gpointer                                 user_data);
 /**
  * upstart_app_launch_list_running_apps:
