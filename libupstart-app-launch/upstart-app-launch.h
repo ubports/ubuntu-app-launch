@@ -36,7 +36,8 @@ extern "C" {
 typedef enum { /*< prefix=UPSTART_APP_LAUNCH_APP_FAILED */
 	UPSTART_APP_LAUNCH_APP_FAILED_CRASH,          /*< nick=crash */
 	UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE,  /*< nick=start-failure */
-} upstart_app_launch_app_failed_t;
+} UpstartAppLaunchAppFailed;
+typedef UpstartAppLaunchAppFailed upstart_app_launch_app_failed_t;
 
 /**
  * upstart_app_launch_app_observer_t:
@@ -50,7 +51,7 @@ typedef void (*upstart_app_launch_app_observer_t) (const gchar * appid, gpointer
  *
  * Function prototype for application failed observers.
  */
-typedef void (*upstart_app_launch_app_failed_observer_t) (const gchar * appid, upstart_app_launch_app_failed_t failure_type, gpointer user_data);
+typedef void (*upstart_app_launch_app_failed_observer_t) (const gchar * appid, UpstartAppLaunchAppFailed failure_type, gpointer user_data);
 
 
 /**
