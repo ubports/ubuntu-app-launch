@@ -34,6 +34,7 @@ target_link_libraries(upstart-launcher
 	${GOBJECT2_LIBRARIES}
 	${LIBUPSTART_LIBRARIES}
 	${GIO2_LIBRARIES}
+	${JSONGLIB_LIBRARIES}
 	-Wl,--no-undefined
 )
 
