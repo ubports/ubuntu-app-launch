@@ -16,4 +16,4 @@ libupstart-app-launch.so.2 libupstart-app-launch2 #MINVER#
  upstart_app_launch_pid_in_app_id@Base 0.2
  upstart_app_launch_start_application@Base 0.2
  upstart_app_launch_stop_application@Base 0.2
- upstart_app_launch_triplet_to_app_id@Base 0.3+14.04.20131218
+ upstart_app_launch_triplet_to_app_id@Base 0replaceme
