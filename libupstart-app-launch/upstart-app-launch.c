@@ -780,3 +780,26 @@ upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, cons
 	g_return_val_if_fail(version != NULL, NULL);
 	return g_strdup_printf("%s_%s_%s", pkg, app, version);
 }
+
+
+gboolean
+upstart_app_launch_start_helper (const gchar * type, const gchar * appid)
+{
+
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
+{
+
+	return FALSE;
+}
+
+gchar **
+upstart_app_launch_list_helpers (const gchar * type)
+{
+
+	return NULL;
+}
+
