@@ -286,6 +286,46 @@ gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *          
                                                          const gchar *                     app,
                                                          const gchar *                     version);
 
+/**
+ * upstart_app_launch_start_helper:
+ * @type: Type of helper
+ * @id: App ID of the helper
+ *
+ * Start an untrusted helper for a specific @type on a given
+ * @appid.  We don't know how that is done specifically, as Upstart
+ * will call a helper for that type.  And then execute it under the
+ * Apparmor profile for that helper type.
+ *
+ * Return value: Whether the helper was able to be started
+ */
+gboolean   upstart_app_launch_start_helper              (const gchar *                     type,
+                                                         const gchar *                     appid);
+
+/**
+ * upstart_app_launch_stop_helper:
+ * @type: Type of helper
+ * @id: App ID of the helper
+ *
+ * Asks Upstart to kill a helper.  In general, this should be a last resort
+ * as we should ask the helper a better way probably with an in-band protocol
+ * of use.
+ *
+ * Return value: Whether the helper is stopped
+ */
+gboolean   upstart_app_launch_stop_helper               (const gchar *                     type,
+                                                         const gchar *                     appid);
+
+/**
+ * upstart_app_launch_list_helpers:
+ *
+ * @type: Type of helper
+ *
+ * List all App IDs of helpers of a given @type.
+ *
+ * Return value: List of application IDs
+ */
+gchar **   upstart_app_launch_list_helpers              (const gchar *                     type);
+
 
 #ifdef __cplusplus
 }
