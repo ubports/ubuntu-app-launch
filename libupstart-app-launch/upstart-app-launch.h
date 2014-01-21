@@ -63,7 +63,7 @@ typedef UpstartAppLaunchAppFailedObserver upstart_app_launch_app_failed_observer
 /**
  * upstart_app_launch_start_application:
  * @appid: ID of the application to launch
- * @uris: (allow-none): A NULL terminated list of URIs to send to the application
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the application
  *
  * Asks upstart to launch an application.
  *
