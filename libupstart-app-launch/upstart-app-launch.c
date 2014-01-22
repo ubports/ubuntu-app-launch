@@ -18,6 +18,7 @@
  */
 
 #include "upstart-app-launch.h"
+#include <json-glib/json-glib.h>
 #include <upstart.h>
 #include <gio/gio.h>
 #include <string.h>
@@ -899,4 +900,88 @@ upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 	GPid primary = upstart_app_launch_get_primary_pid(appid);
 
 	return primary == pid;
+}
+
+/* Try and get a manifest file and do a couple sanity checks on it */
+JsonParser *
+get_manifest_file (const gchar * pkg)
+{
+	/* Get the directory from click */
+	GError * error = NULL;
+	const gchar * click_exec = NULL;
+
+	if (g_getenv("UAL_CLICK_EXEC") != NULL) {
+		click_exec = g_getenv("UAL_CLICK_EXEC");
+	} else {
+		click_exec = "click";
+	}
+
+	gchar * cmdline = g_strdup_printf("%s info \"%s\"",
+		click_exec, pkg);
+
+	gchar * output = NULL;
+	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
+	g_free(cmdline);
+
+	if (error != NULL) {
+		g_warning("Unable to get manifest for '%s' package: %s", pkg, error->message);
+		g_error_free(error);
+		g_free(output);
+		return NULL;
+	}
+
+	/* Let's look at that manifest file */
+	JsonParser * parser = json_parser_new();
+	json_parser_load_from_data(parser, output, -1, &error);
+	g_free(output);
+
+	if (error != NULL) {
+		g_warning("Unable to load manifest for '%s': %s", pkg, error->message);
+		g_error_free(error);
+		g_object_unref(parser);
+		return NULL;
+	}
+	JsonNode * root = json_parser_get_root(parser);
+	if (json_node_get_node_type(root) != JSON_NODE_OBJECT) {
+		g_warning("Manifest file for package '%s' does not have an object as its root node", pkg);
+		g_object_unref(parser);
+		return NULL;
+	}
+
+	JsonObject * rootobj = json_node_get_object(root);
+	if (!json_object_has_member(rootobj, "version")) {
+		g_warning("Manifest file for package '%s' does not have a version", pkg);
+		g_object_unref(parser);
+		return NULL;
+	}
+
+	return parser;
+}
+
+/* Figure out the app version using the manifest */
+gchar *
+manifest_version (const gchar * pkg, const gchar * original_ver)
+{
+	if (g_strcmp0(original_ver, "current-user-version") != 0) {
+		return g_strdup(original_ver);
+	} else  {
+		JsonParser * manifest = get_manifest_file(pkg);
+		g_return_val_if_fail(manifest != NULL, NULL);
+		JsonNode * node = json_parser_get_root(manifest);
+		JsonObject * obj = json_node_get_object(node);
+		gchar * ret = g_strdup(json_object_get_string_member(obj, "version"));
+		g_object_unref(manifest);
+		return ret;
+	}
+
+	return NULL;
+}
+
+gchar *
+upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
+{
+	gchar * version = NULL;
+	version = manifest_version(pkg, ver);
+	g_return_val_if_fail(version != NULL, NULL);
+	return g_strdup_printf("%s_%s_%s", pkg, app, version);
 }

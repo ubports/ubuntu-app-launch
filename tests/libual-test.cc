@@ -75,6 +75,11 @@ class LibUAL : public ::testing::Test
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
 
 			service = dbus_test_service_new(NULL);
+			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+			const gchar * oldpath = g_getenv("PATH");
+			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
+			g_setenv("PATH", newpath, TRUE);
+			g_free(newpath);
 
 			debugConnection();
 
@@ -320,6 +325,14 @@ TEST_F(LibUAL, ApplicationPid)
 	EXPECT_EQ(upstart_app_launch_get_primary_pid("bar"), 5678);
 	EXPECT_TRUE(upstart_app_launch_pid_in_app_id(getpid(), "foo"));
 	EXPECT_FALSE(upstart_app_launch_pid_in_app_id(5678, "foo"));
+}
+
+TEST_F(LibUAL, ApplicationId)
+{
+	/* Test with current-user-version, should return the version in the manifest */
+	ASSERT_STREQ(upstart_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"), "com.test.good_application_1.2.3");
+	/* Test with version specified, shouldn't even read the manifest */
+	ASSERT_STREQ(upstart_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"), "com.test.good_application_1.2.4");
 }
 
 TEST_F(LibUAL, ApplicationList)
