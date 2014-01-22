@@ -271,6 +271,22 @@ GPid       upstart_app_launch_get_primary_pid           (const gchar *          
 gboolean   upstart_app_launch_pid_in_app_id             (GPid                              pid,
                                                          const gchar *                     appid);
 
+/**
+ * upstart_app_launch_triplet_to_app_id:
+ * @pkg: Click package name
+ * @app: Application name
+ * @version: Specific version or "current-user-version"
+ *
+ * Constructs an appid from pkg, app, version triple.
+ *
+ * Return Value: Either the properly constructed @appid or NULL if it failed 
+ *     to find the version installed.
+ */
+gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *                     pkg,
+                                                         const gchar *                     app,
+                                                         const gchar *                     version);
+
+
 #ifdef __cplusplus
 }
 #endif
