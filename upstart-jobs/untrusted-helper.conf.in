@@ -1,18 +1,18 @@
 description "Untrusted Helpers installed from Click Packages"
 
 start on untrusted-helper-start
-stop on untrusted-helper-stop or desktop-end
+stop on untrusted-helper-end or desktop-end
 
-instance ${HELPER_TYPE}:${HELPER_APPID}
+instance ${HELPER_TYPE}:${APP_ID}
 
-env HELPER_TYPE
-env HELPER_APPID
+env APP_ID
 env APP_EXEC="echo Error"
+env HELPER_TYPE
 
 env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
 export UPSTART_APP_LAUNCH_ARCH
 
-apparmor switch ${HELPER_TYPE}-${HELPER_APPID}
+apparmor switch ${APP_ID}
 oom score 800
 
 # This is unconfined
