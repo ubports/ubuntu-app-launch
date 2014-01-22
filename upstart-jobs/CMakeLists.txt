@@ -31,3 +31,11 @@ configure_file("application-failed.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/applica
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
 add_test(application-failed.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf")
 
+####################
+# untrusted-helper.conf
+####################
+
+configure_file("untrusted-helper.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper.conf" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
+add_test(untrusted-helper.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper.conf")
+

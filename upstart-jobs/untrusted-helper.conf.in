@@ -1,0 +1,29 @@
+description "Untrusted Helpers installed from Click Packages"
+
+start on untrusted-helper-start
+stop on untrusted-helper-stop or desktop-end
+
+instance ${HELPER_TYPE}:${HELPER_APPID}
+
+env HELPER_TYPE
+env HELPER_APPID
+env APP_EXEC="echo Error"
+
+env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
+export UPSTART_APP_LAUNCH_ARCH
+
+apparmor switch ${HELPER_TYPE}-${HELPER_APPID}
+oom score 800
+
+# This is unconfined
+pre-start script
+	if [ -x "@pkglibexecdir@/${HELPER_TYPE}/exec-tool" ] ; then
+		@pkglibexecdir@/${HELPER_TYPE}/exec-tool
+	else
+		echo "Unable to find exec tool for ${HELPER_TYPE}"
+		exit -1
+	fi
+end script
+
+# Remember, this is confined
+exec @pkglibexecdir@/exec-line-exec
