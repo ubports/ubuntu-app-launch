@@ -129,7 +129,7 @@ main (int argc, char * argv[])
 	int execret = execvp(nargv[0], nargv);
 
 	if (execret != 0) {
-		g_warning("Unable to exec: %s", strerror(errno));
+		g_warning("Unable to exec '%s': %s", app_exec, strerror(errno));
 	}
 
 	return execret;

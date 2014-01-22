@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Single
+Type=Application
+Exec=single
+NoDisplay=false
+Hidden=false
+Terminal=false
+X-Ubuntu-Single-Instance=true

@@ -66,3 +66,57 @@ TEST(ZGEvent, OpenTest)
 	g_object_unref(mock);
 	g_object_unref(service);
 }
+
+static void
+zg_state_changed (DbusTestTask * task, DbusTestTaskState state, gpointer user_data)
+{
+	if (state != DBUS_TEST_TASK_STATE_FINISHED)
+		return;
+
+	g_debug("ZG Event Task Finished");
+
+	GMainLoop * mainloop = static_cast<GMainLoop *>(user_data);
+	g_main_loop_quit(mainloop);
+}
+
+TEST(ZGEvent, TimeoutTest)
+{
+	GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
+	DbusTestService * service = dbus_test_service_new(NULL);
+
+	DbusTestDbusMock * mock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", NULL);
+
+	dbus_test_dbus_mock_object_add_method(mock, obj,
+		"InsertEvents",
+		G_VARIANT_TYPE("a(asaasay)"),
+		G_VARIANT_TYPE("au"),
+		"time.sleep(6)\n"
+		"ret = [ 0 ]",
+		NULL);
+
+	dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
+
+	DbusTestProcess * zgevent = dbus_test_process_new(ZG_EVENT_TOOL);
+	dbus_test_process_append_param(zgevent, "close");
+	g_setenv("APP_ID", "foo", 1);
+	dbus_test_task_set_wait_for(DBUS_TEST_TASK(zgevent), "org.gnome.zeitgeist.Engine");
+	dbus_test_task_set_name(DBUS_TEST_TASK(zgevent), "ZGEvent");
+	g_signal_connect(G_OBJECT(zgevent), DBUS_TEST_TASK_SIGNAL_STATE_CHANGED, G_CALLBACK(zg_state_changed), mainloop);
+
+	dbus_test_service_add_task(service, DBUS_TEST_TASK(zgevent));
+
+	guint64 start = g_get_monotonic_time();
+
+	dbus_test_service_start_tasks(service);
+
+	g_main_loop_run(mainloop);
+
+	guint64 end = g_get_monotonic_time();
+
+	EXPECT_LT(end - start, 3000 * 1000);
+
+	g_object_unref(zgevent);
+	g_object_unref(service);
+	g_main_loop_unref(mainloop);
+}

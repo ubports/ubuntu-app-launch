@@ -51,8 +51,11 @@ include_directories(${JSONGLIB_INCLUDE_DIRS})
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
-pkg_check_modules(LIBUPSTART REQUIRED libupstart libnih libnih-dbus dbus-1)
+pkg_check_modules(LIBUPSTART REQUIRED libupstart)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
+
+pkg_check_modules(DBUS REQUIRED dbus-1)
+include_directories(${DBUS_INCLUDE_DIRS})
 
 pkg_check_modules(DBUSTEST REQUIRED dbustest-1>=14.04.0)
 include_directories(${DBUSTEST_INCLUDE_DIRS})
@@ -68,7 +71,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c)
+add_library(helpers STATIC helpers.c helpers-keyfile.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES})
 
 ####################
@@ -146,16 +149,6 @@ target_link_libraries(desktop-hook helpers)
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# desktop-single
-####################
-
-add_lttng_gen_tp(NAME desktop-single-trace)
-add_executable(desktop-single desktop-single.c desktop-single-trace.c)
-set_target_properties(desktop-single PROPERTIES OUTPUT_NAME "desktop-single")
-target_link_libraries(desktop-single helpers ${LTTNG_LIBRARIES})
-install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
 # exec-line-exec
 ####################
 
@@ -175,18 +168,23 @@ set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
 target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
-#######################
-# second-exec
-#######################
+####################
+# application-job
+####################
 
-add_lttng_gen_tp(NAME second-exec-trace)
-add_library(second-exec-core STATIC second-exec-core.c second-exec-trace.c)
-target_link_libraries(second-exec-core helpers upstart-launcher ${LTTNG_LIBRARIES})
+add_executable(application-job application-job.c)
+set_target_properties(application-job PROPERTIES OUTPUT_NAME "application-job")
+target_link_libraries(application-job upstart-launcher)
+install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
 
-add_executable(second-exec second-exec.c)
-set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
-target_link_libraries(second-exec second-exec-core)
-install(TARGETS second-exec RUNTIME DESTINATION "${pkglibexecdir}")
+####################
+# application-failed
+####################
+
+add_executable(application-failed application-failed.c)
+set_target_properties(application-failed PROPERTIES OUTPUT_NAME "application-failed")
+target_link_libraries(application-failed ${GIO2_LIBRARIES})
+install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # application.conf
@@ -211,6 +209,14 @@ add_test(application-legacy.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${
 configure_file("application-click.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
 add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
+
+####################
+# application-failed.conf
+####################
+
+configure_file("application-failed.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
+add_test(application-failed.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf")
 
 ####################
 # upstart-app-launch-desktop.click-hook
