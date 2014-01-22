@@ -39,3 +39,11 @@ configure_file("untrusted-helper.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/untrusted
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
 add_test(untrusted-helper.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper.conf")
 
+####################
+# untrusted-helper-type-end.conf
+####################
+
+configure_file("untrusted-helper-type-end.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper-type-end.conf" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper-type-end.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
+add_test(untrusted-helper-type-end.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper-type-end.conf")
+
