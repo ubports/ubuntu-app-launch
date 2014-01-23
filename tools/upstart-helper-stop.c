@@ -21,5 +21,15 @@
 
 int
 main (int argc, gchar * argv[]) {
-	return 0;
+	if (argc != 3) {
+		g_printerr("Usage: %s <helper type> <app id>\n", argv[0]);
+		return 1;
+	}
+
+	if (upstart_app_launch_stop_helper(argv[1], argv[2])) {
+		return 0;
+	}
+
+	g_debug("Unable to stop app id '%s' of type '%s'", argv[2], argv[1]);
+	return -1;
 }

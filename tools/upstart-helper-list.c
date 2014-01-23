@@ -21,5 +21,23 @@
 
 int
 main (int argc, gchar * argv[]) {
+	if (argc != 2) {
+		g_printerr("Usage: %s <helper type>\n", argv[0]);
+		return 1;
+	}
+
+	gchar ** appids = upstart_app_launch_list_helpers(argv[1]);
+	if (appids == NULL) {
+		g_warning("Error getting App IDs for helper type '%s'", argv[1]);
+		return -1;
+	}
+
+	int i;
+	for (i = 0; appids[i] != NULL; i++) {
+		g_print("%s\n", appids[i]);
+	}
+
+	g_strfreev(appids);
+
 	return 0;
 }
