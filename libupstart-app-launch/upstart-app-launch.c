@@ -1171,7 +1171,14 @@ list_helpers_helper (GDBusConnection * con, GVariant * props_dict, gpointer user
 
 	const gchar * name = g_variant_get_string(namev, NULL);
 	if (g_str_has_prefix(name, data->type_prefix)) {
+		/* Skip the type name */
 		name += data->type_len;
+
+		/* Skip a possible instance ID */
+		name = g_strstr_len(name, -1, ":");
+		name++;
+
+		/* Now copy the app id */
 		gchar * appid = g_strdup(name);
 		g_array_append_val(data->retappids, appid);
 	}

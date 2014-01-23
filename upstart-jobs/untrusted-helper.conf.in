@@ -3,11 +3,12 @@ description "Untrusted Helpers installed from Click Packages"
 start on untrusted-helper-start
 stop on untrusted-helper-end or desktop-end
 
-instance ${HELPER_TYPE}:${APP_ID}
+instance ${HELPER_TYPE}:${INSTANCE_ID}:${APP_ID}
 
 env APP_ID
 env APP_EXEC="echo Error"
 env HELPER_TYPE
+env INSTANCE_ID=""
 
 env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
 export UPSTART_APP_LAUNCH_ARCH
