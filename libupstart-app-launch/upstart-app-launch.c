@@ -1114,8 +1114,41 @@ upstart_app_launch_start_helper (const gchar * type, const gchar * appid)
 gboolean
 upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
 {
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(appid != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
 
-	return FALSE;
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	const gchar * jobpath = get_jobpath(con, "untrusted-helper");
+
+	/* Build up our environment */
+	GVariantBuilder builder;
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("HELPER_TYPE=%s", type)));
+	g_variant_builder_close(&builder);
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+	
+	/* Call the job start function */
+	g_dbus_connection_call(con,
+	                       DBUS_SERVICE_UPSTART,
+	                       jobpath,
+	                       DBUS_INTERFACE_UPSTART_JOB,
+	                       "Stop",
+	                       g_variant_builder_end(&builder),
+	                       NULL,
+	                       G_DBUS_CALL_FLAGS_NONE,
+	                       -1,
+	                       NULL, /* cancelable */
+	                       NULL, /* TODO: Callback */
+	                       NULL);
+
+	g_object_unref(con);
+
+	return TRUE;
 }
 
 gchar **
