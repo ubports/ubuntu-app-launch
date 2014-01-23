@@ -142,6 +142,15 @@ target_link_libraries(application-failed ${GIO2_LIBRARIES})
 install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# untrusted-helper-type-end
+####################
+
+add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
+set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
+target_link_libraries(untrusted-helper-type-end upstart-launcher)
+install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # upstart-app-launch-desktop.click-hook
 ####################
 
