@@ -1151,10 +1151,56 @@ upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
 	return TRUE;
 }
 
+typedef struct {
+	gchar * type_prefix; /* Type with the colon sperator */
+	size_t type_len;     /* Length in characters of the prefix */
+	GArray * retappids;  /* Array of appids to return */
+} helpers_helper_t;
+
+/* Look at each instance and see if it matches this type, if so
+   add the appid portion to the array of appids */
+static void
+list_helpers_helper (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
+{
+	helpers_helper_t * data = (helpers_helper_t *)user_data;
+
+	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+	if (namev == NULL) {
+		return;
+	}
+
+	const gchar * name = g_variant_get_string(namev, NULL);
+	if (g_str_has_prefix(name, data->type_prefix)) {
+		name += data->type_len;
+		gchar * appid = g_strdup(name);
+		g_array_append_val(data->retappids, appid);
+	}
+
+	g_variant_unref(namev);
+
+	return;
+}
+
 gchar **
 upstart_app_launch_list_helpers (const gchar * type)
 {
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
 
-	return NULL;
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	helpers_helper_t helpers_helper_data = {
+		.type_prefix = g_strdup_printf("%s:", type),
+		.type_len = strlen(type) + 1, /* 1 for the colon */
+		.retappids = g_array_new(TRUE, TRUE, sizeof(gchar *))
+	};
+
+	foreach_job_instance(con, "untrusted-helper", list_helpers_helper, &helpers_helper_data);
+
+	g_object_unref(con);
+	g_free(helpers_helper_data.type_prefix);
+
+	return (gchar **)g_array_free(helpers_helper_data.retappids, FALSE);
 }
 
