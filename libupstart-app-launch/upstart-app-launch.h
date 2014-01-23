@@ -302,6 +302,24 @@ gboolean   upstart_app_launch_start_helper              (const gchar *          
                                                          const gchar *                     appid);
 
 /**
+ * upstart_app_launch_start_multiple_helper:
+ * @type: Type of helper
+ * @id: App ID of the helper
+ *
+ * Start an untrusted helper for a specific @type on a given
+ * @appid.  We don't know how that is done specifically, as Upstart
+ * will call a helper for that type.  And then execute it under the
+ * Apparmor profile for that helper type.  This function is different
+ * from @upstart_app_launch_start_helper in that it works for helpers
+ * that aren't single instance and the manager will be managing the
+ * instances as well.
+ *
+ * Return value: The generated instance ID or NULL on failure
+ */
+gchar *    upstart_app_launch_start_multiple_helper     (const gchar *                     type,
+                                                         const gchar *                     appid);
+
+/**
  * upstart_app_launch_stop_helper:
  * @type: Type of helper
  * @id: App ID of the helper

@@ -1070,14 +1070,13 @@ upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, cons
 	return g_strdup_printf("%s_%s_%s", pkg, app, version);
 }
 
-
-gboolean
-upstart_app_launch_start_helper (const gchar * type, const gchar * appid)
+/* Implements sending the "start" command to Upstart for the
+   untrusted helper job with the various configuration options
+   to define the instance.  In the end there's only one job with
+   an array of instances. */
+static gboolean
+start_helper_core (const gchar * type, const gchar * appid, const gchar * instance)
 {
-	g_return_val_if_fail(type != NULL, FALSE);
-	g_return_val_if_fail(appid != NULL, FALSE);
-	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
-
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
 
@@ -1089,6 +1088,11 @@ upstart_app_launch_start_helper (const gchar * type, const gchar * appid)
 	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
 	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("HELPER_TYPE=%s", type)));
+
+	if (instance != NULL) {
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instance)));
+	}
+
 	g_variant_builder_close(&builder);
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 	
@@ -1109,6 +1113,33 @@ upstart_app_launch_start_helper (const gchar * type, const gchar * appid)
 	g_object_unref(con);
 
 	return TRUE;
+}
+
+gboolean
+upstart_app_launch_start_helper (const gchar * type, const gchar * appid)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(appid != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	return start_helper_core(type, appid, NULL);
+}
+
+gchar *
+upstart_app_launch_start_multiple_helper (const gchar * type, const gchar * appid)
+{
+	g_return_val_if_fail(type != NULL, NULL);
+	g_return_val_if_fail(appid != NULL, NULL);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, NULL);
+
+	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
+
+	if (start_helper_core(type, appid, instanceid)) {
+		return instanceid;
+	}
+
+	g_free(instanceid);
+	return NULL;
 }
 
 gboolean
