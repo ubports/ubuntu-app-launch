@@ -18,6 +18,7 @@
  */
 
 #include "libupstart-app-launch/upstart-app-launch.h"
+#include <gio/gio.h>
 
 int
 main (int argc, gchar * argv[]) {
@@ -25,6 +26,9 @@ main (int argc, gchar * argv[]) {
 		g_printerr("Usage: %s <helper type>\n", argv[0]);
 		return 1;
 	}
+
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, -1);
 
 	gchar ** appids = upstart_app_launch_list_helpers(argv[1]);
 	if (appids == NULL) {
@@ -38,6 +42,9 @@ main (int argc, gchar * argv[]) {
 	}
 
 	g_strfreev(appids);
+
+	g_dbus_connection_flush_sync(con, NULL, NULL);
+	g_object_unref(con);
 
 	return 0;
 }

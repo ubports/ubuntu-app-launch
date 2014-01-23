@@ -18,6 +18,7 @@
  */
 
 #include "libupstart-app-launch/upstart-app-launch.h"
+#include <gio/gio.h>
 
 int
 main (int argc, gchar * argv[]) {
@@ -26,10 +27,19 @@ main (int argc, gchar * argv[]) {
 		return 1;
 	}
 
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, -1);
+
+	int retval = -1;
+
 	if (upstart_app_launch_start_helper(argv[1], argv[2])) {
-		return 0;
+		retval = 0;
+	} else {
+		g_debug("Unable to start app id '%s' of type '%s'", argv[2], argv[1]);
 	}
 
-	g_debug("Unable to start app id '%s' of type '%s'", argv[2], argv[1]);
-	return -1;
+	g_dbus_connection_flush_sync(con, NULL, NULL);
+	g_object_unref(con);
+
+	return retval; 
 }
