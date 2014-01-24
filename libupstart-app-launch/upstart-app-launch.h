@@ -322,7 +322,7 @@ gchar *    upstart_app_launch_start_multiple_helper     (const gchar *          
 /**
  * upstart_app_launch_stop_helper:
  * @type: Type of helper
- * @id: App ID of the helper
+ * @appid: App ID of the helper
  *
  * Asks Upstart to kill a helper.  In general, this should be a last resort
  * as we should ask the helper a better way probably with an in-band protocol
@@ -332,6 +332,22 @@ gchar *    upstart_app_launch_start_multiple_helper     (const gchar *          
  */
 gboolean   upstart_app_launch_stop_helper               (const gchar *                     type,
                                                          const gchar *                     appid);
+
+/**
+ * upstart_app_launch_stop_multiple_helper:
+ * @type: Type of helper
+ * @appid: App ID of the helper
+ * @instanceid: The instance ID returned when starting the helper
+ *
+ * Asks Upstart to kill a helper.  In general, this should be a last resort
+ * as we should ask the helper a better way probably with an in-band protocol
+ * of use.
+ *
+ * Return value: Whether the helper is stopped
+ */
+gboolean   upstart_app_launch_stop_multiple_helper      (const gchar *                     type,
+                                                         const gchar *                     appid,
+                                                         const gchar *                     instanceid);
 
 /**
  * upstart_app_launch_list_helpers:

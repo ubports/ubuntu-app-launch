@@ -1142,13 +1142,13 @@ upstart_app_launch_start_multiple_helper (const gchar * type, const gchar * appi
 	return NULL;
 }
 
-gboolean
-upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
+/* Implements the basis of sending the stop message to Upstart for
+   an instance of the untrusted-helper job.  That also can have an
+   instance in that we allow for random instance ids to be used for
+   helpers that are not unique */
+static gboolean
+stop_helper_core (const gchar * type, const gchar * appid, const gchar * instanceid)
 {
-	g_return_val_if_fail(type != NULL, FALSE);
-	g_return_val_if_fail(appid != NULL, FALSE);
-	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
-
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
 
@@ -1160,6 +1160,11 @@ upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
 	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
 	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("HELPER_TYPE=%s", type)));
+
+	if (instanceid != NULL) {
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instanceid)));
+	}
+
 	g_variant_builder_close(&builder);
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 	
@@ -1181,6 +1186,28 @@ upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
 
 	return TRUE;
 }
+
+gboolean
+upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(appid != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	return stop_helper_core(type, appid, NULL);
+}
+
+gboolean
+upstart_app_launch_stop_multiple_helper (const gchar * type, const gchar * appid, const gchar * instanceid)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(appid != NULL, FALSE);
+	g_return_val_if_fail(instanceid != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	return stop_helper_core(type, appid, instanceid);
+}
+
 
 typedef struct {
 	gchar * type_prefix; /* Type with the colon sperator */
