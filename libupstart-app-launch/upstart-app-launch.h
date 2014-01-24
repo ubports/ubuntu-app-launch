@@ -299,7 +299,8 @@ gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *          
  * Return value: Whether the helper was able to be started
  */
 gboolean   upstart_app_launch_start_helper              (const gchar *                     type,
-                                                         const gchar *                     appid);
+                                                         const gchar *                     appid,
+                                                         const gchar * const *             uris);
 
 /**
  * upstart_app_launch_start_multiple_helper:
@@ -317,7 +318,8 @@ gboolean   upstart_app_launch_start_helper              (const gchar *          
  * Return value: The generated instance ID or NULL on failure
  */
 gchar *    upstart_app_launch_start_multiple_helper     (const gchar *                     type,
-                                                         const gchar *                     appid);
+                                                         const gchar *                     appid,
+                                                         const gchar * const *             uris);
 
 /**
  * upstart_app_launch_stop_helper:
