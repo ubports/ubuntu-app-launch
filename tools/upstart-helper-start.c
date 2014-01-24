@@ -32,7 +32,8 @@ main (int argc, gchar * argv[]) {
 
 	int retval = -1;
 
-	if (upstart_app_launch_start_helper(argv[1], argv[2])) {
+	/* TODO: Allow URIs */
+	if (upstart_app_launch_start_helper(argv[1], argv[2], NULL)) {
 		retval = 0;
 	} else {
 		g_debug("Unable to start app id '%s' of type '%s'", argv[2], argv[1]);

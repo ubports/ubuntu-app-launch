@@ -9,6 +9,7 @@ env APP_ID
 env APP_EXEC="echo Error"
 env HELPER_TYPE
 env INSTANCE_ID=""
+env APP_URIS
 
 env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
 export UPSTART_APP_LAUNCH_ARCH
