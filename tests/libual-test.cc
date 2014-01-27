@@ -914,3 +914,60 @@ TEST_F(LibUAL, StartHelper)
 
 	return;
 }
+
+TEST_F(LibUAL, StopHelper)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	/* Basic helper */
+	ASSERT_TRUE(upstart_app_launch_stop_helper("untrusted-type", "foo"));
+
+	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Stop", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foo"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
+	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Multi helper */
+	ASSERT_TRUE(upstart_app_launch_stop_multiple_helper("untrusted-type", "foo", "instance-me"));
+
+	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
+
+	len = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Stop", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foo"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_TRUE(check_env(env, "INSTANCE_ID", "instance-me"));
+	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	return;
+}
