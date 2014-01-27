@@ -261,11 +261,15 @@ class LibUAL : public ::testing::Test
 						return false;
 					}
 
-					gchar * combined = g_strdup_printf("%s=%s", var, value);
-					if (g_strcmp0(envvar, combined) == 0) {
+					if (value != NULL) {
+						gchar * combined = g_strdup_printf("%s=%s", var, value);
+						if (g_strcmp0(envvar, combined) == 0) {
+							found = true;
+						}
+						g_free(combined);
+					} else {
 						found = true;
 					}
-					g_free(combined);
 				}
 			}
 
@@ -828,3 +832,85 @@ TEST_F(LibUAL, FailingObserver)
 	g_object_unref(session);
 }
 
+TEST_F(LibUAL, StartHelper)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	/* Basic make sure we can send the event */
+	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", NULL));
+	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Now look at the details of the call */
+	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
+	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Now check a multi out */ 
+	gchar * instance_id = upstart_app_launch_start_multiple_helper("untrusted-type", "foolike", NULL);
+	ASSERT_NE(nullptr, instance_id);
+	g_debug("Multi-instance ID: %s", instance_id);
+
+	len = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
+	g_variant_unref(env);
+	g_free(instance_id);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Let's pass some URLs */
+	const gchar * urls[] = {
+		"http://ubuntu.com/",
+		"https://ubuntu.com/",
+		"file:///home/phablet/test.txt",
+		NULL
+	};
+	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", urls));
+
+	len = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
+	g_variant_unref(env);
+
+	return;
+}
