@@ -100,10 +100,13 @@ class LibUAL : public ::testing::Test
 				G_VARIANT_TYPE("o"),
 				"if args[0] == 'application-click':\n"
 				"	ret = dbus.ObjectPath('/com/test/application_click')\n"
-				"else:\n"
-				"	ret = dbus.ObjectPath('/com/test/application_legacy')\n",
+				"elif args[0] == 'application-legacy':\n"
+				"	ret = dbus.ObjectPath('/com/test/application_legacy')\n"
+				"elif args[0] == 'untrusted-helper':\n"
+				"	ret = dbus.ObjectPath('/com/test/untrusted/helper')\n",
 				NULL);
 
+			/* Click App */
 			DbusTestDbusMockObject * jobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, jobobj,
@@ -142,6 +145,7 @@ class LibUAL : public ::testing::Test
 				NULL);
 			g_free(process_var);
 
+			/*  Legacy App */
 			DbusTestDbusMockObject * ljobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, ljobobj,
@@ -177,6 +181,45 @@ class LibUAL : public ::testing::Test
 				g_variant_new_parsed("[('main', 5678)]"),
 				NULL);
 
+			/*  Untrusted Helper */
+			DbusTestDbusMockObject * uhelperobj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, uhelperobj,
+				"Start",
+				G_VARIANT_TYPE("(asb)"),
+				NULL,
+				"",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, uhelperobj,
+				"Stop",
+				G_VARIANT_TYPE("(asb)"),
+				NULL,
+				"",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, uhelperobj,
+				"GetAllInstances",
+				NULL,
+				G_VARIANT_TYPE("ao"),
+				"ret = [ dbus.ObjectPath('/com/test/untrusted/helper/instance'), dbus.ObjectPath('/com/test/untrusted/helper/multi_instance') ]",
+				NULL);
+
+			DbusTestDbusMockObject * uhelperinstance = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper/instance", "com.ubuntu.Upstart0_6.Instance", NULL);
+			dbus_test_dbus_mock_object_add_property(mock, uhelperinstance,
+				"name",
+				G_VARIANT_TYPE_STRING,
+				g_variant_new_string("untrusted-type::com.foo_bar_43.23.12"),
+				NULL);
+
+			DbusTestDbusMockObject * unhelpermulti = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper/multi_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
+			dbus_test_dbus_mock_object_add_property(mock, unhelpermulti,
+				"name",
+				G_VARIANT_TYPE_STRING,
+				g_variant_new_string("untrusted-type:24034582324132:com.bar_foo_8432.13.1"),
+				NULL);
+
+			/* Put it together */
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
 			dbus_test_service_start_tasks(service);
 
