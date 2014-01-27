@@ -979,6 +979,8 @@ TEST_F(LibUAL, HelperList)
 	EXPECT_NE(nullptr, blanktype);
 	EXPECT_EQ(0, g_strv_length(blanktype));
 
+	g_strfreev(blanktype);
+
 	gchar ** goodtype = upstart_app_launch_list_helpers("untrusted-type");
 
 	EXPECT_NE(nullptr, goodtype);
@@ -991,4 +993,6 @@ TEST_F(LibUAL, HelperList)
 		EXPECT_STREQ("com.foo_bar_43.23.12", goodtype[1]);
 		EXPECT_STREQ("com.bar_foo_8432.13.1", goodtype[0]);
 	}
+
+	g_strfreev(goodtype);
 }
