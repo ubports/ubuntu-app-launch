@@ -971,3 +971,24 @@ TEST_F(LibUAL, StopHelper)
 
 	return;
 }
+
+TEST_F(LibUAL, HelperList)
+{
+	gchar ** blanktype = upstart_app_launch_list_helpers("not-a-type");
+
+	EXPECT_NE(nullptr, blanktype);
+	EXPECT_EQ(0, g_strv_length(blanktype));
+
+	gchar ** goodtype = upstart_app_launch_list_helpers("untrusted-type");
+
+	EXPECT_NE(nullptr, goodtype);
+	EXPECT_EQ(2, g_strv_length(goodtype));
+
+	if (g_strcmp0(goodtype[0], "com.foo_bar_43.23.12") == 0) {
+		EXPECT_STREQ("com.foo_bar_43.23.12", goodtype[0]);
+		EXPECT_STREQ("com.bar_foo_8432.13.1", goodtype[1]);
+	} else {
+		EXPECT_STREQ("com.foo_bar_43.23.12", goodtype[1]);
+		EXPECT_STREQ("com.bar_foo_8432.13.1", goodtype[0]);
+	}
+}
