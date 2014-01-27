@@ -1274,3 +1274,31 @@ upstart_app_launch_list_helpers (const gchar * type)
 	return (gchar **)g_array_free(helpers_helper_data.retappids, FALSE);
 }
 
+gboolean
+upstart_app_launch_observer_add_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+{
+
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_add_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+{
+
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+{
+
+	return FALSE;
+}
+
+gboolean
+upstart_app_launch_observer_delete_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+{
+
+	return FALSE;
+}
+

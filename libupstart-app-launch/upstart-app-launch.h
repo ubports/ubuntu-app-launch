@@ -53,6 +53,12 @@ typedef void (*upstart_app_launch_app_observer_t) (const gchar * appid, gpointer
  */
 typedef void (*upstart_app_launch_app_failed_observer_t) (const gchar * appid, upstart_app_launch_app_failed_t failure_type, gpointer user_data);
 
+/**
+ * UpstartAppLaunchHelperObserver:
+ *
+ * Function to watch for helpers that are starting and stopping
+ */
+typedef void (*UpstartAppLaunchHelperObserver) (const gchar * appid, const gchar * instanceid, const gchar * helpertype, gpointer user_data);
 
 /**
  * upstart_app_launch_start_application:
@@ -362,6 +368,62 @@ gboolean   upstart_app_launch_stop_multiple_helper      (const gchar *          
  */
 gchar **   upstart_app_launch_list_helpers              (const gchar *                     type);
 
+/**
+ * upstart_app_launch_observer_add_helper_started:
+ * @observer: Callback when a helper started
+ * @helper_type: Type of helpers to look for
+ * @user_data: (allow-none): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time a helper of
+ * @helper_type has been started.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_add_helper_started  (UpstartAppLaunchHelperObserver    observer,
+                                                            const gchar *                     helper_type,
+                                                            gpointer                          user_data);
+/**
+ * upstart_app_launch_observer_add_helper_stop:
+ * @observer: Callback when a helper stops
+ * @helper_type: Type of helpers to look for
+ * @user_data: (allow-none): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time a helper of
+ * @helper_type stops.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_add_helper_stop       (UpstartAppLaunchHelperObserver    observer,
+                                                              const gchar *                     helper_type,
+                                                              gpointer                          user_data);
+/**
+ * upstart_app_launch_observer_delete_helper_started:
+ * @observer: Callback to remove
+ * @helper_type: Type of helpers it looked for
+ * @user_data: (allow none): Data that was passed to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHelperObserver    observer,
+                                                              const gchar *                     helper_type,
+                                                              gpointer                          user_data);
+/**
+ * upstart_app_launch_observer_delete_helper_stop:
+ * @observer: Callback to remove
+ * @helper_type: Type of helpers it looked for
+ * @user_data: (allow none): Data that was passed to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_delete_helper_stop    (UpstartAppLaunchHelperObserver    observer,
+                                                              const gchar *                     helper_type,
+                                                              gpointer                          user_data);
 
 #ifdef __cplusplus
 }
