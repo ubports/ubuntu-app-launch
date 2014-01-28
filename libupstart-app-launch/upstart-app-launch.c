@@ -754,11 +754,11 @@ get_manifest_file (const gchar * pkg)
 }
 
 /* Figure out the app version using the manifest */
-gchar *
+const gchar *
 manifest_version (JsonParser ** manifest, const gchar * pkg, const gchar * original_ver)
 {
 	if (original_ver != NULL && g_strcmp0(original_ver, "current-user-version") != 0) {
-		return g_strdup(original_ver);
+		return original_ver;
 	} else  {
 		if (*manifest == NULL) {
 			*manifest = get_manifest_file(pkg);
@@ -780,17 +780,16 @@ upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, cons
 	g_return_val_if_fail(pkg != NULL, NULL);
 	g_return_val_if_fail(app != NULL, NULL);
 
-	gchar * version = NULL;
-	gchar * retval = NULL;
+	const gchar * version = NULL;
 	JsonParser * manifest = NULL;
 
 	version = manifest_version(&manifest, pkg, ver);
 	g_return_val_if_fail(version != NULL, NULL);
 
-	g_clear_object(&manifest);
+	gchar * retval = g_strdup_printf("%s_%s_%s", pkg, app, version);
 
-	retval = g_strdup_printf("%s_%s_%s", pkg, app, version);
-	g_free(version);
+	/* The parser may hold allocation for some of our strings used above */
+	g_clear_object(&manifest);
 
 	return retval;
 }
