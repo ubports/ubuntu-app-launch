@@ -1070,6 +1070,23 @@ upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, cons
 	return g_strdup_printf("%s_%s_%s", pkg, app, version);
 }
 
+/* Print an error if we couldn't start it */
+static void
+start_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+	GVariant * result = NULL;
+
+	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+	if (result != NULL)
+		g_variant_unref(result);
+
+	if (error != NULL) {
+		g_warning("Unable to start helper: %s", error->message);
+		g_error_free(error);
+	}
+}
+
 /* Implements sending the "start" command to Upstart for the
    untrusted helper job with the various configuration options
    to define the instance.  In the end there's only one job with
@@ -1112,7 +1129,7 @@ start_helper_core (const gchar * type, const gchar * appid, const gchar * const 
 	                       G_DBUS_CALL_FLAGS_NONE,
 	                       -1,
 	                       NULL, /* cancelable */
-	                       NULL, /* TODO: Callback */
+	                       start_helper_callback,
 	                       NULL);
 
 	g_object_unref(con);
@@ -1145,6 +1162,23 @@ upstart_app_launch_start_multiple_helper (const gchar * type, const gchar * appi
 
 	g_free(instanceid);
 	return NULL;
+}
+
+/* Print an error if we couldn't stop it */
+static void
+stop_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+	GVariant * result = NULL;
+
+	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+	if (result != NULL)
+		g_variant_unref(result);
+
+	if (error != NULL) {
+		g_warning("Unable to stop helper: %s", error->message);
+		g_error_free(error);
+	}
 }
 
 /* Implements the basis of sending the stop message to Upstart for
@@ -1184,7 +1218,7 @@ stop_helper_core (const gchar * type, const gchar * appid, const gchar * instanc
 	                       G_DBUS_CALL_FLAGS_NONE,
 	                       -1,
 	                       NULL, /* cancelable */
-	                       NULL, /* TODO: Callback */
+	                       stop_helper_callback,
 	                       NULL);
 
 	g_object_unref(con);
