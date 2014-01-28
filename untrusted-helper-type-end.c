@@ -36,10 +36,24 @@ main (int argc, gchar * argv[]) {
 
 	int i;
 	for (i = 0; appids[i] != NULL; i++) {
-		g_debug("Stopping %s", appids[i]);
-		if (!upstart_app_launch_stop_helper(type, appids[i])) {
-			g_warning("Unable to stop '%s'", appids[i]);
+		gchar ** instances = upstart_app_launch_list_helper_instances(type, appids[i]);
+
+		if (g_strv_length(instances) == 0) {
+			g_debug("Stopping %s", appids[i]);
+			if (!upstart_app_launch_stop_helper(type, appids[i])) {
+				g_warning("Unable to stop '%s'", appids[i]);
+			}
+		} else {
+			int j;
+			for (j = 0; j < g_strv_length(instances); j++) {
+				g_debug("Stopping %s (%s)", appids[i], instances[j]);
+				if (!upstart_app_launch_stop_multiple_helper(type, appids[i], instances[j])) {
+					g_warning("Unable to stop '%s' instance '%s'", appids[i], instances[j]);
+				}
+			}
 		}
+
+		g_strfreev(instances);
 	}
 
 	g_strfreev(appids);
