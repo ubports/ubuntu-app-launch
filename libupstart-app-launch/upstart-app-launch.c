@@ -1274,18 +1274,119 @@ upstart_app_launch_list_helpers (const gchar * type)
 	return (gchar **)g_array_free(helpers_helper_data.retappids, FALSE);
 }
 
+/* The data we keep for each observer */
+typedef struct _helper_observer_t helper_observer_t;
+struct _helper_observer_t {
+	GDBusConnection * conn;
+	guint sighandle;
+	gchar * type;
+	UpstartAppLaunchHelperObserver func;
+	gpointer user_data;
+};
+
+/* The lists of helper observers */
+static GList * helper_started_obs = NULL;
+static GList * helper_stopped_obs = NULL;
+
+static void
+helper_observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	helper_observer_t * observer = (helper_observer_t *)user_data;
+
+	gchar * env = NULL;
+	GVariant * envs = g_variant_get_child_value(params, 1);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envs);
+
+	gboolean job_found = FALSE;
+	gchar * instance = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &env)) {
+		if (g_strcmp0(env, "JOB=untrusted-helper") == 0) {
+			job_found = TRUE;
+		} else if (g_str_has_prefix(env, "INSTANCE=")) {
+			instance = g_strdup(env + strlen("INSTANCE="));
+		}
+	}
+
+	g_variant_unref(envs);
+
+	if (instance != NULL && !g_str_has_prefix(instance, observer->type)) {
+		g_free(instance);
+		instance = NULL;
+	}
+
+	gchar * appid = NULL;
+	gchar * instanceid = NULL;
+	gchar * type = NULL;
+
+	if (instance != NULL) {
+		gchar ** split = g_strsplit(instance, ":", 3);
+		appid = split[0];
+		instanceid = split[1];
+		type = split[2];
+		g_free(split);
+	}
+	g_free(instance);
+
+	if (instanceid != NULL && instanceid[0] == '\0') {
+		g_free(instanceid);
+		instanceid = NULL;
+	}
+
+	if (job_found && appid != NULL) {
+		observer->func(appid, instanceid, type, observer->user_data);
+	}
+
+	g_free(appid);
+	g_free(instanceid);
+	g_free(type);
+}
+
+/* Creates the observer structure and registers for the signal with
+   GDBus so that we can get a callback */
+static gboolean
+add_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data, const gchar * signal, GList ** list)
+{
+	GDBusConnection * conn = gdbus_upstart_ref();
+
+	if (conn == NULL) {
+		return FALSE;
+	}
+
+	helper_observer_t * observert = g_new0(helper_observer_t, 1);
+
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
+	observert->type = g_strdup_printf("%s:", helper_type);
+
+	*list = g_list_prepend(*list, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
+		NULL, /* sender */
+		DBUS_INTERFACE_UPSTART, /* interface */
+		"EventEmitted", /* signal */
+		DBUS_PATH_UPSTART, /* path */
+		signal, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		helper_observer_cb,
+		observert,
+		NULL); /* user data destroy */
+
+	return TRUE;
+}
+
 gboolean
 upstart_app_launch_observer_add_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
-
-	return FALSE;
+	return add_helper_generic(observer, helper_type, user_data, "started", &helper_started_obs);
 }
 
 gboolean
 upstart_app_launch_observer_add_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
-
-	return FALSE;
+	return add_helper_generic(observer, helper_type, user_data, "stopped", &helper_stopped_obs);
 }
 
 gboolean
