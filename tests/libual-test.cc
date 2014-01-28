@@ -997,6 +997,25 @@ TEST_F(LibUAL, HelperList)
 	g_strfreev(goodtype);
 }
 
+TEST_F(LibUAL, HelperInstanceList)
+{
+	gchar ** blanktype = upstart_app_launch_list_helper_instances("not-a-type", "com.bar_foo_8432.13.1");
+
+	EXPECT_NE(nullptr, blanktype);
+	EXPECT_EQ(0, g_strv_length(blanktype));
+
+	g_strfreev(blanktype);
+
+	gchar ** goodtype = upstart_app_launch_list_helper_instances("untrusted-type", "com.bar_foo_8432.13.1");
+
+	EXPECT_NE(nullptr, goodtype);
+	EXPECT_EQ(1, g_strv_length(goodtype));
+	EXPECT_STREQ("24034582324132", goodtype[0]);
+
+	g_strfreev(goodtype);
+}
+
+
 typedef struct {
 	unsigned int count;
 	const gchar * appid;
