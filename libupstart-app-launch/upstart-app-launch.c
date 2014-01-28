@@ -1322,9 +1322,9 @@ helper_observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 
 	if (instance != NULL) {
 		gchar ** split = g_strsplit(instance, ":", 3);
-		appid = split[0];
+		type = split[0];
 		instanceid = split[1];
-		type = split[2];
+		appid = split[2];
 		g_free(split);
 	}
 	g_free(instance);
