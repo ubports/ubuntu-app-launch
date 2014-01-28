@@ -1377,6 +1377,34 @@ add_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * helpe
 	return TRUE;
 }
 
+static gboolean
+delete_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * type, gpointer user_data, GList ** list)
+{
+	helper_observer_t * observert = NULL;
+	GList * look;
+
+	for (look = *list; look != NULL; look = g_list_next(look)) {
+		observert = (helper_observer_t *)look->data;
+
+		if (observert->func == observer && observert->user_data == user_data && g_str_has_prefix(observert->type, type)) {
+			break;
+		}
+	}
+
+	if (look == NULL) {
+		return FALSE;
+	}
+
+	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
+	g_object_unref(observert->conn);
+
+	g_free(observert->type);
+	g_free(observert);
+	*list = g_list_delete_link(*list, look);
+
+	return TRUE;
+}
+
 gboolean
 upstart_app_launch_observer_add_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
@@ -1392,14 +1420,12 @@ upstart_app_launch_observer_add_helper_stop (UpstartAppLaunchHelperObserver obse
 gboolean
 upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
-
-	return FALSE;
+	return delete_helper_generic(observer, helper_type, user_data, &helper_started_obs);
 }
 
 gboolean
 upstart_app_launch_observer_delete_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
-
-	return FALSE;
+	return delete_helper_generic(observer, helper_type, user_data, &helper_stopped_obs);
 }
 
