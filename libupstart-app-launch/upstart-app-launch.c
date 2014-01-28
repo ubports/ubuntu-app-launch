@@ -1408,24 +1408,40 @@ delete_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * ty
 gboolean
 upstart_app_launch_observer_add_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
+	g_return_val_if_fail(observer != NULL, FALSE);
+	g_return_val_if_fail(helper_type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
+
 	return add_helper_generic(observer, helper_type, user_data, "started", &helper_started_obs);
 }
 
 gboolean
 upstart_app_launch_observer_add_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
+	g_return_val_if_fail(observer != NULL, FALSE);
+	g_return_val_if_fail(helper_type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
+
 	return add_helper_generic(observer, helper_type, user_data, "stopped", &helper_stopped_obs);
 }
 
 gboolean
 upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
+	g_return_val_if_fail(observer != NULL, FALSE);
+	g_return_val_if_fail(helper_type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
+
 	return delete_helper_generic(observer, helper_type, user_data, &helper_started_obs);
 }
 
 gboolean
 upstart_app_launch_observer_delete_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
+	g_return_val_if_fail(observer != NULL, FALSE);
+	g_return_val_if_fail(helper_type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
+
 	return delete_helper_generic(observer, helper_type, user_data, &helper_stopped_obs);
 }
 
