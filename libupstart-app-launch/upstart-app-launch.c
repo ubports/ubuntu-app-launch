@@ -698,7 +698,7 @@ upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 }
 
 /* Try and get a manifest file and do a couple sanity checks on it */
-JsonParser *
+static JsonParser *
 get_manifest_file (const gchar * pkg)
 {
 	/* Get the directory from click */
@@ -753,8 +753,74 @@ get_manifest_file (const gchar * pkg)
 	return parser;
 }
 
+/* Types of search we can do for an app name */
+typedef enum _app_name_t app_name_t;
+enum _app_name_t {
+	APP_NAME_ONLY,
+	APP_NAME_FIRST,
+	APP_NAME_LAST
+};
+
+/* Figure out the app name if it's one of the keywords */
+static const gchar *
+manifest_app_name (JsonParser ** manifest, const gchar * pkg, const gchar * original_app)
+{
+	app_name_t app_type = APP_NAME_FIRST;
+
+	if (original_app == NULL) {
+		/* first */
+	} else if (g_strcmp0(original_app, "first-listed-app") == 0) {
+		/* first */
+	} else if (g_strcmp0(original_app, "last-listed-app") == 0) {
+		app_type = APP_NAME_LAST;
+	} else if (g_strcmp0(original_app, "only-listed-app") == 0) {
+		app_type = APP_NAME_ONLY;
+	} else {
+		return original_app;
+	}
+
+	if (*manifest == NULL) {
+		*manifest = get_manifest_file(pkg);
+	}
+
+	JsonNode * root_node = json_parser_get_root(*manifest);
+	JsonObject * root_obj = json_node_get_object(root_node);
+	JsonObject * hooks = json_object_get_object_member(root_obj, "hooks");
+
+	if (hooks == NULL) {
+		return NULL;
+	}
+
+	GList * apps = json_object_get_members(hooks);
+	if (apps == NULL) {
+		return NULL;
+	}
+
+	const gchar * retapp = NULL;
+
+	switch (app_type) {
+	case APP_NAME_ONLY:
+		if (g_list_length(apps) == 1) {
+			retapp = (const gchar *)apps->data;
+		}
+		break;
+	case APP_NAME_FIRST:
+		retapp = (const gchar *)apps->data;
+		break;
+	case APP_NAME_LAST:
+		retapp = (const gchar *)(g_list_last(apps)->data);
+		break;
+	default:
+		break;
+	}
+
+	g_list_free(apps);
+
+	return retapp;
+}
+
 /* Figure out the app version using the manifest */
-const gchar *
+static const gchar *
 manifest_version (JsonParser ** manifest, const gchar * pkg, const gchar * original_ver)
 {
 	if (original_ver != NULL && g_strcmp0(original_ver, "current-user-version") != 0) {
@@ -778,15 +844,18 @@ gchar *
 upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
 {
 	g_return_val_if_fail(pkg != NULL, NULL);
-	g_return_val_if_fail(app != NULL, NULL);
 
 	const gchar * version = NULL;
+	const gchar * application = NULL;
 	JsonParser * manifest = NULL;
 
 	version = manifest_version(&manifest, pkg, ver);
 	g_return_val_if_fail(version != NULL, NULL);
 
-	gchar * retval = g_strdup_printf("%s_%s_%s", pkg, app, version);
+	application = manifest_app_name(&manifest, pkg, app);
+	g_return_val_if_fail(version != NULL, NULL);
+
+	gchar * retval = g_strdup_printf("%s_%s_%s", pkg, application, version);
 
 	/* The parser may hold allocation for some of our strings used above */
 	g_clear_object(&manifest);
