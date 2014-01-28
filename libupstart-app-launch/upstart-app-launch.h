@@ -275,7 +275,7 @@ gboolean   upstart_app_launch_pid_in_app_id             (GPid                   
  * upstart_app_launch_triplet_to_app_id:
  * @pkg: Click package name
  * @app: Application name
- * @version: Specific version or "current-user-version"
+ * @version: (allow-none): Specific version or "current-user-version"
  *
  * Constructs an appid from pkg, app, version triple.
  *

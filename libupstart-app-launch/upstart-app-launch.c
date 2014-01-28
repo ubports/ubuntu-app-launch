@@ -757,7 +757,7 @@ get_manifest_file (const gchar * pkg)
 gchar *
 manifest_version (const gchar * pkg, const gchar * original_ver)
 {
-	if (g_strcmp0(original_ver, "current-user-version") != 0) {
+	if (original_ver != NULL && g_strcmp0(original_ver, "current-user-version") != 0) {
 		return g_strdup(original_ver);
 	} else  {
 		JsonParser * manifest = get_manifest_file(pkg);
@@ -775,6 +775,9 @@ manifest_version (const gchar * pkg, const gchar * original_ver)
 gchar *
 upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
 {
+	g_return_val_if_fail(pkg != NULL, NULL);
+	g_return_val_if_fail(app != NULL, NULL);
+
 	gchar * version = NULL;
 	gchar * retval = NULL;
 
