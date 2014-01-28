@@ -359,7 +359,6 @@ gboolean   upstart_app_launch_stop_multiple_helper      (const gchar *          
 
 /**
  * upstart_app_launch_list_helpers:
- *
  * @type: Type of helper
  *
  * List all App IDs of helpers of a given @type.
@@ -367,6 +366,19 @@ gboolean   upstart_app_launch_stop_multiple_helper      (const gchar *          
  * Return value: List of application IDs
  */
 gchar **   upstart_app_launch_list_helpers              (const gchar *                     type);
+
+/**
+ * upstart_app_launch_list_helper_instances:
+ * @type: Type of helper
+ * @appid: AppID of helper
+ *
+ * List all the instances for a particular AppID
+ *
+ * Return value: List of instance IDs
+ */
+gchar **   upstart_app_launch_list_helper_instances     (const gchar *                     type,
+                                                         const gchar *                     appid);
+
 
 /**
  * upstart_app_launch_observer_add_helper_started:

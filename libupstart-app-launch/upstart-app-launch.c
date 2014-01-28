@@ -1308,6 +1308,67 @@ upstart_app_launch_list_helpers (const gchar * type)
 	return (gchar **)g_array_free(helpers_helper_data.retappids, FALSE);
 }
 
+typedef struct {
+	gchar * type_prefix; /* Type with the colon sperator */
+	size_t type_len;     /* Length in characters of the prefix */
+	GArray * retappids;  /* Array of appids to return */
+	gchar * appid_suffix; /* The appid for the end */
+} helper_instances_t;
+
+/* Look at each instance and see if it matches this type and appid.
+   If so, add the instance ID to the array of instance IDs */
+static void
+list_helper_instances (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
+{
+	helper_instances_t * data = (helper_instances_t *)user_data;
+
+	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+	if (namev == NULL) {
+		return;
+	}
+
+	const gchar * name = g_variant_get_string(namev, NULL);
+	gchar * suffix_loc = NULL;
+	if (g_str_has_prefix(name, data->type_prefix) &&
+			(suffix_loc = g_strrstr(name, data->appid_suffix)) != NULL) {
+		/* Skip the type name */
+		name += data->type_len;
+
+		/* Now copy the instance id */
+		gchar * instanceid = g_strndup(name, suffix_loc - name);
+		g_array_append_val(data->retappids, instanceid);
+	}
+
+	g_variant_unref(namev);
+
+	return;
+}
+
+gchar **
+upstart_app_launch_list_helper_instances (const gchar * type, const gchar * appid)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	helper_instances_t helper_instances_data = {
+		.type_prefix = g_strdup_printf("%s:", type),
+		.type_len = strlen(type) + 1, /* 1 for the colon */
+		.retappids = g_array_new(TRUE, TRUE, sizeof(gchar *)),
+		.appid_suffix = g_strdup_printf(":%s", appid)
+	};
+
+	foreach_job_instance(con, "untrusted-helper", list_helper_instances, &helper_instances_data);
+
+	g_object_unref(con);
+	g_free(helper_instances_data.type_prefix);
+	g_free(helper_instances_data.appid_suffix);
+
+	return (gchar **)g_array_free(helper_instances_data.retappids, FALSE);
+}
+
 /* The data we keep for each observer */
 typedef struct _helper_observer_t helper_observer_t;
 struct _helper_observer_t {
