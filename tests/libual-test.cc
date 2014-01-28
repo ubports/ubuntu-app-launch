@@ -245,7 +245,7 @@ class LibUAL : public ::testing::Test
 				pause(100);
 				cleartry++;
 			}
-			ASSERT_EQ(bus, nullptr);
+			ASSERT_EQ(nullptr, bus);
 		}
 
 		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {
@@ -995,4 +995,76 @@ TEST_F(LibUAL, HelperList)
 	}
 
 	g_strfreev(goodtype);
+}
+
+typedef struct {
+	unsigned int count;
+	const gchar * appid;
+	const gchar * type;
+	const gchar * instance;
+} helper_observer_data_t;
+
+static void
+helper_observer_cb (const gchar * appid, const gchar * instance, const gchar * type, gpointer user_data)
+{
+	helper_observer_data_t * data = (helper_observer_data_t *)user_data;
+
+	if (g_strcmp0(data->appid, appid) == 0 &&
+		g_strcmp0(data->type, type) == 0 &&
+		g_strcmp0(data->instance, instance) == 0) {
+		data->count++;
+	}
+}
+
+TEST_F(LibUAL, StartStopHelperObserver)
+{
+	helper_observer_data_t start_data = {
+		.count = 0,
+		.appid = "com.foo_foo_1.2.3",
+		.type = "my-type-is-scorpio",
+		.instance = nullptr
+	};
+	helper_observer_data_t stop_data = {
+		.count = 0,
+		.appid = "com.bar_bar_44.32",
+		.type = "my-type-is-libra",
+		.instance = "1234"
+	};
+
+	ASSERT_TRUE(upstart_app_launch_observer_add_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_add_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
+
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+	/* Basic start */
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('started', ['JOB=untrusted-helper', 'INSTANCE=my-type-is-scorpio::com.foo_foo_1.2.3'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	ASSERT_EQ(start_data.count, 1);
+
+	/* Basic stop */
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('stopped', ['JOB=untrusted-helper', 'INSTANCE=my-type-is-libra:1234:com.bar_bar_44.32'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	ASSERT_EQ(stop_data.count, 1);
+
+	/* Remove */
+	ASSERT_TRUE(upstart_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
 }
