@@ -1,0 +1,18 @@
+
+This documents the expections that the project has on what both submitters
+and reviewers should ensure that they've done for a merge into the project.
+
+== Submitter Responsibilities ==
+
+ * Ensure the project compiles and the test suite executes without error
+ * Ensure that non-obvious code has comments explaining it
+
+== Reviewer Responsibilities ==
+
+ * Did the Jenkins build compile?  Pass?  Run unit tests successfully?
+ * Are there appropriate tests to cover any new functionality?
+ * If this MR effects application startup:
+   * Where you able to test starting a click app?  (i.e. clock)
+   * Where you able to test starting a legacy app?  (i.e. system settings)
+   * Where you able to test secondary activation? (i.e. system settings running, settings item from an indicator)
+
