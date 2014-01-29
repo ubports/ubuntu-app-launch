@@ -305,6 +305,12 @@ TEST_F(LibUAL, ApplicationId)
 	EXPECT_STREQ("com.test.multiple_fifth_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", "last-listed-app", NULL));
 	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.multiple", "only-listed-app", NULL));
 	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "only-listed-app", NULL));
+
+	/* A bunch that should be NULL */
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-hooks", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-json", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-object", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
 }
 
 TEST_F(LibUAL, ApplicationList)
