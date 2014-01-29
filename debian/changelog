@@ -1,3 +1,24 @@
+upstart-app-launch (0.3+14.04.20140129.1-0ubuntu1) trusty; urgency=low
+
+  [ Ken VanDine ]
+  * Added upstart_app_launch_triplet_to_app_id to construct an appid
+    from pkg, app, version triplet. If a specific version isn't
+    provided, click is used to determine the version from the manifest.
+
+  [ Ted Gould ]
+  * Set the Upstart job environment using DBus.
+  * Tests for the exec utilities.
+  * Add an APP_DESKTOP_FILE_PATH to point to a readable desktop file
+    under confinement.
+  * Include an architecture specific directory in the path.
+  * Making the application job a task.
+  * Add application list handling to the triplet function.
+
+  [ CI bot ]
+  * Upload to trusty
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 29 Jan 2014 20:08:11 +0000
+
 upstart-app-launch (0.3+14.04.20131218-0ubuntu1) trusty; urgency=low
 
   [ Ken VanDine ]
