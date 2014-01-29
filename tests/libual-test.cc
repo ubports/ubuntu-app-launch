@@ -288,9 +288,16 @@ TEST_F(LibUAL, ApplicationPid)
 TEST_F(LibUAL, ApplicationId)
 {
 	/* Test with current-user-version, should return the version in the manifest */
-	ASSERT_STREQ(upstart_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"), "com.test.good_application_1.2.3");
+	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"));
+
 	/* Test with version specified, shouldn't even read the manifest */
-	ASSERT_STREQ(upstart_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"), "com.test.good_application_1.2.4");
+	EXPECT_STREQ("com.test.good_application_1.2.4", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"));
+
+	/* Test with out a version or app, should return the version in the manifest */
+	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "first-listed-app", "current-user-version"));
+
+	/* Test with a version or but wildcard app, should return the version in the manifest */
+	EXPECT_STREQ("com.test.good_application_1.2.4", upstart_app_launch_triplet_to_app_id("com.test.good", "last-listed-app", "1.2.4"));
 }
 
 TEST_F(LibUAL, ApplicationList)
