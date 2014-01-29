@@ -853,7 +853,7 @@ upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, cons
 	g_return_val_if_fail(version != NULL, NULL);
 
 	application = manifest_app_name(&manifest, pkg, app);
-	g_return_val_if_fail(version != NULL, NULL);
+	g_return_val_if_fail(application != NULL, NULL);
 
 	gchar * retval = g_strdup_printf("%s_%s_%s", pkg, application, version);
 
