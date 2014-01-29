@@ -14,4 +14,5 @@ and reviewers should ensure that they've done for a merge into the project.
  * If this MR effects application startup:
    * Run test case: upstart-app-launch/click-app
    * Run test case: upstart-app-launch/legacy-app
+   * Run test case: upstart-app-launch/secondary-activation
 

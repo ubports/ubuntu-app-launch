@@ -21,3 +21,15 @@ Test-case upstart-app-launch/legacy-app
 	<dt>Launch the settings application: <tt>upstart-app-launch ubuntu-system-settings</tt></dt>
 	<dd>The settings application should be brought to focus and shown to the user</dd>
 </dl>
+
+Test-case upstart-app-launch/secondary-activation
+<dl>
+	<dt>Run test case: upstart-app-launch/legacy-app</dt>
+	<dd>Everything behaves as expected</dd>
+
+	<dt>Use the launcher to return to the home screen</dt>
+	<dd>The settings app is no longer shown</dd>
+
+	<dt>Send a URL to the service: <tt>url-dispatcher settings:///system/power</tt></dt>
+	<dd>The settings application should come back into focus and be on the power settings pane</dd>
+</dl>
