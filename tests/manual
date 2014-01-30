@@ -24,6 +24,6 @@ Test-case upstart-app-launch/secondary-activation
         <dd>Everything behaves as expected</dd>
     <dt>Use the launcher to return to the home screen</dt>
         <dd>The settings app is no longer shown</dd>
-    <dt>Send a URL to the service: <tt>url-dispatcher settings:///system/battery</tt></dt>
+    <dt>Send a URL to the service: <tt>upstart-app-launch ubuntu-system-settings settings:///system/battery</tt></dt>
         <dd>The settings application should come back into focus and be on the power settings pane</dd>
 </dl>
