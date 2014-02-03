@@ -249,26 +249,40 @@ set_upstart_variable (const gchar * variable, const gchar * value, gboolean sync
 	/* Do we want to replace?  Yes, we do! */
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
-	GError * error = NULL;
-	GVariant * reply = g_dbus_connection_call_sync(bus,
-		DBUS_SERVICE_UPSTART,
-		DBUS_PATH_UPSTART,
-		DBUS_INTERFACE_UPSTART,
-		"SetEnv",
-		g_variant_builder_end(&builder),
-		NULL, /* reply */
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout */
-		NULL, /* cancelable */
-		&error); /* error */
+	if (sync) {
+		GError * error = NULL;
+		GVariant * reply = g_dbus_connection_call_sync(bus,
+			DBUS_SERVICE_UPSTART,
+			DBUS_PATH_UPSTART,
+			DBUS_INTERFACE_UPSTART,
+			"SetEnv",
+			g_variant_builder_end(&builder),
+			NULL, /* reply */
+			G_DBUS_CALL_FLAGS_NONE,
+			-1, /* timeout */
+			NULL, /* cancelable */
+			&error); /* error */
 
-	if (reply != NULL) {
-		g_variant_unref(reply);
-	}
+		if (reply != NULL) {
+			g_variant_unref(reply);
+		}
 
-	if (error != NULL) {
-		g_warning("Unable to set environment variable '%s' to '%s': %s", variable, value, error->message);
-		g_error_free(error);
+		if (error != NULL) {
+			g_warning("Unable to set environment variable '%s' to '%s': %s", variable, value, error->message);
+			g_error_free(error);
+		}
+	} else {
+		g_dbus_connection_call(bus,
+			DBUS_SERVICE_UPSTART,
+			DBUS_PATH_UPSTART,
+			DBUS_INTERFACE_UPSTART,
+			"SetEnv",
+			g_variant_builder_end(&builder),
+			NULL, /* reply */
+			G_DBUS_CALL_FLAGS_NONE,
+			-1, /* timeout */
+			NULL, /* cancelable */
+			NULL, NULL); /* callback */
 	}
 
 	g_object_unref(bus);
