@@ -71,37 +71,40 @@ main (int argc, char * argv[])
 
 	tracepoint(upstart_app_launch, desktop_found);
 
-	/* This string is quoted using desktop file quoting:
-	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
-	gchar * execline = desktop_to_exec(keyfile, app_id);
-	g_return_val_if_fail(execline != NULL, 1);
-	set_upstart_variable("APP_EXEC", execline);
-	g_free(execline);
+	/* TODO: This is for Surface Flinger.  When we drop support, we can drop this code */
+	if (desktopfilename != NULL) {
+		set_upstart_variable("APP_DESKTOP_FILE", desktopfilename, FALSE);
+		/* This is not for SF, it's for platform API only above is for SF */
+		set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfilename, FALSE);
+		g_free(desktopfilename);
+	}
 
 	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
 		gchar * path = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
-		set_upstart_variable("APP_DIR", path);
+		set_upstart_variable("APP_DIR", path, FALSE);
 		g_free(path);
 	}
 
 	gchar * apparmor = g_key_file_get_string(keyfile, "Desktop Entry", "X-Ubuntu-AppArmor-Profile", NULL);
 	if (apparmor != NULL) {
-		set_upstart_variable("APP_EXEC_POLICY", apparmor);
+		set_upstart_variable("APP_EXEC_POLICY", apparmor, FALSE);
 		set_confined_envvars(app_id, "/usr/share");
 		g_free(apparmor);
 	} else {
-		set_upstart_variable("APP_EXEC_POLICY", "unconfined");
+		set_upstart_variable("APP_EXEC_POLICY", "unconfined", FALSE);
 	}
+
+	/* This string is quoted using desktop file quoting:
+	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
+	gchar * execline = desktop_to_exec(keyfile, app_id);
+	g_return_val_if_fail(execline != NULL, 1);
+	/* NOTE: This should be the last upstart variable set as it is sync
+	   so it will wait for a reply from Upstart implying that Upstart
+	   has seen all the other variable requests we made */
+	set_upstart_variable("APP_EXEC", execline, TRUE);
+	g_free(execline);
 
 	g_key_file_free(keyfile);
-
-	/* TODO: This is for Surface Flinger.  When we drop support, we can drop this code */
-	if (desktopfilename != NULL) {
-		set_upstart_variable("APP_DESKTOP_FILE", desktopfilename);
-		/* This is not for SF, it's for platform API only above is for SF */
-		set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfilename);
-		g_free(desktopfilename);
-	}
 
 	tracepoint(upstart_app_launch, desktop_handshake_wait);
 
