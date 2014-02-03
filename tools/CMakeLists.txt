@@ -45,6 +45,15 @@ target_link_libraries(upstart-app-stop upstart-launcher)
 install(TARGETS upstart-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ########################
+# upstart-app-triplet
+########################
+
+add_executable(upstart-app-triplet upstart-app-triplet.c)
+set_target_properties(upstart-app-triplet PROPERTIES OUTPUT_NAME "upstart-app-triplet")
+target_link_libraries(upstart-app-triplet upstart-launcher)
+install(TARGETS upstart-app-triplet RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+########################
 # upstart-helper-start
 ########################
 
