@@ -249,7 +249,8 @@ set_upstart_variable (const gchar * variable, const gchar * value)
 	/* Do we want to replace?  Yes, we do! */
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
-	g_dbus_connection_call(bus,
+	GError * error = NULL;
+	GVariant * reply = g_dbus_connection_call_sync(bus,
 		DBUS_SERVICE_UPSTART,
 		DBUS_PATH_UPSTART,
 		DBUS_INTERFACE_UPSTART,
@@ -259,7 +260,16 @@ set_upstart_variable (const gchar * variable, const gchar * value)
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* timeout */
 		NULL, /* cancelable */
-		NULL, NULL); /* callback */
+		&error); /* error */
+
+	if (reply != NULL) {
+		g_variant_unref(reply);
+	}
+
+	if (error != NULL) {
+		g_warning("Unable to set environment variable '%s' to '%s': %s", variable, value, error->message);
+		g_error_free(error);
+	}
 
 	g_object_unref(bus);
 }
