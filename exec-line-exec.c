@@ -130,7 +130,7 @@ main (int argc, char * argv[])
 
 	if (execret != 0) {
 		gchar * execprint = g_strjoinv(" ", nargv);
-		g_warning("Unable to exec '%s': %s", execprint, strerror(errno));
+		g_warning("Unable to exec '%s' in '%s': %s", execprint, appdir, strerror(errno));
 		g_free(execprint);
 	}
 
