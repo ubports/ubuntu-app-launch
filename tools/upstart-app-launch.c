@@ -21,6 +21,7 @@
 #include "libupstart-app-launch/upstart-app-launch.h"
 
 const gchar * global_appid = NULL;
+int retval = 0;
 
 static void
 good_observer (const gchar * appid, gpointer user_data)
@@ -41,6 +42,7 @@ bad_observer (const gchar * appid, upstart_app_launch_app_failed_t failure_type,
 	}
 
 	g_debug("Applicaiton '%s' failed: %s", appid, failure_type == UPSTART_APP_LAUNCH_APP_FAILED_CRASH ? "crash" : "startup failure");
+	retval = -1;
 	g_main_loop_quit((GMainLoop *)user_data);
 }
 
@@ -81,5 +83,5 @@ main (int argc, gchar * argv[]) {
 	g_main_loop_unref(mainloop);
 	g_free(uris);
 
-	return 0;
+	return retval;
 }
