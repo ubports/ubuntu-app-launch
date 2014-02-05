@@ -63,6 +63,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GVariant * result = NULL;
 
 	tracepoint(upstart_app_launch, libual_start_message_callback, data->appid);
+
 	g_debug("Started Message Callback: %s", data->appid);
 
 	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
@@ -77,6 +78,8 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
 				second_exec(data->appid, data->uris);
 			}
+
+			g_free(remote_error);
 		} else {
 			g_warning("Unable to emit event to start application: %s", error->message);
 		}
@@ -90,7 +93,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 
 /* Get the path of the job from Upstart, if we've got it already, we'll just
    use the cache of the value */
-const gchar *
+static const gchar *
 get_jobpath (GDBusConnection * con, const gchar * jobname)
 {
 	gchar * cachepath = g_strdup_printf("upstart-app-lauch-job-path-cache-%s", jobname);
@@ -133,7 +136,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 
 /* Check to see if a legacy app wants us to manage whether they're
    single instance or not */
-gboolean
+static gboolean
 legacy_single_instance (const gchar * appid)
 {
 	tracepoint(upstart_app_launch, desktop_single_start, appid);
