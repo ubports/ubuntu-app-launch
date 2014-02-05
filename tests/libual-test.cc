@@ -245,7 +245,7 @@ class LibUAL : public ::testing::Test
 				pause(100);
 				cleartry++;
 			}
-			ASSERT_EQ(nullptr, bus);
+			ASSERT_EQ(bus, nullptr);
 		}
 
 		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {

@@ -308,7 +308,7 @@ gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *          
  * Start an untrusted helper for a specific @type on a given
  * @appid.  We don't know how that is done specifically, as Upstart
  * will call a helper for that type.  And then execute it under the
- * Apparmor profile for that helper type.
+ * AppArmor profile for the helper as defined in its manifest.
  *
  * Return value: Whether the helper was able to be started
  */
