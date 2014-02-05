@@ -76,6 +76,8 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
 				second_exec(data->appid, data->uris);
 			}
+
+			g_free(remote_error);
 		} else {
 			g_warning("Unable to emit event to start application: %s", error->message);
 		}
