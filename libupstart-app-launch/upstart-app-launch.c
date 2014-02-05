@@ -91,7 +91,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 
 /* Get the path of the job from Upstart, if we've got it already, we'll just
    use the cache of the value */
-const gchar *
+static const gchar *
 get_jobpath (GDBusConnection * con, const gchar * jobname)
 {
 	gchar * cachepath = g_strdup_printf("upstart-app-lauch-job-path-cache-%s", jobname);
@@ -134,7 +134,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 
 /* Check to see if a legacy app wants us to manage whether they're
    single instance or not */
-gboolean
+static gboolean
 legacy_single_instance (const gchar * appid)
 {
 	tracepoint(upstart_app_launch, desktop_single_start);
@@ -877,7 +877,7 @@ upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 }
 
 /* Try and get a manifest file and do a couple sanity checks on it */
-JsonParser *
+static JsonParser *
 get_manifest_file (const gchar * pkg)
 {
 	/* Get the directory from click */
@@ -933,7 +933,7 @@ get_manifest_file (const gchar * pkg)
 }
 
 /* Figure out the app version using the manifest */
-gchar *
+static gchar *
 manifest_version (const gchar * pkg, const gchar * original_ver)
 {
 	if (g_strcmp0(original_ver, "current-user-version") != 0) {
