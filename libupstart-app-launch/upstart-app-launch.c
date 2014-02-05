@@ -1194,6 +1194,7 @@ start_helper_core (const gchar * type, const gchar * appid, const gchar * const 
 	if (uris != NULL) {
 		gchar * urisjoin = app_uris_string(uris);
 		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_URIS=%s", urisjoin)));
+		g_free(urisjoin);
 	}
 
 	if (instance != NULL) {
