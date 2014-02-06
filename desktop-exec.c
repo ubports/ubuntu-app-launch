@@ -93,6 +93,14 @@ main (int argc, char * argv[])
 		set_upstart_variable("APP_EXEC_POLICY", "unconfined");
 	}
 
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-XMir-Enable", NULL)) {
+		if (g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-XMir-Enable", NULL)) {
+			set_upstart_variable("APP_XMIR_ENABLE", "1");
+		} else {
+			set_upstart_variable("APP_XMIR_ENABLE", "0");
+		}
+	}
+
 	g_key_file_free(keyfile);
 
 	/* TODO: This is for Surface Flinger.  When we drop support, we can drop this code */

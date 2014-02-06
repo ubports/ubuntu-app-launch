@@ -140,6 +140,14 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-XMir-Enable", NULL)) {
+		if (g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-XMir-Enable", NULL)) {
+			set_upstart_variable("APP_XMIR_ENABLE", "1");
+		} else {
+			set_upstart_variable("APP_XMIR_ENABLE", "0");
+		}
+	}
+
 	/* This string is quoted using desktop file quoting:
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	gchar * exec = desktop_to_exec(keyfile, desktopfile);
