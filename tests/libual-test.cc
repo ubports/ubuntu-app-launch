@@ -320,6 +320,21 @@ TEST_F(LibUAL, StopApplication)
 
 }
 
+TEST_F(LibUAL, ApplicationLog)
+{
+	gchar * click_log = upstart_app_launch_application_log_path("foo");
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-click-foo.log", click_log);
+	g_free(click_log);
+
+	gchar * legacy_single = upstart_app_launch_application_log_path("single");
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-legacy-single-.log", legacy_single);
+	g_free(legacy_single);
+
+	gchar * legacy_multiple = upstart_app_launch_application_log_path("bar");
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-legacy-bar-2342345.log", legacy_multiple);
+	g_free(legacy_multiple);
+}
+
 TEST_F(LibUAL, ApplicationPid)
 {
 	EXPECT_EQ(upstart_app_launch_get_primary_pid("foo"), getpid());
