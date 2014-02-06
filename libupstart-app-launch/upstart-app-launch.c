@@ -142,7 +142,7 @@ legacy_single_instance (const gchar * appid)
 	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
 
 	if (keyfile == NULL) {
-		g_error("Unable to find keyfile for application '%s'", appid);
+		g_warning("Unable to find keyfile for application '%s'", appid);
 		return FALSE;
 	}
 
