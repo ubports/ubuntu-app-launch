@@ -129,7 +129,9 @@ main (int argc, char * argv[])
 	int execret = execvp(nargv[0], nargv);
 
 	if (execret != 0) {
-		g_warning("Unable to exec: %s", strerror(errno));
+		gchar * execprint = g_strjoinv(" ", nargv);
+		g_warning("Unable to exec '%s' in '%s': %s", execprint, appdir, strerror(errno));
+		g_free(execprint);
 	}
 
 	return execret;
