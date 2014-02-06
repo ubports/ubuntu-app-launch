@@ -121,6 +121,16 @@ main (int argc, char * argv[])
 		g_array_append_val(newargv, sf);
 	}
 
+	if (g_getenv("MIR_SOCKET") != NULL && g_strcmp0(g_getenv("APP_XMIR_ENABLE"), "1") == 0) {
+		g_array_prepend_val(newargv, "xinit");
+		/* Original command goes here */
+		g_array_append_val(newargv, "--");
+		g_array_append_val(newargv, "-mir");
+
+		const gchar * appid = g_getenv("APP_ID");
+		g_array_append_val(newargv, appid);
+	}
+
 	/* Now exec */
 	gchar ** nargv = (gchar**)g_array_free(newargv, FALSE);
 
