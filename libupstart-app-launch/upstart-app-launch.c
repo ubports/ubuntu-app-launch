@@ -355,6 +355,15 @@ upstart_app_launch_stop_application (const gchar * appid)
 	return found;
 }
 
+gchar *
+upstart_app_launch_application_log_path (const gchar * appid)
+{
+	g_return_val_if_fail(appid != NULL, NULL);
+
+
+	return NULL;
+}
+
 static GDBusConnection *
 gdbus_upstart_ref (void) {
 	static GDBusConnection * gdbus_upstart = NULL;
