@@ -7,7 +7,7 @@ start on application-click-start
 stop on application-end or desktop-end
 
 env APP_ID
-env APP_EXEC="echo Error"
+env APP_EXEC
 env APP_URIS
 env APP_DIR
 # For Surface Flinger
