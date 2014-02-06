@@ -13,6 +13,9 @@ env APP_DIR
 # For Surface Flinger
 env APP_DESKTOP_FILE
 
+env APP_XMIR_ENABLE=0
+export APP_XMIR_ENABLE
+
 env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
 export UPSTART_APP_LAUNCH_ARCH
 

@@ -13,6 +13,9 @@ env APP_URIS
 # For Surface Flinger
 env APP_DESKTOP_FILE
 
+env APP_XMIR_ENABLE=1
+export APP_XMIR_ENABLE
+
 # This will be set to "unconfined" by desktop-exec if there is no confinement defined
 apparmor switch $APP_EXEC_POLICY
 
