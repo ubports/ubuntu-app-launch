@@ -35,7 +35,9 @@ main (int argc, char * argv[])
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	const gchar * app_exec = g_getenv("APP_EXEC");
 	if (app_exec == NULL) {
-		g_warning("No exec line given, nothing to do except fail");
+		/* There should be no reason for this, a g_error() so that it gets
+		   picked up by Apport and we can track it */
+		g_error("No exec line given, nothing to do except fail");
 		return 1;
 	}
 
@@ -129,7 +131,9 @@ main (int argc, char * argv[])
 	int execret = execvp(nargv[0], nargv);
 
 	if (execret != 0) {
-		g_warning("Unable to exec: %s", strerror(errno));
+		gchar * execprint = g_strjoinv(" ", nargv);
+		g_warning("Unable to exec '%s' in '%s': %s", execprint, appdir, strerror(errno));
+		g_free(execprint);
 	}
 
 	return execret;
