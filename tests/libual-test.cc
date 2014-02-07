@@ -288,9 +288,29 @@ TEST_F(LibUAL, ApplicationPid)
 TEST_F(LibUAL, ApplicationId)
 {
 	/* Test with current-user-version, should return the version in the manifest */
-	ASSERT_STREQ(upstart_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"), "com.test.good_application_1.2.3");
+	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"));
+
 	/* Test with version specified, shouldn't even read the manifest */
-	ASSERT_STREQ(upstart_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"), "com.test.good_application_1.2.4");
+	EXPECT_STREQ("com.test.good_application_1.2.4", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"));
+
+	/* Test with out a version or app, should return the version in the manifest */
+	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "first-listed-app", "current-user-version"));
+
+	/* Test with a version or but wildcard app, should return the version in the manifest */
+	EXPECT_STREQ("com.test.good_application_1.2.4", upstart_app_launch_triplet_to_app_id("com.test.good", "last-listed-app", "1.2.4"));
+
+	/* Make sure we can select the app from a list correctly */
+	EXPECT_STREQ("com.test.multiple_first_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", "first-listed-app", NULL));
+	EXPECT_STREQ("com.test.multiple_first_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", NULL, NULL));
+	EXPECT_STREQ("com.test.multiple_fifth_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", "last-listed-app", NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.multiple", "only-listed-app", NULL));
+	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "only-listed-app", NULL));
+
+	/* A bunch that should be NULL */
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-hooks", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-json", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-object", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
 }
 
 TEST_F(LibUAL, ApplicationList)

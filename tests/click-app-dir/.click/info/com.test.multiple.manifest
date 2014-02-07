@@ -1,0 +1,20 @@
+{
+	"version": "1.2.3",
+	"hooks": {
+		"first": {
+			"desktop": "application.desktop"
+		},
+		"second": {
+			"desktop": "application.desktop"
+		},
+		"third": {
+			"desktop": "application.desktop"
+		},
+		"fourth": {
+			"desktop": "application.desktop"
+		},
+		"fifth": {
+			"desktop": "application.desktop"
+		}
+	}
+}
