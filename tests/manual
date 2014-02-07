@@ -1,0 +1,29 @@
+Test-case upstart-app-launch/click-app
+<dl>
+    <dt>Ensure the clock is installed via click by running: <tt>click list</tt></dt>
+        <dd><tt>com.ubuntu.clock</tt> should be listed. <i>Note the version for later</i></dd>
+    <dt>Ensure the clock app is not currently running: <tt>upstart-app-list</tt></dt>
+        <dd>Clock application shouldn't be listed</dd>
+    <dt>Launch the clock application: <tt>upstart-app-launch com.ubuntu.clock_clock_$(version from click list)</tt></dt>
+        <dd>The clock application should be brought to focus and shown to the user</dd>
+</dl>
+
+Test-case upstart-app-launch/legacy-app
+<dl>
+    <dt>Ensure that the system-settings is installed: <tt>apt-cache policy ubuntu-system-settings</tt></dt>
+        <dd>One of the versions in the version table should a <tt>***</tt> next to it</dd>
+    <dt>Ensure the settings app is not currently running: <tt>upstart-app-list</tt></dt>
+        <dd>Settings shouldn't be listed</dd>
+    <dt>Launch the settings application: <tt>upstart-app-launch ubuntu-system-settings</tt></dt>
+        <dd>The settings application should be brought to focus and shown to the user</dd>
+</dl>
+
+Test-case upstart-app-launch/secondary-activation
+<dl>
+    <dt>Run test case: upstart-app-launch/legacy-app</dt>
+        <dd>Everything behaves as expected</dd>
+    <dt>Use the launcher to return to the home screen</dt>
+        <dd>The settings app is no longer shown</dd>
+    <dt>Send a URL to the service: <tt>upstart-app-launch ubuntu-system-settings settings:///system/battery</tt></dt>
+        <dd>The settings application should come back into focus and be on the power settings pane</dd>
+</dl>

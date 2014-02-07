@@ -49,6 +49,11 @@ class LibUAL : public ::testing::Test
 
 		virtual void SetUp() {
 			service = dbus_test_service_new(NULL);
+			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+			const gchar * oldpath = g_getenv("PATH");
+			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
+			g_setenv("PATH", newpath, TRUE);
+			g_free(newpath);
 
 			debugConnection();
 
@@ -278,6 +283,34 @@ TEST_F(LibUAL, ApplicationPid)
 	ASSERT_EQ(upstart_app_launch_get_primary_pid("bar"), 5678);
 	ASSERT_TRUE(upstart_app_launch_pid_in_app_id(1234, "foo"));
 	ASSERT_FALSE(upstart_app_launch_pid_in_app_id(5678, "foo"));
+}
+
+TEST_F(LibUAL, ApplicationId)
+{
+	/* Test with current-user-version, should return the version in the manifest */
+	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"));
+
+	/* Test with version specified, shouldn't even read the manifest */
+	EXPECT_STREQ("com.test.good_application_1.2.4", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"));
+
+	/* Test with out a version or app, should return the version in the manifest */
+	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "first-listed-app", "current-user-version"));
+
+	/* Test with a version or but wildcard app, should return the version in the manifest */
+	EXPECT_STREQ("com.test.good_application_1.2.4", upstart_app_launch_triplet_to_app_id("com.test.good", "last-listed-app", "1.2.4"));
+
+	/* Make sure we can select the app from a list correctly */
+	EXPECT_STREQ("com.test.multiple_first_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", "first-listed-app", NULL));
+	EXPECT_STREQ("com.test.multiple_first_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", NULL, NULL));
+	EXPECT_STREQ("com.test.multiple_fifth_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", "last-listed-app", NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.multiple", "only-listed-app", NULL));
+	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "only-listed-app", NULL));
+
+	/* A bunch that should be NULL */
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-hooks", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-json", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-object", NULL, NULL));
+	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
 }
 
 TEST_F(LibUAL, ApplicationList)

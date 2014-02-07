@@ -7,7 +7,7 @@ start on application-legacy-start
 stop on application-end or desktop-end
 
 env APP_ID
-env APP_EXEC="echo Error"
+env APP_EXEC
 env APP_EXEC_POLICY=""
 env APP_URIS
 # For Surface Flinger

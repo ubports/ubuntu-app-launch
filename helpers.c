@@ -18,6 +18,7 @@
  */
 
 #include <json-glib/json-glib.h>
+#include <upstart.h>
 #include "helpers.h"
 
 /* Take an app ID and validate it and then break it up
@@ -220,37 +221,71 @@ desktop_to_exec (GKeyFile * desktop_file, const gchar * from)
 
 /* Sets an upstart variable, currently using initctl */
 void
-set_upstart_variable (const gchar * variable, const gchar * value)
+set_upstart_variable (const gchar * variable, const gchar * value, gboolean sync)
 {
-	GError * error = NULL;
-	gchar * command[4] = {
-		"initctl",
-		"set-env",
-		NULL,
-		NULL
-	};
+	/* Check to see if we can get the job environment */
+	const gchar * job_name = g_getenv("UPSTART_JOB");
+	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
+	g_return_if_fail(job_name != NULL);
 
-	g_debug("Setting Upstart variable '%s' to '%s'", variable, value);
-	gchar * variablestr = g_strdup_printf("%s=%s", variable, value);
-	command[2] = variablestr;
+	/* Get a bus, let's go! */
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_if_fail(bus != NULL);
 
-	g_spawn_sync(NULL, /* working directory */
-		command,
-		NULL, /* environment */
-		G_SPAWN_SEARCH_PATH,
-		NULL, NULL, /* child setup */
-		NULL, /* stdout */
-		NULL, /* stderr */
-		NULL, /* exit status */
-		&error);
+	GVariantBuilder builder; /* Target: (assb) */
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
 
-	if (error != NULL) {
-		g_warning("Unable to set variable '%s' to '%s': %s", variable, value, error->message);
-		g_error_free(error);
+	/* Setup the job properties */
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
+	if (instance_name != NULL)
+		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
+	g_variant_builder_close(&builder);
+
+	/* The value itself */
+	gchar * envstr = g_strdup_printf("%s=%s", variable, value);
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(envstr));
+
+	/* Do we want to replace?  Yes, we do! */
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+	if (sync) {
+		GError * error = NULL;
+		GVariant * reply = g_dbus_connection_call_sync(bus,
+			DBUS_SERVICE_UPSTART,
+			DBUS_PATH_UPSTART,
+			DBUS_INTERFACE_UPSTART,
+			"SetEnv",
+			g_variant_builder_end(&builder),
+			NULL, /* reply */
+			G_DBUS_CALL_FLAGS_NONE,
+			-1, /* timeout */
+			NULL, /* cancelable */
+			&error); /* error */
+
+		if (reply != NULL) {
+			g_variant_unref(reply);
+		}
+
+		if (error != NULL) {
+			g_warning("Unable to set environment variable '%s' to '%s': %s", variable, value, error->message);
+			g_error_free(error);
+		}
+	} else {
+		g_dbus_connection_call(bus,
+			DBUS_SERVICE_UPSTART,
+			DBUS_PATH_UPSTART,
+			DBUS_INTERFACE_UPSTART,
+			"SetEnv",
+			g_variant_builder_end(&builder),
+			NULL, /* reply */
+			G_DBUS_CALL_FLAGS_NONE,
+			-1, /* timeout */
+			NULL, /* cancelable */
+			NULL, NULL); /* callback */
 	}
 
-	g_free(variablestr);
-	return;
+	g_object_unref(bus);
 }
 
 /* Convert a URI into a file */
@@ -542,7 +577,7 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	g_return_if_fail(app_dir != NULL);
 
 	g_debug("Setting 'UBUNTU_APPLICATION_ISOLATION' to '1'");
-	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1");
+	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1", FALSE);
 
 	/* Make sure the XDG base dirs are set for the application using
 	 * the user's current values/system defaults. We could set these to
@@ -550,26 +585,26 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	 * brittle if someone uses different base dirs.
 	 */
 	g_debug("Setting 'XDG_CACHE_HOME' using g_get_user_cache_dir()");
-	set_upstart_variable("XDG_CACHE_HOME", g_get_user_cache_dir());
+	set_upstart_variable("XDG_CACHE_HOME", g_get_user_cache_dir(), FALSE);
 
 	g_debug("Setting 'XDG_CONFIG_HOME' using g_get_user_config_dir()");
-	set_upstart_variable("XDG_CONFIG_HOME", g_get_user_config_dir());
+	set_upstart_variable("XDG_CONFIG_HOME", g_get_user_config_dir(), FALSE);
 
 	g_debug("Setting 'XDG_DATA_HOME' using g_get_user_data_dir()");
-	set_upstart_variable("XDG_DATA_HOME", g_get_user_data_dir());
+	set_upstart_variable("XDG_DATA_HOME", g_get_user_data_dir(), FALSE);
 
 	g_debug("Setting 'XDG_RUNTIME_DIR' using g_get_user_runtime_dir()");
-	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
+	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir(), FALSE);
 
 	/* Add the application's dir to the list of sources for data */
 	gchar * datadirs = g_strjoin(":", app_dir, g_getenv("XDG_DATA_DIRS"), NULL);
-	set_upstart_variable("XDG_DATA_DIRS", datadirs);
+	set_upstart_variable("XDG_DATA_DIRS", datadirs, FALSE);
 	g_free(datadirs);
 
 	/* Set TMPDIR to something sane and application-specific */
 	gchar * tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package);
 	g_debug("Setting 'TMPDIR' to '%s'", tmpdir);
-	set_upstart_variable("TMPDIR", tmpdir);
+	set_upstart_variable("TMPDIR", tmpdir, FALSE);
 	g_debug("Creating '%s'", tmpdir);
 	g_mkdir_with_parents(tmpdir, 0700);
 	g_free(tmpdir);
@@ -577,7 +612,7 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	/* Do the same for nvidia */
 	gchar * nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package);
 	g_debug("Setting '__GL_SHADER_DISK_CACHE_PATH' to '%s'", nv_shader_cachedir);
-	set_upstart_variable("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
+	set_upstart_variable("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir, FALSE);
 	g_free(nv_shader_cachedir);
 
 	return;

@@ -35,7 +35,9 @@ main (int argc, char * argv[])
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	const gchar * app_exec = g_getenv("APP_EXEC");
 	if (app_exec == NULL) {
-		g_warning("No exec line given, nothing to do except fail");
+		/* There should be no reason for this, a g_error() so that it gets
+		   picked up by Apport and we can track it */
+		g_error("No exec line given, nothing to do except fail");
 		return 1;
 	}
 
@@ -55,11 +57,55 @@ main (int argc, char * argv[])
 		if (g_chdir(appdir) != 0) {
 			g_warning("Unable to change directory to '%s'", appdir);
 		}
+	}
 
-		const gchar * path = g_getenv("PATH");
-		gchar * newpath = g_strdup_printf("%s:%s", appdir, path);
+	/* Protect against app directories that have ':' in them */
+	if (appdir != NULL && strchr(appdir, ':') == NULL) {
+		const gchar * path_path = g_getenv("PATH");
+		gchar * path_libpath = NULL;
+		const gchar * path_joinable[4] = { 0 };
+
+		const gchar * import_path = g_getenv("QML2_IMPORT_PATH");
+		gchar * import_libpath = NULL;
+		const gchar * import_joinable[4] = { 0 };
+
+		/* If we've got an architecture set insert that into the
+		   path before everything else */
+		const gchar * archdir = g_getenv("UPSTART_APP_LAUNCH_ARCH");
+		if (archdir != NULL && strchr(archdir, ':') == NULL) {
+			path_libpath = g_build_filename(appdir, "lib", archdir, "bin", NULL);
+			import_libpath = g_build_filename(appdir, "lib", archdir, NULL);
+
+			path_joinable[0] = path_libpath;
+			path_joinable[1] = appdir;
+			path_joinable[2] = path_path;
+
+			/* Need to check whether the original is NULL because we're
+			   appending instead of prepending */
+			if (import_path == NULL) {
+				import_joinable[0] = import_libpath;
+			} else {
+				import_joinable[0] = import_path;
+				import_joinable[1] = import_libpath;
+			}
+		} else {
+			path_joinable[0] = appdir;
+			path_joinable[1] = path_path;
+
+			import_joinable[0] = import_path;
+		}
+
+		gchar * newpath = g_strjoinv(":", (gchar**)path_joinable);
 		g_setenv("PATH", newpath, TRUE);
+		g_free(path_libpath);
 		g_free(newpath);
+
+		if (import_joinable[0] != NULL) {
+			gchar * newimport = g_strjoinv(":", (gchar**)import_joinable);
+			g_setenv("QML2_IMPORT_PATH", newimport, TRUE);
+			g_free(newimport);
+		}
+		g_free(import_libpath);
 	}
 
 	/* Parse the execiness of it all */
@@ -85,7 +131,9 @@ main (int argc, char * argv[])
 	int execret = execvp(nargv[0], nargv);
 
 	if (execret != 0) {
-		g_warning("Unable to exec: %s", strerror(errno));
+		gchar * execprint = g_strjoinv(" ", nargv);
+		g_warning("Unable to exec '%s' in '%s': %s", execprint, appdir, strerror(errno));
+		g_free(execprint);
 	}
 
 	return execret;
