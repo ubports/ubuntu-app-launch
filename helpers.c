@@ -221,7 +221,7 @@ desktop_to_exec (GKeyFile * desktop_file, const gchar * from)
 
 /* Sets an upstart variable, currently using initctl */
 void
-set_upstart_variable (const gchar * variable, const gchar * value)
+set_upstart_variable (const gchar * variable, const gchar * value, gboolean sync)
 {
 	/* Check to see if we can get the job environment */
 	const gchar * job_name = g_getenv("UPSTART_JOB");
@@ -249,17 +249,41 @@ set_upstart_variable (const gchar * variable, const gchar * value)
 	/* Do we want to replace?  Yes, we do! */
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
-	g_dbus_connection_call(bus,
-		DBUS_SERVICE_UPSTART,
-		DBUS_PATH_UPSTART,
-		DBUS_INTERFACE_UPSTART,
-		"SetEnv",
-		g_variant_builder_end(&builder),
-		NULL, /* reply */
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout */
-		NULL, /* cancelable */
-		NULL, NULL); /* callback */
+	if (sync) {
+		GError * error = NULL;
+		GVariant * reply = g_dbus_connection_call_sync(bus,
+			DBUS_SERVICE_UPSTART,
+			DBUS_PATH_UPSTART,
+			DBUS_INTERFACE_UPSTART,
+			"SetEnv",
+			g_variant_builder_end(&builder),
+			NULL, /* reply */
+			G_DBUS_CALL_FLAGS_NONE,
+			-1, /* timeout */
+			NULL, /* cancelable */
+			&error); /* error */
+
+		if (reply != NULL) {
+			g_variant_unref(reply);
+		}
+
+		if (error != NULL) {
+			g_warning("Unable to set environment variable '%s' to '%s': %s", variable, value, error->message);
+			g_error_free(error);
+		}
+	} else {
+		g_dbus_connection_call(bus,
+			DBUS_SERVICE_UPSTART,
+			DBUS_PATH_UPSTART,
+			DBUS_INTERFACE_UPSTART,
+			"SetEnv",
+			g_variant_builder_end(&builder),
+			NULL, /* reply */
+			G_DBUS_CALL_FLAGS_NONE,
+			-1, /* timeout */
+			NULL, /* cancelable */
+			NULL, NULL); /* callback */
+	}
 
 	g_object_unref(bus);
 }
@@ -553,7 +577,7 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	g_return_if_fail(app_dir != NULL);
 
 	g_debug("Setting 'UBUNTU_APPLICATION_ISOLATION' to '1'");
-	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1");
+	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1", FALSE);
 
 	/* Make sure the XDG base dirs are set for the application using
 	 * the user's current values/system defaults. We could set these to
@@ -561,26 +585,26 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	 * brittle if someone uses different base dirs.
 	 */
 	g_debug("Setting 'XDG_CACHE_HOME' using g_get_user_cache_dir()");
-	set_upstart_variable("XDG_CACHE_HOME", g_get_user_cache_dir());
+	set_upstart_variable("XDG_CACHE_HOME", g_get_user_cache_dir(), FALSE);
 
 	g_debug("Setting 'XDG_CONFIG_HOME' using g_get_user_config_dir()");
-	set_upstart_variable("XDG_CONFIG_HOME", g_get_user_config_dir());
+	set_upstart_variable("XDG_CONFIG_HOME", g_get_user_config_dir(), FALSE);
 
 	g_debug("Setting 'XDG_DATA_HOME' using g_get_user_data_dir()");
-	set_upstart_variable("XDG_DATA_HOME", g_get_user_data_dir());
+	set_upstart_variable("XDG_DATA_HOME", g_get_user_data_dir(), FALSE);
 
 	g_debug("Setting 'XDG_RUNTIME_DIR' using g_get_user_runtime_dir()");
-	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
+	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir(), FALSE);
 
 	/* Add the application's dir to the list of sources for data */
 	gchar * datadirs = g_strjoin(":", app_dir, g_getenv("XDG_DATA_DIRS"), NULL);
-	set_upstart_variable("XDG_DATA_DIRS", datadirs);
+	set_upstart_variable("XDG_DATA_DIRS", datadirs, FALSE);
 	g_free(datadirs);
 
 	/* Set TMPDIR to something sane and application-specific */
 	gchar * tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package);
 	g_debug("Setting 'TMPDIR' to '%s'", tmpdir);
-	set_upstart_variable("TMPDIR", tmpdir);
+	set_upstart_variable("TMPDIR", tmpdir, FALSE);
 	g_debug("Creating '%s'", tmpdir);
 	g_mkdir_with_parents(tmpdir, 0700);
 	g_free(tmpdir);
@@ -588,7 +612,7 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	/* Do the same for nvidia */
 	gchar * nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package);
 	g_debug("Setting '__GL_SHADER_DISK_CACHE_PATH' to '%s'", nv_shader_cachedir);
-	set_upstart_variable("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
+	set_upstart_variable("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir, FALSE);
 	g_free(nv_shader_cachedir);
 
 	return;
