@@ -16,5 +16,9 @@
 		<signal name="UnityStartingSignal">
 			<arg type="s" name="appid" />
 		</signal>
+		<signal name="ApplicationFailed">
+			<arg type="s" name="appid" />
+			<arg type="s" name="stage" />
+		</signal>
 	</interface>
 </node>

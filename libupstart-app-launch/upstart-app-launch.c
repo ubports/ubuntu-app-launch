@@ -395,12 +395,22 @@ struct _observer_t {
 	gpointer user_data;
 };
 
+/* The data we keep for each failed observer */
+typedef struct _failed_observer_t failed_observer_t;
+struct _failed_observer_t {
+	GDBusConnection * conn;
+	guint sighandle;
+	upstart_app_launch_app_failed_observer_t func;
+	gpointer user_data;
+};
+
 /* The lists of Observers */
 static GList * starting_array = NULL;
 static GList * started_array = NULL;
 static GList * stop_array = NULL;
 static GList * focus_array = NULL;
 static GList * resume_array = NULL;
+static GList * failed_array = NULL;
 
 static void
 observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
@@ -613,10 +623,63 @@ upstart_app_launch_observer_add_app_starting (upstart_app_launch_app_observer_t 
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
 
+/* Handle the failed signal when it occurs, call the observer */
+static void
+failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	failed_observer_t * observer = (failed_observer_t *)user_data;
+	const gchar * appid = NULL;
+	const gchar * typestr = NULL;
+
+	tracepoint(upstart_app_launch, observer_start, "failed");
+
+	if (observer->func != NULL) {
+		upstart_app_launch_app_failed_t type = UPSTART_APP_LAUNCH_APP_FAILED_CRASH;
+		g_variant_get(params, "(&s&s)", &appid, &typestr);
+
+		if (g_strcmp0("crash", typestr) == 0) {
+			type = UPSTART_APP_LAUNCH_APP_FAILED_CRASH;
+		} else if (g_strcmp0("start-failure", typestr) == 0) {
+			type = UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE;
+		} else {
+			g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
+		}
+
+		observer->func(appid, type, observer->user_data);
+	}
+
+	tracepoint(upstart_app_launch, observer_finish, "failed");
+}
+
 gboolean
 upstart_app_launch_observer_add_app_failed (upstart_app_launch_app_failed_observer_t observer, gpointer user_data)
 {
-	return FALSE;
+	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+
+	if (conn == NULL) {
+		return FALSE;
+	}
+
+	failed_observer_t * observert = g_new0(failed_observer_t, 1);
+
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
+
+	failed_array = g_list_prepend(failed_array, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
+		NULL, /* sender */
+		"com.canonical.UpstartAppLaunch", /* interface */
+		"ApplicationFailed", /* signal */
+		"/", /* path */
+		NULL, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		failed_signal_cb,
+		observert,
+		NULL); /* user data destroy */
+
+	return TRUE;
 }
 
 static gboolean
@@ -679,7 +742,28 @@ upstart_app_launch_observer_delete_app_starting (upstart_app_launch_app_observer
 gboolean
 upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_observer_t observer, gpointer user_data)
 {
-	return FALSE;
+	failed_observer_t * observert = NULL;
+	GList * look;
+
+	for (look = failed_array; look != NULL; look = g_list_next(look)) {
+		observert = (failed_observer_t *)look->data;
+
+		if (observert->func == observer && observert->user_data == user_data) {
+			break;
+		}
+	}
+
+	if (look == NULL) {
+		return FALSE;
+	}
+
+	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
+	g_object_unref(observert->conn);
+
+	g_free(observert);
+	failed_array = g_list_delete_link(failed_array, look);
+
+	return TRUE;
 }
 
 typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);

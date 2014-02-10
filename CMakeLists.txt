@@ -178,6 +178,15 @@ target_link_libraries(application-job upstart-launcher)
 install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# application-failed
+####################
+
+add_executable(application-failed application-failed.c)
+set_target_properties(application-failed PROPERTIES OUTPUT_NAME "application-failed")
+target_link_libraries(application-failed ${GIO2_LIBRARIES})
+install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # application.conf
 ####################
 
@@ -200,6 +209,14 @@ add_test(application-legacy.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${
 configure_file("application-click.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
 add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
+
+####################
+# application-failed.conf
+####################
+
+configure_file("application-failed.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
+add_test(application-failed.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf")
 
 ####################
 # upstart-app-launch-desktop.click-hook
