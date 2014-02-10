@@ -62,6 +62,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GError * error = NULL;
 	GVariant * result = NULL;
 
+	tracepoint(upstart_app_launch, libual_start_message_callback, data->appid);
 	g_debug("Started Message Callback: %s", data->appid);
 
 	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
@@ -137,7 +138,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 static gboolean
 legacy_single_instance (const gchar * appid)
 {
-	tracepoint(upstart_app_launch, desktop_single_start);
+	tracepoint(upstart_app_launch, desktop_single_start, appid);
 
 	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
 
@@ -146,7 +147,7 @@ legacy_single_instance (const gchar * appid)
 		return FALSE;
 	}
 
-	tracepoint(upstart_app_launch, desktop_single_found);
+	tracepoint(upstart_app_launch, desktop_single_found, appid);
 
 	gboolean singleinstance = FALSE;
 
@@ -165,7 +166,7 @@ legacy_single_instance (const gchar * appid)
 	
 	g_key_file_free(keyfile);
 
-	tracepoint(upstart_app_launch, desktop_single_finished);
+	tracepoint(upstart_app_launch, desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
 
 	return singleinstance;
 }
@@ -174,6 +175,8 @@ gboolean
 upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
+
+	tracepoint(upstart_app_launch, libual_start, appid);
 
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
@@ -192,6 +195,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
 	g_free(click_link);
 
+	tracepoint(upstart_app_launch, libual_determine_type, appid, click ? "click" : "legacy");
+
 	/* Figure out the DBus path for the job */
 	const gchar * jobpath = NULL;
 	if (click) {
@@ -202,6 +207,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 
 	if (jobpath == NULL)
 		return FALSE;
+
+	tracepoint(upstart_app_launch, libual_job_path_determined, appid, jobpath);
 
 	/* Callback data */
 	app_start_t * app_start_data = g_new0(app_start_t, 1);
@@ -247,6 +254,8 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	                       NULL, /* cancelable */
 	                       application_start_cb,
 	                       app_start_data);
+
+	tracepoint(upstart_app_launch, libual_start_message_sent, appid);
 
 	g_object_unref(con);
 
@@ -398,6 +407,11 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 {
 	observer_t * observer = (observer_t *)user_data;
 
+	const gchar * signalname = NULL;
+	g_variant_get_child(params, 0, "&s", &signalname);
+
+	tracepoint(upstart_app_launch, observer_start, signalname);
+
 	gchar * env = NULL;
 	GVariant * envs = g_variant_get_child_value(params, 1);
 	GVariantIter iter;
@@ -430,6 +444,8 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 	if (job_found && instance != NULL) {
 		observer->func(instance, observer->user_data);
 	}
+
+	tracepoint(upstart_app_launch, observer_finish, signalname);
 
 	g_free(instance);
 }
@@ -519,10 +535,14 @@ focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * obj
 	observer_t * observer = (observer_t *)user_data;
 	const gchar * appid = NULL;
 
+	tracepoint(upstart_app_launch, observer_start, "focus");
+
 	if (observer->func != NULL) {
 		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
+
+	tracepoint(upstart_app_launch, observer_finish, "focus");
 }
 
 gboolean
@@ -535,6 +555,8 @@ upstart_app_launch_observer_add_app_focus (upstart_app_launch_app_observer_t obs
 static void
 resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
+	tracepoint(upstart_app_launch, observer_start, "resume");
+
 	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	GError * error = NULL;
@@ -550,6 +572,8 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		g_warning("Unable to emit response signal: %s", error->message);
 		g_error_free(error);
 	}
+
+	tracepoint(upstart_app_launch, observer_finish, "resume");
 }
 
 gboolean
@@ -562,6 +586,8 @@ upstart_app_launch_observer_add_app_resume (upstart_app_launch_app_observer_t ob
 static void
 starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
+	tracepoint(upstart_app_launch, observer_start, "starting");
+
 	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	GError * error = NULL;
@@ -577,6 +603,8 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 		g_warning("Unable to emit response signal: %s", error->message);
 		g_error_free(error);
 	}
+
+	tracepoint(upstart_app_launch, observer_finish, "starting");
 }
 
 gboolean
