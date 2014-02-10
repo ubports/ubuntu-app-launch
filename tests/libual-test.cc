@@ -612,6 +612,20 @@ TEST_F(LibUAL, UrlSendTest)
 	EXPECT_EQ("foo", this->last_resume_appid);
 
 	g_dbus_connection_remove_filter(session, filter);
+
+	/* Send multiple resume responses to ensure we unsubscribe */
+	int i;
+	for (i = 0; i < 5; i++)
+		g_dbus_connection_emit_signal(session,
+			NULL, /* destination */
+			"/", /* path */
+			"com.canonical.UpstartAppLaunch", /* interface */
+			"UnityResumeResponse", /* signal */
+			g_variant_new("(s)", "foo"), /* params, the same */
+			NULL);
+
+	pause(100); /* Ensure all the events come through */
+
 	g_object_unref(session);
 }
 
