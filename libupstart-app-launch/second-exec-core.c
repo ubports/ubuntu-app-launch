@@ -35,6 +35,7 @@ typedef struct {
 	gchar * dbus_path;
 	guint64 unity_starttime;
 	guint timer;
+	guint signal;
 } second_exec_t;
 
 static void second_exec_complete (second_exec_t * data);
@@ -382,7 +383,7 @@ second_exec (const gchar * app_id, const gchar * appuris)
 	data->bus = session;
 
 	/* Set up listening for the unfrozen signal from Unity */
-	g_dbus_connection_signal_subscribe(session,
+	data->signal = g_dbus_connection_signal_subscribe(session,
 		NULL, /* sender */
 		"com.canonical.UpstartAppLaunch", /* interface */
 		"UnityResumeResponse", /* signal */
@@ -463,6 +464,9 @@ second_exec_complete (second_exec_t * data)
 	tracepoint(upstart_app_launch, second_exec_finish, data->appid);
 
 	/* Clean up */
+	if (data->signal != 0)
+		g_dbus_connection_signal_unsubscribe(data->bus, data->signal);
+
 	g_object_unref(data->bus);
 	if (data->app_data != NULL)
 		g_variant_unref(data->app_data);
