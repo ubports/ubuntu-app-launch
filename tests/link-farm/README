@@ -1,0 +1,3 @@
+This directory is setup as our testing link farm.  Anything that has a
+desktop in here will be detected as a click package, something without
+will be seen as a legacy package.

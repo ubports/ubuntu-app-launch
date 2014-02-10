@@ -71,7 +71,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c)
+add_library(helpers STATIC helpers.c helpers-keyfile.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES})
 
 ####################
@@ -149,16 +149,6 @@ target_link_libraries(desktop-hook helpers)
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# desktop-single
-####################
-
-add_lttng_gen_tp(NAME desktop-single-trace)
-add_executable(desktop-single desktop-single.c desktop-single-trace.c)
-set_target_properties(desktop-single PROPERTIES OUTPUT_NAME "desktop-single")
-target_link_libraries(desktop-single helpers ${LTTNG_LIBRARIES})
-install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
 # exec-line-exec
 ####################
 
@@ -178,18 +168,14 @@ set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
 target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
-#######################
-# second-exec
-#######################
+####################
+# application-job
+####################
 
-add_lttng_gen_tp(NAME second-exec-trace)
-add_library(second-exec-core STATIC second-exec-core.c second-exec-trace.c)
-target_link_libraries(second-exec-core helpers upstart-launcher ${LTTNG_LIBRARIES})
-
-add_executable(second-exec second-exec.c)
-set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
-target_link_libraries(second-exec second-exec-core)
-install(TARGETS second-exec RUNTIME DESTINATION "${pkglibexecdir}")
+add_executable(application-job application-job.c)
+set_target_properties(application-job PROPERTIES OUTPUT_NAME "application-job")
+target_link_libraries(application-job upstart-launcher)
+install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # application.conf

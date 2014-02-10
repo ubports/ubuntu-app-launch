@@ -1,5 +1,0 @@
-
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_start, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_found, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, desktop_single_finished, TP_ARGS(0), TP_FIELDS())
-
