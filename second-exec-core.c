@@ -155,7 +155,22 @@ app_id_to_dbus_path (void)
 		return;
 	}
 
-	dbus_path = nih_dbus_path(NULL, "", appid, NULL);
+	GString * str = g_string_sized_new(strlen(appid) + 2); /* base case, we just need a / and a null */
+	g_string_append_c(str, '/');
+
+	int i;
+	for (i = 0; appid[i] != '\0'; i++) {
+		if ((appid[i] >= 'a' && appid[i] <= 'z') ||
+			(appid[i] >= 'A' && appid[i] <= 'Z') ||
+			(appid[i] >= '0' && appid[i] <= '9' && i != 0)) {
+			g_string_append_c(str, appid[i]);
+			continue;
+		}
+
+		g_string_append_printf(str, "_%2X", appid[i]);
+	}
+
+	dbus_path = g_string_free(str, FALSE);
 	g_debug("DBus Path: %s", dbus_path);
 
 	return;
@@ -421,11 +436,7 @@ second_exec (const gchar * app_id, const gchar * appuris)
 
 	g_main_loop_unref(mainloop);
 	g_object_unref(session);
-
-	if (dbus_path != NULL) {
-		nih_free(dbus_path);
-		dbus_path = NULL;
-	}
+	g_clear_pointer(&dbus_path, g_free);
 
 	tracepoint(upstart_app_launch, second_exec_finish);
 
