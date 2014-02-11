@@ -614,8 +614,10 @@ TEST_F(LibUAL, UrlSendTest)
 	g_dbus_connection_remove_filter(session, filter);
 
 	/* Send multiple resume responses to ensure we unsubscribe */
+	/* Multiple to increase our chance of hitting a bad free in the middle,
+	   fun with async! */
 	int i;
-	for (i = 0; i < 5; i++)
+	for (i = 0; i < 5; i++) {
 		g_dbus_connection_emit_signal(session,
 			NULL, /* destination */
 			"/", /* path */
@@ -624,7 +626,8 @@ TEST_F(LibUAL, UrlSendTest)
 			g_variant_new("(s)", "foo"), /* params, the same */
 			NULL);
 
-	pause(100); /* Ensure all the events come through */
+		pause(50); /* Ensure all the events come through */
+	}
 
 	g_object_unref(session);
 }
