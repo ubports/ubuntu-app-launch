@@ -277,6 +277,30 @@ GPid       upstart_app_launch_get_primary_pid           (const gchar *          
 gboolean   upstart_app_launch_pid_in_app_id             (GPid                              pid,
                                                          const gchar *                     appid);
 
+/**
+ * upstart_app_launch_triplet_to_app_id:
+ * @pkg: Click package name
+ * @app: (allow-none): Application name, see description
+ * @version: (allow-none): Specific version or wildcard, see description
+ *
+ * Constructs an appid from pkg, app, version triple.  Wildcards are allowed
+ * for the @app and @version parameters.
+ *
+ * For the @app parameter the wildcards * "first-listed-app", "last-listed-app"
+ * and "only-listed-app" can be used.  A NULL value will default to the
+ * first listed app.
+ *
+ * For the @version parameter only one wildcard is allowed, "current-user-version".
+ * If NULL is passed that is the default.
+ *
+ * Return Value: Either the properly constructed @appid or NULL if it failed 
+ *     to construct it.
+ */
+gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *                     pkg,
+                                                         const gchar *                     app,
+                                                         const gchar *                     version);
+
+
 #ifdef __cplusplus
 }
 #endif

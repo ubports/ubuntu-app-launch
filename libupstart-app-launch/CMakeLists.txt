@@ -1,4 +1,7 @@
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 ##########################
 # Version Info
 ##########################
@@ -11,6 +14,8 @@ set(ABI_VERSION 2)
 # Library
 ##########################
 
+add_lttng_gen_tp(NAME upstart-app-launch-trace)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
 set(LAUNCHER_HEADERS
@@ -19,6 +24,9 @@ upstart-app-launch.h
 
 set(LAUNCHER_SOURCES
 upstart-app-launch.c
+second-exec-core.c
+upstart-app-launch-trace.c
+"${CMAKE_SOURCE_DIR}/helpers-keyfile.c"
 )
 
 add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
@@ -34,6 +42,8 @@ target_link_libraries(upstart-launcher
 	${GOBJECT2_LIBRARIES}
 	${LIBUPSTART_LIBRARIES}
 	${GIO2_LIBRARIES}
+	${LTTNG_LIBRARIES}
+	${JSONGLIB_LIBRARIES}
 	-Wl,--no-undefined
 )
 

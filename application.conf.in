@@ -2,6 +2,7 @@ description "Application Launching Wrapper"
 author "Ted Gould <ted@canonical.com>"
 
 start on application-start
+task
 
 # Events aren't emitted directly, but start is used to create them
 emits application-legacy-start
@@ -13,24 +14,4 @@ export APP_ID
 env APP_URIS
 export APP_URIS
 
-script
-	CLICK_PKG=`echo "${APP_ID}" | cut -d _ -f 1`
-
-	if [ ! -z $CLICK_PKG ] ; then
-		CLICK_DIR=`click pkgdir "${CLICK_PKG}" 2> /dev/null || true`
-	fi
-
-	if [ ! -z $CLICK_DIR ] && [ -d $CLICK_DIR ] ; then
-		if ! start application-click APP_ID="${APP_ID}" APP_URIS="${APP_URIS}"; then
-			@pkglibexecdir@/second-exec
-		fi
-	else
-		if @pkglibexecdir@/desktop-single $APP_ID ; then
-			if ! start application-legacy APP_ID="${APP_ID}" INSTANCE_ID="" APP_URIS="${APP_URIS}" ; then
-				@pkglibexecdir@/second-exec
-			fi
-		else
-			start application-legacy APP_ID="${APP_ID}" INSTANCE_ID=`date -u +%s` APP_URIS="${APP_URIS}"
-		fi
-	fi
-end script
+exec @pkglibexecdir@/application-job
