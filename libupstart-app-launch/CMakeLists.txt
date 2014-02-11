@@ -79,7 +79,7 @@ install(
 include(UseGObjectIntrospection)
 
 set(INTROSPECTION_GIRS)
-set(_introspection_files ${LAUNCHER_HEADERS} ${LAUNCHER_SOURCES})
+set(_introspection_files ${LAUNCHER_HEADERS})
 set(UpstartAppLaunch_2_gir "upstart-app-launch")
 set(UpstartAppLaunch_2_gir_INCLUDES GObject-2.0)
 
