@@ -1,3 +1,22 @@
+upstart-app-launch (0.3+14.04.20140210-0ubuntu1) trusty; urgency=low
+
+  * 
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 10 Feb 2014 10:25:19 +0000
+
+upstart-app-launch (0.3+14.04.20140206-0ubuntu1) trusty; urgency=low
+
+  [ Ted Gould ]
+  * Basic merge and review requirements.
+  * On error print the exec line
+  * Make the last environment variable set synchronous to make Upstart
+    respond that it received it. (LP: #1275017)
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 06 Feb 2014 16:54:55 +0000
+
 upstart-app-launch (0.3+14.04.20140129.1-0ubuntu1) trusty; urgency=low
 
   [ Ken VanDine ]

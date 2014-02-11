@@ -27,3 +27,10 @@ Test-case upstart-app-launch/secondary-activation
     <dt>Send a URL to the service: <tt>upstart-app-launch ubuntu-system-settings settings:///system/battery</tt></dt>
         <dd>The settings application should come back into focus and be on the power settings pane</dd>
 </dl>
+
+Test-case upstart-app-launch/security-app-launch
+<dl>
+    <dt>Setup the security tests: https://wiki.ubuntu.com/Touch/Testing#Running_Security_tests</dt>
+    <dt>Execute the <tt>click-apparmor</tt> test to start and stop several confined applications</dt>
+        <dd>Ensure that all applications start and stop correctly</dd>
+</dl>

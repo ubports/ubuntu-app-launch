@@ -35,6 +35,15 @@ target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBR
 
 add_test (NAME libual-test COMMAND libual-test)
 
+# Failure Test
+
+add_definitions ( -DAPP_FAILED_TOOL="${CMAKE_BINARY_DIR}/application-failed" )
+
+add_executable (failure-test
+	failure-test.cc)
+target_link_libraries (failure-test gtest ${GTEST_LIBS} upstart-launcher)
+add_test (failure-test failure-test)
+
 # ZG Test
 
 add_definitions ( -DZG_EVENT_TOOL="${CMAKE_BINARY_DIR}/zg-report-app" )

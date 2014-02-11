@@ -110,7 +110,7 @@ main (int argc, char * argv[])
 	}
 
 	g_debug("Setting 'APP_DIR' to '%s'", output);
-	set_upstart_variable("APP_DIR", output);
+	set_upstart_variable("APP_DIR", output, FALSE);
 
 	set_confined_envvars(package, output);
 
@@ -130,7 +130,7 @@ main (int argc, char * argv[])
 
 	GKeyFile * keyfile = g_key_file_new();
 
-	set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfile);
+	set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfile, FALSE);
 	g_key_file_load_from_file(keyfile, desktopfile, 0, &error);
 	if (error != NULL) {
 		g_warning("Unable to load desktop file '%s': %s", desktopfile, error->message);
@@ -149,19 +149,22 @@ main (int argc, char * argv[])
 
 	tracepoint(upstart_app_launch, click_read_desktop);
 
+	/* TODO: This is for Surface Flinger, when we drop support we can drop this */
+	gchar * userdesktopfile = g_strdup_printf("%s.desktop", app_id);
+	gchar * userdesktoppath = g_build_filename(g_get_home_dir(), ".local", "share", "applications", userdesktopfile, NULL);
+	set_upstart_variable("APP_DESKTOP_FILE", userdesktoppath, FALSE);
+	g_free(userdesktopfile);
+	g_free(userdesktoppath);
+
 	g_debug("Setting 'APP_EXEC' to '%s'", exec);
-	set_upstart_variable("APP_EXEC", exec);
+	/* NOTE: This should be the last upstart variable set as it is sync
+	   so it will wait for a reply from Upstart implying that Upstart
+	   has seen all the other variable requests we made */
+	set_upstart_variable("APP_EXEC", exec, TRUE);
 
 	g_free(exec);
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
-
-	/* TODO: This is for Surface Flinger, when we drop support we can drop this */
-	gchar * userdesktopfile = g_strdup_printf("%s.desktop", app_id);
-	gchar * userdesktoppath = g_build_filename(g_get_home_dir(), ".local", "share", "applications", userdesktopfile, NULL);
-	set_upstart_variable("APP_DESKTOP_FILE", userdesktoppath);
-	g_free(userdesktopfile);
-	g_free(userdesktoppath);
 
 	tracepoint(upstart_app_launch, click_handshake_wait);
 
@@ -169,7 +172,6 @@ main (int argc, char * argv[])
 
 	tracepoint(upstart_app_launch, click_handshake_complete);
 
-	g_dbus_connection_flush_sync(bus, NULL, NULL);
 	g_object_unref(bus);
 
 	return 0;
