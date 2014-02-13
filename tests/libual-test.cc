@@ -73,9 +73,10 @@ class LibUAL : public ::testing::Test
 			g_free(linkfarmpath);
 
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+			g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR, TRUE);
 
 			service = dbus_test_service_new(NULL);
-			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+
 			const gchar * oldpath = g_getenv("PATH");
 			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
 			g_setenv("PATH", newpath, TRUE);
@@ -317,6 +318,21 @@ TEST_F(LibUAL, StopApplication)
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
+}
+
+TEST_F(LibUAL, ApplicationLog)
+{
+	gchar * click_log = upstart_app_launch_application_log_path("foo");
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-click-foo.log", click_log);
+	g_free(click_log);
+
+	gchar * legacy_single = upstart_app_launch_application_log_path("single");
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-legacy-single-.log", legacy_single);
+	g_free(legacy_single);
+
+	gchar * legacy_multiple = upstart_app_launch_application_log_path("bar");
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-legacy-bar-2342345.log", legacy_multiple);
+	g_free(legacy_multiple);
 }
 
 TEST_F(LibUAL, ApplicationPid)
