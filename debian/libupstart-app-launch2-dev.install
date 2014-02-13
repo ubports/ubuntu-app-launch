@@ -1,3 +1,4 @@
 usr/lib/*/libupstart-app-launch.so
 usr/lib/*/pkgconfig/*
 usr/include/*
+usr/share/gir-1.0/*

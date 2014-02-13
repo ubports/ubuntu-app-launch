@@ -29,35 +29,41 @@ extern "C" {
 #endif
 
 /**
- * upstart_app_launch_app_failed_t:
+ * UpstartAppLaunchAppFailed:
  *
  * Types of failure that we report.
  */
-enum _upstart_app_launch_app_failed_t {
-	UPSTART_APP_LAUNCH_APP_FAILED_CRASH,
-	UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE,
-};
-typedef enum _upstart_app_launch_app_failed_t upstart_app_launch_app_failed_t;
+typedef enum { /*< prefix=UPSTART_APP_LAUNCH_APP_FAILED */
+	UPSTART_APP_LAUNCH_APP_FAILED_CRASH,          /*< nick=crash */
+	UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE,  /*< nick=start-failure */
+} UpstartAppLaunchAppFailed;
+typedef UpstartAppLaunchAppFailed upstart_app_launch_app_failed_t;
 
 /**
- * upstart_app_launch_app_observer_t:
+ * UpstartAppLaunchAppObserver:
  *
  * Function prototype for application observers.
  */
-typedef void (*upstart_app_launch_app_observer_t) (const gchar * appid, gpointer user_data);
+typedef void (*UpstartAppLaunchAppObserver) (const gchar * appid, gpointer user_data);
+
+/* Backwards compatible.  Drop when making API bump. */
+typedef UpstartAppLaunchAppObserver upstart_app_launch_app_observer_t;
 
 /**
- * upstart_app_launch_app_failed_observer_t:
+ * UpstartAppLaunchAppFailedObserver:
  *
  * Function prototype for application failed observers.
  */
-typedef void (*upstart_app_launch_app_failed_observer_t) (const gchar * appid, upstart_app_launch_app_failed_t failure_type, gpointer user_data);
+typedef void (*UpstartAppLaunchAppFailedObserver) (const gchar * appid, UpstartAppLaunchAppFailed failure_type, gpointer user_data);
+
+/* Backwards compatible.  Drop when making API bump. */
+typedef UpstartAppLaunchAppFailedObserver upstart_app_launch_app_failed_observer_t;
 
 
 /**
  * upstart_app_launch_start_application:
  * @appid: ID of the application to launch
- * @uris: (allow none): A NULL terminated list of URIs to send to the application
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the application
  *
  * Asks upstart to launch an application.
  *
@@ -94,8 +100,8 @@ gchar *    upstart_app_launch_application_log_path     (const gchar *           
 
 /**
  * upstart_app_launch_observer_add_app_starting:
- * @observer: Callback when an application is about to start
- * @user_data: (allow none): Data to pass to the observer
+ * @observer: (scope notified): Callback when an application is about to start
+ * @user_data: (closure) (allow-none): Data to pass to the observer
  *
  * Sets up a callback to get called each time an application
  * is about to start.  The application will not start until the
@@ -103,50 +109,50 @@ gchar *    upstart_app_launch_application_log_path     (const gchar *           
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_starting (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_add_app_starting (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_add_app_started:
- * @observer: Callback when an application started
- * @user_data: (allow none): Data to pass to the observer
+ * @observer: (scope notified): Callback when an application started
+ * @user_data: (closure) (allow-none): Data to pass to the observer
  *
  * Sets up a callback to get called each time an application
  * has been started.
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_started  (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_add_app_started  (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_add_app_stop:
- * @observer: Callback when an application stops
- * @user_data: (allow none): Data to pass to the observer
+ * @observer: (scope notified): Callback when an application stops
+ * @user_data: (closure) (allow-none): Data to pass to the observer
  *
  * Sets up a callback to get called each time an application
  * stops.
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_stop     (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_add_app_stop     (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 
 /**
  * upstart_app_launch_observer_add_app_focus:
- * @observer: Callback when an application is started for the second time
- * @user_data: (allow none): Data to pass to the observer
+ * @observer: (scope notified): Callback when an application is started for the second time
+ * @user_data: (closure) (allow-none): Data to pass to the observer
  *
  * Sets up a callback to get called each time an app gets called
  * that is already running, so we request it to be focused again.
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_focus    (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_add_app_focus    (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 
 /**
  * upstart_app_launch_observer_add_app_resume:
- * @observer: Callback when an application is started and possibly asleep
- * @user_data: (allow none): Data to pass to the observer
+ * @observer: (scope notified): Callback when an application is started and possibly asleep
+ * @user_data: (closure) (allow-none): Data to pass to the observer
  *
  * Sets up a callback to get called each time an app gets called
  * that is already running, so we request it to be given CPU time.
@@ -154,96 +160,96 @@ gboolean   upstart_app_launch_observer_add_app_focus    (upstart_app_launch_app_
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_resume   (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_add_app_resume   (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 
 /**
  * upstart_app_launch_observer_add_app_failed:
- * @observer: Callback when an application fails
- * @user_data: (allow none): Data to pass to the observer
+ * @observer: (scope notified): Callback when an application fails
+ * @user_data: (allow-none) (closure): Data to pass to the observer
  *
  * Sets up a callback to get called each time an application
  * stops via failure.
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   upstart_app_launch_observer_add_app_failed   (upstart_app_launch_app_failed_observer_t observer,
-                                                         gpointer                                 user_data);
+gboolean   upstart_app_launch_observer_add_app_failed   (UpstartAppLaunchAppFailedObserver observer,
+                                                         gpointer                          user_data);
 
 /**
  * upstart_app_launch_observer_delete_app_starting:
- * @observer: Callback to remove
- * @user_data: (allow none): Data that was passed to the observer
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data that was passed to the observer
  *
  * Removes a previously registered callback to ensure it no longer
  * gets signaled.
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_starting (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_starting (UpstartAppLaunchAppObserver       observer,
                                                             gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_app_started:
- * @observer: Callback to remove
- * @user_data: (allow none): Data that was passed to the observer
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data that was passed to the observer
  *
  * Removes a previously registered callback to ensure it no longer
  * gets signaled.
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_started (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_started (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_app_stop:
- * @observer: Callback to remove
- * @user_data: (allow none): Data that was passed to the observer
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data that was passed to the observer
  *
  * Removes a previously registered callback to ensure it no longer
  * gets signaled.
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_stop  (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_stop  (UpstartAppLaunchAppObserver       observer,
                                                          gpointer                          user_data);
 
 /**
  * upstart_app_launch_observer_delete_app_focus:
- * @observer: Callback to remove
- * @user_data: (allow none): Data that was passed to the observer
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data that was passed to the observer
  *
  * Removes a previously registered callback to ensure it no longer
  * gets signaled.
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_focus    (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_focus    (UpstartAppLaunchAppObserver       observer,
                                                             gpointer                          user_data);
 
 /**
  * upstart_app_launch_observer_delete_app_resume:
- * @observer: Callback to remove
- * @user_data: (allow none): Data that was passed to the observer
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data that was passed to the observer
  *
  * Removes a previously registered callback to ensure it no longer
  * gets signaled.
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_resume   (upstart_app_launch_app_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_resume   (UpstartAppLaunchAppObserver       observer,
                                                             gpointer                          user_data);
 
 /**
  * upstart_app_launch_observer_delete_app_failed:
- * @observer: Callback to remove
- * @user_data: (allow none): Data to pass to the observer
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data to pass to the observer
  *
  * Removes a previously registered callback to ensure it no longer
  * gets signaled.
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_observer_t observer,
+gboolean   upstart_app_launch_observer_delete_app_failed (UpstartAppLaunchAppFailedObserver        observer,
                                                           gpointer                                 user_data);
 /**
  * upstart_app_launch_list_running_apps:
