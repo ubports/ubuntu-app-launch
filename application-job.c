@@ -51,6 +51,16 @@ app_failed (const gchar * appid, upstart_app_launch_app_failed_t failure_type, g
 	g_main_loop_quit((GMainLoop *)user_data);
 }
 
+/* A fallback so that we can see what is going on.  The job can not always signal
+   that it has been started, and thus we wouldn't quit.  Which would be a bad thing. */
+static gboolean
+timeout_check (gpointer user_data)
+{
+	g_debug("Timeout reached");
+	g_main_loop_quit((GMainLoop *)user_data);
+	return TRUE; /* Keep the source connected to avoid the disconnect error */
+}
+
 int
 main (int argc, char * argv[])
 {
@@ -81,12 +91,16 @@ main (int argc, char * argv[])
 	upstart_app_launch_observer_add_app_focus(app_focus, mainloop);
 	upstart_app_launch_observer_add_app_failed(app_failed, mainloop);
 
+	guint timer = g_timeout_add_seconds(1, timeout_check, mainloop);
+
 	g_debug("Start Application: %s", global_appid);
 	g_return_val_if_fail(upstart_app_launch_start_application(global_appid, (const gchar * const *)uris), -1);
 	g_strfreev(uris);
 
 	g_debug("Wait for results");
 	g_main_loop_run(mainloop);
+
+	g_source_remove(timer);
 
 	upstart_app_launch_observer_delete_app_started(app_started, mainloop);
 	upstart_app_launch_observer_delete_app_focus(app_focus, mainloop);

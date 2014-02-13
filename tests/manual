@@ -42,3 +42,10 @@ Test-case upstart-app-launch/helper-run
     <dt>Look at the lock screen infographic for the SMS sent count</dt>
         <dd>Count should have incremented by 1</dd>
 </dl>
+
+Test-case upstart-app-launch/security-app-launch
+<dl>
+    <dt>Setup the security tests: https://wiki.ubuntu.com/Touch/Testing#Running_Security_tests</dt>
+    <dt>Execute the <tt>click-apparmor</tt> test to start and stop several confined applications</dt>
+        <dd>Ensure that all applications start and stop correctly</dd>
+</dl>

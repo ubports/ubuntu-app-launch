@@ -144,7 +144,7 @@ legacy_single_instance (const gchar * appid)
 	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
 
 	if (keyfile == NULL) {
-		g_error("Unable to find keyfile for application '%s'", appid);
+		g_warning("Unable to find keyfile for application '%s'", appid);
 		return FALSE;
 	}
 
@@ -172,18 +172,11 @@ legacy_single_instance (const gchar * appid)
 	return singleinstance;
 }
 
-gboolean
-upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+/* Determine whether it's a click package by looking for the symlink
+   that is created by the desktop hook */
+static gboolean
+is_click (const gchar * appid)
 {
-	g_return_val_if_fail(appid != NULL, FALSE);
-
-	tracepoint(upstart_app_launch, libual_start, appid);
-
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
-
-	/* Determine whether it's a click package by looking for the symlink
-	   that is created by the desktop hook */
 	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
 	gchar * click_link = NULL;
 	const gchar * link_farm_dir = g_getenv("UPSTART_APP_LAUNCH_LINK_FARM");
@@ -196,6 +189,18 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
 	g_free(click_link);
 
+	return click;
+}
+
+gboolean
+upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+{
+	g_return_val_if_fail(appid != NULL, FALSE);
+
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	gboolean click = is_click(appid);
 	tracepoint(upstart_app_launch, libual_determine_type, appid, click ? "click" : "legacy");
 
 	/* Figure out the DBus path for the job */
@@ -363,6 +368,53 @@ upstart_app_launch_stop_application (const gchar * appid)
 	g_object_unref(con);
 
 	return found;
+}
+
+gchar *
+upstart_app_launch_application_log_path (const gchar * appid)
+{
+	gchar * path = NULL;
+	g_return_val_if_fail(appid != NULL, NULL);
+
+	if (is_click(appid)) {
+		gchar * appfile = g_strdup_printf("application-click-%s.log", appid);
+		path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
+		g_free(appfile);
+		return path;
+	}
+
+	if (legacy_single_instance(appid)) {
+		gchar * appfile = g_strdup_printf("application-legacy-%s-.log", appid);
+		path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
+		g_free(appfile);
+		return path;
+	}
+
+	/* If we're not single instance, we can't recreate the instance ID
+	   but if it's running we can grab it. */
+	unsigned int i;
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, NULL);
+
+	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
+	g_array_set_clear_func(apps, free_helper);
+
+	apps_for_job(con, "application-legacy", apps, FALSE);
+	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
+	for (i = 0; i < apps->len && path == NULL; i++) {
+		const gchar * array_id = g_array_index(apps, const gchar *, i);
+		if (g_str_has_prefix(array_id, appiddash)) {
+			gchar * appfile = g_strdup_printf("application-legacy-%s.log", array_id);
+			path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
+			g_free(appfile);
+		}
+	}
+	g_free(appiddash);
+
+	g_array_free(apps, TRUE);
+	g_object_unref(con);
+
+	return path;
 }
 
 static GDBusConnection *

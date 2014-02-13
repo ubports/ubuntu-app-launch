@@ -1,4 +1,4 @@
 Pattern: ${home}/.cache/upstart-app-launch/desktop/${id}.desktop
-Exec: @pkglibexecdir@/desktop-hook ${id}
+Exec: @pkglibexecdir@/desktop-hook
 User-Level: yes
 Hook-Name: desktop
