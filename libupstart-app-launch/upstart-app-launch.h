@@ -322,7 +322,8 @@ gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *          
 /**
  * upstart_app_launch_start_helper:
  * @type: Type of helper
- * @id: App ID of the helper
+ * @appid: App ID of the helper
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
  *
  * Start an untrusted helper for a specific @type on a given
  * @appid.  We don't know how that is done specifically, as Upstart
@@ -338,7 +339,8 @@ gboolean   upstart_app_launch_start_helper              (const gchar *          
 /**
  * upstart_app_launch_start_multiple_helper:
  * @type: Type of helper
- * @id: App ID of the helper
+ * @appid: App ID of the helper
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
  *
  * Start an untrusted helper for a specific @type on a given
  * @appid.  We don't know how that is done specifically, as Upstart
@@ -390,7 +392,7 @@ gboolean   upstart_app_launch_stop_multiple_helper      (const gchar *          
  *
  * List all App IDs of helpers of a given @type.
  *
- * Return value: List of application IDs
+ * Return value: (transfer full): List of application IDs
  */
 gchar **   upstart_app_launch_list_helpers              (const gchar *                     type);
 
@@ -401,7 +403,7 @@ gchar **   upstart_app_launch_list_helpers              (const gchar *          
  *
  * List all the instances for a particular AppID
  *
- * Return value: List of instance IDs
+ * Return value: (transfer full): List of instance IDs
  */
 gchar **   upstart_app_launch_list_helper_instances     (const gchar *                     type,
                                                          const gchar *                     appid);
@@ -409,8 +411,8 @@ gchar **   upstart_app_launch_list_helper_instances     (const gchar *          
 
 /**
  * upstart_app_launch_observer_add_helper_started:
- * @observer: Callback when a helper started
- * @helper_type: Type of helpers to look for
+ * @observer: (scope notified): Callback when a helper started
+ * @helper_type: (closure) (allow-none): Type of helpers to look for
  * @user_data: (allow-none): Data to pass to the observer
  *
  * Sets up a callback to get called each time a helper of
@@ -423,8 +425,8 @@ gboolean   upstart_app_launch_observer_add_helper_started  (UpstartAppLaunchHelp
                                                             gpointer                          user_data);
 /**
  * upstart_app_launch_observer_add_helper_stop:
- * @observer: Callback when a helper stops
- * @helper_type: Type of helpers to look for
+ * @observer: (scope notified): Callback when a helper stops
+ * @helper_type: (closure) (allow-none): Type of helpers to look for
  * @user_data: (allow-none): Data to pass to the observer
  *
  * Sets up a callback to get called each time a helper of
@@ -437,9 +439,9 @@ gboolean   upstart_app_launch_observer_add_helper_stop       (UpstartAppLaunchHe
                                                               gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_helper_started:
- * @observer: Callback to remove
- * @helper_type: Type of helpers it looked for
- * @user_data: (allow none): Data that was passed to the observer
+ * @observer: (scope notified): Callback to remove
+ * @helper_type: (closure) (allow-none): Type of helpers it looked for
+ * @user_data: (allow-none): Data that was passed to the observer
  *
  * Removes a previously registered callback to ensure it no longer
  * gets signaled.
@@ -451,9 +453,9 @@ gboolean   upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHe
                                                               gpointer                          user_data);
 /**
  * upstart_app_launch_observer_delete_helper_stop:
- * @observer: Callback to remove
- * @helper_type: Type of helpers it looked for
- * @user_data: (allow none): Data that was passed to the observer
+ * @observer: (scope notified): Callback to remove
+ * @helper_type: (closure) (allow-none): Type of helpers it looked for
+ * @user_data: (allow-none): Data that was passed to the observer
  *
  * Removes a previously registered callback to ensure it no longer
  * gets signaled.
