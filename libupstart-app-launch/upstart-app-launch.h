@@ -74,6 +74,20 @@ gboolean   upstart_app_launch_start_application         (const gchar *          
                                                          const gchar * const *             uris);
 
 /**
+ * upstart_app_launch_start_application_test:
+ * @appid: ID of the application to launch
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the application
+ *
+ * Asks upstart to launch an application with environment variables set
+ * to enable testing.  Should only be used in testing.
+ *
+ * Return value: Whether the launch succeeded (may fail later, but upstart
+ *    will report the error in that case.
+ */
+gboolean   upstart_app_launch_start_application_test    (const gchar *                     appid,
+                                                         const gchar * const *             uris);
+
+/**
  * upstart_app_launch_stop_application:
  * @appid: ID of the application to launch
  *

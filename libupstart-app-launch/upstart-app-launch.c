@@ -267,6 +267,12 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	return TRUE;
 }
 
+gboolean
+upstart_app_launch_start_application_test (const gchar * appid, const gchar * const * uris)
+{
+	return FALSE;
+}
+
 static void
 stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, const gchar * instanceid)
 {
