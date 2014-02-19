@@ -327,6 +327,23 @@ gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *          
                                                          const gchar *                     app,
                                                          const gchar *                     version);
 
+/**
+ * upstart_app_launch_app_id_parse:
+ * @appid: Application ID to parse
+ * @package: (out) (transfer full) (allow-none): Package section of @appid
+ * @application: (out) (transfer full) (allow-none): Application section of @appid
+ * @version: (out) (transfer full) (allow-none): Version section of @appid
+ *
+ * Takes an application ID @appid and breaks it into its component parts.  Each
+ * of them can be NULL if those parts aren't desired.  If all are NULL it will
+ * still parse to generate a proper return value check if @appid is valid.
+ *
+ * Return value: Whether @appid is valid
+ */
+gboolean    upstart_app_launch_app_id_parse             (const gchar *                     appid,
+                                                         gchar **                          package,
+                                                         gchar **                          application,
+                                                         gchar **                          version);
 
 #ifdef __cplusplus
 }

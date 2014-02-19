@@ -1056,6 +1056,14 @@ upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 	return primary == pid;
 }
 
+gboolean
+upstart_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** application, gchar ** version)
+{
+	g_return_val_if_fail(appid != NULL, FALSE);
+
+	return FALSE;
+}
+
 /* Try and get a manifest file and do a couple sanity checks on it */
 static JsonParser *
 get_manifest_file (const gchar * pkg)
