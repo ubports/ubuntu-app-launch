@@ -191,8 +191,8 @@ is_click (const gchar * appid)
 	return click;
 }
 
-gboolean
-upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+static gboolean
+start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
@@ -243,6 +243,10 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 		}
 	}
 
+	if (test) {
+		g_variant_builder_add_value(&builder, g_variant_new_string("QT_TESTABILITY=1"));
+	}
+
 	g_variant_builder_close(&builder);
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 	
@@ -268,9 +272,15 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 }
 
 gboolean
+upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+{
+	return start_application_core(appid, uris, FALSE);
+}
+
+gboolean
 upstart_app_launch_start_application_test (const gchar * appid, const gchar * const * uris)
 {
-	return FALSE;
+	return start_application_core(appid, uris, TRUE);
 }
 
 static void
