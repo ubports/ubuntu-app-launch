@@ -1061,7 +1061,34 @@ upstart_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar **
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
-	return FALSE;
+	/* 'Parse' the App ID */
+	gchar ** app_id_segments = g_strsplit(appid, "_", 4);
+	if (g_strv_length(app_id_segments) != 3) {
+		g_debug("Unable to parse Application ID: %s", appid);
+		g_strfreev(app_id_segments);
+		return FALSE;
+	}
+
+	if (package != NULL) {
+		*package = app_id_segments[0];
+	} else {
+		g_free(app_id_segments[0]);
+	}
+
+	if (application != NULL) {
+		*application = app_id_segments[1];
+	} else {
+		g_free(app_id_segments[1]);
+	}
+
+	if (version != NULL) {
+		*version = app_id_segments[2];
+	} else {
+		g_free(app_id_segments[2]);
+	}
+
+	g_free(app_id_segments);
+	return TRUE;
 }
 
 /* Try and get a manifest file and do a couple sanity checks on it */
