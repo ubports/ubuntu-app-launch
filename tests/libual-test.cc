@@ -395,6 +395,28 @@ TEST_F(LibUAL, ApplicationId)
 	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
 }
 
+TEST_F(LibUAL, AppIdParse)
+{
+	EXPECT_TRUE(upstart_app_launch_app_id_parse("com.ubuntu.test_test_123", NULL, NULL, NULL));
+	EXPECT_FALSE(upstart_app_launch_app_id_parse("inkscape", NULL, NULL, NULL));
+	EXPECT_FALSE(upstart_app_launch_app_id_parse("music-app", NULL, NULL, NULL));
+
+	gchar * pkg;
+	gchar * app;
+	gchar * version;
+
+	ASSERT_TRUE(upstart_app_launch_app_id_parse("com.ubuntu.test_test_123", &pkg, &app, &version));
+	EXPECT_STREQ("com.ubuntu.test", pkg);
+	EXPECT_STREQ("test", app);
+	EXPECT_STREQ("123", version);
+
+	g_free(pkg);
+	g_free(app);
+	g_free(version);
+
+	return;
+}
+
 TEST_F(LibUAL, ApplicationList)
 {
 	gchar ** apps = upstart_app_launch_list_running_apps();
