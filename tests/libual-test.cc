@@ -310,6 +310,30 @@ TEST_F(LibUAL, StartApplication)
 	return;
 }
 
+TEST_F(LibUAL, StartApplicationTest)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	ASSERT_TRUE(upstart_app_launch_start_application_test("foolike", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "QT_TESTABILITY", "1"));
+	g_variant_unref(env);
+}
+
 TEST_F(LibUAL, StopApplication)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
