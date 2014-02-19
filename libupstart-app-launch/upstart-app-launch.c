@@ -63,6 +63,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GVariant * result = NULL;
 
 	tracepoint(upstart_app_launch, libual_start_message_callback, data->appid);
+
 	g_debug("Started Message Callback: %s", data->appid);
 
 	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
@@ -1256,3 +1257,475 @@ upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, cons
 
 	return retval;
 }
+
+/* Print an error if we couldn't start it */
+static void
+start_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+	GVariant * result = NULL;
+
+	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+	if (result != NULL)
+		g_variant_unref(result);
+
+	if (error != NULL) {
+		g_warning("Unable to start helper: %s", error->message);
+		g_error_free(error);
+	}
+}
+
+/* Implements sending the "start" command to Upstart for the
+   untrusted helper job with the various configuration options
+   to define the instance.  In the end there's only one job with
+   an array of instances. */
+static gboolean
+start_helper_core (const gchar * type, const gchar * appid, const gchar * const * uris, const gchar * instance)
+{
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	const gchar * jobpath = get_jobpath(con, "untrusted-helper");
+
+	/* Build up our environment */
+	GVariantBuilder builder;
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("HELPER_TYPE=%s", type)));
+
+	if (uris != NULL) {
+		gchar * urisjoin = app_uris_string(uris);
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_URIS=%s", urisjoin)));
+		g_free(urisjoin);
+	}
+
+	if (instance != NULL) {
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instance)));
+	}
+
+	g_variant_builder_close(&builder);
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+	
+	/* Call the job start function */
+	g_dbus_connection_call(con,
+	                       DBUS_SERVICE_UPSTART,
+	                       jobpath,
+	                       DBUS_INTERFACE_UPSTART_JOB,
+	                       "Start",
+	                       g_variant_builder_end(&builder),
+	                       NULL,
+	                       G_DBUS_CALL_FLAGS_NONE,
+	                       -1,
+	                       NULL, /* cancelable */
+	                       start_helper_callback,
+	                       NULL);
+
+	g_object_unref(con);
+
+	return TRUE;
+}
+
+gboolean
+upstart_app_launch_start_helper (const gchar * type, const gchar * appid, const gchar * const * uris)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(appid != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	return start_helper_core(type, appid, uris, NULL);
+}
+
+gchar *
+upstart_app_launch_start_multiple_helper (const gchar * type, const gchar * appid, const gchar * const * uris)
+{
+	g_return_val_if_fail(type != NULL, NULL);
+	g_return_val_if_fail(appid != NULL, NULL);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, NULL);
+
+	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
+
+	if (start_helper_core(type, appid, uris, instanceid)) {
+		return instanceid;
+	}
+
+	g_free(instanceid);
+	return NULL;
+}
+
+/* Print an error if we couldn't stop it */
+static void
+stop_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+	GVariant * result = NULL;
+
+	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+	if (result != NULL)
+		g_variant_unref(result);
+
+	if (error != NULL) {
+		g_warning("Unable to stop helper: %s", error->message);
+		g_error_free(error);
+	}
+}
+
+/* Implements the basis of sending the stop message to Upstart for
+   an instance of the untrusted-helper job.  That also can have an
+   instance in that we allow for random instance ids to be used for
+   helpers that are not unique */
+static gboolean
+stop_helper_core (const gchar * type, const gchar * appid, const gchar * instanceid)
+{
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	const gchar * jobpath = get_jobpath(con, "untrusted-helper");
+
+	/* Build up our environment */
+	GVariantBuilder builder;
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("HELPER_TYPE=%s", type)));
+
+	if (instanceid != NULL) {
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instanceid)));
+	}
+
+	g_variant_builder_close(&builder);
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+	
+	/* Call the job start function */
+	g_dbus_connection_call(con,
+	                       DBUS_SERVICE_UPSTART,
+	                       jobpath,
+	                       DBUS_INTERFACE_UPSTART_JOB,
+	                       "Stop",
+	                       g_variant_builder_end(&builder),
+	                       NULL,
+	                       G_DBUS_CALL_FLAGS_NONE,
+	                       -1,
+	                       NULL, /* cancelable */
+	                       stop_helper_callback,
+	                       NULL);
+
+	g_object_unref(con);
+
+	return TRUE;
+}
+
+gboolean
+upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(appid != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	return stop_helper_core(type, appid, NULL);
+}
+
+gboolean
+upstart_app_launch_stop_multiple_helper (const gchar * type, const gchar * appid, const gchar * instanceid)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(appid != NULL, FALSE);
+	g_return_val_if_fail(instanceid != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	return stop_helper_core(type, appid, instanceid);
+}
+
+
+typedef struct {
+	gchar * type_prefix; /* Type with the colon sperator */
+	size_t type_len;     /* Length in characters of the prefix */
+	GArray * retappids;  /* Array of appids to return */
+} helpers_helper_t;
+
+/* Look at each instance and see if it matches this type, if so
+   add the appid portion to the array of appids */
+static void
+list_helpers_helper (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
+{
+	helpers_helper_t * data = (helpers_helper_t *)user_data;
+
+	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+	if (namev == NULL) {
+		return;
+	}
+
+	const gchar * name = g_variant_get_string(namev, NULL);
+	if (g_str_has_prefix(name, data->type_prefix)) {
+		/* Skip the type name */
+		name += data->type_len;
+
+		/* Skip a possible instance ID */
+		name = g_strstr_len(name, -1, ":");
+		name++;
+
+		/* Now copy the app id */
+		gchar * appid = g_strdup(name);
+		g_array_append_val(data->retappids, appid);
+	}
+
+	g_variant_unref(namev);
+
+	return;
+}
+
+gchar **
+upstart_app_launch_list_helpers (const gchar * type)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	helpers_helper_t helpers_helper_data = {
+		.type_prefix = g_strdup_printf("%s:", type),
+		.type_len = strlen(type) + 1, /* 1 for the colon */
+		.retappids = g_array_new(TRUE, TRUE, sizeof(gchar *))
+	};
+
+	foreach_job_instance(con, "untrusted-helper", list_helpers_helper, &helpers_helper_data);
+
+	g_object_unref(con);
+	g_free(helpers_helper_data.type_prefix);
+
+	return (gchar **)g_array_free(helpers_helper_data.retappids, FALSE);
+}
+
+typedef struct {
+	gchar * type_prefix; /* Type with the colon sperator */
+	size_t type_len;     /* Length in characters of the prefix */
+	GArray * retappids;  /* Array of appids to return */
+	gchar * appid_suffix; /* The appid for the end */
+} helper_instances_t;
+
+/* Look at each instance and see if it matches this type and appid.
+   If so, add the instance ID to the array of instance IDs */
+static void
+list_helper_instances (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
+{
+	helper_instances_t * data = (helper_instances_t *)user_data;
+
+	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+	if (namev == NULL) {
+		return;
+	}
+
+	const gchar * name = g_variant_get_string(namev, NULL);
+	gchar * suffix_loc = NULL;
+	if (g_str_has_prefix(name, data->type_prefix) &&
+			(suffix_loc = g_strrstr(name, data->appid_suffix)) != NULL) {
+		/* Skip the type name */
+		name += data->type_len;
+
+		/* Now copy the instance id */
+		gchar * instanceid = g_strndup(name, suffix_loc - name);
+		g_array_append_val(data->retappids, instanceid);
+	}
+
+	g_variant_unref(namev);
+
+	return;
+}
+
+gchar **
+upstart_app_launch_list_helper_instances (const gchar * type, const gchar * appid)
+{
+	g_return_val_if_fail(type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	helper_instances_t helper_instances_data = {
+		.type_prefix = g_strdup_printf("%s:", type),
+		.type_len = strlen(type) + 1, /* 1 for the colon */
+		.retappids = g_array_new(TRUE, TRUE, sizeof(gchar *)),
+		.appid_suffix = g_strdup_printf(":%s", appid)
+	};
+
+	foreach_job_instance(con, "untrusted-helper", list_helper_instances, &helper_instances_data);
+
+	g_object_unref(con);
+	g_free(helper_instances_data.type_prefix);
+	g_free(helper_instances_data.appid_suffix);
+
+	return (gchar **)g_array_free(helper_instances_data.retappids, FALSE);
+}
+
+/* The data we keep for each observer */
+typedef struct _helper_observer_t helper_observer_t;
+struct _helper_observer_t {
+	GDBusConnection * conn;
+	guint sighandle;
+	gchar * type;
+	UpstartAppLaunchHelperObserver func;
+	gpointer user_data;
+};
+
+/* The lists of helper observers */
+static GList * helper_started_obs = NULL;
+static GList * helper_stopped_obs = NULL;
+
+static void
+helper_observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	helper_observer_t * observer = (helper_observer_t *)user_data;
+
+	gchar * env = NULL;
+	GVariant * envs = g_variant_get_child_value(params, 1);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envs);
+
+	gboolean job_found = FALSE;
+	gchar * instance = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &env)) {
+		if (g_strcmp0(env, "JOB=untrusted-helper") == 0) {
+			job_found = TRUE;
+		} else if (g_str_has_prefix(env, "INSTANCE=")) {
+			instance = g_strdup(env + strlen("INSTANCE="));
+		}
+	}
+
+	g_variant_unref(envs);
+
+	if (instance != NULL && !g_str_has_prefix(instance, observer->type)) {
+		g_free(instance);
+		instance = NULL;
+	}
+
+	gchar * appid = NULL;
+	gchar * instanceid = NULL;
+	gchar * type = NULL;
+
+	if (instance != NULL) {
+		gchar ** split = g_strsplit(instance, ":", 3);
+		type = split[0];
+		instanceid = split[1];
+		appid = split[2];
+		g_free(split);
+	}
+	g_free(instance);
+
+	if (instanceid != NULL && instanceid[0] == '\0') {
+		g_free(instanceid);
+		instanceid = NULL;
+	}
+
+	if (job_found && appid != NULL) {
+		observer->func(appid, instanceid, type, observer->user_data);
+	}
+
+	g_free(appid);
+	g_free(instanceid);
+	g_free(type);
+}
+
+/* Creates the observer structure and registers for the signal with
+   GDBus so that we can get a callback */
+static gboolean
+add_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data, const gchar * signal, GList ** list)
+{
+	GDBusConnection * conn = gdbus_upstart_ref();
+
+	if (conn == NULL) {
+		return FALSE;
+	}
+
+	helper_observer_t * observert = g_new0(helper_observer_t, 1);
+
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
+	observert->type = g_strdup_printf("%s:", helper_type);
+
+	*list = g_list_prepend(*list, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
+		NULL, /* sender */
+		DBUS_INTERFACE_UPSTART, /* interface */
+		"EventEmitted", /* signal */
+		DBUS_PATH_UPSTART, /* path */
+		signal, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		helper_observer_cb,
+		observert,
+		NULL); /* user data destroy */
+
+	return TRUE;
+}
+
+static gboolean
+delete_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * type, gpointer user_data, GList ** list)
+{
+	helper_observer_t * observert = NULL;
+	GList * look;
+
+	for (look = *list; look != NULL; look = g_list_next(look)) {
+		observert = (helper_observer_t *)look->data;
+
+		if (observert->func == observer && observert->user_data == user_data && g_str_has_prefix(observert->type, type)) {
+			break;
+		}
+	}
+
+	if (look == NULL) {
+		return FALSE;
+	}
+
+	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
+	g_object_unref(observert->conn);
+
+	g_free(observert->type);
+	g_free(observert);
+	*list = g_list_delete_link(*list, look);
+
+	return TRUE;
+}
+
+gboolean
+upstart_app_launch_observer_add_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+{
+	g_return_val_if_fail(observer != NULL, FALSE);
+	g_return_val_if_fail(helper_type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
+
+	return add_helper_generic(observer, helper_type, user_data, "started", &helper_started_obs);
+}
+
+gboolean
+upstart_app_launch_observer_add_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+{
+	g_return_val_if_fail(observer != NULL, FALSE);
+	g_return_val_if_fail(helper_type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
+
+	return add_helper_generic(observer, helper_type, user_data, "stopped", &helper_stopped_obs);
+}
+
+gboolean
+upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+{
+	g_return_val_if_fail(observer != NULL, FALSE);
+	g_return_val_if_fail(helper_type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
+
+	return delete_helper_generic(observer, helper_type, user_data, &helper_started_obs);
+}
+
+gboolean
+upstart_app_launch_observer_delete_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+{
+	g_return_val_if_fail(observer != NULL, FALSE);
+	g_return_val_if_fail(helper_type != NULL, FALSE);
+	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
+
+	return delete_helper_generic(observer, helper_type, user_data, &helper_stopped_obs);
+}
+

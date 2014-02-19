@@ -59,6 +59,12 @@ typedef void (*UpstartAppLaunchAppFailedObserver) (const gchar * appid, UpstartA
 /* Backwards compatible.  Drop when making API bump. */
 typedef UpstartAppLaunchAppFailedObserver upstart_app_launch_app_failed_observer_t;
 
+/**
+ * UpstartAppLaunchHelperObserver:
+ *
+ * Function to watch for helpers that are starting and stopping
+ */
+typedef void (*UpstartAppLaunchHelperObserver) (const gchar * appid, const gchar * instanceid, const gchar * helpertype, gpointer user_data);
 
 /**
  * upstart_app_launch_start_application:
@@ -344,6 +350,153 @@ gboolean    upstart_app_launch_app_id_parse             (const gchar *          
                                                          gchar **                          package,
                                                          gchar **                          application,
                                                          gchar **                          version);
+
+/**
+ * upstart_app_launch_start_helper:
+ * @type: Type of helper
+ * @appid: App ID of the helper
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
+ *
+ * Start an untrusted helper for a specific @type on a given
+ * @appid.  We don't know how that is done specifically, as Upstart
+ * will call a helper for that type.  And then execute it under the
+ * AppArmor profile for the helper as defined in its manifest.
+ *
+ * Return value: Whether the helper was able to be started
+ */
+gboolean   upstart_app_launch_start_helper              (const gchar *                     type,
+                                                         const gchar *                     appid,
+                                                         const gchar * const *             uris);
+
+/**
+ * upstart_app_launch_start_multiple_helper:
+ * @type: Type of helper
+ * @appid: App ID of the helper
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
+ *
+ * Start an untrusted helper for a specific @type on a given
+ * @appid.  We don't know how that is done specifically, as Upstart
+ * will call a helper for that type.  And then execute it under the
+ * Apparmor profile for that helper type.  This function is different
+ * from @upstart_app_launch_start_helper in that it works for helpers
+ * that aren't single instance and the manager will be managing the
+ * instances as well.
+ *
+ * Return value: The generated instance ID or NULL on failure
+ */
+gchar *    upstart_app_launch_start_multiple_helper     (const gchar *                     type,
+                                                         const gchar *                     appid,
+                                                         const gchar * const *             uris);
+
+/**
+ * upstart_app_launch_stop_helper:
+ * @type: Type of helper
+ * @appid: App ID of the helper
+ *
+ * Asks Upstart to kill a helper.  In general, this should be a last resort
+ * as we should ask the helper a better way probably with an in-band protocol
+ * of use.
+ *
+ * Return value: Whether the helper is stopped
+ */
+gboolean   upstart_app_launch_stop_helper               (const gchar *                     type,
+                                                         const gchar *                     appid);
+
+/**
+ * upstart_app_launch_stop_multiple_helper:
+ * @type: Type of helper
+ * @appid: App ID of the helper
+ * @instanceid: The instance ID returned when starting the helper
+ *
+ * Asks Upstart to kill a helper.  In general, this should be a last resort
+ * as we should ask the helper a better way probably with an in-band protocol
+ * of use.
+ *
+ * Return value: Whether the helper is stopped
+ */
+gboolean   upstart_app_launch_stop_multiple_helper      (const gchar *                     type,
+                                                         const gchar *                     appid,
+                                                         const gchar *                     instanceid);
+
+/**
+ * upstart_app_launch_list_helpers:
+ * @type: Type of helper
+ *
+ * List all App IDs of helpers of a given @type.
+ *
+ * Return value: (transfer full): List of application IDs
+ */
+gchar **   upstart_app_launch_list_helpers              (const gchar *                     type);
+
+/**
+ * upstart_app_launch_list_helper_instances:
+ * @type: Type of helper
+ * @appid: AppID of helper
+ *
+ * List all the instances for a particular AppID
+ *
+ * Return value: (transfer full): List of instance IDs
+ */
+gchar **   upstart_app_launch_list_helper_instances     (const gchar *                     type,
+                                                         const gchar *                     appid);
+
+
+/**
+ * upstart_app_launch_observer_add_helper_started:
+ * @observer: (scope notified): Callback when a helper started
+ * @helper_type: (closure) (allow-none): Type of helpers to look for
+ * @user_data: (allow-none): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time a helper of
+ * @helper_type has been started.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_add_helper_started  (UpstartAppLaunchHelperObserver    observer,
+                                                            const gchar *                     helper_type,
+                                                            gpointer                          user_data);
+/**
+ * upstart_app_launch_observer_add_helper_stop:
+ * @observer: (scope notified): Callback when a helper stops
+ * @helper_type: (closure) (allow-none): Type of helpers to look for
+ * @user_data: (allow-none): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time a helper of
+ * @helper_type stops.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_add_helper_stop       (UpstartAppLaunchHelperObserver    observer,
+                                                              const gchar *                     helper_type,
+                                                              gpointer                          user_data);
+/**
+ * upstart_app_launch_observer_delete_helper_started:
+ * @observer: (scope notified): Callback to remove
+ * @helper_type: (closure) (allow-none): Type of helpers it looked for
+ * @user_data: (allow-none): Data that was passed to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHelperObserver    observer,
+                                                              const gchar *                     helper_type,
+                                                              gpointer                          user_data);
+/**
+ * upstart_app_launch_observer_delete_helper_stop:
+ * @observer: (scope notified): Callback to remove
+ * @helper_type: (closure) (allow-none): Type of helpers it looked for
+ * @user_data: (allow-none): Data that was passed to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   upstart_app_launch_observer_delete_helper_stop    (UpstartAppLaunchHelperObserver    observer,
+                                                              const gchar *                     helper_type,
+                                                              gpointer                          user_data);
 
 #ifdef __cplusplus
 }

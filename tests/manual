@@ -28,6 +28,21 @@ Test-case upstart-app-launch/secondary-activation
         <dd>The settings application should come back into focus and be on the power settings pane</dd>
 </dl>
 
+Test-case upstart-app-launch/helper-run
+<dl>
+    <dt>NOTE: Test is theoretical today, needs other components to be written</dt>
+    <dt>Get a device that supports sending SMS</dt>
+        <dd>Typically this is a phone</dd>
+    <dt>Note the SMS sent count visible on the lock screen infographic for this user</dt>
+    <dt>Start the messaging app</dt>
+    <dt>Send an SMS</dt>
+        <dd>SMS should report as being sent successfully</dd>
+    <dt>Wait approximately 1 minute</dt>
+        <dd>Screen should lock</dd>
+    <dt>Look at the lock screen infographic for the SMS sent count</dt>
+        <dd>Count should have incremented by 1</dd>
+</dl>
+
 Test-case upstart-app-launch/security-app-launch
 <dl>
     <dt>Setup the security tests: https://wiki.ubuntu.com/Touch/Testing#Running_Security_tests</dt>

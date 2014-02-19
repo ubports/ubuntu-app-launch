@@ -101,10 +101,13 @@ class LibUAL : public ::testing::Test
 				G_VARIANT_TYPE("o"),
 				"if args[0] == 'application-click':\n"
 				"	ret = dbus.ObjectPath('/com/test/application_click')\n"
-				"else:\n"
-				"	ret = dbus.ObjectPath('/com/test/application_legacy')\n",
+				"elif args[0] == 'application-legacy':\n"
+				"	ret = dbus.ObjectPath('/com/test/application_legacy')\n"
+				"elif args[0] == 'untrusted-helper':\n"
+				"	ret = dbus.ObjectPath('/com/test/untrusted/helper')\n",
 				NULL);
 
+			/* Click App */
 			DbusTestDbusMockObject * jobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, jobobj,
@@ -143,6 +146,7 @@ class LibUAL : public ::testing::Test
 				NULL);
 			g_free(process_var);
 
+			/*  Legacy App */
 			DbusTestDbusMockObject * ljobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, ljobobj,
@@ -178,6 +182,45 @@ class LibUAL : public ::testing::Test
 				g_variant_new_parsed("[('main', 5678)]"),
 				NULL);
 
+			/*  Untrusted Helper */
+			DbusTestDbusMockObject * uhelperobj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, uhelperobj,
+				"Start",
+				G_VARIANT_TYPE("(asb)"),
+				NULL,
+				"",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, uhelperobj,
+				"Stop",
+				G_VARIANT_TYPE("(asb)"),
+				NULL,
+				"",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, uhelperobj,
+				"GetAllInstances",
+				NULL,
+				G_VARIANT_TYPE("ao"),
+				"ret = [ dbus.ObjectPath('/com/test/untrusted/helper/instance'), dbus.ObjectPath('/com/test/untrusted/helper/multi_instance') ]",
+				NULL);
+
+			DbusTestDbusMockObject * uhelperinstance = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper/instance", "com.ubuntu.Upstart0_6.Instance", NULL);
+			dbus_test_dbus_mock_object_add_property(mock, uhelperinstance,
+				"name",
+				G_VARIANT_TYPE_STRING,
+				g_variant_new_string("untrusted-type::com.foo_bar_43.23.12"),
+				NULL);
+
+			DbusTestDbusMockObject * unhelpermulti = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper/multi_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
+			dbus_test_dbus_mock_object_add_property(mock, unhelpermulti,
+				"name",
+				G_VARIANT_TYPE_STRING,
+				g_variant_new_string("untrusted-type:24034582324132:com.bar_foo_8432.13.1"),
+				NULL);
+
+			/* Put it together */
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
 			dbus_test_service_start_tasks(service);
 
@@ -219,11 +262,15 @@ class LibUAL : public ::testing::Test
 						return false;
 					}
 
-					gchar * combined = g_strdup_printf("%s=%s", var, value);
-					if (g_strcmp0(envvar, combined) == 0) {
+					if (value != NULL) {
+						gchar * combined = g_strdup_printf("%s=%s", var, value);
+						if (g_strcmp0(envvar, combined) == 0) {
+							found = true;
+						}
+						g_free(combined);
+					} else {
 						found = true;
 					}
-					g_free(combined);
 				}
 			}
 
@@ -884,3 +931,258 @@ TEST_F(LibUAL, FailingObserver)
 	g_object_unref(session);
 }
 
+TEST_F(LibUAL, StartHelper)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	/* Basic make sure we can send the event */
+	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", NULL));
+	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Now look at the details of the call */
+	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
+	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Now check a multi out */ 
+	gchar * instance_id = upstart_app_launch_start_multiple_helper("untrusted-type", "foolike", NULL);
+	ASSERT_NE(nullptr, instance_id);
+	g_debug("Multi-instance ID: %s", instance_id);
+
+	len = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
+	g_variant_unref(env);
+	g_free(instance_id);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Let's pass some URLs */
+	const gchar * urls[] = {
+		"http://ubuntu.com/",
+		"https://ubuntu.com/",
+		"file:///home/phablet/test.txt",
+		NULL
+	};
+	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", urls));
+
+	len = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
+	g_variant_unref(env);
+
+	return;
+}
+
+TEST_F(LibUAL, StopHelper)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	/* Basic helper */
+	ASSERT_TRUE(upstart_app_launch_stop_helper("untrusted-type", "foo"));
+
+	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Stop", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foo"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
+	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Multi helper */
+	ASSERT_TRUE(upstart_app_launch_stop_multiple_helper("untrusted-type", "foo", "instance-me"));
+
+	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
+
+	len = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Stop", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "foo"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_TRUE(check_env(env, "INSTANCE_ID", "instance-me"));
+	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	return;
+}
+
+TEST_F(LibUAL, HelperList)
+{
+	gchar ** blanktype = upstart_app_launch_list_helpers("not-a-type");
+
+	EXPECT_NE(nullptr, blanktype);
+	EXPECT_EQ(0, g_strv_length(blanktype));
+
+	g_strfreev(blanktype);
+
+	gchar ** goodtype = upstart_app_launch_list_helpers("untrusted-type");
+
+	EXPECT_NE(nullptr, goodtype);
+	EXPECT_EQ(2, g_strv_length(goodtype));
+
+	if (g_strcmp0(goodtype[0], "com.foo_bar_43.23.12") == 0) {
+		EXPECT_STREQ("com.foo_bar_43.23.12", goodtype[0]);
+		EXPECT_STREQ("com.bar_foo_8432.13.1", goodtype[1]);
+	} else {
+		EXPECT_STREQ("com.foo_bar_43.23.12", goodtype[1]);
+		EXPECT_STREQ("com.bar_foo_8432.13.1", goodtype[0]);
+	}
+
+	g_strfreev(goodtype);
+}
+
+TEST_F(LibUAL, HelperInstanceList)
+{
+	gchar ** blanktype = upstart_app_launch_list_helper_instances("not-a-type", "com.bar_foo_8432.13.1");
+
+	EXPECT_NE(nullptr, blanktype);
+	EXPECT_EQ(0, g_strv_length(blanktype));
+
+	g_strfreev(blanktype);
+
+	gchar ** goodtype = upstart_app_launch_list_helper_instances("untrusted-type", "com.bar_foo_8432.13.1");
+
+	EXPECT_NE(nullptr, goodtype);
+	EXPECT_EQ(1, g_strv_length(goodtype));
+	EXPECT_STREQ("24034582324132", goodtype[0]);
+
+	g_strfreev(goodtype);
+}
+
+
+typedef struct {
+	unsigned int count;
+	const gchar * appid;
+	const gchar * type;
+	const gchar * instance;
+} helper_observer_data_t;
+
+static void
+helper_observer_cb (const gchar * appid, const gchar * instance, const gchar * type, gpointer user_data)
+{
+	helper_observer_data_t * data = (helper_observer_data_t *)user_data;
+
+	if (g_strcmp0(data->appid, appid) == 0 &&
+		g_strcmp0(data->type, type) == 0 &&
+		g_strcmp0(data->instance, instance) == 0) {
+		data->count++;
+	}
+}
+
+TEST_F(LibUAL, StartStopHelperObserver)
+{
+	helper_observer_data_t start_data = {
+		.count = 0,
+		.appid = "com.foo_foo_1.2.3",
+		.type = "my-type-is-scorpio",
+		.instance = nullptr
+	};
+	helper_observer_data_t stop_data = {
+		.count = 0,
+		.appid = "com.bar_bar_44.32",
+		.type = "my-type-is-libra",
+		.instance = "1234"
+	};
+
+	ASSERT_TRUE(upstart_app_launch_observer_add_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_add_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
+
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+	/* Basic start */
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('started', ['JOB=untrusted-helper', 'INSTANCE=my-type-is-scorpio::com.foo_foo_1.2.3'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	ASSERT_EQ(start_data.count, 1);
+
+	/* Basic stop */
+	dbus_test_dbus_mock_object_emit_signal(mock, obj,
+		"EventEmitted",
+		G_VARIANT_TYPE("(sas)"),
+		g_variant_new_parsed("('stopped', ['JOB=untrusted-helper', 'INSTANCE=my-type-is-libra:1234:com.bar_bar_44.32'])"),
+		NULL
+	);
+
+	g_usleep(100000);
+	while (g_main_pending())
+		g_main_iteration(TRUE);
+
+	ASSERT_EQ(stop_data.count, 1);
+
+	/* Remove */
+	ASSERT_TRUE(upstart_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
+	ASSERT_TRUE(upstart_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
+}
