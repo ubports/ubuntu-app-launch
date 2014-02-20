@@ -192,8 +192,8 @@ is_click (const gchar * appid)
 	return click;
 }
 
-gboolean
-upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+static gboolean
+start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
@@ -244,6 +244,10 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 		}
 	}
 
+	if (test) {
+		g_variant_builder_add_value(&builder, g_variant_new_string("QT_TESTABILITY=1"));
+	}
+
 	g_variant_builder_close(&builder);
 	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 	
@@ -266,6 +270,18 @@ upstart_app_launch_start_application (const gchar * appid, const gchar * const *
 	g_object_unref(con);
 
 	return TRUE;
+}
+
+gboolean
+upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+{
+	return start_application_core(appid, uris, FALSE);
+}
+
+gboolean
+upstart_app_launch_start_application_test (const gchar * appid, const gchar * const * uris)
+{
+	return start_application_core(appid, uris, TRUE);
 }
 
 static void
@@ -1039,6 +1055,41 @@ upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 	GPid primary = upstart_app_launch_get_primary_pid(appid);
 
 	return primary == pid;
+}
+
+gboolean
+upstart_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** application, gchar ** version)
+{
+	g_return_val_if_fail(appid != NULL, FALSE);
+
+	/* 'Parse' the App ID */
+	gchar ** app_id_segments = g_strsplit(appid, "_", 4);
+	if (g_strv_length(app_id_segments) != 3) {
+		g_debug("Unable to parse Application ID: %s", appid);
+		g_strfreev(app_id_segments);
+		return FALSE;
+	}
+
+	if (package != NULL) {
+		*package = app_id_segments[0];
+	} else {
+		g_free(app_id_segments[0]);
+	}
+
+	if (application != NULL) {
+		*application = app_id_segments[1];
+	} else {
+		g_free(app_id_segments[1]);
+	}
+
+	if (version != NULL) {
+		*version = app_id_segments[2];
+	} else {
+		g_free(app_id_segments[2]);
+	}
+
+	g_free(app_id_segments);
+	return TRUE;
 }
 
 /* Try and get a manifest file and do a couple sanity checks on it */

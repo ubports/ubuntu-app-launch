@@ -80,6 +80,20 @@ gboolean   upstart_app_launch_start_application         (const gchar *          
                                                          const gchar * const *             uris);
 
 /**
+ * upstart_app_launch_start_application_test:
+ * @appid: ID of the application to launch
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the application
+ *
+ * Asks upstart to launch an application with environment variables set
+ * to enable testing.  Should only be used in testing.
+ *
+ * Return value: Whether the launch succeeded (may fail later, but upstart
+ *    will report the error in that case.
+ */
+gboolean   upstart_app_launch_start_application_test    (const gchar *                     appid,
+                                                         const gchar * const *             uris);
+
+/**
  * upstart_app_launch_stop_application:
  * @appid: ID of the application to launch
  *
@@ -318,6 +332,24 @@ gboolean   upstart_app_launch_pid_in_app_id             (GPid                   
 gchar *     upstart_app_launch_triplet_to_app_id        (const gchar *                     pkg,
                                                          const gchar *                     app,
                                                          const gchar *                     version);
+
+/**
+ * upstart_app_launch_app_id_parse:
+ * @appid: Application ID to parse
+ * @package: (out) (transfer full) (allow-none): Package section of @appid
+ * @application: (out) (transfer full) (allow-none): Application section of @appid
+ * @version: (out) (transfer full) (allow-none): Version section of @appid
+ *
+ * Takes an application ID @appid and breaks it into its component parts.  Each
+ * of them can be NULL if those parts aren't desired.  If all are NULL it will
+ * still parse to generate a proper return value check if @appid is valid.
+ *
+ * Return value: Whether @appid is valid
+ */
+gboolean    upstart_app_launch_app_id_parse             (const gchar *                     appid,
+                                                         gchar **                          package,
+                                                         gchar **                          application,
+                                                         gchar **                          version);
 
 /**
  * upstart_app_launch_start_helper:
