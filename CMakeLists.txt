@@ -76,51 +76,6 @@ add_library(helpers STATIC helpers.c helpers-keyfile.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES})
 
 ####################
-# upstart-app-list
-####################
-
-add_executable(upstart-app-list upstart-app-list.c)
-set_target_properties(upstart-app-list PROPERTIES OUTPUT_NAME "upstart-app-list")
-target_link_libraries(upstart-app-list upstart-launcher)
-install(TARGETS upstart-app-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# upstart-app-launch
-####################
-
-add_executable(upstart-app-launch upstart-app-launch.c)
-set_target_properties(upstart-app-launch PROPERTIES OUTPUT_NAME "upstart-app-launch")
-target_link_libraries(upstart-app-launch upstart-launcher)
-install(TARGETS upstart-app-launch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# upstart-app-watch
-####################
-
-add_executable(upstart-app-watch upstart-app-watch.c)
-set_target_properties(upstart-app-watch PROPERTIES OUTPUT_NAME "upstart-app-watch")
-target_link_libraries(upstart-app-watch upstart-launcher)
-install(TARGETS upstart-app-watch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# upstart-app-pid
-####################
-
-add_executable(upstart-app-pid upstart-app-pid.c)
-set_target_properties(upstart-app-pid PROPERTIES OUTPUT_NAME "upstart-app-pid")
-target_link_libraries(upstart-app-pid upstart-launcher)
-install(TARGETS upstart-app-pid RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# upstart-app-stop
-####################
-
-add_executable(upstart-app-stop upstart-app-stop.c)
-set_target_properties(upstart-app-stop PROPERTIES OUTPUT_NAME "upstart-app-stop")
-target_link_libraries(upstart-app-stop upstart-launcher)
-install(TARGETS upstart-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
 # desktop-exec
 ####################
 
@@ -188,36 +143,13 @@ target_link_libraries(application-failed ${GIO2_LIBRARIES})
 install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# application.conf
+# untrusted-helper-type-end
 ####################
 
-configure_file("application.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application.conf")
-
-####################
-# application-legacy.conf
-####################
-
-configure_file("application-legacy.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application-legacy.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf")
-
-####################
-# application-click.conf
-####################
-
-configure_file("application-click.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
-
-####################
-# application-failed.conf
-####################
-
-configure_file("application-failed.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application-failed.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf")
+add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
+set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
+target_link_libraries(untrusted-helper-type-end upstart-launcher)
+install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # upstart-app-launch-desktop.click-hook
@@ -226,6 +158,8 @@ add_test(application-failed.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${
 configure_file("upstart-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/upstart-app-launch-desktop.click-hook" @ONLY)
 
 add_subdirectory(libupstart-app-launch)
+add_subdirectory(upstart-jobs)
+add_subdirectory(tools)
 
 # testing & coverage
 if (${enable_tests})

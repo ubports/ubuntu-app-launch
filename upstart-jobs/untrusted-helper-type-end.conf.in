@@ -1,0 +1,9 @@
+description "End all untrusted helpers of a particular type, usually when the manager ends"
+
+start on untrusted-helper-type-end
+
+instance ${HELPER_TYPE}
+
+emits untrusted-helper-end
+
+exec @pkglibexecdir@/untrusted-helper-type-end
