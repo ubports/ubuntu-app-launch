@@ -67,7 +67,7 @@ fail (const gchar * appid, upstart_app_launch_app_failed_t failhow, gpointer use
 			break;
 	}
 
-	g_print("Fail   %s (%s)\n", appid, failstr);
+	g_print("Fail     %s (%s)\n", appid, failstr);
 	return;
 }
 

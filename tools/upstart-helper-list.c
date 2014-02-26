@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Canonical Ltd.
+ * Copyright © 2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,24 +17,34 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "second-exec-core.h"
+#include "libupstart-app-launch/upstart-app-launch.h"
+#include <gio/gio.h>
 
 int
-main (int argc, char * argv[])
-{
-	if (argc != 1) {
-		g_error("Should be called as: %s", argv[0]);
+main (int argc, gchar * argv[]) {
+	if (argc != 2) {
+		g_printerr("Usage: %s <helper type>\n", argv[0]);
 		return 1;
 	}
 
-	const gchar * appid = g_getenv("APP_ID");
-	const gchar * appuris = g_getenv("APP_URIS");
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, -1);
 
-	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
-
-	if (second_exec(appid, appuris)) {
-		return 0;
-	} else {
-		return 1;
+	gchar ** appids = upstart_app_launch_list_helpers(argv[1]);
+	if (appids == NULL) {
+		g_warning("Error getting App IDs for helper type '%s'", argv[1]);
+		return -1;
 	}
+
+	int i;
+	for (i = 0; appids[i] != NULL; i++) {
+		g_print("%s\n", appids[i]);
+	}
+
+	g_strfreev(appids);
+
+	g_dbus_connection_flush_sync(con, NULL, NULL);
+	g_object_unref(con);
+
+	return 0;
 }

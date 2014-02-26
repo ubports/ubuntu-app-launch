@@ -1,35 +1,32 @@
-description "Application Launching for Click Applications"
+description "Application Launching for Legacy Applications"
 author "Ted Gould <ted@canonical.com>"
 
-instance ${APP_ID}
+instance ${APP_ID}-${INSTANCE_ID}
 
-start on application-click-start
+start on application-legacy-start
 stop on application-end or desktop-end
 
 env APP_ID
-env APP_EXEC="echo Error"
+env APP_EXEC
+env APP_EXEC_POLICY=""
 env APP_URIS
-env APP_DIR
 # For Surface Flinger
 env APP_DESKTOP_FILE
 
-env APP_XMIR_ENABLE=0
+env APP_XMIR_ENABLE=1
 export APP_XMIR_ENABLE
 
-env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
-export UPSTART_APP_LAUNCH_ARCH
-
-apparmor switch ${APP_ID}
+# This will be set to "unconfined" by desktop-exec if there is no confinement defined
+apparmor switch $APP_EXEC_POLICY
 
 pre-start script
 	if pgrep -u system surfaceflinger ; then
 		initctl set-env USING_SURFACE_FLINGER=1
 	fi
 
-	exec @pkglibexecdir@/click-exec
+	exec @pkglibexecdir@/desktop-exec
 end script
 
-# Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec
 
 post-start exec @pkglibexecdir@/zg-report-app open

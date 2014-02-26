@@ -1,4 +1,7 @@
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 ##########################
 # Version Info
 ##########################
@@ -11,6 +14,8 @@ set(ABI_VERSION 2)
 # Library
 ##########################
 
+add_lttng_gen_tp(NAME upstart-app-launch-trace)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
 set(LAUNCHER_HEADERS
@@ -19,6 +24,9 @@ upstart-app-launch.h
 
 set(LAUNCHER_SOURCES
 upstart-app-launch.c
+second-exec-core.c
+upstart-app-launch-trace.c
+"${CMAKE_SOURCE_DIR}/helpers-keyfile.c"
 )
 
 add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
@@ -34,6 +42,7 @@ target_link_libraries(upstart-launcher
 	${GOBJECT2_LIBRARIES}
 	${LIBUPSTART_LIBRARIES}
 	${GIO2_LIBRARIES}
+	${LTTNG_LIBRARIES}
 	${JSONGLIB_LIBRARIES}
 	-Wl,--no-undefined
 )
@@ -62,4 +71,27 @@ install(
 	FILES "${CMAKE_CURRENT_BINARY_DIR}/upstart-app-launch-${API_VERSION}.pc"
 	DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
+
+##########################
+# Introspection
+##########################
+
+include(UseGObjectIntrospection)
+
+set(INTROSPECTION_GIRS)
+set(_introspection_files ${LAUNCHER_HEADERS})
+set(UpstartAppLaunch_2_gir "upstart-app-launch")
+set(UpstartAppLaunch_2_gir_INCLUDES GObject-2.0)
+
+gir_get_cflags(_cflags)
+set(UpstartAppLaunch_2_gir_CFLAGS ${c_flags})
+set(UpstartAppLaunch_2_gir_LIBS upstart-app-launch)
+
+list_make_absolute(_abs_introspection_files _introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
+set(UpstartAppLaunch_2_gir_FILES ${_abs_introspection_files})
+set(UpstartAppLaunch_2_gir_SCANNERFLAGS --c-include "upstart-app-launch.h")
+set(UpstartAppLaunch_2_gir_EXPORT_PACKAGES "upstart-app-launch-${API_VERSION}")
+
+list(APPEND INTROSPECTION_GIRS UpstartAppLaunch-2.gir)
+gir_add_introspections(INTROSPECTION_GIRS)
 

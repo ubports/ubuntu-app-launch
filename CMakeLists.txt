@@ -9,6 +9,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
 set(PACKAGE ${CMAKE_PROJECT_NAME})
 
 find_package(PkgConfig REQUIRED)
+find_package(GObjectIntrospection REQUIRED)
 include(GNUInstallDirs)
 include(CheckIncludeFile)
 include(CheckFunctionExists)
@@ -51,8 +52,11 @@ include_directories(${JSONGLIB_INCLUDE_DIRS})
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
-pkg_check_modules(LIBUPSTART REQUIRED libupstart libnih libnih-dbus dbus-1)
+pkg_check_modules(LIBUPSTART REQUIRED libupstart)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
+
+pkg_check_modules(DBUS REQUIRED dbus-1)
+include_directories(${DBUS_INCLUDE_DIRS})
 
 pkg_check_modules(DBUSTEST REQUIRED dbustest-1>=14.04.0)
 include_directories(${DBUSTEST_INCLUDE_DIRS})
@@ -68,53 +72,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c)
+add_library(helpers STATIC helpers.c helpers-keyfile.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES})
-
-####################
-# upstart-app-list
-####################
-
-add_executable(upstart-app-list upstart-app-list.c)
-set_target_properties(upstart-app-list PROPERTIES OUTPUT_NAME "upstart-app-list")
-target_link_libraries(upstart-app-list upstart-launcher)
-install(TARGETS upstart-app-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# upstart-app-launch
-####################
-
-add_executable(upstart-app-launch upstart-app-launch.c)
-set_target_properties(upstart-app-launch PROPERTIES OUTPUT_NAME "upstart-app-launch")
-target_link_libraries(upstart-app-launch upstart-launcher)
-install(TARGETS upstart-app-launch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# upstart-app-watch
-####################
-
-add_executable(upstart-app-watch upstart-app-watch.c)
-set_target_properties(upstart-app-watch PROPERTIES OUTPUT_NAME "upstart-app-watch")
-target_link_libraries(upstart-app-watch upstart-launcher)
-install(TARGETS upstart-app-watch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# upstart-app-pid
-####################
-
-add_executable(upstart-app-pid upstart-app-pid.c)
-set_target_properties(upstart-app-pid PROPERTIES OUTPUT_NAME "upstart-app-pid")
-target_link_libraries(upstart-app-pid upstart-launcher)
-install(TARGETS upstart-app-pid RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# upstart-app-stop
-####################
-
-add_executable(upstart-app-stop upstart-app-stop.c)
-set_target_properties(upstart-app-stop PROPERTIES OUTPUT_NAME "upstart-app-stop")
-target_link_libraries(upstart-app-stop upstart-launcher)
-install(TARGETS upstart-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ####################
 # desktop-exec
@@ -146,16 +105,6 @@ target_link_libraries(desktop-hook helpers)
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# desktop-single
-####################
-
-add_lttng_gen_tp(NAME desktop-single-trace)
-add_executable(desktop-single desktop-single.c desktop-single-trace.c)
-set_target_properties(desktop-single PROPERTIES OUTPUT_NAME "desktop-single")
-target_link_libraries(desktop-single helpers ${LTTNG_LIBRARIES})
-install(TARGETS desktop-single RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
 # exec-line-exec
 ####################
 
@@ -175,42 +124,32 @@ set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
 target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
-#######################
-# second-exec
-#######################
-
-add_lttng_gen_tp(NAME second-exec-trace)
-add_library(second-exec-core STATIC second-exec-core.c second-exec-trace.c)
-target_link_libraries(second-exec-core helpers upstart-launcher ${LTTNG_LIBRARIES})
-
-add_executable(second-exec second-exec.c)
-set_target_properties(second-exec PROPERTIES OUTPUT_NAME "second-exec")
-target_link_libraries(second-exec second-exec-core)
-install(TARGETS second-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
 ####################
-# application.conf
+# application-job
 ####################
 
-configure_file("application.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application.conf")
+add_executable(application-job application-job.c)
+set_target_properties(application-job PROPERTIES OUTPUT_NAME "application-job")
+target_link_libraries(application-job upstart-launcher)
+install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# application-legacy.conf
+# application-failed
 ####################
 
-configure_file("application-legacy.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application-legacy.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf")
+add_executable(application-failed application-failed.c)
+set_target_properties(application-failed PROPERTIES OUTPUT_NAME "application-failed")
+target_link_libraries(application-failed ${GIO2_LIBRARIES})
+install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# application-click.conf
+# untrusted-helper-type-end
 ####################
 
-configure_file("application-click.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
+add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
+set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
+target_link_libraries(untrusted-helper-type-end upstart-launcher)
+install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # upstart-app-launch-desktop.click-hook
@@ -219,6 +158,8 @@ add_test(application-click.conf.test "${CMAKE_SOURCE_DIR}/test-conffile.sh" "${C
 configure_file("upstart-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/upstart-app-launch-desktop.click-hook" @ONLY)
 
 add_subdirectory(libupstart-app-launch)
+add_subdirectory(upstart-jobs)
+add_subdirectory(tools)
 
 # testing & coverage
 if (${enable_tests})

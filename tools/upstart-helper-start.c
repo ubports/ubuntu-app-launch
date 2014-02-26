@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Canonical Ltd.
+ * Copyright © 2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -18,29 +18,29 @@
  */
 
 #include "libupstart-app-launch/upstart-app-launch.h"
+#include <gio/gio.h>
 
 int
 main (int argc, gchar * argv[]) {
-
-	if (argc < 2) {
-		g_printerr("Usage: %s <app id> [uris]\n", argv[0]);
+	if (argc != 3) {
+		g_printerr("Usage: %s <helper type> <app id>\n", argv[0]);
 		return 1;
 	}
 
-	gchar ** uris = NULL;
-	if (argc > 2) {
-		int i;
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, -1);
 
-		uris = g_new0(gchar *, argc - 1);
+	int retval = -1;
 
-		for (i = 2; i < argc; i++) {
-			uris[i - 2] = argv[i];
-		}
+	/* TODO: Allow URIs */
+	if (upstart_app_launch_start_helper(argv[1], argv[2], NULL)) {
+		retval = 0;
+	} else {
+		g_debug("Unable to start app id '%s' of type '%s'", argv[2], argv[1]);
 	}
 
-	upstart_app_launch_start_application(argv[1], (const gchar * const *)uris);
+	g_dbus_connection_flush_sync(con, NULL, NULL);
+	g_object_unref(con);
 
-	g_free(uris);
-
-	return 0;
+	return retval; 
 }
