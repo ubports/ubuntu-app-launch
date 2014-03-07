@@ -96,6 +96,7 @@ main (int argc, char * argv[])
 		g_warning("Unable to read Click database: %s", error->message);
 		g_error_free(error);
 		g_free(package);
+		g_object_unref(db);
 		return 1;
 	}
 	gchar * pkgdir = click_user_get_path(user, package, &error);
@@ -103,6 +104,8 @@ main (int argc, char * argv[])
 		g_warning("Unable to get the Click package directory for %s: %s", package, error->message);
 		g_error_free(error);
 		g_free(package);
+		g_object_unref(user);
+		g_object_unref(db);
 		return 1;
 	}
 	g_object_unref(user);
