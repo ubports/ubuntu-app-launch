@@ -44,6 +44,7 @@ You should not modify them and expect any executing under Unity to change.
 
 #include <gio/gio.h>
 #include <glib/gstdio.h>
+#include <click.h>
 #include <string.h>
 #include <errno.h>
 
@@ -390,40 +391,32 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	}
 
 	/* Check click to find out where the files are */
-	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
+	ClickUser * user = click_user_new_for_user(NULL, NULL, &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		g_error_free(error);
+		g_free(package);
+		return;
+	}
+	gchar * pkgdir = click_user_get_path(user, package, &error);
+	if (error != NULL) {
+		g_warning("Unable to get the Click package directory for %s: %s", package, error->message);
+		g_error_free(error);
+		g_free(package);
+		return;
+	}
+	g_object_unref(user);
 	g_free(package);
 
-	gchar * output = NULL;
-	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
-	g_free(cmdline);
-
-	/* If we have an extra newline, we can hide it. */
-	if (output != NULL) {
-		gchar * newline = NULL;
-
-		newline = g_strstr_len(output, -1, "\n");
-
-		if (newline != NULL) {
-			newline[0] = '\0';
-		}
-	}
-
-	if (error != NULL) {
-		g_warning("Unable to get the package directory from click: %s", error->message);
-		g_error_free(error);
-		g_free(output); /* Probably not set, but just in case */
+	if (!g_file_test(pkgdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
+		g_warning("Directory returned by click '%s' couldn't be found", pkgdir);
+		g_free(pkgdir);
 		return;
 	}
 
-	if (!g_file_test(output, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
-		g_warning("Directory returned by click '%s' couldn't be found", output);
-		g_free(output);
-		return;
-	}
-
-	gchar * indesktop = manifest_to_desktop(output, state->app_id);
+	gchar * indesktop = manifest_to_desktop(pkgdir, state->app_id);
 	if (indesktop == NULL) {
-		g_free(output);
+		g_free(pkgdir);
 		return;
 	}
 
@@ -432,11 +425,11 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 	gchar * desktoppath = g_build_filename(desktopdir, desktopfile, NULL);
 	g_free(desktopfile);
 
-	copy_desktop_file(indesktop, desktoppath, output, state->app_id);
+	copy_desktop_file(indesktop, desktoppath, pkgdir, state->app_id);
 
 	g_free(desktoppath);
 	g_free(indesktop);
-	g_free(output);
+	g_free(pkgdir);
 
 	return;
 }
