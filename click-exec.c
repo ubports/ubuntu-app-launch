@@ -34,7 +34,7 @@ all off limits.
 
 For information on Click packages and the manifest look at the Click package documentation:
 
-https://click-package.readthedocs.org/en/latest/
+https://click.readthedocs.org/en/latest/
 
 */
 

@@ -24,7 +24,7 @@ INTRODUCTION:
 This is a hook for Click packages.  You can find information on Click package hooks in
 the click documentation:
 
-https://click-package.readthedocs.org/en/latest/
+https://click.readthedocs.org/en/latest/
 
 Probably the biggest thing to understand for how this code works is that you need to
 understand that this hook is run after one, or many packages are installed.  A set of
