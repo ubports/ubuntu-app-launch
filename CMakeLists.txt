@@ -52,7 +52,7 @@ include_directories(${JSONGLIB_INCLUDE_DIRS})
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
-pkg_check_modules(CLICK REQUIRED click-0.4)
+pkg_check_modules(CLICK REQUIRED click-0.4>=0.4.18)
 include_directories(${CLICK_INCLUDE_DIRS})
 
 pkg_check_modules(LIBUPSTART REQUIRED libupstart)
@@ -76,7 +76,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
 ####################
 
 add_library(helpers STATIC helpers.c helpers-keyfile.c)
-target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES})
+target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
 
 ####################
 # desktop-exec
