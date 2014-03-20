@@ -1,3 +1,10 @@
+upstart-app-launch (0.3+14.04.20140220-0ubuntu2) trusty; urgency=medium
+
+  * Drop depends:click from a Multi-Arch:same library package, as click is
+    neither M-A:allowed nor M-A:foreign. This unbreaks cross-compilation.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 20 Feb 2014 23:51:29 +0000
+
 upstart-app-launch (0.3+14.04.20140220-0ubuntu1) trusty; urgency=low
 
   [ Ted Gould ]

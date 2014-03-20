@@ -56,7 +56,6 @@ Section: libs
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
-         click (>= 0.4.9),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
 Description: library for sending requests to the upstart app launch
