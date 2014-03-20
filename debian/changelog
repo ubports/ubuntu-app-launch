@@ -1,3 +1,14 @@
+upstart-app-launch (0.3+14.04.20140320-0ubuntu1) trusty; urgency=low
+
+  [ Thomi Richards ]
+  * Export the correct environment variable to load apps with
+    testability enabled. (LP: #1285947)
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 20 Mar 2014 23:22:49 +0000
+
 upstart-app-launch (0.3+14.04.20140220-0ubuntu3) trusty; urgency=medium
 
   * Change dependency on "zeitgeist" to "zeitgeist-core". The former is a
