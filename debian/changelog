@@ -1,3 +1,12 @@
+upstart-app-launch (0.3+14.04.20140220-0ubuntu3) trusty; urgency=medium
+
+  * Change dependency on "zeitgeist" to "zeitgeist-core". The former is a
+    metapackage which pulls in python2 and useless gtk/X data providers,
+    whereas zeitgeist-core provides the service necessary for
+    zg-report-app to operate.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Sat, 22 Feb 2014 23:00:37 +0000
+
 upstart-app-launch (0.3+14.04.20140220-0ubuntu2) trusty; urgency=medium
 
   * Drop depends:click from a Multi-Arch:same library package, as click is
