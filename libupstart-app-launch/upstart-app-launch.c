@@ -245,7 +245,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	}
 
 	if (test) {
-		g_variant_builder_add_value(&builder, g_variant_new_string("QT_TESTABILITY=1"));
+		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
 	}
 
 	g_variant_builder_close(&builder);

@@ -377,7 +377,7 @@ TEST_F(LibUAL, StartApplicationTest)
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
 	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
-	EXPECT_TRUE(check_env(env, "QT_TESTABILITY", "1"));
+	EXPECT_TRUE(check_env(env, "QT_LOAD_TESTABILITY", "1"));
 	g_variant_unref(env);
 }
 
