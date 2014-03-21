@@ -33,7 +33,6 @@ Package: upstart-app-launch
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         click (>= 0.4.9),
          click-apparmor,
          upstart (>= 1.11),
          zeitgeist-core,

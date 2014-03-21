@@ -1,7 +1,0 @@
-#!/bin/bash
-
-if [ ${1} == "info" ] ; then
-	/bin/cat "${XDG_DATA_DIRS}/click-app-dir/.click/info/${2}.manifest"
-else
-	exit 1
-fi

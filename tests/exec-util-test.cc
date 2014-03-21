@@ -37,10 +37,6 @@ class ExecUtil : public ::testing::Test
 		virtual void SetUp() {
 			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
-			const gchar * oldpath = g_getenv("PATH");
-			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
-			g_setenv("PATH", newpath, TRUE);
-			g_free(newpath);
 
 			service = dbus_test_service_new(NULL);
 

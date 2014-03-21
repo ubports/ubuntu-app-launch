@@ -19,6 +19,7 @@
 
 #include "upstart-app-launch.h"
 #include <json-glib/json-glib.h>
+#include <click.h>
 #include <upstart.h>
 #include <gio/gio.h>
 #include <string.h>
@@ -1092,60 +1093,46 @@ upstart_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar **
 	return TRUE;
 }
 
-/* Try and get a manifest file and do a couple sanity checks on it */
-static JsonParser *
-get_manifest_file (const gchar * pkg)
+/* Try and get a manifest and do a couple sanity checks on it */
+static JsonObject *
+get_manifest (const gchar * pkg)
 {
 	/* Get the directory from click */
 	GError * error = NULL;
-	const gchar * click_exec = NULL;
 
-	if (g_getenv("UAL_CLICK_EXEC") != NULL) {
-		click_exec = g_getenv("UAL_CLICK_EXEC");
-	} else {
-		click_exec = "click";
+	ClickDB * db = click_db_new();
+	/* If TEST_CLICK_DB is unset, this reads the system database. */
+	click_db_read(db, g_getenv("TEST_CLICK_DB"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		g_error_free(error);
+		return NULL;
 	}
-
-	gchar * cmdline = g_strdup_printf("%s info \"%s\"",
-		click_exec, pkg);
-
-	gchar * output = NULL;
-	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
-	g_free(cmdline);
-
+	/* If TEST_CLICK_USER is unset, this uses the current user name. */
+	ClickUser * user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		g_error_free(error);
+		g_object_unref(db);
+		return NULL;
+	}
+	g_object_unref(db);
+	JsonObject * manifest = click_user_get_manifest(user, pkg, &error);
 	if (error != NULL) {
 		g_warning("Unable to get manifest for '%s' package: %s", pkg, error->message);
 		g_error_free(error);
-		g_free(output);
+		g_object_unref(user);
 		return NULL;
 	}
+	g_object_unref(user);
 
-	/* Let's look at that manifest file */
-	JsonParser * parser = json_parser_new();
-	json_parser_load_from_data(parser, output, -1, &error);
-	g_free(output);
-
-	if (error != NULL) {
-		g_warning("Unable to load manifest for '%s': %s", pkg, error->message);
-		g_error_free(error);
-		g_object_unref(parser);
-		return NULL;
-	}
-	JsonNode * root = json_parser_get_root(parser);
-	if (json_node_get_node_type(root) != JSON_NODE_OBJECT) {
-		g_warning("Manifest file for package '%s' does not have an object as its root node", pkg);
-		g_object_unref(parser);
-		return NULL;
-	}
-
-	JsonObject * rootobj = json_node_get_object(root);
-	if (!json_object_has_member(rootobj, "version")) {
+	if (!json_object_has_member(manifest, "version")) {
 		g_warning("Manifest file for package '%s' does not have a version", pkg);
-		g_object_unref(parser);
+		json_object_unref(manifest);
 		return NULL;
 	}
 
-	return parser;
+	return manifest;
 }
 
 /* Types of search we can do for an app name */
@@ -1158,7 +1145,7 @@ enum _app_name_t {
 
 /* Figure out the app name if it's one of the keywords */
 static const gchar *
-manifest_app_name (JsonParser ** manifest, const gchar * pkg, const gchar * original_app)
+manifest_app_name (JsonObject ** manifest, const gchar * pkg, const gchar * original_app)
 {
 	app_name_t app_type = APP_NAME_FIRST;
 
@@ -1175,12 +1162,10 @@ manifest_app_name (JsonParser ** manifest, const gchar * pkg, const gchar * orig
 	}
 
 	if (*manifest == NULL) {
-		*manifest = get_manifest_file(pkg);
+		*manifest = get_manifest(pkg);
 	}
 
-	JsonNode * root_node = json_parser_get_root(*manifest);
-	JsonObject * root_obj = json_node_get_object(root_node);
-	JsonObject * hooks = json_object_get_object_member(root_obj, "hooks");
+	JsonObject * hooks = json_object_get_object_member(*manifest, "hooks");
 
 	if (hooks == NULL) {
 		return NULL;
@@ -1216,20 +1201,17 @@ manifest_app_name (JsonParser ** manifest, const gchar * pkg, const gchar * orig
 
 /* Figure out the app version using the manifest */
 static const gchar *
-manifest_version (JsonParser ** manifest, const gchar * pkg, const gchar * original_ver)
+manifest_version (JsonObject ** manifest, const gchar * pkg, const gchar * original_ver)
 {
 	if (original_ver != NULL && g_strcmp0(original_ver, "current-user-version") != 0) {
 		return original_ver;
 	} else  {
 		if (*manifest == NULL) {
-			*manifest = get_manifest_file(pkg);
+			*manifest = get_manifest(pkg);
 		}
 		g_return_val_if_fail(*manifest != NULL, NULL);
 
-		JsonNode * node = json_parser_get_root(*manifest);
-		JsonObject * obj = json_node_get_object(node);
-
-		return g_strdup(json_object_get_string_member(obj, "version"));
+		return g_strdup(json_object_get_string_member(*manifest, "version"));
 	}
 
 	return NULL;
@@ -1242,7 +1224,7 @@ upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, cons
 
 	const gchar * version = NULL;
 	const gchar * application = NULL;
-	JsonParser * manifest = NULL;
+	JsonObject * manifest = NULL;
 
 	version = manifest_version(&manifest, pkg, ver);
 	g_return_val_if_fail(version != NULL, NULL);
@@ -1252,8 +1234,9 @@ upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, cons
 
 	gchar * retval = g_strdup_printf("%s_%s_%s", pkg, application, version);
 
-	/* The parser may hold allocation for some of our strings used above */
-	g_clear_object(&manifest);
+	/* The object may hold allocation for some of our strings used above */
+	if (manifest)
+		json_object_unref(manifest);
 
 	return retval;
 }
