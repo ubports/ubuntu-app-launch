@@ -18,6 +18,7 @@
  */
 
 #include <gio/gio.h>
+#include <click.h>
 #include "helpers.h"
 #include "click-exec-trace.h"
 
@@ -34,7 +35,7 @@ all off limits.
 
 For information on Click packages and the manifest look at the Click package documentation:
 
-https://click-package.readthedocs.org/en/latest/
+https://click.readthedocs.org/en/latest/
 
 */
 
@@ -80,45 +81,55 @@ main (int argc, char * argv[])
 	}
 
 	/* Check click to find out where the files are */
-	gchar * cmdline = g_strdup_printf("click pkgdir \"%s\"", package);
-
-	gchar * output = NULL;
-	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
-	g_free(cmdline);
+	ClickDB * db = click_db_new();
+	/* If TEST_CLICK_DB is unset, this reads the system database. */
+	click_db_read(db, g_getenv("TEST_CLICK_DB"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		g_error_free(error);
+		g_free(package);
+		return 1;
+	}
+	/* If TEST_CLICK_USER is unset, this uses the current user name. */
+	ClickUser * user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		g_error_free(error);
+		g_free(package);
+		g_object_unref(db);
+		return 1;
+	}
+	gchar * pkgdir = click_user_get_path(user, package, &error);
+	if (error != NULL) {
+		g_warning("Unable to get the Click package directory for %s: %s", package, error->message);
+		g_error_free(error);
+		g_free(package);
+		g_object_unref(user);
+		g_object_unref(db);
+		return 1;
+	}
+	g_object_unref(user);
+	g_object_unref(db);
 
 	tracepoint(upstart_app_launch, click_found_pkgdir);
 
-	/* If we have an extra newline, we can delete it. */
-	gchar * newline = g_strstr_len(output, -1, "\n");
-	if (newline != NULL) {
-		newline[0] = '\0';
-	}
-
-	if (error != NULL) {
-		g_warning("Unable to get the package directory from click: %s", error->message);
-		g_error_free(error);
-		g_free(output); /* Probably not set, but just in case */
+	if (!g_file_test(pkgdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
+		g_warning("Application directory '%s' doesn't exist", pkgdir);
+		g_free(pkgdir);
 		g_free(package);
 		return 1;
 	}
 
-	if (!g_file_test(output, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
-		g_warning("Application directory '%s' doesn't exist", output);
-		g_free(output);
-		g_free(package);
-		return 1;
-	}
+	g_debug("Setting 'APP_DIR' to '%s'", pkgdir);
+	set_upstart_variable("APP_DIR", pkgdir, FALSE);
 
-	g_debug("Setting 'APP_DIR' to '%s'", output);
-	set_upstart_variable("APP_DIR", output, FALSE);
-
-	set_confined_envvars(package, output);
+	set_confined_envvars(package, pkgdir);
 
 	tracepoint(upstart_app_launch, click_configured_env);
 
-	gchar * desktopfile = manifest_to_desktop(output, app_id);
+	gchar * desktopfile = manifest_to_desktop(pkgdir, app_id);
 
-	g_free(output);
+	g_free(pkgdir);
 	g_free(package);
 
 	if (desktopfile == NULL) {
