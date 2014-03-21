@@ -1,3 +1,13 @@
+upstart-app-launch (0.3+14.04.20140321-0ubuntu1) trusty; urgency=low
+
+  [ Colin Watson ]
+  * Use libclick to get the package directory, saving about 0.7 seconds
+    from Click application startup (on mako).
+  * Use libclick to get package manifests, saving about 0.7 seconds from
+    Click application startup (on mako).
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 21 Mar 2014 17:56:24 +0000
+
 upstart-app-launch (0.3+14.04.20140320-0ubuntu1) trusty; urgency=low
 
   [ Thomi Richards ]
