@@ -18,13 +18,7 @@ export UPSTART_APP_LAUNCH_ARCH
 
 apparmor switch ${APP_ID}
 
-pre-start script
-	if pgrep -u system surfaceflinger ; then
-		initctl set-env USING_SURFACE_FLINGER=1
-	fi
-
-	exec @pkglibexecdir@/click-exec
-end script
+pre-start exec @pkglibexecdir@/click-exec
 
 # Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec
