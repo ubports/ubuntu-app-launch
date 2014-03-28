@@ -10,8 +10,7 @@ env APP_ID
 env APP_EXEC
 env APP_URIS
 env APP_DIR
-# For Surface Flinger
-env APP_DESKTOP_FILE
+env APP_DESKTOP_FILE_PATH
 
 env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
 export UPSTART_APP_LAUNCH_ARCH
