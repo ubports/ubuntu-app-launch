@@ -31,7 +31,7 @@ end script
 exec @pkglibexecdir@/exec-line-exec
 
 post-start script
-	initctl setenv APP_PROCESS_GROUP=`initctl status | cut -d " " -f 4`
+	initctl set-env APP_PROCESS_GROUP=`initctl status | cut -d " " -f 4`
 	@pkglibexecdir@/zg-report-app open
 end script
 
