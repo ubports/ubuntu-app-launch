@@ -36,6 +36,6 @@ post-start script
 end script
 
 post-stop script
-	kill "-$(APP_PROCESS_GROUP)"
+	pkill -g "$(APP_PROCESS_GROUP)" || true
 	@pkglibexecdir@/zg-report-app close
 end script
