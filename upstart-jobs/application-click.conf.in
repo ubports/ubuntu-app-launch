@@ -31,7 +31,7 @@ end script
 exec @pkglibexecdir@/exec-line-exec
 
 post-start script
-	initctl set-env APP_PROCESS_GROUP=`initctl status | cut -d " " -f 4`
+	initctl set-env APP_PROCESS_GROUP=`upstart-app-pid ${APP_ID}`
 	@pkglibexecdir@/zg-report-app open
 end script
 
