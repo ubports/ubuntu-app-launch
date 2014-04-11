@@ -12,6 +12,7 @@ env APP_URIS
 env APP_DIR
 # For Surface Flinger
 env APP_DESKTOP_FILE
+env APP_PROCESS_GROUP
 
 env UPSTART_APP_LAUNCH_ARCH="@upstart_app_launch_arch@"
 export UPSTART_APP_LAUNCH_ARCH
@@ -29,5 +30,12 @@ end script
 # Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec
 
-post-start exec @pkglibexecdir@/zg-report-app open
-post-stop exec @pkglibexecdir@/zg-report-app close
+post-start script
+	initctl setenv APP_PROCESS_GROUP=`initctl status | cut -d " " -f 4`
+	@pkglibexecdir@/zg-report-app open
+end script
+
+post-stop script
+	kill "-$(APP_PROCESS_GROUP)"
+	@pkglibexecdir@/zg-report-app close
+end script
