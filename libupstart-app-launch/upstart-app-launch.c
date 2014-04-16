@@ -228,6 +228,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 
 	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_LAUNCHER_PID=%d", getpid())));
 
 	if (uris != NULL) {
 		gchar * urisjoin = app_uris_string(uris);
