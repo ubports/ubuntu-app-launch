@@ -80,7 +80,31 @@ main (int argc, char * argv[])
 			pid = atoi(launcher_pid);
 		}
 
-		report_recoverable_problem("upstart-app-launch-invalid-appid", pid, TRUE, props);
+		/* Checking to see if we're using the command line tool to create
+		   the appid. Chances are in that case it's a user error, and we
+		   don't need to automatically record it, the user mistyped. */
+		gboolean debugtool = FALSE;
+		if (pid != 0) {
+			gchar * cmdpath = g_strdup_printf("/proc/%d/cmdline", pid);
+			gchar * cmdline = NULL;
+
+			if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
+				if (g_strstr_len(cmdline, -1, "upstart-app-launch") != NULL) {
+					debugtool = TRUE;
+				}
+
+				g_free(cmdline);
+			} else {
+				/* The caller has already exited, probably a debug tool */
+				debugtool = TRUE;
+			}
+
+			g_free(cmdpath);
+		}
+
+		if (!debugtool) {
+			report_recoverable_problem("upstart-app-launch-invalid-appid", pid, TRUE, props);
+		}
 		return 1;
 	}
 
