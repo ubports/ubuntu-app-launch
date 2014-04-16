@@ -61,7 +61,7 @@ apport_child_timeout (gpointer user_data)
 
 /* Code to report an error */
 void
-report_recoverable_problem (const gchar * signature, GPid report_pid, gboolean wait, gchar * additional_properties[])
+report_recoverable_problem (const gchar * signature, GPid report_pid, gboolean wait, const gchar * additional_properties[])
 {
 	GError * error = NULL;
 	gint error_stdin = 0;

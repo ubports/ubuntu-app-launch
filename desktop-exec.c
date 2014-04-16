@@ -25,6 +25,7 @@
 
 #include "helpers.h"
 #include "desktop-exec-trace.h"
+#include "recoverable-problem.h"
 
 int
 main (int argc, char * argv[])
@@ -65,7 +66,15 @@ main (int argc, char * argv[])
 	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
 	if (keyfile == NULL) {
-		g_error("Unable to find keyfile for application '%s'", app_id);
+		g_warning("Unable to find keyfile for application '%s'", app_id);
+
+		const gchar * props[3] = {
+			"AppId", NULL,
+			NULL
+		};
+		props[1] = app_id;
+
+		report_recoverable_problem("upstart-app-launch-invalid-appid", 0, TRUE, props);
 		return 1;
 	}
 
