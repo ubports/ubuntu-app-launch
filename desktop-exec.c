@@ -74,7 +74,13 @@ main (int argc, char * argv[])
 		};
 		props[1] = app_id;
 
-		report_recoverable_problem("upstart-app-launch-invalid-appid", 0, TRUE, props);
+		GPid pid = 0;
+		const gchar * launcher_pid = g_getenv("APP_LAUNCHER_PID");
+		if (launcher_pid != NULL) {
+			pid = atoi(launcher_pid);
+		}
+
+		report_recoverable_problem("upstart-app-launch-invalid-appid", pid, TRUE, props);
 		return 1;
 	}
 
