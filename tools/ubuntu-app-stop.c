@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 int
 main (int argc, gchar * argv[]) {
@@ -27,7 +27,7 @@ main (int argc, gchar * argv[]) {
 		return 1;
 	}
 
-	if (upstart_app_launch_stop_application(argv[1])) {
+	if (ubuntu_app_launch_stop_application(argv[1])) {
 		return 0;
 	} else {
 		return 1;

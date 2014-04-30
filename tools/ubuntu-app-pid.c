@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 int
 main (int argc, gchar * argv[]) {
@@ -27,7 +27,7 @@ main (int argc, gchar * argv[]) {
 		return 1;
 	}
 
-	GPid pid = upstart_app_launch_get_primary_pid(argv[1]);
+	GPid pid = ubuntu_app_launch_get_primary_pid(argv[1]);
 
 	if (pid == 0) {
 		return 1;

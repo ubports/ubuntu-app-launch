@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 #include <gio/gio.h>
 
 int
@@ -32,7 +32,7 @@ main (int argc, gchar * argv[]) {
 
 	int retval = -1;
 
-	if (upstart_app_launch_stop_helper(argv[1], argv[2])) {
+	if (ubuntu_app_launch_stop_helper(argv[1], argv[2])) {
 		retval = 0;
 	} else {
 		g_debug("Unable to stop app id '%s' of type '%s'", argv[2], argv[1]);

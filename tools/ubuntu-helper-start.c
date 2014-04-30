@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 #include <gio/gio.h>
 
 int
@@ -33,7 +33,7 @@ main (int argc, gchar * argv[]) {
 	int retval = -1;
 
 	/* TODO: Allow URIs */
-	if (upstart_app_launch_start_helper(argv[1], argv[2], NULL)) {
+	if (ubuntu_app_launch_start_helper(argv[1], argv[2], NULL)) {
 		retval = 0;
 	} else {
 		g_debug("Unable to start app id '%s' of type '%s'", argv[2], argv[1]);

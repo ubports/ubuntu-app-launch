@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 int
 main (int argc, gchar * argv[]) {
@@ -39,7 +39,7 @@ main (int argc, gchar * argv[]) {
 		app = argv[3];
 	}
 
-	gchar * appid = upstart_app_launch_triplet_to_app_id(pkg, app, ver);
+	gchar * appid = ubuntu_app_launch_triplet_to_app_id(pkg, app, ver);
 	if (appid == NULL) {
 		return -1;
 	}

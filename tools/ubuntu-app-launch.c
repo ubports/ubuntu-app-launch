@@ -18,7 +18,7 @@
  */
 
 #include <glib.h>
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 const gchar * global_appid = NULL;
 int retval = 0;
@@ -35,13 +35,13 @@ good_observer (const gchar * appid, gpointer user_data)
 }
 
 static void
-bad_observer (const gchar * appid, upstart_app_launch_app_failed_t failure_type, gpointer user_data)
+bad_observer (const gchar * appid, ubuntu_app_launch_app_failed_t failure_type, gpointer user_data)
 {
 	if (g_strcmp0(appid, global_appid) != 0) {
 		return;
 	}
 
-	g_debug("Application '%s' failed: %s", appid, failure_type == UPSTART_APP_LAUNCH_APP_FAILED_CRASH ? "crash" : "startup failure");
+	g_debug("Application '%s' failed: %s", appid, failure_type == UBUNTU_APP_LAUNCH_APP_FAILED_CRASH ? "crash" : "startup failure");
 	retval = -1;
 	g_main_loop_quit((GMainLoop *)user_data);
 }
@@ -67,18 +67,18 @@ main (int argc, gchar * argv[]) {
 		}
 	}
 
-	upstart_app_launch_observer_add_app_started(good_observer, mainloop);
-	upstart_app_launch_observer_add_app_focus(good_observer, mainloop);
+	ubuntu_app_launch_observer_add_app_started(good_observer, mainloop);
+	ubuntu_app_launch_observer_add_app_focus(good_observer, mainloop);
 
-	upstart_app_launch_observer_add_app_failed(bad_observer, mainloop);
+	ubuntu_app_launch_observer_add_app_failed(bad_observer, mainloop);
 
-	upstart_app_launch_start_application(global_appid, (const gchar * const *)uris);
+	ubuntu_app_launch_start_application(global_appid, (const gchar * const *)uris);
 
 	g_main_loop_run(mainloop);
 
-	upstart_app_launch_observer_delete_app_started(good_observer, mainloop);
-	upstart_app_launch_observer_delete_app_focus(good_observer, mainloop);
-	upstart_app_launch_observer_delete_app_failed(bad_observer, mainloop);
+	ubuntu_app_launch_observer_delete_app_started(good_observer, mainloop);
+	ubuntu_app_launch_observer_delete_app_focus(good_observer, mainloop);
+	ubuntu_app_launch_observer_delete_app_failed(bad_observer, mainloop);
 
 	g_main_loop_unref(mainloop);
 	g_free(uris);

@@ -17,14 +17,14 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 int
 main (int argc, char * argv[])
 {
 	gchar ** apps;
 
-	apps = upstart_app_launch_list_running_apps();
+	apps = ubuntu_app_launch_list_running_apps();
 
 	int i;
 	for (i = 0; apps[i] != NULL; i++) {

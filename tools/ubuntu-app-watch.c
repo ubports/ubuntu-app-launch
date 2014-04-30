@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 void
 starting (const gchar * appid, gpointer user_data)
@@ -55,14 +55,14 @@ focus (const gchar * appid, gpointer user_data)
 }
 
 void
-fail (const gchar * appid, upstart_app_launch_app_failed_t failhow, gpointer user_data)
+fail (const gchar * appid, ubuntu_app_launch_app_failed_t failhow, gpointer user_data)
 {
 	const gchar * failstr = "unknown";
 	switch (failhow) {
-		case UPSTART_APP_LAUNCH_APP_FAILED_CRASH:
+		case UBUNTU_APP_LAUNCH_APP_FAILED_CRASH:
 			failstr = "crashed";
 			break;
-		case UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE:
+		case UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE:
 			failstr = "startup";
 			break;
 	}
@@ -75,22 +75,22 @@ fail (const gchar * appid, upstart_app_launch_app_failed_t failhow, gpointer use
 int
 main (int argc, gchar * argv[])
 {
-	upstart_app_launch_observer_add_app_starting(starting, NULL);
-	upstart_app_launch_observer_add_app_started(started, NULL);
-	upstart_app_launch_observer_add_app_stop(stopped, NULL);
-	upstart_app_launch_observer_add_app_focus(focus, NULL);
-	upstart_app_launch_observer_add_app_resume(resume, NULL);
-	upstart_app_launch_observer_add_app_failed(fail, NULL);
+	ubuntu_app_launch_observer_add_app_starting(starting, NULL);
+	ubuntu_app_launch_observer_add_app_started(started, NULL);
+	ubuntu_app_launch_observer_add_app_stop(stopped, NULL);
+	ubuntu_app_launch_observer_add_app_focus(focus, NULL);
+	ubuntu_app_launch_observer_add_app_resume(resume, NULL);
+	ubuntu_app_launch_observer_add_app_failed(fail, NULL);
 
 	GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
 	g_main_loop_run(mainloop);
 
-	upstart_app_launch_observer_delete_app_starting(starting, NULL);
-	upstart_app_launch_observer_delete_app_started(started, NULL);
-	upstart_app_launch_observer_delete_app_stop(stopped, NULL);
-	upstart_app_launch_observer_delete_app_focus(focus, NULL);
-	upstart_app_launch_observer_delete_app_resume(resume, NULL);
-	upstart_app_launch_observer_delete_app_failed(fail, NULL);
+	ubuntu_app_launch_observer_delete_app_starting(starting, NULL);
+	ubuntu_app_launch_observer_delete_app_started(started, NULL);
+	ubuntu_app_launch_observer_delete_app_stop(stopped, NULL);
+	ubuntu_app_launch_observer_delete_app_focus(focus, NULL);
+	ubuntu_app_launch_observer_delete_app_resume(resume, NULL);
+	ubuntu_app_launch_observer_delete_app_failed(fail, NULL);
 
 	g_main_loop_unref(mainloop);
 
