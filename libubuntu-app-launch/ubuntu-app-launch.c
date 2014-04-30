@@ -17,14 +17,14 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "upstart-app-launch.h"
+#include "ubuntu-app-launch.h"
 #include <json-glib/json-glib.h>
 #include <click.h>
 #include <upstart.h>
 #include <gio/gio.h>
 #include <string.h>
 
-#include "upstart-app-launch-trace.h"
+#include "ubuntu-app-launch-trace.h"
 #include "second-exec-core.h"
 #include "../helpers.h"
 
@@ -63,7 +63,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GError * error = NULL;
 	GVariant * result = NULL;
 
-	tracepoint(upstart_app_launch, libual_start_message_callback, data->appid);
+	tracepoint(ubuntu_app_launch, libual_start_message_callback, data->appid);
 
 	g_debug("Started Message Callback: %s", data->appid);
 
@@ -97,7 +97,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 static const gchar *
 get_jobpath (GDBusConnection * con, const gchar * jobname)
 {
-	gchar * cachepath = g_strdup_printf("upstart-app-lauch-job-path-cache-%s", jobname);
+	gchar * cachepath = g_strdup_printf("ubuntu-app-lauch-job-path-cache-%s", jobname);
 	gpointer cachedata = g_object_get_data(G_OBJECT(con), cachepath);
 
 	if (cachedata != NULL) {
@@ -140,7 +140,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 static gboolean
 legacy_single_instance (const gchar * appid)
 {
-	tracepoint(upstart_app_launch, desktop_single_start, appid);
+	tracepoint(ubuntu_app_launch, desktop_single_start, appid);
 
 	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
 
@@ -149,7 +149,7 @@ legacy_single_instance (const gchar * appid)
 		return FALSE;
 	}
 
-	tracepoint(upstart_app_launch, desktop_single_found, appid);
+	tracepoint(ubuntu_app_launch, desktop_single_found, appid);
 
 	gboolean singleinstance = FALSE;
 
@@ -168,7 +168,7 @@ legacy_single_instance (const gchar * appid)
 	
 	g_key_file_free(keyfile);
 
-	tracepoint(upstart_app_launch, desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
+	tracepoint(ubuntu_app_launch, desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
 
 	return singleinstance;
 }
@@ -180,9 +180,9 @@ is_click (const gchar * appid)
 {
 	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
 	gchar * click_link = NULL;
-	const gchar * link_farm_dir = g_getenv("UPSTART_APP_LAUNCH_LINK_FARM");
+	const gchar * link_farm_dir = g_getenv("UBUNTU_APP_LAUNCH_LINK_FARM");
 	if (G_LIKELY(link_farm_dir == NULL)) {
-		click_link = g_build_filename(g_get_home_dir(), ".cache", "upstart-app-launch", "desktop", appiddesktop, NULL);
+		click_link = g_build_filename(g_get_home_dir(), ".cache", "ubuntu-app-launch", "desktop", appiddesktop, NULL);
 	} else {
 		click_link = g_build_filename(link_farm_dir, appiddesktop, NULL);
 	}
@@ -202,7 +202,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	g_return_val_if_fail(con != NULL, FALSE);
 
 	gboolean click = is_click(appid);
-	tracepoint(upstart_app_launch, libual_determine_type, appid, click ? "click" : "legacy");
+	tracepoint(ubuntu_app_launch, libual_determine_type, appid, click ? "click" : "legacy");
 
 	/* Figure out the DBus path for the job */
 	const gchar * jobpath = NULL;
@@ -215,7 +215,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	if (jobpath == NULL)
 		return FALSE;
 
-	tracepoint(upstart_app_launch, libual_job_path_determined, appid, jobpath);
+	tracepoint(ubuntu_app_launch, libual_job_path_determined, appid, jobpath);
 
 	/* Callback data */
 	app_start_t * app_start_data = g_new0(app_start_t, 1);
@@ -266,7 +266,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	                       application_start_cb,
 	                       app_start_data);
 
-	tracepoint(upstart_app_launch, libual_start_message_sent, appid);
+	tracepoint(ubuntu_app_launch, libual_start_message_sent, appid);
 
 	g_object_unref(con);
 
@@ -274,13 +274,13 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 }
 
 gboolean
-upstart_app_launch_start_application (const gchar * appid, const gchar * const * uris)
+ubuntu_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
 	return start_application_core(appid, uris, FALSE);
 }
 
 gboolean
-upstart_app_launch_start_application_test (const gchar * appid, const gchar * const * uris)
+ubuntu_app_launch_start_application_test (const gchar * appid, const gchar * const * uris)
 {
 	return start_application_core(appid, uris, TRUE);
 }
@@ -338,7 +338,7 @@ free_helper (gpointer value)
 }
 
 gboolean
-upstart_app_launch_stop_application (const gchar * appid)
+ubuntu_app_launch_stop_application (const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
@@ -388,7 +388,7 @@ upstart_app_launch_stop_application (const gchar * appid)
 }
 
 gchar *
-upstart_app_launch_application_log_path (const gchar * appid)
+ubuntu_app_launch_application_log_path (const gchar * appid)
 {
 	gchar * path = NULL;
 	g_return_val_if_fail(appid != NULL, NULL);
@@ -461,7 +461,7 @@ typedef struct _observer_t observer_t;
 struct _observer_t {
 	GDBusConnection * conn;
 	guint sighandle;
-	upstart_app_launch_app_observer_t func;
+	ubuntu_app_launch_app_observer_t func;
 	gpointer user_data;
 };
 
@@ -470,7 +470,7 @@ typedef struct _failed_observer_t failed_observer_t;
 struct _failed_observer_t {
 	GDBusConnection * conn;
 	guint sighandle;
-	upstart_app_launch_app_failed_observer_t func;
+	ubuntu_app_launch_app_failed_observer_t func;
 	gpointer user_data;
 };
 
@@ -490,7 +490,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 	const gchar * signalname = NULL;
 	g_variant_get_child(params, 0, "&s", &signalname);
 
-	tracepoint(upstart_app_launch, observer_start, signalname);
+	tracepoint(ubuntu_app_launch, observer_start, signalname);
 
 	gchar * env = NULL;
 	GVariant * envs = g_variant_get_child_value(params, 1);
@@ -525,7 +525,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 		observer->func(instance, observer->user_data);
 	}
 
-	tracepoint(upstart_app_launch, observer_finish, signalname);
+	tracepoint(ubuntu_app_launch, observer_finish, signalname);
 
 	g_free(instance);
 }
@@ -533,7 +533,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 /* Creates the observer structure and registers for the signal with
    GDBus so that we can get a callback */
 static gboolean
-add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list)
+add_app_generic (ubuntu_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list)
 {
 	GDBusConnection * conn = gdbus_upstart_ref();
 
@@ -564,13 +564,13 @@ add_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data,
 }
 
 gboolean
-upstart_app_launch_observer_add_app_started (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_started (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return add_app_generic(observer, user_data, "started", &started_array);
 }
 
 gboolean
-upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_stop (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return add_app_generic(observer, user_data, "stopped", &stop_array);
 }
@@ -578,7 +578,7 @@ upstart_app_launch_observer_add_app_stop (upstart_app_launch_app_observer_t obse
 /* Creates the observer structure and registers for the signal with
    GDBus so that we can get a callback */
 static gboolean
-add_session_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list, GDBusSignalCallback session_cb)
+add_session_generic (ubuntu_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list, GDBusSignalCallback session_cb)
 {
 	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
@@ -596,7 +596,7 @@ add_session_generic (upstart_app_launch_app_observer_t observer, gpointer user_d
 
 	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
 		NULL, /* sender */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		signal, /* signal */
 		"/", /* path */
 		NULL, /* arg0 */
@@ -615,18 +615,18 @@ focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * obj
 	observer_t * observer = (observer_t *)user_data;
 	const gchar * appid = NULL;
 
-	tracepoint(upstart_app_launch, observer_start, "focus");
+	tracepoint(ubuntu_app_launch, observer_start, "focus");
 
 	if (observer->func != NULL) {
 		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
 
-	tracepoint(upstart_app_launch, observer_finish, "focus");
+	tracepoint(ubuntu_app_launch, observer_finish, "focus");
 }
 
 gboolean
-upstart_app_launch_observer_add_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_focus (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return add_session_generic(observer, user_data, "UnityFocusRequest", &focus_array, focus_signal_cb);
 }
@@ -635,7 +635,7 @@ upstart_app_launch_observer_add_app_focus (upstart_app_launch_app_observer_t obs
 static void
 resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
-	tracepoint(upstart_app_launch, observer_start, "resume");
+	tracepoint(ubuntu_app_launch, observer_start, "resume");
 
 	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
@@ -643,7 +643,7 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 	g_dbus_connection_emit_signal(conn,
 		sender, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityResumeResponse", /* signal */
 		params, /* params, the same */
 		&error);
@@ -653,11 +653,11 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		g_error_free(error);
 	}
 
-	tracepoint(upstart_app_launch, observer_finish, "resume");
+	tracepoint(ubuntu_app_launch, observer_finish, "resume");
 }
 
 gboolean
-upstart_app_launch_observer_add_app_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_resume (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return add_session_generic(observer, user_data, "UnityResumeRequest", &resume_array, resume_signal_cb);
 }
@@ -666,7 +666,7 @@ upstart_app_launch_observer_add_app_resume (upstart_app_launch_app_observer_t ob
 static void
 starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
-	tracepoint(upstart_app_launch, observer_start, "starting");
+	tracepoint(ubuntu_app_launch, observer_start, "starting");
 
 	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
@@ -674,7 +674,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 	g_dbus_connection_emit_signal(conn,
 		sender, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingSignal", /* signal */
 		params, /* params, the same */
 		&error);
@@ -684,11 +684,11 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 		g_error_free(error);
 	}
 
-	tracepoint(upstart_app_launch, observer_finish, "starting");
+	tracepoint(ubuntu_app_launch, observer_finish, "starting");
 }
 
 gboolean
-upstart_app_launch_observer_add_app_starting (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_starting (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
@@ -701,16 +701,16 @@ failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 	const gchar * appid = NULL;
 	const gchar * typestr = NULL;
 
-	tracepoint(upstart_app_launch, observer_start, "failed");
+	tracepoint(ubuntu_app_launch, observer_start, "failed");
 
 	if (observer->func != NULL) {
-		upstart_app_launch_app_failed_t type = UPSTART_APP_LAUNCH_APP_FAILED_CRASH;
+		ubuntu_app_launch_app_failed_t type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
 		g_variant_get(params, "(&s&s)", &appid, &typestr);
 
 		if (g_strcmp0("crash", typestr) == 0) {
-			type = UPSTART_APP_LAUNCH_APP_FAILED_CRASH;
+			type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
 		} else if (g_strcmp0("start-failure", typestr) == 0) {
-			type = UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE;
+			type = UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE;
 		} else {
 			g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
 		}
@@ -718,11 +718,11 @@ failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		observer->func(appid, type, observer->user_data);
 	}
 
-	tracepoint(upstart_app_launch, observer_finish, "failed");
+	tracepoint(ubuntu_app_launch, observer_finish, "failed");
 }
 
 gboolean
-upstart_app_launch_observer_add_app_failed (upstart_app_launch_app_failed_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_failed (ubuntu_app_launch_app_failed_observer_t observer, gpointer user_data)
 {
 	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
@@ -740,7 +740,7 @@ upstart_app_launch_observer_add_app_failed (upstart_app_launch_app_failed_observ
 
 	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
 		NULL, /* sender */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
 		"/", /* path */
 		NULL, /* arg0 */
@@ -753,7 +753,7 @@ upstart_app_launch_observer_add_app_failed (upstart_app_launch_app_failed_observ
 }
 
 static gboolean
-delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_data, GList ** list)
+delete_app_generic (ubuntu_app_launch_app_observer_t observer, gpointer user_data, GList ** list)
 {
 	observer_t * observert = NULL;
 	GList * look;
@@ -780,37 +780,37 @@ delete_app_generic (upstart_app_launch_app_observer_t observer, gpointer user_da
 }
 
 gboolean
-upstart_app_launch_observer_delete_app_started (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_started (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &started_array);
 }
 
 gboolean
-upstart_app_launch_observer_delete_app_stop (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_stop (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &stop_array);
 }
 
 gboolean
-upstart_app_launch_observer_delete_app_resume (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_resume (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &resume_array);
 }
 
 gboolean
-upstart_app_launch_observer_delete_app_focus (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_focus (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &focus_array);
 }
 
 gboolean
-upstart_app_launch_observer_delete_app_starting (upstart_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_starting (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &starting_array);
 }
 
 gboolean
-upstart_app_launch_observer_delete_app_failed (upstart_app_launch_app_failed_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_failed (ubuntu_app_launch_app_failed_observer_t observer, gpointer user_data)
 {
 	failed_observer_t * observert = NULL;
 	GList * look;
@@ -945,7 +945,7 @@ apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gbool
 }
 
 gchar **
-upstart_app_launch_list_running_apps (void)
+ubuntu_app_launch_list_running_apps (void)
 {
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, g_new0(gchar *, 1));
@@ -1022,7 +1022,7 @@ pid_for_job (GDBusConnection * con, const gchar * jobname, const gchar * appid)
 }
 
 GPid
-upstart_app_launch_get_primary_pid (const gchar * appid)
+ubuntu_app_launch_get_primary_pid (const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, 0);
 
@@ -1045,7 +1045,7 @@ upstart_app_launch_get_primary_pid (const gchar * appid)
 }
 
 gboolean
-upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
+ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
@@ -1053,13 +1053,13 @@ upstart_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 		return FALSE;
 	}
 
-	GPid primary = upstart_app_launch_get_primary_pid(appid);
+	GPid primary = ubuntu_app_launch_get_primary_pid(appid);
 
 	return primary == pid;
 }
 
 gboolean
-upstart_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** application, gchar ** version)
+ubuntu_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** application, gchar ** version)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
@@ -1218,7 +1218,7 @@ manifest_version (JsonObject ** manifest, const gchar * pkg, const gchar * origi
 }
 
 gchar *
-upstart_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
+ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
 {
 	g_return_val_if_fail(pkg != NULL, NULL);
 
@@ -1310,7 +1310,7 @@ start_helper_core (const gchar * type, const gchar * appid, const gchar * const 
 }
 
 gboolean
-upstart_app_launch_start_helper (const gchar * type, const gchar * appid, const gchar * const * uris)
+ubuntu_app_launch_start_helper (const gchar * type, const gchar * appid, const gchar * const * uris)
 {
 	g_return_val_if_fail(type != NULL, FALSE);
 	g_return_val_if_fail(appid != NULL, FALSE);
@@ -1320,7 +1320,7 @@ upstart_app_launch_start_helper (const gchar * type, const gchar * appid, const 
 }
 
 gchar *
-upstart_app_launch_start_multiple_helper (const gchar * type, const gchar * appid, const gchar * const * uris)
+ubuntu_app_launch_start_multiple_helper (const gchar * type, const gchar * appid, const gchar * const * uris)
 {
 	g_return_val_if_fail(type != NULL, NULL);
 	g_return_val_if_fail(appid != NULL, NULL);
@@ -1399,7 +1399,7 @@ stop_helper_core (const gchar * type, const gchar * appid, const gchar * instanc
 }
 
 gboolean
-upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
+ubuntu_app_launch_stop_helper (const gchar * type, const gchar * appid)
 {
 	g_return_val_if_fail(type != NULL, FALSE);
 	g_return_val_if_fail(appid != NULL, FALSE);
@@ -1409,7 +1409,7 @@ upstart_app_launch_stop_helper (const gchar * type, const gchar * appid)
 }
 
 gboolean
-upstart_app_launch_stop_multiple_helper (const gchar * type, const gchar * appid, const gchar * instanceid)
+ubuntu_app_launch_stop_multiple_helper (const gchar * type, const gchar * appid, const gchar * instanceid)
 {
 	g_return_val_if_fail(type != NULL, FALSE);
 	g_return_val_if_fail(appid != NULL, FALSE);
@@ -1458,7 +1458,7 @@ list_helpers_helper (GDBusConnection * con, GVariant * props_dict, gpointer user
 }
 
 gchar **
-upstart_app_launch_list_helpers (const gchar * type)
+ubuntu_app_launch_list_helpers (const gchar * type)
 {
 	g_return_val_if_fail(type != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
@@ -1517,7 +1517,7 @@ list_helper_instances (GDBusConnection * con, GVariant * props_dict, gpointer us
 }
 
 gchar **
-upstart_app_launch_list_helper_instances (const gchar * type, const gchar * appid)
+ubuntu_app_launch_list_helper_instances (const gchar * type, const gchar * appid)
 {
 	g_return_val_if_fail(type != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
@@ -1547,7 +1547,7 @@ struct _helper_observer_t {
 	GDBusConnection * conn;
 	guint sighandle;
 	gchar * type;
-	UpstartAppLaunchHelperObserver func;
+	UbuntuAppLaunchHelperObserver func;
 	gpointer user_data;
 };
 
@@ -1613,7 +1613,7 @@ helper_observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 /* Creates the observer structure and registers for the signal with
    GDBus so that we can get a callback */
 static gboolean
-add_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data, const gchar * signal, GList ** list)
+add_helper_generic (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data, const gchar * signal, GList ** list)
 {
 	GDBusConnection * conn = gdbus_upstart_ref();
 
@@ -1645,7 +1645,7 @@ add_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * helpe
 }
 
 static gboolean
-delete_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * type, gpointer user_data, GList ** list)
+delete_helper_generic (UbuntuAppLaunchHelperObserver observer, const gchar * type, gpointer user_data, GList ** list)
 {
 	helper_observer_t * observert = NULL;
 	GList * look;
@@ -1673,7 +1673,7 @@ delete_helper_generic (UpstartAppLaunchHelperObserver observer, const gchar * ty
 }
 
 gboolean
-upstart_app_launch_observer_add_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+ubuntu_app_launch_observer_add_helper_started (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
 	g_return_val_if_fail(observer != NULL, FALSE);
 	g_return_val_if_fail(helper_type != NULL, FALSE);
@@ -1683,7 +1683,7 @@ upstart_app_launch_observer_add_helper_started (UpstartAppLaunchHelperObserver o
 }
 
 gboolean
-upstart_app_launch_observer_add_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+ubuntu_app_launch_observer_add_helper_stop (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
 	g_return_val_if_fail(observer != NULL, FALSE);
 	g_return_val_if_fail(helper_type != NULL, FALSE);
@@ -1693,7 +1693,7 @@ upstart_app_launch_observer_add_helper_stop (UpstartAppLaunchHelperObserver obse
 }
 
 gboolean
-upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+ubuntu_app_launch_observer_delete_helper_started (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
 	g_return_val_if_fail(observer != NULL, FALSE);
 	g_return_val_if_fail(helper_type != NULL, FALSE);
@@ -1703,7 +1703,7 @@ upstart_app_launch_observer_delete_helper_started (UpstartAppLaunchHelperObserve
 }
 
 gboolean
-upstart_app_launch_observer_delete_helper_stop (UpstartAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
+ubuntu_app_launch_observer_delete_helper_stop (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
 {
 	g_return_val_if_fail(observer != NULL, FALSE);
 	g_return_val_if_fail(helper_type != NULL, FALSE);

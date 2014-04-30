@@ -1,4 +1,4 @@
-project(upstart-app-launch C CXX)
+project(ubuntu-app-launch C CXX)
 cmake_minimum_required(VERSION 2.8.9)
 
 option (enable_tests "Build tests" ON)
@@ -31,7 +31,7 @@ execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
 	OUTPUT_VARIABLE UPSTART_APP_LAUNCH_ARCH
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-set(upstart_app_launch_arch "${UPSTART_APP_LAUNCH_ARCH}")
+set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function")
 
@@ -133,7 +133,7 @@ install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
 add_executable(application-job application-job.c)
 set_target_properties(application-job PROPERTIES OUTPUT_NAME "application-job")
-target_link_libraries(application-job upstart-launcher)
+target_link_libraries(application-job ubuntu-launcher)
 install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
@@ -151,16 +151,16 @@ install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
 
 add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
 set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
-target_link_libraries(untrusted-helper-type-end upstart-launcher)
+target_link_libraries(untrusted-helper-type-end ubuntu-launcher)
 install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# upstart-app-launch-desktop.click-hook
+# ubuntu-app-launch-desktop.click-hook
 ####################
 
-configure_file("upstart-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/upstart-app-launch-desktop.click-hook" @ONLY)
+configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/ubuntu-app-launch-desktop.click-hook" @ONLY)
 
-add_subdirectory(libupstart-app-launch)
+add_subdirectory(libubuntu-app-launch)
 add_subdirectory(upstart-jobs)
 add_subdirectory(tools)
 
