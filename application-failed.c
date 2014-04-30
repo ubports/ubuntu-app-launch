@@ -51,7 +51,7 @@ main (int argc, char * argv[])
 	g_dbus_connection_emit_signal(bus,
 		NULL, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch",
+		"com.canonical.UbuntuAppLaunch",
 		"ApplicationFailed",
 		g_variant_new("(ss)", appid, crashed ? "crash" : "start-failure"),
 		&error);

@@ -659,7 +659,7 @@ TEST_F(LibUAL, StartingResponses)
 	g_dbus_connection_emit_signal(session,
 		NULL, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingBroadcast", /* signal */
 		g_variant_new("(s)", "foo"), /* params, the same */
 		NULL);
@@ -728,7 +728,7 @@ TEST_F(LibUAL, UrlSendTest)
 		g_dbus_connection_emit_signal(session,
 			NULL, /* destination */
 			"/", /* path */
-			"com.canonical.UpstartAppLaunch", /* interface */
+			"com.canonical.UbuntuAppLaunch", /* interface */
 			"UnityResumeResponse", /* signal */
 			g_variant_new("(s)", "foo"), /* params, the same */
 			NULL);
@@ -887,7 +887,7 @@ TEST_F(LibUAL, FailingObserver)
 	g_dbus_connection_emit_signal(session,
 		NULL, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
 		g_variant_new("(ss)", "foo", "crash"), /* params, the same */
 		NULL);
@@ -901,7 +901,7 @@ TEST_F(LibUAL, FailingObserver)
 	g_dbus_connection_emit_signal(session,
 		NULL, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
 		g_variant_new("(ss)", "foo", "blahblah"), /* params, the same */
 		NULL);
@@ -915,7 +915,7 @@ TEST_F(LibUAL, FailingObserver)
 	g_dbus_connection_emit_signal(session,
 		NULL, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
 		g_variant_new("(ss)", "foo", "start-failure"), /* params, the same */
 		NULL);
