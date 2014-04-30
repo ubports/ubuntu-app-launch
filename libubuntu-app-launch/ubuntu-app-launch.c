@@ -461,7 +461,7 @@ typedef struct _observer_t observer_t;
 struct _observer_t {
 	GDBusConnection * conn;
 	guint sighandle;
-	ubuntu_app_launch_app_observer_t func;
+	UbuntuAppLaunchAppObserver func;
 	gpointer user_data;
 };
 
@@ -470,7 +470,7 @@ typedef struct _failed_observer_t failed_observer_t;
 struct _failed_observer_t {
 	GDBusConnection * conn;
 	guint sighandle;
-	ubuntu_app_launch_app_failed_observer_t func;
+	UbuntuAppLaunchAppFailedObserver func;
 	gpointer user_data;
 };
 
@@ -533,7 +533,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 /* Creates the observer structure and registers for the signal with
    GDBus so that we can get a callback */
 static gboolean
-add_app_generic (ubuntu_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list)
+add_app_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, const gchar * signal, GList ** list)
 {
 	GDBusConnection * conn = gdbus_upstart_ref();
 
@@ -564,13 +564,13 @@ add_app_generic (ubuntu_app_launch_app_observer_t observer, gpointer user_data, 
 }
 
 gboolean
-ubuntu_app_launch_observer_add_app_started (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return add_app_generic(observer, user_data, "started", &started_array);
 }
 
 gboolean
-ubuntu_app_launch_observer_add_app_stop (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return add_app_generic(observer, user_data, "stopped", &stop_array);
 }
@@ -578,7 +578,7 @@ ubuntu_app_launch_observer_add_app_stop (ubuntu_app_launch_app_observer_t observ
 /* Creates the observer structure and registers for the signal with
    GDBus so that we can get a callback */
 static gboolean
-add_session_generic (ubuntu_app_launch_app_observer_t observer, gpointer user_data, const gchar * signal, GList ** list, GDBusSignalCallback session_cb)
+add_session_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, const gchar * signal, GList ** list, GDBusSignalCallback session_cb)
 {
 	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
@@ -626,7 +626,7 @@ focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * obj
 }
 
 gboolean
-ubuntu_app_launch_observer_add_app_focus (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return add_session_generic(observer, user_data, "UnityFocusRequest", &focus_array, focus_signal_cb);
 }
@@ -657,7 +657,7 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 }
 
 gboolean
-ubuntu_app_launch_observer_add_app_resume (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return add_session_generic(observer, user_data, "UnityResumeRequest", &resume_array, resume_signal_cb);
 }
@@ -688,7 +688,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 }
 
 gboolean
-ubuntu_app_launch_observer_add_app_starting (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
@@ -704,7 +704,7 @@ failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 	tracepoint(ubuntu_app_launch, observer_start, "failed");
 
 	if (observer->func != NULL) {
-		ubuntu_app_launch_app_failed_t type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
+		UbuntuAppLaunchAppFailed type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
 		g_variant_get(params, "(&s&s)", &appid, &typestr);
 
 		if (g_strcmp0("crash", typestr) == 0) {
@@ -722,7 +722,7 @@ failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 }
 
 gboolean
-ubuntu_app_launch_observer_add_app_failed (ubuntu_app_launch_app_failed_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
 {
 	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
@@ -753,7 +753,7 @@ ubuntu_app_launch_observer_add_app_failed (ubuntu_app_launch_app_failed_observer
 }
 
 static gboolean
-delete_app_generic (ubuntu_app_launch_app_observer_t observer, gpointer user_data, GList ** list)
+delete_app_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, GList ** list)
 {
 	observer_t * observert = NULL;
 	GList * look;
@@ -780,37 +780,37 @@ delete_app_generic (ubuntu_app_launch_app_observer_t observer, gpointer user_dat
 }
 
 gboolean
-ubuntu_app_launch_observer_delete_app_started (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &started_array);
 }
 
 gboolean
-ubuntu_app_launch_observer_delete_app_stop (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &stop_array);
 }
 
 gboolean
-ubuntu_app_launch_observer_delete_app_resume (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &resume_array);
 }
 
 gboolean
-ubuntu_app_launch_observer_delete_app_focus (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &focus_array);
 }
 
 gboolean
-ubuntu_app_launch_observer_delete_app_starting (ubuntu_app_launch_app_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
 	return delete_app_generic(observer, user_data, &starting_array);
 }
 
 gboolean
-ubuntu_app_launch_observer_delete_app_failed (ubuntu_app_launch_app_failed_observer_t observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
 {
 	failed_observer_t * observert = NULL;
 	GList * look;

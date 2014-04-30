@@ -55,7 +55,7 @@ focus (const gchar * appid, gpointer user_data)
 }
 
 void
-fail (const gchar * appid, ubuntu_app_launch_app_failed_t failhow, gpointer user_data)
+fail (const gchar * appid, UbuntuAppLaunchAppFailed failhow, gpointer user_data)
 {
 	const gchar * failstr = "unknown";
 	switch (failhow) {

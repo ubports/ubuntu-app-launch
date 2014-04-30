@@ -61,7 +61,7 @@ class FailureTest : public ::testing::Test
 };
 
 static void
-failed_observer (const gchar * appid, ubuntu_app_launch_app_failed_t reason, gpointer user_data)
+failed_observer (const gchar * appid, UbuntuAppLaunchAppFailed reason, gpointer user_data)
 {
 	if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_CRASH) {
 		std::string * last = static_cast<std::string *>(user_data);
@@ -121,7 +121,7 @@ TEST_F(FailureTest, LegacyTest)
 }
 
 static void
-failed_start_observer (const gchar * appid, ubuntu_app_launch_app_failed_t reason, gpointer user_data)
+failed_start_observer (const gchar * appid, UbuntuAppLaunchAppFailed reason, gpointer user_data)
 {
 	if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE) {
 		std::string * last = static_cast<std::string *>(user_data);

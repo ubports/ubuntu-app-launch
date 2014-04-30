@@ -35,7 +35,7 @@ good_observer (const gchar * appid, gpointer user_data)
 }
 
 static void
-bad_observer (const gchar * appid, ubuntu_app_launch_app_failed_t failure_type, gpointer user_data)
+bad_observer (const gchar * appid, UbuntuAppLaunchAppFailed failure_type, gpointer user_data)
 {
 	if (g_strcmp0(appid, global_appid) != 0) {
 		return;
