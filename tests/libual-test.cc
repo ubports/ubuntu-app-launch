@@ -21,7 +21,7 @@
 #include <gio/gio.h>
 
 extern "C" {
-#include "upstart-app-launch.h"
+#include "ubuntu-app-launch.h"
 #include "libdbustest/dbus-test.h"
 }
 
@@ -69,7 +69,7 @@ class LibUAL : public ::testing::Test
 
 		virtual void SetUp() {
 			gchar * linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
-			g_setenv("UPSTART_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
+			g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
 			g_free(linkfarmpath);
 
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
@@ -223,13 +223,13 @@ class LibUAL : public ::testing::Test
 			g_dbus_connection_set_exit_on_close(bus, FALSE);
 			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 
-			ASSERT_TRUE(upstart_app_launch_observer_add_app_focus(focus_cb, this));
-			ASSERT_TRUE(upstart_app_launch_observer_add_app_resume(resume_cb, this));
+			ASSERT_TRUE(ubuntu_app_launch_observer_add_app_focus(focus_cb, this));
+			ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resume(resume_cb, this));
 		}
 
 		virtual void TearDown() {
-			upstart_app_launch_observer_delete_app_focus(focus_cb, this);
-			upstart_app_launch_observer_delete_app_resume(resume_cb, this);
+			ubuntu_app_launch_observer_delete_app_focus(focus_cb, this);
+			ubuntu_app_launch_observer_delete_app_resume(resume_cb, this);
 
 			g_clear_object(&mock);
 			g_clear_object(&service);
@@ -304,13 +304,13 @@ TEST_F(LibUAL, StartApplication)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(upstart_app_launch_start_application("foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foolike", NULL));
 	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now look at the details of the call */
-	ASSERT_TRUE(upstart_app_launch_start_application("foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foolike", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -337,7 +337,7 @@ TEST_F(LibUAL, StartApplication)
 		"file:///home/phablet/test.txt",
 		NULL
 	};
-	ASSERT_TRUE(upstart_app_launch_start_application("foolike", urls));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foolike", urls));
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -356,7 +356,7 @@ TEST_F(LibUAL, StartApplicationTest)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	ASSERT_TRUE(upstart_app_launch_start_application_test("foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application_test("foolike", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -380,7 +380,7 @@ TEST_F(LibUAL, StopApplication)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	ASSERT_TRUE(upstart_app_launch_stop_application("foo"));
+	ASSERT_TRUE(ubuntu_app_launch_stop_application("foo"));
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
@@ -388,25 +388,25 @@ TEST_F(LibUAL, StopApplication)
 
 TEST_F(LibUAL, ApplicationLog)
 {
-	gchar * click_log = upstart_app_launch_application_log_path("foo");
+	gchar * click_log = ubuntu_app_launch_application_log_path("foo");
 	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-click-foo.log", click_log);
 	g_free(click_log);
 
-	gchar * legacy_single = upstart_app_launch_application_log_path("single");
+	gchar * legacy_single = ubuntu_app_launch_application_log_path("single");
 	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-legacy-single-.log", legacy_single);
 	g_free(legacy_single);
 
-	gchar * legacy_multiple = upstart_app_launch_application_log_path("bar");
+	gchar * legacy_multiple = ubuntu_app_launch_application_log_path("bar");
 	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-legacy-bar-2342345.log", legacy_multiple);
 	g_free(legacy_multiple);
 }
 
 TEST_F(LibUAL, ApplicationPid)
 {
-	EXPECT_EQ(upstart_app_launch_get_primary_pid("foo"), getpid());
-	EXPECT_EQ(upstart_app_launch_get_primary_pid("bar"), 5678);
-	EXPECT_TRUE(upstart_app_launch_pid_in_app_id(getpid(), "foo"));
-	EXPECT_FALSE(upstart_app_launch_pid_in_app_id(5678, "foo"));
+	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("foo"), getpid());
+	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("bar"), 5678);
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(getpid(), "foo"));
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(5678, "foo"));
 }
 
 TEST_F(LibUAL, ApplicationId)
@@ -415,42 +415,42 @@ TEST_F(LibUAL, ApplicationId)
 	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
 	/* Test with current-user-version, should return the version in the manifest */
-	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"));
+	EXPECT_STREQ("com.test.good_application_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"));
 
 	/* Test with version specified, shouldn't even read the manifest */
-	EXPECT_STREQ("com.test.good_application_1.2.4", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"));
+	EXPECT_STREQ("com.test.good_application_1.2.4", ubuntu_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"));
 
 	/* Test with out a version or app, should return the version in the manifest */
-	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "first-listed-app", "current-user-version"));
+	EXPECT_STREQ("com.test.good_application_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.good", "first-listed-app", "current-user-version"));
 
 	/* Test with a version or but wildcard app, should return the version in the manifest */
-	EXPECT_STREQ("com.test.good_application_1.2.4", upstart_app_launch_triplet_to_app_id("com.test.good", "last-listed-app", "1.2.4"));
+	EXPECT_STREQ("com.test.good_application_1.2.4", ubuntu_app_launch_triplet_to_app_id("com.test.good", "last-listed-app", "1.2.4"));
 
 	/* Make sure we can select the app from a list correctly */
-	EXPECT_STREQ("com.test.multiple_first_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", "first-listed-app", NULL));
-	EXPECT_STREQ("com.test.multiple_first_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", NULL, NULL));
-	EXPECT_STREQ("com.test.multiple_fifth_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.multiple", "last-listed-app", NULL));
-	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.multiple", "only-listed-app", NULL));
-	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "only-listed-app", NULL));
+	EXPECT_STREQ("com.test.multiple_first_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "first-listed-app", NULL));
+	EXPECT_STREQ("com.test.multiple_first_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.multiple", NULL, NULL));
+	EXPECT_STREQ("com.test.multiple_fifth_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "last-listed-app", NULL));
+	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "only-listed-app", NULL));
+	EXPECT_STREQ("com.test.good_application_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.good", "only-listed-app", NULL));
 
 	/* A bunch that should be NULL */
-	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-hooks", NULL, NULL));
-	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-json", NULL, NULL));
-	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-object", NULL, NULL));
-	EXPECT_EQ(nullptr, upstart_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
+	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-hooks", NULL, NULL));
+	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-json", NULL, NULL));
+	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-object", NULL, NULL));
+	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
 }
 
 TEST_F(LibUAL, AppIdParse)
 {
-	EXPECT_TRUE(upstart_app_launch_app_id_parse("com.ubuntu.test_test_123", NULL, NULL, NULL));
-	EXPECT_FALSE(upstart_app_launch_app_id_parse("inkscape", NULL, NULL, NULL));
-	EXPECT_FALSE(upstart_app_launch_app_id_parse("music-app", NULL, NULL, NULL));
+	EXPECT_TRUE(ubuntu_app_launch_app_id_parse("com.ubuntu.test_test_123", NULL, NULL, NULL));
+	EXPECT_FALSE(ubuntu_app_launch_app_id_parse("inkscape", NULL, NULL, NULL));
+	EXPECT_FALSE(ubuntu_app_launch_app_id_parse("music-app", NULL, NULL, NULL));
 
 	gchar * pkg;
 	gchar * app;
 	gchar * version;
 
-	ASSERT_TRUE(upstart_app_launch_app_id_parse("com.ubuntu.test_test_123", &pkg, &app, &version));
+	ASSERT_TRUE(ubuntu_app_launch_app_id_parse("com.ubuntu.test_test_123", &pkg, &app, &version));
 	EXPECT_STREQ("com.ubuntu.test", pkg);
 	EXPECT_STREQ("test", app);
 	EXPECT_STREQ("123", version);
@@ -464,7 +464,7 @@ TEST_F(LibUAL, AppIdParse)
 
 TEST_F(LibUAL, ApplicationList)
 {
-	gchar ** apps = upstart_app_launch_list_running_apps();
+	gchar ** apps = ubuntu_app_launch_list_running_apps();
 
 	ASSERT_NE(apps, nullptr);
 	ASSERT_EQ(g_strv_length(apps), 2);
@@ -510,8 +510,8 @@ TEST_F(LibUAL, StartStopObserver)
 		.name = nullptr
 	};
 
-	ASSERT_TRUE(upstart_app_launch_observer_add_app_started(observer_cb, &start_data));
-	ASSERT_TRUE(upstart_app_launch_observer_add_app_stop(observer_cb, &stop_data));
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_started(observer_cb, &start_data));
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_stop(observer_cb, &stop_data));
 
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
@@ -619,8 +619,8 @@ TEST_F(LibUAL, StartStopObserver)
 
 
 	/* Remove */
-	ASSERT_TRUE(upstart_app_launch_observer_delete_app_started(observer_cb, &start_data));
-	ASSERT_TRUE(upstart_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_started(observer_cb, &start_data));
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
 }
 
 static GDBusMessage *
@@ -654,7 +654,7 @@ TEST_F(LibUAL, StartingResponses)
 		&starting_count,
 		NULL);
 
-	EXPECT_TRUE(upstart_app_launch_observer_add_app_starting(starting_observer, &last_observer));
+	EXPECT_TRUE(ubuntu_app_launch_observer_add_app_starting(starting_observer, &last_observer));
 
 	g_dbus_connection_emit_signal(session,
 		NULL, /* destination */
@@ -669,7 +669,7 @@ TEST_F(LibUAL, StartingResponses)
 	EXPECT_EQ("foo", last_observer);
 	EXPECT_EQ(1, starting_count);
 
-	EXPECT_TRUE(upstart_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
+	EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
 
 	g_dbus_connection_remove_filter(session, filter);
 	g_object_unref(session);
@@ -677,7 +677,7 @@ TEST_F(LibUAL, StartingResponses)
 
 TEST_F(LibUAL, AppIdTest)
 {
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", NULL));
 	pause(50); /* Ensure all the events come through */
 	EXPECT_EQ("foo", this->last_focus_appid);
 	EXPECT_EQ("foo", this->last_resume_appid);
@@ -712,7 +712,7 @@ TEST_F(LibUAL, UrlSendTest)
 		"http://www.test.com",
 		NULL
 	};
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", uris));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", uris));
 	pause(100); /* Ensure all the events come through */
 
 	EXPECT_EQ("foo", this->last_focus_appid);
@@ -746,7 +746,7 @@ TEST_F(LibUAL, UrlSendNoObjectTest)
 		NULL
 	};
 
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", uris));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", uris));
 	pause(100); /* Ensure all the events come through */
 
 	EXPECT_EQ("foo", this->last_focus_appid);
@@ -757,7 +757,7 @@ TEST_F(LibUAL, UnityTimeoutTest)
 {
 	this->resume_timeout = 100;
 
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", NULL));
 	pause(1000); /* Ensure all the events come through */
 	EXPECT_EQ("foo", this->last_focus_appid);
 	EXPECT_EQ("foo", this->last_resume_appid);
@@ -772,7 +772,7 @@ TEST_F(LibUAL, UnityTimeoutUriTest)
 		NULL
 	};
 
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", uris));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", uris));
 	pause(1000); /* Ensure all the events come through */
 	EXPECT_EQ("foo", this->last_focus_appid);
 	EXPECT_EQ("foo", this->last_resume_appid);
@@ -804,7 +804,7 @@ TEST_F(LibUAL, UnityLostTest)
 		NULL
 	};
 
-	ASSERT_TRUE(upstart_app_launch_start_application("foo", uris));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", uris));
 
 	guint end = g_get_monotonic_time();
 
@@ -825,7 +825,7 @@ TEST_F(LibUAL, LegacySingleInstance)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Check for a single-instance app */
-	ASSERT_TRUE(upstart_app_launch_start_application("single", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("single", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -847,7 +847,7 @@ TEST_F(LibUAL, LegacySingleInstance)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Check for a multi-instance app */
-	ASSERT_TRUE(upstart_app_launch_start_application("multiple", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("multiple", NULL));
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -868,9 +868,9 @@ TEST_F(LibUAL, LegacySingleInstance)
 }
 
 static void
-failed_observer (const gchar * appid, upstart_app_launch_app_failed_t reason, gpointer user_data)
+failed_observer (const gchar * appid, ubuntu_app_launch_app_failed_t reason, gpointer user_data)
 {
-	if (reason == UPSTART_APP_LAUNCH_APP_FAILED_CRASH) {
+	if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_CRASH) {
 		std::string * last = static_cast<std::string *>(user_data);
 		*last = appid;
 	}
@@ -882,7 +882,7 @@ TEST_F(LibUAL, FailingObserver)
 	std::string last_observer;
 	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
-	EXPECT_TRUE(upstart_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+	EXPECT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
 
 	g_dbus_connection_emit_signal(session,
 		NULL, /* destination */
@@ -924,7 +924,7 @@ TEST_F(LibUAL, FailingObserver)
 
 	EXPECT_TRUE(last_observer.empty());
 
-	EXPECT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+	EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
 	g_object_unref(session);
 }
@@ -934,13 +934,13 @@ TEST_F(LibUAL, StartHelper)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "foolike", NULL));
 	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now look at the details of the call */
-	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "foolike", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -963,7 +963,7 @@ TEST_F(LibUAL, StartHelper)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now check a multi out */ 
-	gchar * instance_id = upstart_app_launch_start_multiple_helper("untrusted-type", "foolike", NULL);
+	gchar * instance_id = ubuntu_app_launch_start_multiple_helper("untrusted-type", "foolike", NULL);
 	ASSERT_NE(nullptr, instance_id);
 	g_debug("Multi-instance ID: %s", instance_id);
 
@@ -995,7 +995,7 @@ TEST_F(LibUAL, StartHelper)
 		"file:///home/phablet/test.txt",
 		NULL
 	};
-	ASSERT_TRUE(upstart_app_launch_start_helper("untrusted-type", "foolike", urls));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "foolike", urls));
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -1017,7 +1017,7 @@ TEST_F(LibUAL, StopHelper)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic helper */
-	ASSERT_TRUE(upstart_app_launch_stop_helper("untrusted-type", "foo"));
+	ASSERT_TRUE(ubuntu_app_launch_stop_helper("untrusted-type", "foo"));
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
@@ -1042,7 +1042,7 @@ TEST_F(LibUAL, StopHelper)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Multi helper */
-	ASSERT_TRUE(upstart_app_launch_stop_multiple_helper("untrusted-type", "foo", "instance-me"));
+	ASSERT_TRUE(ubuntu_app_launch_stop_multiple_helper("untrusted-type", "foo", "instance-me"));
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
@@ -1071,14 +1071,14 @@ TEST_F(LibUAL, StopHelper)
 
 TEST_F(LibUAL, HelperList)
 {
-	gchar ** blanktype = upstart_app_launch_list_helpers("not-a-type");
+	gchar ** blanktype = ubuntu_app_launch_list_helpers("not-a-type");
 
 	EXPECT_NE(nullptr, blanktype);
 	EXPECT_EQ(0, g_strv_length(blanktype));
 
 	g_strfreev(blanktype);
 
-	gchar ** goodtype = upstart_app_launch_list_helpers("untrusted-type");
+	gchar ** goodtype = ubuntu_app_launch_list_helpers("untrusted-type");
 
 	EXPECT_NE(nullptr, goodtype);
 	EXPECT_EQ(2, g_strv_length(goodtype));
@@ -1096,14 +1096,14 @@ TEST_F(LibUAL, HelperList)
 
 TEST_F(LibUAL, HelperInstanceList)
 {
-	gchar ** blanktype = upstart_app_launch_list_helper_instances("not-a-type", "com.bar_foo_8432.13.1");
+	gchar ** blanktype = ubuntu_app_launch_list_helper_instances("not-a-type", "com.bar_foo_8432.13.1");
 
 	EXPECT_NE(nullptr, blanktype);
 	EXPECT_EQ(0, g_strv_length(blanktype));
 
 	g_strfreev(blanktype);
 
-	gchar ** goodtype = upstart_app_launch_list_helper_instances("untrusted-type", "com.bar_foo_8432.13.1");
+	gchar ** goodtype = ubuntu_app_launch_list_helper_instances("untrusted-type", "com.bar_foo_8432.13.1");
 
 	EXPECT_NE(nullptr, goodtype);
 	EXPECT_EQ(1, g_strv_length(goodtype));
@@ -1147,8 +1147,8 @@ TEST_F(LibUAL, StartStopHelperObserver)
 		.instance = "1234"
 	};
 
-	ASSERT_TRUE(upstart_app_launch_observer_add_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
-	ASSERT_TRUE(upstart_app_launch_observer_add_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
 
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
@@ -1181,6 +1181,6 @@ TEST_F(LibUAL, StartStopHelperObserver)
 	ASSERT_EQ(stop_data.count, 1);
 
 	/* Remove */
-	ASSERT_TRUE(upstart_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
-	ASSERT_TRUE(upstart_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
 }

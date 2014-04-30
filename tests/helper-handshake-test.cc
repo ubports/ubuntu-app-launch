@@ -86,7 +86,7 @@ TEST_F(HelperHandshakeTest, BaseHandshake)
 	g_dbus_connection_emit_signal(con,
 		g_dbus_connection_get_unique_name(con), /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingSignal", /* signal */
 		g_variant_new("(s)", "fooapp"), /* params, the same */
 		NULL);

@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 #include <glib/gstdio.h>
 #include <gio/gio.h>
-#include <upstart-app-launch.h>
+#include <ubuntu-app-launch.h>
 
 class FailureTest : public ::testing::Test
 {
@@ -61,9 +61,9 @@ class FailureTest : public ::testing::Test
 };
 
 static void
-failed_observer (const gchar * appid, upstart_app_launch_app_failed_t reason, gpointer user_data)
+failed_observer (const gchar * appid, ubuntu_app_launch_app_failed_t reason, gpointer user_data)
 {
-	if (reason == UPSTART_APP_LAUNCH_APP_FAILED_CRASH) {
+	if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_CRASH) {
 		std::string * last = static_cast<std::string *>(user_data);
 		*last = appid;
 	}
@@ -77,7 +77,7 @@ TEST_F(FailureTest, CrashTest)
 	g_setenv("INSTANCE", "foo", TRUE);
 
 	std::string last_observer;
-	ASSERT_TRUE(upstart_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
 
 	/* Status based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
@@ -95,7 +95,7 @@ TEST_F(FailureTest, CrashTest)
 
 	EXPECT_EQ("foo", last_observer);
 
-	ASSERT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
 	return;
 }
@@ -107,7 +107,7 @@ TEST_F(FailureTest, LegacyTest)
 	g_setenv("INSTANCE", "foo-1234", TRUE);
 
 	std::string last_observer;
-	ASSERT_TRUE(upstart_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
 
 	/* Status based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
@@ -115,15 +115,15 @@ TEST_F(FailureTest, LegacyTest)
 
 	EXPECT_EQ("foo", last_observer);
 
-	ASSERT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
 	return;
 }
 
 static void
-failed_start_observer (const gchar * appid, upstart_app_launch_app_failed_t reason, gpointer user_data)
+failed_start_observer (const gchar * appid, ubuntu_app_launch_app_failed_t reason, gpointer user_data)
 {
-	if (reason == UPSTART_APP_LAUNCH_APP_FAILED_START_FAILURE) {
+	if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE) {
 		std::string * last = static_cast<std::string *>(user_data);
 		*last = appid;
 	}
@@ -138,14 +138,14 @@ TEST_F(FailureTest, StartTest)
 	g_unsetenv("EXIT_SIGNAL");
 
 	std::string last_observer;
-	ASSERT_TRUE(upstart_app_launch_observer_add_app_failed(failed_start_observer, &last_observer));
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_start_observer, &last_observer));
 
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
 	pause(100);
 
 	EXPECT_EQ("foo", last_observer);
 
-	ASSERT_TRUE(upstart_app_launch_observer_delete_app_failed(failed_start_observer, &last_observer));
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_start_observer, &last_observer));
 
 	return;
 }

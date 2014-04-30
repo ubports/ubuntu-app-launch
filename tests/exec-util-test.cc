@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 #include <libdbustest/dbus-test.h>
 #include <gio/gio.h>
-#include <libupstart-app-launch/upstart-app-launch.h>
+#include <libubuntu-app-launch/ubuntu-app-launch.h>
 
 class ExecUtil : public ::testing::Test
 {
@@ -59,11 +59,11 @@ class ExecUtil : public ::testing::Test
 			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 
 			/* Make the handshake clear faster */
-			upstart_app_launch_observer_add_app_starting(starting_cb, NULL);
+			ubuntu_app_launch_observer_add_app_starting(starting_cb, NULL);
 		}
 
 		virtual void TearDown() {
-			upstart_app_launch_observer_delete_app_starting(starting_cb, NULL);
+			ubuntu_app_launch_observer_delete_app_starting(starting_cb, NULL);
 
 			g_clear_object(&mock);
 			g_clear_object(&service);
