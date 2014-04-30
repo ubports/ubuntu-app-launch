@@ -1,4 +1,4 @@
-Source: upstart-app-launch
+Source: ubuntu-app-launch
 Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
@@ -23,76 +23,81 @@ Build-Depends: click-dev (>= 0.2.2),
                python3-dbusmock,
                upstart (>= 1.11),
 Standards-Version: 3.9.4
-Homepage: http://launchpad.net/upstart-app-launch
+Homepage: http://launchpad.net/ubuntu-app-launch
 # If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
 # just go ahead.  ~indicator-applet-developers will notice and sync up the code again.
-Vcs-Bzr: https://code.launchpad.net/~indicator-applet-developers/upstart-app-launch/trunk.13.10
-Vcs-Browser: http://bazaar.launchpad.net/~indicator-applet-developers/upstart-app-launch/trunk.13.10/files
+Vcs-Bzr: https://code.launchpad.net/~indicator-applet-developers/ubuntu-app-launch/trunk.13.10
+Vcs-Browser: http://bazaar.launchpad.net/~indicator-applet-developers/ubuntu-app-launch/trunk.13.10/files
 
-Package: upstart-app-launch
+Package: ubuntu-app-launch
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          click-apparmor,
          upstart (>= 1.11),
          zeitgeist-core,
-Description: Upstart Job for Launching Applications
+Replaces: upstart-app-launch
+Description: Session init system job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
 
-Package: upstart-app-launch-tools
+Package: ubuntu-app-launch-tools
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         upstart-app-launch (= ${binary:Version}),
+         ubuntu-app-launch (= ${binary:Version}),
+Replaces: upstart-app-launch-tools
 Description: Tools for working wtih launched applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
  .
  This package provides tools for working with the Upstart App Launch.
 
-Package: libupstart-app-launch2
+Package: libubuntu-app-launch2
 Section: libs
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
-Description: library for sending requests to the upstart app launch
+Replaces: libupstart-app-launch2
+Description: library for sending requests to the ubuntu app launch
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
  .
  This package contains shared libraries to be used by applications.
 
-Package: libupstart-app-launch2-dev
+Package: libubuntu-app-launch2-dev
 Section: libdevel
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          libglib2.0-dev,
-         libupstart-app-launch2 (= ${binary:Version}),
+         libubuntu-app-launch2 (= ${binary:Version}),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
-Replaces: libupstart-app-launch1-dev
-Conflicts: libupstart-app-launch1-dev
-Description: library for sending requests to the upstart app launch
+Replaces: libupstart-app-launch1-dev,
+          libupstart-app-launch2-dev
+Conflicts: libubuntu-app-launch1-dev
+Description: library for sending requests to the ubuntu app launch
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
  .
  This package contains files that are needed to build applications.
 
-Package: gir1.2-upstart-app-launch-2
+Package: gir1.2-ubuntu-app-launch-2
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         libupstart-app-launch2 (= ${binary:Version}),
+         libubuntu-app-launch2 (= ${binary:Version}),
          ${gir:Depends},
 Pre-Depends: ${misc:Pre-Depends}
-Recommends: upstart-app-launch (= ${binary:Version})
-Description: typelib file for libupstart-app-launch2
+Replaces: gir1.2-upstart-app-launch-2
+Recommends: ubuntu-app-launch (= ${binary:Version})
+Description: typelib file for libubuntu-app-launch2
  Interface for starting apps and getting info on them.
  .
  This package can be used by other packages using the GIRepository format to
- generate dynamic bindings for libupstart-app-launch2.
+ generate dynamic bindings for libubuntu-app-launch2.
 
