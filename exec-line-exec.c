@@ -65,6 +65,10 @@ main (int argc, char * argv[])
 		gchar * path_libpath = NULL;
 		const gchar * path_joinable[4] = { 0 };
 
+		const gchar * lib_path = g_getenv("LD_LIBRARY_PATH");
+		gchar * lib_libpath = g_build_filename(appdir, "lib", NULL);
+		const gchar * lib_joinable[4] = { 0 };
+
 		const gchar * import_path = g_getenv("QML2_IMPORT_PATH");
 		gchar * import_libpath = NULL;
 		const gchar * import_joinable[4] = { 0 };
@@ -80,6 +84,10 @@ main (int argc, char * argv[])
 			path_joinable[1] = appdir;
 			path_joinable[2] = path_path;
 
+			lib_joinable[0] = lib_libpath;
+			lib_joinable[1] = import_libpath;
+			lib_joinable[2] = lib_path;
+
 			/* Need to check whether the original is NULL because we're
 			   appending instead of prepending */
 			if (import_path == NULL) {
@@ -92,6 +100,9 @@ main (int argc, char * argv[])
 			path_joinable[0] = appdir;
 			path_joinable[1] = path_path;
 
+			lib_joinable[0] = lib_libpath;
+			lib_joinable[1] = lib_path;
+
 			import_joinable[0] = import_path;
 		}
 
@@ -99,6 +110,11 @@ main (int argc, char * argv[])
 		g_setenv("PATH", newpath, TRUE);
 		g_free(path_libpath);
 		g_free(newpath);
+
+		gchar * newlib = g_strjoinv(":", (gchar**)lib_joinable);
+		g_setenv("LD_LIBRARY_PATH", newlib, TRUE);
+		g_free(lib_libpath);
+		g_free(newlib);
 
 		if (import_joinable[0] != NULL) {
 			gchar * newimport = g_strjoinv(":", (gchar**)import_joinable);
