@@ -84,8 +84,8 @@ main (int argc, char * argv[])
 			path_joinable[1] = appdir;
 			path_joinable[2] = path_path;
 
-			lib_joinable[0] = lib_libpath;
-			lib_joinable[1] = import_libpath;
+			lib_joinable[0] = import_libpath;
+			lib_joinable[1] = lib_libpath;
 			lib_joinable[2] = lib_path;
 
 			/* Need to check whether the original is NULL because we're
