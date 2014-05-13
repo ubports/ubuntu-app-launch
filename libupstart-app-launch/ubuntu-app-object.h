@@ -31,25 +31,25 @@ extern "C" {
 
 typedef struct _UbuntuAppObject UbuntuAppObject;
 
-UbuntuAppObject * ubuntu_app_object_create (const gchar *                     pkg,
-                                            const gchar *                     app,
-                                            const gchar *                     version);
+UbuntuAppObject * ubuntu_app_object_create       (const gchar * pkg,
+                                                  const gchar * app,
+                                                  const gchar * version);
 
-void ubuntu_app_object_free (UbuntuAppObject * obj);
+void              ubuntu_app_object_free         (UbuntuAppObject * obj);
 
-gboolean   ubuntu_app_object_start         (UbuntuAppObject * obj,
-                                            const gchar * const *             uris);
+gboolean          ubuntu_app_object_start        (UbuntuAppObject *      obj,
+                                                  const gchar * const *  uris);
 
-gboolean   ubuntu_app_object_stop         (UbuntuAppObject * obj);
+gboolean          ubuntu_app_object_stop         (UbuntuAppObject * obj);
 
-gchar *   ubuntu_app_object_log_path         (UbuntuAppObject * obj);
+gchar *           ubuntu_app_object_log_path     (UbuntuAppObject * obj);
 
-GPid   ubuntu_app_object_primary_pid         (UbuntuAppObject * obj);
+GPid              ubuntu_app_object_primary_pid  (UbuntuAppObject * obj);
 
-gboolean   ubuntu_app_object_has_pid             (UbuntuAppObject * obj,
-GPid                              pid);
+gboolean          ubuntu_app_object_has_pid      (UbuntuAppObject * obj,
+                                                  GPid              pid);
 
-const gchar *   ubuntu_app_object_app_id         (UbuntuAppObject * obj);
+const gchar *     ubuntu_app_object_app_id       (UbuntuAppObject * obj);
 
 #ifdef __cplusplus
 }
