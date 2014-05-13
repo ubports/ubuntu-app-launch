@@ -20,10 +20,12 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
 set(LAUNCHER_HEADERS
 upstart-app-launch.h
+ubuntu-app-object.h
 )
 
 set(LAUNCHER_SOURCES
 upstart-app-launch.c
+ubuntu-app-object.c
 second-exec-core.c
 upstart-app-launch-trace.c
 "${CMAKE_SOURCE_DIR}/helpers-keyfile.c"
