@@ -10,20 +10,14 @@ env APP_ID
 env APP_EXEC
 env APP_EXEC_POLICY=""
 env APP_URIS
-# For Surface Flinger
-env APP_DESKTOP_FILE
+env APP_DESKTOP_FILE_PATH
 
 # This will be set to "unconfined" by desktop-exec if there is no confinement defined
 apparmor switch $APP_EXEC_POLICY
 
-pre-start script
-	if pgrep -u system surfaceflinger ; then
-		initctl set-env USING_SURFACE_FLINGER=1
-	fi
+pre-start exec @pkglibexecdir@/desktop-exec
 
-	exec @pkglibexecdir@/desktop-exec
-end script
-
+# This could be confined
 exec @pkglibexecdir@/exec-line-exec
 
 post-start exec @pkglibexecdir@/zg-report-app open

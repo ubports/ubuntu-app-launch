@@ -71,10 +71,8 @@ main (int argc, char * argv[])
 
 	tracepoint(upstart_app_launch, desktop_found);
 
-	/* TODO: This is for Surface Flinger.  When we drop support, we can drop this code */
+	/* Desktop file name so that libs can get other info from it */
 	if (desktopfilename != NULL) {
-		set_upstart_variable("APP_DESKTOP_FILE", desktopfilename, FALSE);
-		/* This is not for SF, it's for platform API only above is for SF */
 		set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfilename, FALSE);
 		g_free(desktopfilename);
 	}
