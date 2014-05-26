@@ -52,6 +52,9 @@ include_directories(${JSONGLIB_INCLUDE_DIRS})
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
+pkg_check_modules(CLICK REQUIRED click-0.4>=0.4.18)
+include_directories(${CLICK_INCLUDE_DIRS})
+
 pkg_check_modules(LIBUPSTART REQUIRED libupstart)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
 
@@ -73,14 +76,14 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
 ####################
 
 add_library(helpers STATIC helpers.c helpers-keyfile.c)
-target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES})
+target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
 
 ####################
 # desktop-exec
 ####################
 
 add_lttng_gen_tp(NAME desktop-exec-trace)
-add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c)
+add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c recoverable-problem.c)
 set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
 target_link_libraries(desktop-exec helpers ${LTTNG_LIBRARIES})
 install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
@@ -92,7 +95,7 @@ install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
 add_lttng_gen_tp(NAME click-exec-trace)
 add_executable(click-exec click-exec.c click-exec-trace.c)
 set_target_properties(click-exec PROPERTIES OUTPUT_NAME "click-exec")
-target_link_libraries(click-exec helpers ${LTTNG_LIBRARIES})
+target_link_libraries(click-exec helpers ${LTTNG_LIBRARIES} ${CLICK_LIBRARIES})
 install(TARGETS click-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
@@ -101,7 +104,7 @@ install(TARGETS click-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 add_executable(desktop-hook desktop-hook.c)
 set_target_properties(desktop-hook PROPERTIES OUTPUT_NAME "desktop-hook")
-target_link_libraries(desktop-hook helpers)
+target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES})
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################

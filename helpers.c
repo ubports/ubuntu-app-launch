@@ -18,6 +18,7 @@
  */
 
 #include <json-glib/json-glib.h>
+#include <click.h>
 #include <upstart.h>
 #include "helpers.h"
 
@@ -62,62 +63,54 @@ gchar *
 manifest_to_desktop (const gchar * app_dir, const gchar * app_id)
 {
 	gchar * package = NULL;
-	gchar * output = NULL;
 	gchar * application = NULL;
 	gchar * version = NULL;
-	JsonParser * parser = NULL;
-	GError * error = NULL;
+	ClickDB * db = NULL;
+	ClickUser * user = NULL;
+	JsonObject * manifest = NULL;
 	gchar * desktoppath = NULL;
+	GError * error = NULL;
 
 	if (!app_id_to_triplet(app_id, &package, &application, &version)) {
 		g_warning("Unable to parse triplet: %s", app_id);
 		return NULL;
 	}
 
-	gchar * cmdline = g_strdup_printf("click info \"%s\"", package);
-	g_spawn_command_line_sync(cmdline, &output, NULL, NULL, &error);
-	g_free(cmdline);
-
+	db = click_db_new();
+	/* If TEST_CLICK_DB is unset, this reads the system database. */
+	click_db_read(db, g_getenv("TEST_CLICK_DB"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		goto manifest_out;
+	}
+	/* If TEST_CLICK_USER is unset, this uses the current user name. */
+	user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		goto manifest_out;
+	}
+	manifest = click_user_get_manifest(user, package, &error);
 	if (error != NULL) {
 		g_warning("Unable to get manifest for '%s': %s", package, error->message);
-		g_error_free(error);
 		goto manifest_out;
 	}
 
-	parser = json_parser_new();
-
-	json_parser_load_from_data(parser, output, -1, &error);
-	g_free(output);
-
-	if (error != NULL) {
-		g_warning("Unable to load manifest data '%s': %s", package, error->message);
-		g_error_free(error);
-		goto manifest_out;
-	}
-
-	JsonNode * root = json_parser_get_root(parser);
-	if (json_node_get_node_type(root) != JSON_NODE_OBJECT) {
-		g_warning("Manifest '%s' doesn't start with an object", package);
-		goto manifest_out;
-	}
-
-	JsonObject * rootobj = json_node_get_object(root);
-	if (!json_object_has_member(rootobj, "version")) {
+	if (!json_object_has_member(manifest, "version")) {
 		g_warning("Manifest '%s' doesn't have a version", package);
 		goto manifest_out;
 	}
 
-	if (g_strcmp0(json_object_get_string_member(rootobj, "version"), version) != 0) {
-		g_warning("Manifest '%s' version '%s' doesn't match AppID version '%s'", package, json_object_get_string_member(rootobj, "version"), version);
+	if (g_strcmp0(json_object_get_string_member(manifest, "version"), version) != 0) {
+		g_warning("Manifest '%s' version '%s' doesn't match AppID version '%s'", package, json_object_get_string_member(manifest, "version"), version);
 		goto manifest_out;
 	}
 
-	if (!json_object_has_member(rootobj, "hooks")) {
+	if (!json_object_has_member(manifest, "hooks")) {
 		g_warning("Manifest '%s' doesn't have an hooks section", package);
 		goto manifest_out;
 	}
 
-	JsonObject * appsobj = json_object_get_object_member(rootobj, "hooks");
+	JsonObject * appsobj = json_object_get_object_member(manifest, "hooks");
 	if (appsobj == NULL) {
 		g_warning("Manifest '%s' has an hooks section that is not a JSON object", package);
 		goto manifest_out;
@@ -151,7 +144,12 @@ manifest_to_desktop (const gchar * app_dir, const gchar * app_id)
 	}
 
 manifest_out:
-	g_clear_object(&parser);
+	if (error != NULL)
+		g_error_free(error);
+	if (manifest != NULL)
+		json_object_unref(manifest);
+	g_clear_object(&user);
+	g_clear_object(&db);
 	g_free(package);
 	g_free(application);
 	g_free(version);

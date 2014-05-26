@@ -77,11 +77,6 @@ class LibUAL : public ::testing::Test
 
 			service = dbus_test_service_new(NULL);
 
-			const gchar * oldpath = g_getenv("PATH");
-			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
-			g_setenv("PATH", newpath, TRUE);
-			g_free(newpath);
-
 			debugConnection();
 
 			mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
@@ -377,7 +372,7 @@ TEST_F(LibUAL, StartApplicationTest)
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
 	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
-	EXPECT_TRUE(check_env(env, "QT_TESTABILITY", "1"));
+	EXPECT_TRUE(check_env(env, "QT_LOAD_TESTABILITY", "1"));
 	g_variant_unref(env);
 }
 
@@ -416,6 +411,9 @@ TEST_F(LibUAL, ApplicationPid)
 
 TEST_F(LibUAL, ApplicationId)
 {
+	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
+
 	/* Test with current-user-version, should return the version in the manifest */
 	EXPECT_STREQ("com.test.good_application_1.2.3", upstart_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"));
 

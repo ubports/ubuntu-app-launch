@@ -1,3 +1,57 @@
+upstart-app-launch (0.3+14.10.20140521-0ubuntu1) utopic; urgency=low
+
+  [ Ted Gould ]
+  * Drop Surface Flinger support
+  * Debug message for valid, though rare, conditions. (LP: #1301173)
+  * More elegant handling of bad application id errors (LP: #1238068)
+  * Set LD_LIBRARY_PATH to include the application directory
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 21 May 2014 17:41:20 +0000
+
+upstart-app-launch (0.3+14.04.20140411-0ubuntu1) trusty; urgency=low
+
+  [ Ted Gould ]
+  * Kill all jobs in process group on exit
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 11 Apr 2014 22:14:55 +0000
+
+upstart-app-launch (0.3+14.04.20140321-0ubuntu1) trusty; urgency=low
+
+  [ Colin Watson ]
+  * Use libclick to get the package directory, saving about 0.7 seconds
+    from Click application startup (on mako).
+  * Use libclick to get package manifests, saving about 0.7 seconds from
+    Click application startup (on mako).
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 21 Mar 2014 17:56:24 +0000
+
+upstart-app-launch (0.3+14.04.20140320-0ubuntu1) trusty; urgency=low
+
+  [ Thomi Richards ]
+  * Export the correct environment variable to load apps with
+    testability enabled. (LP: #1285947)
+
+  [ Ubuntu daily release ]
+  * New rebuild forced
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 20 Mar 2014 23:22:49 +0000
+
+upstart-app-launch (0.3+14.04.20140220-0ubuntu3) trusty; urgency=medium
+
+  * Change dependency on "zeitgeist" to "zeitgeist-core". The former is a
+    metapackage which pulls in python2 and useless gtk/X data providers,
+    whereas zeitgeist-core provides the service necessary for
+    zg-report-app to operate.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Sat, 22 Feb 2014 23:00:37 +0000
+
+upstart-app-launch (0.3+14.04.20140220-0ubuntu2) trusty; urgency=medium
+
+  * Drop depends:click from a Multi-Arch:same library package, as click is
+    neither M-A:allowed nor M-A:foreign. This unbreaks cross-compilation.
+
+ -- Dimitri John Ledkov <xnox@ubuntu.com>  Thu, 20 Feb 2014 23:51:29 +0000
+
 upstart-app-launch (0.3+14.04.20140220-0ubuntu1) trusty; urgency=low
 
   [ Ted Gould ]

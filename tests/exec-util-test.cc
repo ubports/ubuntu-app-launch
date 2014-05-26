@@ -37,10 +37,6 @@ class ExecUtil : public ::testing::Test
 		virtual void SetUp() {
 			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
-			const gchar * oldpath = g_getenv("PATH");
-			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
-			g_setenv("PATH", newpath, TRUE);
-			g_free(newpath);
 
 			service = dbus_test_service_new(NULL);
 
@@ -90,13 +86,15 @@ TEST_F(ExecUtil, ClickExec)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
 	g_setenv("APP_ID", "com.test.good_application_1.2.3", TRUE);
+	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
 	g_spawn_command_line_sync(CLICK_EXEC_TOOL, NULL, NULL, NULL, NULL);
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	ASSERT_EQ(12, len);
+	ASSERT_EQ(11, len);
 	ASSERT_NE(nullptr, calls);
 
 	unsigned int i;
@@ -111,8 +109,9 @@ TEST_F(ExecUtil, ClickExec)
 	bool got_shader_dir = false;
 	bool got_app_dir = false;
 	bool got_app_exec = false;
-	bool got_app_desktop = false;
 	bool got_app_desktop_path = false;
+
+#define APP_DIR CMAKE_SOURCE_DIR "/click-root-dir/.click/users/test-user/com.test.good"
 
 	for (i = 0; i < len; i++) {
 		EXPECT_STREQ("SetEnv", calls[i].name);
@@ -139,7 +138,7 @@ TEST_F(ExecUtil, ClickExec)
 		} else if (g_strcmp0(var, "XDG_RUNTIME_DIR") == 0) {
 			got_runtime_dir = true;
 		} else if (g_strcmp0(var, "XDG_DATA_DIRS") == 0) {
-			EXPECT_TRUE(g_str_has_prefix(value, CMAKE_SOURCE_DIR "/click-app-dir:"));
+			EXPECT_TRUE(g_str_has_prefix(value, APP_DIR ":"));
 			got_data_dirs = true;
 		} else if (g_strcmp0(var, "TMPDIR") == 0) {
 			EXPECT_TRUE(g_str_has_suffix(value, "com.test.good"));
@@ -148,15 +147,13 @@ TEST_F(ExecUtil, ClickExec)
 			EXPECT_TRUE(g_str_has_suffix(value, "com.test.good"));
 			got_shader_dir = true;
 		} else if (g_strcmp0(var, "APP_DIR") == 0) {
-			EXPECT_STREQ(CMAKE_SOURCE_DIR "/click-app-dir", value);
+			EXPECT_STREQ(APP_DIR, value);
 			got_app_dir = true;
 		} else if (g_strcmp0(var, "APP_EXEC") == 0) {
 			EXPECT_STREQ("foo", value);
 			got_app_exec = true;
-		} else if (g_strcmp0(var, "APP_DESKTOP_FILE") == 0) {
-			got_app_desktop = true;
 		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
-			EXPECT_STREQ(CMAKE_SOURCE_DIR "/click-app-dir/application.desktop", value);
+			EXPECT_STREQ(APP_DIR "/application.desktop", value);
 			got_app_desktop_path = true;
 		} else {
 			g_warning("Unknown variable! %s", var);
@@ -165,6 +162,8 @@ TEST_F(ExecUtil, ClickExec)
 
 		g_free(var);
 	}
+
+#undef APP_DIR
 
 	EXPECT_TRUE(got_app_isolation);
 	EXPECT_TRUE(got_cache_home);
@@ -176,7 +175,6 @@ TEST_F(ExecUtil, ClickExec)
 	EXPECT_TRUE(got_shader_dir);
 	EXPECT_TRUE(got_app_dir);
 	EXPECT_TRUE(got_app_exec);
-	EXPECT_TRUE(got_app_desktop);
 	EXPECT_TRUE(got_app_desktop_path);
 }
 
@@ -191,13 +189,12 @@ TEST_F(ExecUtil, DesktopExec)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	ASSERT_EQ(4, len);
+	ASSERT_EQ(3, len);
 	ASSERT_NE(nullptr, calls);
 
 	unsigned int i;
 
 	bool got_app_exec = false;
-	bool got_app_desktop = false;
 	bool got_app_desktop_path = false;
 	bool got_app_exec_policy = false;
 
@@ -217,8 +214,6 @@ TEST_F(ExecUtil, DesktopExec)
 		if (g_strcmp0(var, "APP_EXEC") == 0) {
 			EXPECT_STREQ("foo", value);
 			got_app_exec = true;
-		} else if (g_strcmp0(var, "APP_DESKTOP_FILE") == 0) {
-			got_app_desktop = true;
 		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
 			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/foo.desktop", value);
 			got_app_desktop_path = true;
@@ -234,7 +229,6 @@ TEST_F(ExecUtil, DesktopExec)
 	}
 
 	EXPECT_TRUE(got_app_exec);
-	EXPECT_TRUE(got_app_desktop);
 	EXPECT_TRUE(got_app_desktop_path);
 	EXPECT_TRUE(got_app_exec_policy);
 }

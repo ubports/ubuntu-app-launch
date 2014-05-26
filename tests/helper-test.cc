@@ -33,10 +33,6 @@ class HelperTest : public ::testing::Test
 	protected:
 		virtual void SetUp() {
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
-			const gchar * oldpath = g_getenv("PATH");
-			gchar * newpath = g_strjoin(":", CMAKE_SOURCE_DIR, oldpath, NULL);
-			g_setenv("PATH", newpath, TRUE);
-			g_free(newpath);
 			g_setenv("DATA_WRITE_DIR", CMAKE_BINARY_DIR, TRUE);
 			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			return;
@@ -421,6 +417,9 @@ TEST_F(HelperTest, DesktopToExec)
 TEST_F(HelperTest, ManifestToDesktop)
 {
 	gchar * desktop = NULL;
+
+	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
 	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.good_application_1.2.3");
 	ASSERT_STREQ(desktop, CMAKE_SOURCE_DIR "/click-app-dir/application.desktop");
