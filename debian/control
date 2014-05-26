@@ -37,6 +37,8 @@ Depends: ${shlibs:Depends},
          upstart (>= 1.11),
          zeitgeist-core,
 Replaces: upstart-app-launch
+Conflicts: upstart-app-launch
+Provides: upstart-app-launch
 Description: Session init system job for Launching Applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
@@ -46,7 +48,6 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          ubuntu-app-launch (= ${binary:Version}),
-Replaces: upstart-app-launch-tools
 Description: Tools for working wtih launched applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
@@ -60,7 +61,6 @@ Depends: ${misc:Depends},
          ${shlibs:Depends},
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
-Replaces: libupstart-app-launch2
 Description: library for sending requests to the ubuntu app launch
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
@@ -76,9 +76,6 @@ Depends: ${misc:Depends},
          libubuntu-app-launch2 (= ${binary:Version}),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
-Replaces: libupstart-app-launch1-dev,
-          libupstart-app-launch2-dev
-Conflicts: libubuntu-app-launch1-dev
 Description: library for sending requests to the ubuntu app launch
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.
@@ -93,7 +90,6 @@ Depends: ${shlibs:Depends},
          libubuntu-app-launch2 (= ${binary:Version}),
          ${gir:Depends},
 Pre-Depends: ${misc:Pre-Depends}
-Replaces: gir1.2-upstart-app-launch-2
 Recommends: ubuntu-app-launch (= ${binary:Version})
 Description: typelib file for libubuntu-app-launch2
  Interface for starting apps and getting info on them.
