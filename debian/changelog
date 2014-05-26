@@ -4,6 +4,16 @@ ubuntu-app-launch (0.4-0ubuntu1) UNRELEASED; urgency=medium
 
  -- Ted Gould <ted@ubuntu.com>  Wed, 30 Apr 2014 10:06:03 -0500
 
+upstart-app-launch (0.3+14.10.20140521-0ubuntu1) utopic; urgency=low
+
+  [ Ted Gould ]
+  * Drop Surface Flinger support
+  * Debug message for valid, though rare, conditions. (LP: #1301173)
+  * More elegant handling of bad application id errors (LP: #1238068)
+  * Set LD_LIBRARY_PATH to include the application directory
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Wed, 21 May 2014 17:41:20 +0000
+
 upstart-app-launch (0.3+14.04.20140411-0ubuntu1) trusty; urgency=low
 
   [ Ted Gould ]

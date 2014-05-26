@@ -25,6 +25,7 @@
 
 #include "helpers.h"
 #include "desktop-exec-trace.h"
+#include "recoverable-problem.h"
 
 int
 main (int argc, char * argv[])
@@ -65,16 +66,54 @@ main (int argc, char * argv[])
 	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
 	if (keyfile == NULL) {
-		g_error("Unable to find keyfile for application '%s'", app_id);
+		g_warning("Unable to find keyfile for application '%s'", app_id);
+
+		const gchar * props[3] = {
+			"AppId", NULL,
+			NULL
+		};
+		props[1] = app_id;
+
+		GPid pid = 0;
+		const gchar * launcher_pid = g_getenv("APP_LAUNCHER_PID");
+		if (launcher_pid != NULL) {
+			pid = atoi(launcher_pid);
+		}
+
+		/* Checking to see if we're using the command line tool to create
+		   the appid. Chances are in that case it's a user error, and we
+		   don't need to automatically record it, the user mistyped. */
+		gboolean debugtool = FALSE;
+		if (pid != 0) {
+			gchar * cmdpath = g_strdup_printf("/proc/%d/cmdline", pid);
+			gchar * cmdline = NULL;
+
+			if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
+				if (g_strstr_len(cmdline, -1, "upstart-app-launch") != NULL) {
+					debugtool = TRUE;
+				}
+
+				g_free(cmdline);
+			} else {
+				/* The caller has already exited, probably a debug tool */
+				debugtool = TRUE;
+			}
+
+			g_free(cmdpath);
+		}
+
+		if (!debugtool) {
+			report_recoverable_problem("upstart-app-launch-invalid-appid", pid, TRUE, props);
+		} else {
+			g_debug("Suppressing appid recoverable error for debug tool");
+		}
 		return 1;
 	}
 
 	tracepoint(upstart_app_launch, desktop_found);
 
-	/* TODO: This is for Surface Flinger.  When we drop support, we can drop this code */
+	/* Desktop file name so that libs can get other info from it */
 	if (desktopfilename != NULL) {
-		set_upstart_variable("APP_DESKTOP_FILE", desktopfilename, FALSE);
-		/* This is not for SF, it's for platform API only above is for SF */
 		set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfilename, FALSE);
 		g_free(desktopfilename);
 	}

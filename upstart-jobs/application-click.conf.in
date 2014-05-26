@@ -10,22 +10,14 @@ env APP_ID
 env APP_EXEC
 env APP_URIS
 env APP_DIR
-# For Surface Flinger
-env APP_DESKTOP_FILE
-env APP_PROCESS_GROUP
+env APP_DESKTOP_FILE_PATH
 
 env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
 export UBUNTU_APP_LAUNCH_ARCH
 
 apparmor switch ${APP_ID}
 
-pre-start script
-	if pgrep -u system surfaceflinger ; then
-		initctl set-env USING_SURFACE_FLINGER=1
-	fi
-
-	exec @pkglibexecdir@/click-exec
-end script
+pre-start exec @pkglibexecdir@/click-exec
 
 # Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec

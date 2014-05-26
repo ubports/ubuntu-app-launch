@@ -83,7 +83,7 @@ target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LI
 ####################
 
 add_lttng_gen_tp(NAME desktop-exec-trace)
-add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c)
+add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c recoverable-problem.c)
 set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
 target_link_libraries(desktop-exec helpers ${LTTNG_LIBRARIES})
 install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")

@@ -94,7 +94,7 @@ TEST_F(ExecUtil, ClickExec)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	ASSERT_EQ(12, len);
+	ASSERT_EQ(11, len);
 	ASSERT_NE(nullptr, calls);
 
 	unsigned int i;
@@ -109,7 +109,6 @@ TEST_F(ExecUtil, ClickExec)
 	bool got_shader_dir = false;
 	bool got_app_dir = false;
 	bool got_app_exec = false;
-	bool got_app_desktop = false;
 	bool got_app_desktop_path = false;
 
 #define APP_DIR CMAKE_SOURCE_DIR "/click-root-dir/.click/users/test-user/com.test.good"
@@ -153,8 +152,6 @@ TEST_F(ExecUtil, ClickExec)
 		} else if (g_strcmp0(var, "APP_EXEC") == 0) {
 			EXPECT_STREQ("foo", value);
 			got_app_exec = true;
-		} else if (g_strcmp0(var, "APP_DESKTOP_FILE") == 0) {
-			got_app_desktop = true;
 		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
 			EXPECT_STREQ(APP_DIR "/application.desktop", value);
 			got_app_desktop_path = true;
@@ -178,7 +175,6 @@ TEST_F(ExecUtil, ClickExec)
 	EXPECT_TRUE(got_shader_dir);
 	EXPECT_TRUE(got_app_dir);
 	EXPECT_TRUE(got_app_exec);
-	EXPECT_TRUE(got_app_desktop);
 	EXPECT_TRUE(got_app_desktop_path);
 }
 
@@ -193,13 +189,12 @@ TEST_F(ExecUtil, DesktopExec)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 
-	ASSERT_EQ(4, len);
+	ASSERT_EQ(3, len);
 	ASSERT_NE(nullptr, calls);
 
 	unsigned int i;
 
 	bool got_app_exec = false;
-	bool got_app_desktop = false;
 	bool got_app_desktop_path = false;
 	bool got_app_exec_policy = false;
 
@@ -219,8 +214,6 @@ TEST_F(ExecUtil, DesktopExec)
 		if (g_strcmp0(var, "APP_EXEC") == 0) {
 			EXPECT_STREQ("foo", value);
 			got_app_exec = true;
-		} else if (g_strcmp0(var, "APP_DESKTOP_FILE") == 0) {
-			got_app_desktop = true;
 		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
 			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/foo.desktop", value);
 			got_app_desktop_path = true;
@@ -236,7 +229,6 @@ TEST_F(ExecUtil, DesktopExec)
 	}
 
 	EXPECT_TRUE(got_app_exec);
-	EXPECT_TRUE(got_app_desktop);
 	EXPECT_TRUE(got_app_desktop_path);
 	EXPECT_TRUE(got_app_exec_policy);
 }
