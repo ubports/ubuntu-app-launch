@@ -17,19 +17,23 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "ubuntu-app-launch.h"
+#include "ubuntu-app-launch-mock.h"
 
-int
-main (int argc, gchar * argv[]) {
+static GPid primary_pid = 0;
+static gchar * primary_pid_appid = NULL;
 
-	if (argc != 2) {
-		g_printerr("Usage: %s <app id>\n", argv[0]);
-		return 1;
-	}
+GPid
+ubuntu_app_launch_get_primary_pid (const gchar * appid)
+{
+	g_free(primary_pid_appid);
+	primary_pid_appid = g_strdup(appid);
+	return primary_pid;
+}
 
-	if (upstart_app_launch_stop_application(argv[1])) {
-		return 0;
-	} else {
-		return 1;
-	}
+void
+ubuntu_app_launch_mock_set_primary_pid (GPid pid)
+{
+	primary_pid = pid;
+	return;
 }

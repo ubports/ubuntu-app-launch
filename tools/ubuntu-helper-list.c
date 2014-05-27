@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 #include <gio/gio.h>
 
 int
@@ -30,7 +30,7 @@ main (int argc, gchar * argv[]) {
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, -1);
 
-	gchar ** appids = upstart_app_launch_list_helpers(argv[1]);
+	gchar ** appids = ubuntu_app_launch_list_helpers(argv[1]);
 	if (appids == NULL) {
 		g_warning("Error getting App IDs for helper type '%s'", argv[1]);
 		return -1;
