@@ -89,7 +89,7 @@ main (int argc, char * argv[])
 			gchar * cmdline = NULL;
 
 			if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
-				if (g_strstr_len(cmdline, -1, "upstart-app-launch") != NULL) {
+				if (g_strstr_len(cmdline, -1, "ubuntu-app-launch") != NULL) {
 					debugtool = TRUE;
 				}
 
