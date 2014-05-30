@@ -139,13 +139,11 @@ main (int argc, char * argv[])
 	tracepoint(upstart_app_launch, exec_parse_complete);
 
 	if (g_getenv("MIR_SOCKET") != NULL && g_strcmp0(g_getenv("APP_XMIR_ENABLE"), "1") == 0) {
-		g_array_prepend_val(newargv, "xinit");
-		/* Original command goes here */
-		g_array_append_val(newargv, "--");
-		g_array_append_val(newargv, "-mir");
-
+		/* xmir-helper $(APP_ID) $(COMMAND) */
 		const gchar * appid = g_getenv("APP_ID");
-		g_array_append_val(newargv, appid);
+		g_array_prepend_val(newargv, appid);
+
+		g_array_prepend_val(newargv, XMIR_HELPER);
 	}
 
 	/* Now exec */
