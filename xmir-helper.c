@@ -17,10 +17,12 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <unistd.h>
+
 int
 main (int argc, char * argv[])
 {
-	char * nargv = &argv[2];
+	char ** nargv = &argv[2];
 
 	int execret = execvp(nargv[0], nargv);
 
