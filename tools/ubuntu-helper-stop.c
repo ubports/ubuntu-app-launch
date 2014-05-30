@@ -17,35 +17,29 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include <gio/gio.h>
 
 int
 main (int argc, gchar * argv[]) {
-
-	if (argc > 4 || argc == 1) {
-		g_printerr("Usage: %s <package> [application] [version]\n", argv[0]);
+	if (argc != 3) {
+		g_printerr("Usage: %s <helper type> <app id>\n", argv[0]);
 		return 1;
 	}
 
-	gchar * pkg = argv[1];
-	gchar * app = NULL;
-	gchar * ver = NULL;
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, -1);
 
-	if (argc > 2) {
-		app = argv[2];
+	int retval = -1;
+
+	if (ubuntu_app_launch_stop_helper(argv[1], argv[2])) {
+		retval = 0;
+	} else {
+		g_debug("Unable to stop app id '%s' of type '%s'", argv[2], argv[1]);
 	}
 
-	if (argc > 3) {
-		app = argv[3];
-	}
+	g_dbus_connection_flush_sync(con, NULL, NULL);
+	g_object_unref(con);
 
-	gchar * appid = upstart_app_launch_triplet_to_app_id(pkg, app, ver);
-	if (appid == NULL) {
-		return -1;
-	}
-
-	g_print("%s\n", appid);
-	g_free(appid);
-
-	return 0;
+	return retval;
 }

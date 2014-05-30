@@ -18,7 +18,7 @@
  */
 
 #include <gio/gio.h>
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 int retval = 0;
 const gchar * global_appid;
@@ -42,7 +42,7 @@ app_focus (const gchar * appid, gpointer user_data)
 }
 
 static void
-app_failed (const gchar * appid, upstart_app_launch_app_failed_t failure_type, gpointer user_data)
+app_failed (const gchar * appid, UbuntuAppLaunchAppFailed failure_type, gpointer user_data)
 {
 	if (g_strcmp0(appid, global_appid) != 0)
 		return;
@@ -87,14 +87,14 @@ main (int argc, char * argv[])
 
 	GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
 
-	upstart_app_launch_observer_add_app_started(app_started, mainloop);
-	upstart_app_launch_observer_add_app_focus(app_focus, mainloop);
-	upstart_app_launch_observer_add_app_failed(app_failed, mainloop);
+	ubuntu_app_launch_observer_add_app_started(app_started, mainloop);
+	ubuntu_app_launch_observer_add_app_focus(app_focus, mainloop);
+	ubuntu_app_launch_observer_add_app_failed(app_failed, mainloop);
 
 	guint timer = g_timeout_add_seconds(1, timeout_check, mainloop);
 
 	g_debug("Start Application: %s", global_appid);
-	g_return_val_if_fail(upstart_app_launch_start_application(global_appid, (const gchar * const *)uris), -1);
+	g_return_val_if_fail(ubuntu_app_launch_start_application(global_appid, (const gchar * const *)uris), -1);
 	g_strfreev(uris);
 
 	g_debug("Wait for results");
@@ -102,9 +102,9 @@ main (int argc, char * argv[])
 
 	g_source_remove(timer);
 
-	upstart_app_launch_observer_delete_app_started(app_started, mainloop);
-	upstart_app_launch_observer_delete_app_focus(app_focus, mainloop);
-	upstart_app_launch_observer_delete_app_failed(app_failed, mainloop);
+	ubuntu_app_launch_observer_delete_app_started(app_started, mainloop);
+	ubuntu_app_launch_observer_delete_app_focus(app_focus, mainloop);
+	ubuntu_app_launch_observer_delete_app_failed(app_failed, mainloop);
 
 	g_main_loop_unref(mainloop);
 	g_object_unref(con);

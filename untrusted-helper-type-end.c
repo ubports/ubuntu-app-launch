@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 #include <gio/gio.h>
 
 int
@@ -28,7 +28,7 @@ main (int argc, gchar * argv[]) {
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, -1);
 
-	gchar ** appids = upstart_app_launch_list_helpers(type);
+	gchar ** appids = ubuntu_app_launch_list_helpers(type);
 	if (appids == NULL) {
 		g_warning("Error getting App IDs for helper type '%s'", argv[1]);
 		return -1;
@@ -36,19 +36,19 @@ main (int argc, gchar * argv[]) {
 
 	int i;
 	for (i = 0; appids[i] != NULL; i++) {
-		gchar ** instances = upstart_app_launch_list_helper_instances(type, appids[i]);
+		gchar ** instances = ubuntu_app_launch_list_helper_instances(type, appids[i]);
 		guint instance_cnt = g_strv_length(instances);
 
 		if (instance_cnt == 0) {
 			g_debug("Stopping %s", appids[i]);
-			if (!upstart_app_launch_stop_helper(type, appids[i])) {
+			if (!ubuntu_app_launch_stop_helper(type, appids[i])) {
 				g_warning("Unable to stop '%s'", appids[i]);
 			}
 		} else {
 			int j;
 			for (j = 0; j < instance_cnt; j++) {
 				g_debug("Stopping %s (%s)", appids[i], instances[j]);
-				if (!upstart_app_launch_stop_multiple_helper(type, appids[i], instances[j])) {
+				if (!ubuntu_app_launch_stop_multiple_helper(type, appids[i], instances[j])) {
 					g_warning("Unable to stop '%s' instance '%s'", appids[i], instances[j]);
 				}
 			}
