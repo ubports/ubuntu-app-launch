@@ -1,8 +1,9 @@
-ubuntu-app-launch (0.4-0ubuntu1) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.4+14.10.20140601-0ubuntu1) utopic; urgency=medium
 
+  [ Ted Gould ]
   * Rename to "Ubuntu App Launch"
 
- -- Ted Gould <ted@ubuntu.com>  Wed, 30 Apr 2014 10:06:03 -0500
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Sun, 01 Jun 2014 21:10:43 +0000
 
 upstart-app-launch (0.3+14.10.20140521-0ubuntu1) utopic; urgency=low
 
