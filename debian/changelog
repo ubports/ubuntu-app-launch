@@ -84,7 +84,6 @@ upstart-app-launch (0.3+14.04.20140213-0ubuntu1) trusty; urgency=low
 
 upstart-app-launch (0.3+14.04.20140210-0ubuntu1) trusty; urgency=low
 
-  * 
   * debian/*symbols: auto-update new symbols to released version
 
  -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 13 Feb 2014 13:14:48 +0000
