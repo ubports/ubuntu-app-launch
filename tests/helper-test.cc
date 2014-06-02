@@ -286,7 +286,9 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 
 	/* Not a test other than "don't crash" */
-	set_confined_envvars("foo-app-pkg", "/foo/bar");
+	EnvHandle * handle = env_handle_start();
+	set_confined_envvars(handle, "foo-app-pkg", "/foo/bar");
+	env_handle_finish(handle);
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);

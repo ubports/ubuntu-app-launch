@@ -565,6 +565,7 @@ env_handle_start (void)
 void
 env_handle_add (EnvHandle * handle, const gchar * variable, const gchar * value)
 {
+	g_return_if_fail(handle != NULL);
 	gchar * combinedstr = g_strdup_printf("%s=%s", variable, value);
 	GVariant * env = g_variant_new_take_string(combinedstr);
 	g_variant_builder_add_value((GVariantBuilder*)handle, env);
@@ -573,6 +574,7 @@ env_handle_add (EnvHandle * handle, const gchar * variable, const gchar * value)
 void
 env_handle_finish (EnvHandle * handle)
 {
+	g_return_if_fail(handle != NULL);
 	/* Check to see if we can get the job environment */
 	const gchar * job_name = g_getenv("UPSTART_JOB");
 	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
