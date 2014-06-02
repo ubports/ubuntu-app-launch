@@ -17,22 +17,22 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 int
-main (int argc, gchar * argv[]) {
+main (int argc, char * argv[])
+{
+	gchar ** apps;
 
-	if (argc != 2) {
-		g_printerr("Usage: %s <app id>\n", argv[0]);
-		return 1;
+	apps = ubuntu_app_launch_list_running_apps();
+
+	int i;
+	for (i = 0; apps[i] != NULL; i++) {
+		g_print("%s\n", apps[i]);
 	}
 
-	GPid pid = upstart_app_launch_get_primary_pid(argv[1]);
+	g_strfreev(apps);
 
-	if (pid == 0) {
-		return 1;
-	}
-
-	g_print("%d\n", pid);
 	return 0;
 }
+

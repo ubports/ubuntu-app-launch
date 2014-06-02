@@ -12,28 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors:
- *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "upstart-app-launch.h"
-#include "upstart-app-launch-mock.h"
+void ubuntu_app_launch_mock_set_primary_pid (GPid pid);
 
-static GPid primary_pid = 0;
-static gchar * primary_pid_appid = NULL;
-
-GPid
-upstart_app_launch_get_primary_pid (const gchar * appid)
-{
-	g_free(primary_pid_appid);
-	primary_pid_appid = g_strdup(appid);
-	return primary_pid;
-}
-
-void
-upstart_app_launch_mock_set_primary_pid (GPid pid)
-{
-	primary_pid = pid;
-	return;
-}

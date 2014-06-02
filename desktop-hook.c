@@ -479,7 +479,7 @@ main (int argc, char * argv[])
 	/* Find all the symlinks of desktop files */
 	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-launch", "desktop", NULL);
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
-		g_warning("No installed click packages");
+		g_debug("No installed click packages");
 	} else {
 		dir_for_each(symlinkdir, add_click_package, apparray);
 	}
@@ -488,7 +488,7 @@ main (int argc, char * argv[])
 	gchar * desktopdir = g_build_filename(g_get_user_data_dir(), "applications", NULL);
 	gboolean desktopdirexists = FALSE;
 	if (!g_file_test(desktopdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
-		g_warning("No applications defined");
+		g_debug("No applications defined");
 	} else {
 		dir_for_each(desktopdir, add_desktop_file, apparray);
 		desktopdirexists = TRUE;

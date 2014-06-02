@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Canonical Ltd.
+ * Copyright © 2014 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,19 +17,29 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libupstart-app-launch/upstart-app-launch.h"
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include <gio/gio.h>
 
 int
 main (int argc, gchar * argv[]) {
-
-	if (argc != 2) {
-		g_printerr("Usage: %s <app id>\n", argv[0]);
+	if (argc != 3) {
+		g_printerr("Usage: %s <helper type> <app id>\n", argv[0]);
 		return 1;
 	}
 
-	if (upstart_app_launch_stop_application(argv[1])) {
-		return 0;
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, -1);
+
+	int retval = -1;
+
+	if (ubuntu_app_launch_stop_helper(argv[1], argv[2])) {
+		retval = 0;
 	} else {
-		return 1;
+		g_debug("Unable to stop app id '%s' of type '%s'", argv[2], argv[1]);
 	}
+
+	g_dbus_connection_flush_sync(con, NULL, NULL);
+	g_object_unref(con);
+
+	return retval;
 }

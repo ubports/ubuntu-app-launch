@@ -48,7 +48,7 @@ TEST(ZGEvent, OpenTest)
 	dbus_test_service_start_tasks(service);
 
 	/* Give it time to send the event and exit */
-	g_usleep(100000);
+	g_usleep(150000);
 	while (g_main_pending()) {
 		g_main_iteration(TRUE);
 	}

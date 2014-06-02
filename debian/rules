@@ -8,5 +8,5 @@
 	dh $@ --with click,gir
 
 override_dh_click:
-	dh_click --name upstart-app-launch-desktop
+	dh_click --name ubuntu-app-launch-desktop
 

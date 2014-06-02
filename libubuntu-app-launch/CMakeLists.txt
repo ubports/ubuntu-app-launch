@@ -14,32 +14,32 @@ set(ABI_VERSION 2)
 # Library
 ##########################
 
-add_lttng_gen_tp(NAME upstart-app-launch-trace)
+add_lttng_gen_tp(NAME ubuntu-app-launch-trace)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
 set(LAUNCHER_HEADERS
-upstart-app-launch.h
+ubuntu-app-launch.h
 ubuntu-app-object.h
 )
 
 set(LAUNCHER_SOURCES
-upstart-app-launch.c
+ubuntu-app-launch.c
 ubuntu-app-object.c
 second-exec-core.c
-upstart-app-launch-trace.c
+ubuntu-app-launch-trace.c
 "${CMAKE_SOURCE_DIR}/helpers-keyfile.c"
 )
 
-add_library(upstart-launcher SHARED ${LAUNCHER_SOURCES})
+add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES})
 
-set_target_properties(upstart-launcher PROPERTIES
+set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
 	SOVERSION ${ABI_VERSION}
-	OUTPUT_NAME "upstart-app-launch"
+	OUTPUT_NAME "ubuntu-app-launch"
 )
 
-target_link_libraries(upstart-launcher
+target_link_libraries(ubuntu-launcher
 	${GLIB2_LIBARIES}
 	${GOBJECT2_LIBRARIES}
 	${LIBUPSTART_LIBRARIES}
@@ -52,11 +52,11 @@ target_link_libraries(upstart-launcher
 
 install(
 	FILES ${LAUNCHER_HEADERS}
-	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libupstart-app-launch-${API_VERSION}"
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libubuntu-app-launch-${API_VERSION}"
 )
 
 install(
-	TARGETS upstart-launcher
+	TARGETS ubuntu-launcher
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
@@ -69,9 +69,9 @@ set(libdir "${CMAKE_INSTALL_FULL_LIBDIR}")
 set(includedir "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
 set(VERSION "${API_VERSION}")
 
-configure_file("upstart-app-launch.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/upstart-app-launch-${API_VERSION}.pc" @ONLY)
+configure_file("ubuntu-app-launch.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/ubuntu-app-launch-${API_VERSION}.pc" @ONLY)
 install(
-	FILES "${CMAKE_CURRENT_BINARY_DIR}/upstart-app-launch-${API_VERSION}.pc"
+	FILES "${CMAKE_CURRENT_BINARY_DIR}/ubuntu-app-launch-${API_VERSION}.pc"
 	DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
@@ -83,18 +83,18 @@ include(UseGObjectIntrospection)
 
 set(INTROSPECTION_GIRS)
 set(_introspection_files ${LAUNCHER_HEADERS})
-set(UpstartAppLaunch_2_gir "upstart-app-launch")
-set(UpstartAppLaunch_2_gir_INCLUDES GObject-2.0)
+set(UbuntuAppLaunch_2_gir "ubuntu-app-launch")
+set(UbuntuAppLaunch_2_gir_INCLUDES GObject-2.0)
 
 gir_get_cflags(_cflags)
-set(UpstartAppLaunch_2_gir_CFLAGS ${c_flags})
-set(UpstartAppLaunch_2_gir_LIBS upstart-app-launch)
+set(UbuntuAppLaunch_2_gir_CFLAGS ${c_flags})
+set(UbuntuAppLaunch_2_gir_LIBS ubuntu-app-launch)
 
 list_make_absolute(_abs_introspection_files _introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
-set(UpstartAppLaunch_2_gir_FILES ${_abs_introspection_files})
-set(UpstartAppLaunch_2_gir_SCANNERFLAGS --c-include "upstart-app-launch.h")
-set(UpstartAppLaunch_2_gir_EXPORT_PACKAGES "upstart-app-launch-${API_VERSION}")
+set(UbuntuAppLaunch_2_gir_FILES ${_abs_introspection_files})
+set(UbuntuAppLaunch_2_gir_SCANNERFLAGS --c-include "ubuntu-app-launch.h")
+set(UbuntuAppLaunch_2_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
 
-list(APPEND INTROSPECTION_GIRS UpstartAppLaunch-2.gir)
+list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-2.gir)
 gir_add_introspections(INTROSPECTION_GIRS)
 
