@@ -2,6 +2,7 @@
 TRACEPOINT_EVENT(upstart_app_launch, desktop_start, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, desktop_starting_sent, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, desktop_found, TP_ARGS(0), TP_FIELDS())
+TRACEPOINT_EVENT(upstart_app_launch, desktop_send_env_vars, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, desktop_handshake_wait, TP_ARGS(0), TP_FIELDS())
 TRACEPOINT_EVENT(upstart_app_launch, desktop_handshake_complete, TP_ARGS(0), TP_FIELDS())
 

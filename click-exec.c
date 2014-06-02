@@ -169,6 +169,8 @@ main (int argc, char * argv[])
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
 
+	tracepoint(upstart_app_launch, click_send_env_vars);
+
 	/* NOTE: We now are sending all of the env vars to Upstart */
 	env_handle_finish(handle);
 	handle = NULL; /* Cause errors */

@@ -144,6 +144,8 @@ main (int argc, char * argv[])
 
 	g_key_file_free(keyfile);
 
+	tracepoint(upstart_app_launch, desktop_send_env_vars);
+
 	/* Sync the env vars with Upstart */
 	env_handle_finish(handle);
 	handle = NULL; /* make errors not love */
