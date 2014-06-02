@@ -272,8 +272,8 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
 	dbus_test_dbus_mock_object_add_method(mock, obj,
-		"SetEnv",
-		G_VARIANT_TYPE("(assb)"),
+		"SetEnvMulti",
+		G_VARIANT_TYPE("(asasb)"),
 		NULL,
 		"",
 		NULL);
@@ -291,10 +291,11 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	env_handle_finish(handle);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvMulti", &len, NULL);
 
-	ASSERT_EQ(len, 8);
+	ASSERT_EQ(len, 1);
 	ASSERT_NE(calls, nullptr);
+	ASSERT_STREQ("SetEnvMulti", calls[0].name);
 
 	unsigned int i;
 
@@ -307,12 +308,13 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	bool got_temp_dir = false;
 	bool got_shader_dir = false;
 
-	for (i = 0; i < len; i++) {
-		EXPECT_STREQ("SetEnv", calls[i].name);
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 1);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envarray);
+	gchar * envvar = NULL;
 
-		GVariant * envvar = g_variant_get_child_value(calls[i].params, 1);
-		gchar * var = g_variant_dup_string(envvar, NULL);
-		g_variant_unref(envvar);
+	while (g_variant_iter_loop(&iter, "s", &envvar)) {
+		gchar * var = g_strdup(envvar);
 
 		gchar * equal = g_strstr_len(var, -1, "=");
 		ASSERT_NE(equal, nullptr);
@@ -347,6 +349,8 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 
 		g_free(var);
 	}
+
+	g_variant_unref(envarray);
 
 	ASSERT_TRUE(got_app_isolation);
 	ASSERT_TRUE(got_cache_home);
