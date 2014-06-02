@@ -623,3 +623,71 @@ starting_handshake_wait (handshake_t * handshake)
 
 	g_free(handshake);
 }
+
+EnvHandle *
+env_handle_start (void)
+{
+	GVariantBuilder * builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
+	return (EnvHandle *)builder;
+}
+
+void
+env_handle_add (EnvHandle * handle, const gchar * variable, const gchar * value)
+{
+	gchar * combinedstr = g_strdup_printf("%s=%s", variable, value);
+	GVariant * env = g_variant_new_take_string(combinedstr);
+	g_variant_builder_add_value((GVariantBuilder*)handle, env);
+}
+
+void
+env_handle_finish (EnvHandle * handle)
+{
+	/* Check to see if we can get the job environment */
+	const gchar * job_name = g_getenv("UPSTART_JOB");
+	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
+	g_return_if_fail(job_name != NULL);
+
+	/* Get a bus, let's go! */
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_if_fail(bus != NULL);
+
+	GVariantBuilder builder; /* Target: (assb) */
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+	/* Setup the job properties */
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
+	if (instance_name != NULL)
+		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
+	g_variant_builder_close(&builder);
+
+	/* The value itself */
+	g_variant_builder_add_value(&builder, g_variant_builder_end((GVariantBuilder*)handle));
+
+	/* Do we want to replace?  Yes, we do! */
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+	GError * error = NULL;
+	GVariant * reply = g_dbus_connection_call_sync(bus,
+		DBUS_SERVICE_UPSTART,
+		DBUS_PATH_UPSTART,
+		DBUS_INTERFACE_UPSTART,
+		"SetEnvMulti",
+		g_variant_builder_end(&builder),
+		NULL, /* reply */
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout */
+		NULL, /* cancelable */
+		&error); /* error */
+
+	if (reply != NULL) {
+		g_variant_unref(reply);
+	}
+
+	if (error != NULL) {
+		g_warning("Unable to set environment variables: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_object_unref(bus);
+}

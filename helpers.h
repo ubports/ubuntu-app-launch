@@ -37,6 +37,14 @@ GKeyFile * keyfile_for_appid     (const gchar *   appid,
 void      set_confined_envvars   (const gchar *   package,
                                   const gchar *   app_dir);
 
+/* A handle to group environment setting */
+typedef struct _EnvHandle EnvHandle;
+EnvHandle * env_handle_start     (void);
+void        env_handle_add       (EnvHandle *     handle,
+                                  const gchar *   variable,
+                                  const gchar *   value);
+void        env_handle_finish    (EnvHandle *     handle);
+
 typedef struct _handshake_t handshake_t;
 handshake_t * starting_handshake_start   (const gchar *   app_id);
 void      starting_handshake_wait        (handshake_t *   handshake);
