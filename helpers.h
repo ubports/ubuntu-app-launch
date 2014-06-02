@@ -19,6 +19,8 @@
 
 #include <glib.h>
 
+typedef struct _EnvHandle EnvHandle;
+
 gboolean  app_id_to_triplet      (const gchar *   app_id,
                                   gchar **        package,
                                   gchar **        application,
@@ -27,18 +29,15 @@ gchar *   manifest_to_desktop    (const gchar *   app_dir,
                                   const gchar *   app_id);
 gchar *   desktop_to_exec        (GKeyFile *      desktop_file,
                                   const gchar *   from);
-void      set_upstart_variable   (const gchar *   variable,
-                                  const gchar *   value,
-                                  gboolean        sync);
 GArray *  desktop_exec_parse     (const gchar *   execline,
                                   const gchar *   uri_list);
 GKeyFile * keyfile_for_appid     (const gchar *   appid,
                                   gchar * *       desktopfile);
-void      set_confined_envvars   (const gchar *   package,
+void      set_confined_envvars   (EnvHandle *     handle,
+                                  const gchar *   package,
                                   const gchar *   app_dir);
 
 /* A handle to group environment setting */
-typedef struct _EnvHandle EnvHandle;
 EnvHandle * env_handle_start     (void);
 void        env_handle_add       (EnvHandle *     handle,
                                   const gchar *   variable,
