@@ -1,8 +1,9 @@
-ubuntu-app-launch (0.4+14.10.20140601-0ubuntu3) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.4+14.10.20140605.3-0ubuntu1) utopic; urgency=medium
 
+  [ Ted Gould ]
   * Fixing click hook for name change
 
- -- Ted Gould <ted@ubuntu.com>  Wed, 04 Jun 2014 20:55:03 -0500
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 05 Jun 2014 03:40:55 +0000
 
 ubuntu-app-launch (0.4+14.10.20140601-0ubuntu2) utopic; urgency=low
 
