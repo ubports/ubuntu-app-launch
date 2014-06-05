@@ -29,15 +29,15 @@ https://click.readthedocs.org/en/latest/
 Probably the biggest thing to understand for how this code works is that you need to
 understand that this hook is run after one, or many packages are installed.  A set of
 symbolic links are made to the desktop files per-application (not per-package) in the
-directory specified in upstart-app-launcher-desktop.click-hook.in.  Those desktop files
+directory specified in ubuntu-app-launcher-desktop.click-hook.in.  Those desktop files
 give us the App ID of the packages that are installed and have applications needing
 desktop files in them.  We then operate on each of them ensuring that they are synchronized
 with the desktop files in ~/.local/share/applications/.
 
 The desktop files that we're creating there ARE NOT used for execution by the
-upstart-app-launch Upstart jobs.  They are there so that Unity can know which applications
+ubuntu-app-launch Upstart jobs.  They are there so that Unity can know which applications
 are installed for this user and they provide an Exec line to allow compatibility with
-desktop environments that are not using upstart-app-launch for launching applications.
+desktop environments that are not using ubuntu-app-launch for launching applications.
 You should not modify them and expect any executing under Unity to change.
 
 */
@@ -477,7 +477,7 @@ main (int argc, char * argv[])
 	GArray * apparray = g_array_new(FALSE, FALSE, sizeof(app_state_t));
 
 	/* Find all the symlinks of desktop files */
-	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-launch", "desktop", NULL);
+	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "ubuntu-app-launch", "desktop", NULL);
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_debug("No installed click packages");
 	} else {

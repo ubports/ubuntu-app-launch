@@ -103,7 +103,7 @@ main (int argc, char * argv[])
 		}
 
 		if (!debugtool) {
-			report_recoverable_problem("upstart-app-launch-invalid-appid", pid, TRUE, props);
+			report_recoverable_problem("ubuntu-app-launch-invalid-appid", pid, TRUE, props);
 		} else {
 			g_debug("Suppressing appid recoverable error for debug tool");
 		}
