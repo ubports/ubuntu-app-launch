@@ -5,7 +5,7 @@ export LD_LIBRARY_PATH=/lib
 export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-full.sh
 export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@
 export QML2_IMPORT_PATH=/bar/qml/import
-export UPSTART_APP_LAUNCH_ARCH=64bit-amazing
+export UBUNTU_APP_LAUNCH_ARCH=64bit-amazing
 
 echo "Testing Full Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
@@ -15,7 +15,7 @@ export LD_LIBRARY_PATH=/lib
 export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-noarch.sh
 export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@
 export QML2_IMPORT_PATH=/bar/qml/import
-unset UPSTART_APP_LAUNCH_ARCH
+unset UBUNTU_APP_LAUNCH_ARCH
 
 echo "Testing Noarch Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
@@ -25,7 +25,7 @@ unset LD_LIBRARY_PATH
 export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-noinit.sh
 export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@
 unset QML2_IMPORT_PATH
-export UPSTART_APP_LAUNCH_ARCH=64bit-amazing
+export UBUNTU_APP_LAUNCH_ARCH=64bit-amazing
 
 echo "Testing Uninitialized Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
@@ -35,7 +35,7 @@ export LD_LIBRARY_PATH=/lib
 export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-colon.sh
 export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@/foo:bar
 export QML2_IMPORT_PATH=/bar/qml/import
-export UPSTART_APP_LAUNCH_ARCH=64bit-amazing
+export UBUNTU_APP_LAUNCH_ARCH=64bit-amazing
 
 echo "Testing Colon Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
@@ -45,7 +45,7 @@ export LD_LIBRARY_PATH=/lib
 export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-archcolon.sh
 export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@
 export QML2_IMPORT_PATH=/bar/qml/import
-export UPSTART_APP_LAUNCH_ARCH=64bit-amazing:amazinger
+export UBUNTU_APP_LAUNCH_ARCH=64bit-amazing:amazinger
 
 echo "Testing Arch Colon Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
@@ -55,7 +55,7 @@ export LD_LIBRARY_PATH=""
 export APP_EXEC=@CMAKE_CURRENT_SOURCE_DIR@/exec-test-nullstr.sh
 export APP_DIR=@CMAKE_CURRENT_BINARY_DIR@
 export QML2_IMPORT_PATH=""
-export UPSTART_APP_LAUNCH_ARCH=64bit-amazing
+export UBUNTU_APP_LAUNCH_ARCH=64bit-amazing
 
 echo "Testing Null string Test"
 @CMAKE_BINARY_DIR@/exec-line-exec
