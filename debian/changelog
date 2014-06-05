@@ -1,3 +1,10 @@
+ubuntu-app-launch (0.4+14.10.20140601-0ubuntu2) utopic; urgency=low
+
+  * add Conflicts/Replaces/Provides to ubuntu-app-launch-tools since there are
+    still packages depending on upstart-app-launch-tools
+
+ -- Oliver Grawert <ogra@ubuntu.com>  Wed, 04 Jun 2014 10:06:24 +0200
+
 ubuntu-app-launch (0.4+14.10.20140601-0ubuntu1) utopic; urgency=medium
 
   [ Ted Gould ]
