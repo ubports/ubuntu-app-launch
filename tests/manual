@@ -56,8 +56,8 @@ Test-case ubuntu-app-launch/correct-job-type
         <dd>The settings application should be brought to focus and shown to the user</dd>
     <dt>Launch the clock application: <tt>ubuntu-app-launch `ubuntu-app-triplet com.ubuntu.clock`</tt></dt>
         <dd>The clock application should be brought to focus and shown to the user</dd>
-	<dt>Verify the settings app is running under the <tt>application-legacy</tt> upstart job</dt>
-		<dd>Running <tt>initctl list | grep application-legacy | grep ubuntu-system-settings</tt> should return a single entry</dd>
-	<dt>Verify the clock app is running under the <tt>application-click</tt> upstart job</dt>
-		<dd>Running <tt>initctl list | grep application-click | grep com.ubuntu.clock</tt> should return a single entry</dd>
+    <dt>Verify the settings app is running under the <tt>application-legacy</tt> upstart job</dt>
+        <dd>Running <tt>initctl list | grep application-legacy | grep ubuntu-system-settings</tt> should return a single entry</dd>
+    <dt>Verify the clock app is running under the <tt>application-click</tt> upstart job</dt>
+        <dd>Running <tt>initctl list | grep application-click | grep com.ubuntu.clock</tt> should return a single entry</dd>
 </dl>
