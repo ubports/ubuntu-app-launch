@@ -29,3 +29,5 @@ end script
 
 # Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec
+
+post-stop exec @pkglibexecdir@/cgroup-reap-all
