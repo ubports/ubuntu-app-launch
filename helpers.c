@@ -605,7 +605,7 @@ env_handle_finish (EnvHandle * handle)
 		DBUS_SERVICE_UPSTART,
 		DBUS_PATH_UPSTART,
 		DBUS_INTERFACE_UPSTART,
-		"SetEnvMulti",
+		"SetEnvList",
 		g_variant_builder_end(&builder),
 		NULL, /* reply */
 		G_DBUS_CALL_FLAGS_NONE,

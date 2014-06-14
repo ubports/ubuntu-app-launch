@@ -45,7 +45,7 @@ class ExecUtil : public ::testing::Test
 			DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, obj,
-				"SetEnvMulti",
+				"SetEnvList",
 				G_VARIANT_TYPE("(asasb)"),
 				NULL,
 				"",
@@ -92,11 +92,11 @@ TEST_F(ExecUtil, ClickExec)
 	g_spawn_command_line_sync(CLICK_EXEC_TOOL, NULL, NULL, NULL, NULL);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvMulti", &len, NULL);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
 
 	ASSERT_EQ(1, len);
 	ASSERT_NE(nullptr, calls);
-	ASSERT_STREQ("SetEnvMulti", calls[0].name);
+	ASSERT_STREQ("SetEnvList", calls[0].name);
 
 	unsigned int i;
 
@@ -191,11 +191,11 @@ TEST_F(ExecUtil, DesktopExec)
 	g_spawn_command_line_sync(DESKTOP_EXEC_TOOL, NULL, NULL, NULL, NULL);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvMulti", &len, NULL);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
 
 	ASSERT_EQ(1, len);
 	ASSERT_NE(nullptr, calls);
-	ASSERT_STREQ("SetEnvMulti", calls[0].name);
+	ASSERT_STREQ("SetEnvList", calls[0].name);
 
 	unsigned int i;
 

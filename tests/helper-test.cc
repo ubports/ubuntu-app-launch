@@ -272,7 +272,7 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
 	dbus_test_dbus_mock_object_add_method(mock, obj,
-		"SetEnvMulti",
+		"SetEnvList",
 		G_VARIANT_TYPE("(asasb)"),
 		NULL,
 		"",
@@ -291,11 +291,11 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	env_handle_finish(handle);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvMulti", &len, NULL);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
 
 	ASSERT_EQ(len, 1);
 	ASSERT_NE(calls, nullptr);
-	ASSERT_STREQ("SetEnvMulti", calls[0].name);
+	ASSERT_STREQ("SetEnvList", calls[0].name);
 
 	unsigned int i;
 
