@@ -93,3 +93,10 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 	return keyfile;
 }
 
+GList *
+pids_from_cgroup (const gchar * groupname)
+{
+
+
+	return NULL;
+}

@@ -1054,9 +1054,19 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 		return FALSE;
 	}
 
-	GPid primary = ubuntu_app_launch_get_primary_pid(appid);
+	GList * pidlist = pids_from_cgroup(appid); /* TODO: Turn appid into cgroup name */
+	GList * head;
 
-	return primary == pid;
+	for (head = pidlist; head != NULL; head = g_list_next(head)) {
+		GPid checkpid = GPOINTER_TO_INT(head->data);
+		if (checkpid == pid) {
+			g_list_free(pidlist);
+			return TRUE;
+		}
+	}
+
+	g_list_free(pidlist);
+	return FALSE;
 }
 
 gboolean
