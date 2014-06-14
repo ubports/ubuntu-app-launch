@@ -155,6 +155,15 @@ target_link_libraries(untrusted-helper-type-end ubuntu-launcher)
 install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# cgroup-reap-all
+####################
+
+add_executable(cgroup-reap-all cgroup-reap-all.c)
+set_target_properties(cgroup-reap-all PROPERTIES OUTPUT_NAME "cgroup-reap-all")
+target_link_libraries(cgroup-reap-all helpers)
+install(TARGETS cgroup-reap-all RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # ubuntu-app-launch-desktop.click-hook
 ####################
 
