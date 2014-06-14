@@ -623,3 +623,11 @@ starting_handshake_wait (handshake_t * handshake)
 
 	g_free(handshake);
 }
+
+GList *
+pids_from_cgroup (const gchar * groupname)
+{
+
+
+	return NULL;
+}

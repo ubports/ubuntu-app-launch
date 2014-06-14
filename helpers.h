@@ -41,3 +41,5 @@ typedef struct _handshake_t handshake_t;
 handshake_t * starting_handshake_start   (const gchar *   app_id);
 void      starting_handshake_wait        (handshake_t *   handshake);
 
+GList *   pids_from_cgroup       (const gchar *   groupname);
+
