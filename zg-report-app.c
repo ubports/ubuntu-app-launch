@@ -65,7 +65,7 @@ main (int argc, char * argv[])
 	ZeitgeistLog * log = zeitgeist_log_get_default();
 
 	ZeitgeistEvent * event = zeitgeist_event_new();
-	zeitgeist_event_set_actor(event, "application://upstart-app-launch.desktop");
+	zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
 	if (g_strcmp0(argv[1], "open") == 0) {
 		zeitgeist_event_set_interpretation(event, ZEITGEIST_ZG_ACCESS_EVENT);
 	} else {

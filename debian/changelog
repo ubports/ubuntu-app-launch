@@ -1,8 +1,23 @@
-ubuntu-app-launch (0.4-0ubuntu1) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.4+14.10.20140605.3-0ubuntu1) utopic; urgency=medium
 
+  [ Ted Gould ]
+  * Fixing click hook for name change
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 05 Jun 2014 03:40:55 +0000
+
+ubuntu-app-launch (0.4+14.10.20140601-0ubuntu2) utopic; urgency=low
+
+  * add Conflicts/Replaces/Provides to ubuntu-app-launch-tools since there are
+    still packages depending on upstart-app-launch-tools
+
+ -- Oliver Grawert <ogra@ubuntu.com>  Wed, 04 Jun 2014 10:06:24 +0200
+
+ubuntu-app-launch (0.4+14.10.20140601-0ubuntu1) utopic; urgency=medium
+
+  [ Ted Gould ]
   * Rename to "Ubuntu App Launch"
 
- -- Ted Gould <ted@ubuntu.com>  Wed, 30 Apr 2014 10:06:03 -0500
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Sun, 01 Jun 2014 21:10:43 +0000
 
 upstart-app-launch (0.3+14.10.20140521-0ubuntu1) utopic; urgency=low
 
@@ -84,7 +99,6 @@ upstart-app-launch (0.3+14.04.20140213-0ubuntu1) trusty; urgency=low
 
 upstart-app-launch (0.3+14.04.20140210-0ubuntu1) trusty; urgency=low
 
-  * 
   * debian/*symbols: auto-update new symbols to released version
 
  -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 13 Feb 2014 13:14:48 +0000
