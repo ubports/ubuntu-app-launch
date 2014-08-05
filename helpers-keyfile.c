@@ -18,6 +18,8 @@
  */
 
 #include "helpers.h"
+#include <gio/gio.h>
+#include <cgmanager/cgmanager.h>
 
 /* Check to make sure we have the sections and keys we want */
 static gboolean
@@ -97,9 +99,57 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 gdbus call --address unix:path=/sys/fs/cgroup/cgmanager/sock --object-path /org/linuxcontainers/cgmanager --method org.linuxcontainers.cgmanager0_0.GetTasks cpuset upstart/application-legacy-inkscape-1407212090937717
 */
 GList *
-pids_from_cgroup (const gchar * groupname)
+pids_from_cgroup (const gchar * jobname, const gchar * instancename)
 {
+	GError * error = NULL;
+	GDBusConnection * cgmanager = g_dbus_connection_new_for_address_sync(
+		CGMANAGER_DBUS_PATH,
+		G_DBUS_CONNECTION_FLAGS_NONE,
+		NULL, /* Auth Observer */
+		NULL, /* Cancellable */
+		&error);
 
+	if (error != NULL) {
+		g_warning("Unable to connect to cgroup manager: %s", error->message);
+		g_error_free(error);
+		return NULL;
+	}
 
-	return NULL;
+	gchar * groupname = g_strdup_printf("upstart/%s-%s", jobname, instancename);
+
+	GVariant * vtpids = g_dbus_connection_call_sync(cgmanager,
+		NULL, /* bus name for direct connection */
+		"/org/linuxcontainers/cgmanager",
+		"org.linuxcontainers.cgmanager0_0",
+		"GetTasks",
+		g_variant_new("(ss)", "cpu", groupname),
+		G_VARIANT_TYPE("(ai)"),
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* default timeout */
+		NULL, /* cancellable */
+		&error);
+
+	g_free(groupname);
+	g_object_unref(cgmanager);
+
+	if (error != NULL) {
+		g_warning("Unable to get PID list from cgroup manager: %s", error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	GVariant * vpids = g_variant_get_child_value(vtpids, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, vpids);
+	guint32 pid;
+	GList * retval = NULL;
+
+	while (g_variant_iter_loop(&iter, "i", &pid)) {
+		retval = g_list_prepend(retval, GINT_TO_POINTER(pid));
+	}
+
+	g_variant_unref(vpids);
+	g_variant_unref(vtpids);
+
+	return retval;
 }

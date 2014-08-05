@@ -36,7 +36,7 @@ main (int argc, char * argv[])
 	/* We're gonna try to kill things forever, litterally. It's important
 	   enough that we can't consider failure and option. */
 	GList * pidlist = NULL;
-	while ((pidlist = pids_from_cgroup(appid)) != NULL) {
+	while ((pidlist = pids_from_cgroup(appid, appid)) != NULL) {
 		GList * head;
 
 		for (head = pidlist; head != NULL; head = g_list_next(head)) {

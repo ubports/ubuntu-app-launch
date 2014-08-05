@@ -1054,7 +1054,7 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 		return FALSE;
 	}
 
-	GList * pidlist = pids_from_cgroup(appid); /* TODO: Turn appid into cgroup name */
+	GList * pidlist = pids_from_cgroup(appid, appid); /* TODO: Turn appid into cgroup name */
 	GList * head;
 
 	for (head = pidlist; head != NULL; head = g_list_next(head)) {
