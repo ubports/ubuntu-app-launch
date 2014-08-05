@@ -93,6 +93,9 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 	return keyfile;
 }
 
+/*
+gdbus call --address unix:path=/sys/fs/cgroup/cgmanager/sock --object-path /org/linuxcontainers/cgmanager --method org.linuxcontainers.cgmanager0_0.GetTasks cpuset upstart/application-legacy-inkscape-1407212090937717
+*/
 GList *
 pids_from_cgroup (const gchar * groupname)
 {
