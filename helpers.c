@@ -584,7 +584,7 @@ starting_handshake_start (const gchar *   app_id)
 	/* Set up listening for the unfrozen signal from Unity */
 	handshake->signal_subscribe = g_dbus_connection_signal_subscribe(handshake->con,
 		NULL, /* sender */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingSignal", /* signal */
 		"/", /* path */
 		app_id, /* arg0 */
@@ -596,7 +596,7 @@ starting_handshake_start (const gchar *   app_id)
 	g_dbus_connection_emit_signal(handshake->con,
 		NULL, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingBroadcast", /* signal */
 		g_variant_new("(s)", app_id),
 		&error);
