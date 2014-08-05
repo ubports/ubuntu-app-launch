@@ -100,8 +100,14 @@ GDBusConnection *
 cgroup_manager_connection (void)
 {
 	GError * error = NULL;
+	const gchar * path = CGMANAGER_DBUS_PATH;
+
+	if (g_getenv("UPSTART_APP_LAUNCH_CG_MANAGER_PATH")) {
+		path = g_getenv("UPSTART_APP_LAUNCH_CG_MANAGER_PATH");
+	}
+
 	GDBusConnection * cgmanager = g_dbus_connection_new_for_address_sync(
-		CGMANAGER_DBUS_PATH,
+		path,
 		G_DBUS_CONNECTION_FLAGS_NONE,
 		NULL, /* Auth Observer */
 		NULL, /* Cancellable */
@@ -121,10 +127,11 @@ GList *
 pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gchar * instancename)
 {
 	GError * error = NULL;
+	const gchar * name = g_getenv("UPSTART_APP_LAUNCH_CG_MANAGER_NAME");
 	gchar * groupname = g_strdup_printf("upstart/%s-%s", jobname, instancename);
 
 	GVariant * vtpids = g_dbus_connection_call_sync(cgmanager,
-		NULL, /* bus name for direct connection */
+		name, /* bus name for direct connection is NULL */
 		"/org/linuxcontainers/cgmanager",
 		"org.linuxcontainers.cgmanager0_0",
 		"GetTasks",
