@@ -102,8 +102,8 @@ cgroup_manager_connection (void)
 	GError * error = NULL;
 	const gchar * path = CGMANAGER_DBUS_PATH;
 
-	if (g_getenv("UPSTART_APP_LAUNCH_CG_MANAGER_PATH")) {
-		path = g_getenv("UPSTART_APP_LAUNCH_CG_MANAGER_PATH");
+	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_PATH")) {
+		path = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_PATH");
 	}
 
 	GDBusConnection * cgmanager = g_dbus_connection_new_for_address_sync(
@@ -127,7 +127,7 @@ GList *
 pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gchar * instancename)
 {
 	GError * error = NULL;
-	const gchar * name = g_getenv("UPSTART_APP_LAUNCH_CG_MANAGER_NAME");
+	const gchar * name = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME");
 	gchar * groupname = g_strdup_printf("upstart/%s-%s", jobname, instancename);
 
 	GVariant * vtpids = g_dbus_connection_call_sync(cgmanager,
