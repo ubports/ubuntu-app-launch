@@ -122,7 +122,7 @@ pids_from_cgroup (const gchar * jobname, const gchar * instancename)
 		"/org/linuxcontainers/cgmanager",
 		"org.linuxcontainers.cgmanager0_0",
 		"GetTasks",
-		g_variant_new("(ss)", "cpu", groupname),
+		g_variant_new("(ss)", "cpuset", groupname),
 		G_VARIANT_TYPE("(ai)"),
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* default timeout */
