@@ -1063,9 +1063,34 @@ pids_for_appid (const gchar * appid)
 		return pids;
 	}
 
-	/* TODO: like ubuntu_app_launch_application_log_path  */
+	/* If we're not single instance, we need to find all the pids for all
+	   the instances of the app */
+	unsigned int i;
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, NULL);
+
+	GList * pids = NULL;
+
+	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
+	g_array_set_clear_func(apps, free_helper);
+
+	apps_for_job(con, "application-legacy", apps, FALSE);
+	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
+	for (i = 0; i < apps->len; i++) {
+		const gchar * array_id = g_array_index(apps, const gchar *, i);
+		if (g_str_has_prefix(array_id, appiddash)) {
+			GList * morepids = pids_from_cgroup(cgmanager, "application-legacy", array_id);
+			pids = g_list_concat(pids, morepids);
+		}
+	}
+	g_free(appiddash);
+
+	g_array_free(apps, TRUE);
+	g_object_unref(con);
+
 	g_clear_object(&cgmanager);
-	return NULL;
+
+	return pids;
 }
 
 gboolean
