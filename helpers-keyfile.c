@@ -95,11 +95,9 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 	return keyfile;
 }
 
-/*
-gdbus call --address unix:path=/sys/fs/cgroup/cgmanager/sock --object-path /org/linuxcontainers/cgmanager --method org.linuxcontainers.cgmanager0_0.GetTasks cpuset upstart/application-legacy-inkscape-1407212090937717
-*/
-GList *
-pids_from_cgroup (const gchar * jobname, const gchar * instancename)
+/* Get the connection to the cgroup manager */
+GDBusConnection *
+cgroup_manager_connection (void)
 {
 	GError * error = NULL;
 	GDBusConnection * cgmanager = g_dbus_connection_new_for_address_sync(
@@ -115,6 +113,14 @@ pids_from_cgroup (const gchar * jobname, const gchar * instancename)
 		return NULL;
 	}
 
+	return cgmanager;
+}
+
+/* Get the PIDs for a particular cgroup */
+GList *
+pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gchar * instancename)
+{
+	GError * error = NULL;
 	gchar * groupname = g_strdup_printf("upstart/%s-%s", jobname, instancename);
 
 	GVariant * vtpids = g_dbus_connection_call_sync(cgmanager,
@@ -130,7 +136,6 @@ pids_from_cgroup (const gchar * jobname, const gchar * instancename)
 		&error);
 
 	g_free(groupname);
-	g_object_unref(cgmanager);
 
 	if (error != NULL) {
 		g_warning("Unable to get PID list from cgroup manager: %s", error->message);

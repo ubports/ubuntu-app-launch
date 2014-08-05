@@ -17,7 +17,6 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <glib.h>
 #include "helpers.h"
 
 int kill (pid_t pid, int signal);
@@ -33,10 +32,13 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	GDBusConnection * cgmanager = cgroup_manager_connection();
+	g_return_val_if_fail(cgmanager != NULL, -1);
+
 	/* We're gonna try to kill things forever, litterally. It's important
 	   enough that we can't consider failure and option. */
 	GList * pidlist = NULL;
-	while ((pidlist = pids_from_cgroup(jobname, instance)) != NULL) {
+	while ((pidlist = pids_from_cgroup(cgmanager, jobname, instance)) != NULL) {
 		GList * head;
 
 		for (head = pidlist; head != NULL; head = g_list_next(head)) {
@@ -47,6 +49,8 @@ main (int argc, char * argv[])
 
 		g_list_free(pidlist);
 	}
+
+	g_clear_object(&cgmanager);
 
 	return 0;
 }

@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <glib.h>
+#include <gio/gio.h>
 
 gboolean  app_id_to_triplet      (const gchar *   app_id,
                                   gchar **        package,
@@ -41,6 +41,8 @@ typedef struct _handshake_t handshake_t;
 handshake_t * starting_handshake_start   (const gchar *   app_id);
 void      starting_handshake_wait        (handshake_t *   handshake);
 
-GList *   pids_from_cgroup       (const gchar *   jobname,
+GDBusConnection * cgroup_manager_connection (void);
+GList *   pids_from_cgroup       (GDBusConnection * cgmanager,
+                                  const gchar *   jobname,
                                   const gchar *   instancename);
 

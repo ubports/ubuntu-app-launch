@@ -1048,16 +1048,23 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 GList *
 pids_for_appid (const gchar * appid)
 {
+	GDBusConnection * cgmanager = cgroup_manager_connection();
+	g_return_val_if_fail(cgmanager != NULL, NULL);
+
 	if (is_click(appid)) {
-		return pids_from_cgroup("application-click", appid);
+		GList * pids = pids_from_cgroup(cgmanager, "application-click", appid);
+		g_clear_object(&cgmanager);
+		return pids;
 	} else if (legacy_single_instance(appid)) {
 		gchar * jobname = g_strdup_printf("%s-", appid);
-		GList * pids = pids_from_cgroup("application-legacy", jobname);
+		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
 		g_free(jobname);
+		g_clear_object(&cgmanager);
 		return pids;
 	}
 
 	/* TODO: like ubuntu_app_launch_application_log_path  */
+	g_clear_object(&cgmanager);
 	return NULL;
 }
 
