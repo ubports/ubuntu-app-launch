@@ -21,7 +21,7 @@ Build-Depends: click-dev (>= 0.2.2),
                libzeitgeist-2.0-dev,
                gobject-introspection,
                python3-dbusmock,
-               upstart (>= 1.11),
+               upstart (>= 1.13),
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/ubuntu-app-launch
 # If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
@@ -34,7 +34,7 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          click-apparmor,
-         upstart (>= 1.11),
+         upstart (>= 1.13),
          zeitgeist-core,
 Replaces: upstart-app-launch
 Conflicts: upstart-app-launch
