@@ -1045,6 +1045,22 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 	return pid;
 }
 
+GList *
+pids_for_appid (const gchar * appid)
+{
+	if (is_click(appid)) {
+		return pids_from_cgroup("application-click", appid);
+	} else if (legacy_single_instance(appid)) {
+		gchar * jobname = g_strdup_printf("%s-", appid);
+		GList * pids = pids_from_cgroup("application-legacy", jobname);
+		g_free(jobname);
+		return pids;
+	}
+
+	/* TODO: like ubuntu_app_launch_application_log_path  */
+	return NULL;
+}
+
 gboolean
 ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 {
@@ -1054,7 +1070,7 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 		return FALSE;
 	}
 
-	GList * pidlist = pids_from_cgroup(appid, appid); /* TODO: Turn appid into cgroup name */
+	GList * pidlist = pids_for_appid(appid); /* TODO: Turn appid into cgroup name */
 	GList * head;
 
 	for (head = pidlist; head != NULL; head = g_list_next(head)) {
