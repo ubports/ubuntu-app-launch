@@ -25,22 +25,23 @@ int kill (pid_t pid, int signal);
 int
 main (int argc, char * argv[])
 {
-	const gchar * appid = g_getenv("APP_ID");
-	/* TODO: Use something besides App ID */
+	const gchar * jobname = g_getenv("UPSTART_JOB");
+	const gchar * instance = g_getenv("UPSTART_INSTANCE");
 
-	if (appid == NULL) {
-		g_warning("Unable to get app id in cgroup reaper");
+	if (jobname == NULL || instance == NULL) {
+		g_warning("Unable to get job information in cgroup reaper");
 		return 1;
 	}
 
 	/* We're gonna try to kill things forever, litterally. It's important
 	   enough that we can't consider failure and option. */
 	GList * pidlist = NULL;
-	while ((pidlist = pids_from_cgroup(appid, appid)) != NULL) {
+	while ((pidlist = pids_from_cgroup(jobname, instance)) != NULL) {
 		GList * head;
 
 		for (head = pidlist; head != NULL; head = g_list_next(head)) {
 			GPid pid = GPOINTER_TO_INT(head->data);
+			g_debug("Killing pid: %d", pid);
 			kill(pid, SIGKILL);
 		}
 
