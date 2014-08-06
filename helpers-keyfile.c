@@ -101,14 +101,16 @@ cgroup_manager_connection (void)
 {
 	GError * error = NULL;
 	const gchar * path = CGMANAGER_DBUS_PATH;
+	GDBusConnectionFlags flags = G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT;
 
 	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_PATH")) {
 		path = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_PATH");
+		flags = G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION;
 	}
 
 	GDBusConnection * cgmanager = g_dbus_connection_new_for_address_sync(
 		path,
-		G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
+		flags,
 		NULL, /* Auth Observer */
 		NULL, /* Cancellable */
 		&error);
