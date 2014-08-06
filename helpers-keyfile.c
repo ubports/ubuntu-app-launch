@@ -108,7 +108,7 @@ cgroup_manager_connection (void)
 
 	GDBusConnection * cgmanager = g_dbus_connection_new_for_address_sync(
 		path,
-		G_DBUS_CONNECTION_FLAGS_NONE,
+		G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
 		NULL, /* Auth Observer */
 		NULL, /* Cancellable */
 		&error);
