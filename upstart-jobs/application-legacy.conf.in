@@ -14,7 +14,7 @@ env APP_DESKTOP_FILE_PATH
 
 # This will be set to "unconfined" by desktop-exec if there is no confinement defined
 apparmor switch $APP_EXEC_POLICY
-cgroup cpuset
+cgroup freezer
 
 pre-start exec @pkglibexecdir@/desktop-exec
 

@@ -135,7 +135,7 @@ pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gcha
 		"/org/linuxcontainers/cgmanager",
 		"org.linuxcontainers.cgmanager0_0",
 		"GetTasks",
-		g_variant_new("(ss)", "cpuset", groupname),
+		g_variant_new("(ss)", "freezer", groupname),
 		G_VARIANT_TYPE("(ai)"),
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* default timeout */
