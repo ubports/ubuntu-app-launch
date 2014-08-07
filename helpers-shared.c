@@ -158,7 +158,7 @@ pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gcha
 	GVariant * vpids = g_variant_get_child_value(vtpids, 0);
 	GVariantIter iter;
 	g_variant_iter_init(&iter, vpids);
-	guint32 pid;
+	gint32 pid;
 	GList * retval = NULL;
 
 	while (g_variant_iter_loop(&iter, "i", &pid)) {
