@@ -220,12 +220,12 @@ class LibUAL : public ::testing::Test
 			cgmock = dbus_test_dbus_mock_new("org.test.cgmock");
 			g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock", TRUE);
 
-			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(mock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
-			dbus_test_dbus_mock_object_add_method(mock, cgobject,
+			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+			dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
 				"GetTasks",
-				G_VARIANT_TYPE("ss"),
+				G_VARIANT_TYPE("(ss)"),
 				G_VARIANT_TYPE("ai"),
-				"ret = [ 100, 200, 300 ]",
+				"ret = [100, 200, 300]",
 				NULL);
 
 			/* Put it together */
@@ -238,7 +238,7 @@ class LibUAL : public ::testing::Test
 			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 
 			/* Make sure we pretend the CG manager is just on our bus */
-			g_setenv("UPSTART_APP_LAUNCH_CG_MANAGER_PATH", g_getenv("DBUS_SESSION_BUS_ADDRESS"), TRUE);
+			g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS", "YES", TRUE);
 
 			ASSERT_TRUE(ubuntu_app_launch_observer_add_app_focus(focus_cb, this));
 			ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resume(resume_cb, this));
@@ -419,15 +419,13 @@ TEST_F(LibUAL, ApplicationLog)
 	g_free(legacy_multiple);
 }
 
-/* TODO: Enable with cgmanager proxy 
 TEST_F(LibUAL, ApplicationPid)
 {
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("foo"), getpid());
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("bar"), 5678);
-	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(getpid(), "foo"));
-	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(5678, "foo"));
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "foo"));
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "foo"));
 }
-*/
 
 TEST_F(LibUAL, ApplicationId)
 {

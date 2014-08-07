@@ -100,20 +100,21 @@ GDBusConnection *
 cgroup_manager_connection (void)
 {
 	GError * error = NULL;
-	const gchar * path = CGMANAGER_DBUS_PATH;
-	GDBusConnectionFlags flags = G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT;
 
-	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_PATH")) {
-		path = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_PATH");
-		flags = G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION;
+	GDBusConnection * cgmanager = NULL;
+
+	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS")) {
+		/* For working dbusmock */
+		g_debug("Connecting to CG Manager on session bus");
+		cgmanager = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	} else {
+		cgmanager = g_dbus_connection_new_for_address_sync(
+			CGMANAGER_DBUS_PATH,
+			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
+			NULL, /* Auth Observer */
+			NULL, /* Cancellable */
+			&error);
 	}
-
-	GDBusConnection * cgmanager = g_dbus_connection_new_for_address_sync(
-		path,
-		flags,
-		NULL, /* Auth Observer */
-		NULL, /* Cancellable */
-		&error);
 
 	if (error != NULL) {
 		g_warning("Unable to connect to cgroup manager: %s", error->message);
@@ -131,6 +132,8 @@ pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gcha
 	GError * error = NULL;
 	const gchar * name = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME");
 	gchar * groupname = g_strdup_printf("upstart/%s-%s", jobname, instancename);
+
+	g_debug("Looking for cg manager '%s' group '%s'", name, groupname);
 
 	GVariant * vtpids = g_dbus_connection_call_sync(cgmanager,
 		name, /* bus name for direct connection is NULL */
