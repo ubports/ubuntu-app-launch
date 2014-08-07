@@ -22,5 +22,7 @@ pre-start exec @pkglibexecdir@/desktop-exec
 exec @pkglibexecdir@/exec-line-exec
 
 post-start exec @pkglibexecdir@/zg-report-app open
-pre-stop exec @pkglibexecdir@/cgroup-reap-all
-post-stop exec @pkglibexecdir@/zg-report-app close
+post-stop script
+	@pkglibexecdir@/zg-report-app close
+	@pkglibexecdir@/cgroup-reap-all
+end script
