@@ -35,8 +35,8 @@ main (int argc, char * argv[])
 	GDBusConnection * cgmanager = cgroup_manager_connection();
 	g_return_val_if_fail(cgmanager != NULL, -1);
 
-	/* We're gonna try to kill things forever, litterally. It's important
-	   enough that we can't consider failure and option. */
+	/* We're gonna try to kill things forever, literally. It's important
+	   enough that we can't consider failure an option. */
 	GList * pidlist = NULL;
 	while ((pidlist = pids_from_cgroup(cgmanager, jobname, instance)) != NULL) {
 		GList * head;
