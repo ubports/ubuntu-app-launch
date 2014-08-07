@@ -1048,7 +1048,7 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 /* Get the PIDs for an AppID. If it's click or legacy single instance that's
    a simple call to the helper. But if it's not, we have to make a call for
    each instance of the app that we have running. */
-GList *
+static GList *
 pids_for_appid (const gchar * appid)
 {
 	GDBusConnection * cgmanager = cgroup_manager_connection();
