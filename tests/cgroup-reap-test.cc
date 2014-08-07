@@ -27,8 +27,19 @@ class CGroupReap : public ::testing::Test
 		DbusTestService * service = NULL;
 		DbusTestDbusMock * cgmock = NULL;
 		GDBusConnection * bus = NULL;
+		GPid sleeppid = 0;
 
 		virtual void SetUp() {
+			gchar * argv[] = { "sleep", "30", NULL };
+			g_spawn_async(NULL,
+			              argv,
+			              NULL, /* env */
+			              G_SPAWN_SEARCH_PATH,
+			              NULL, NULL, /* child setup */
+			              &sleeppid,
+			              NULL); /* error */
+			ASSERT_NE(0, sleeppid);
+
 			service = dbus_test_service_new(NULL);
 
 			/* Create the cgroup manager mock */
@@ -36,12 +47,19 @@ class CGroupReap : public ::testing::Test
 			g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock", TRUE);
 
 			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+			gchar * pythoncode = g_strdup_printf(
+				"if os.spawnlp(os.P_WAIT, 'ps', 'ps', '%d') == 0 :\n"
+				"  ret = [ %d ]\n"
+				"else:\n"
+				"  ret = [ ]",
+				sleeppid, sleeppid);
 			dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
 				"GetTasks",
 				G_VARIANT_TYPE("(ss)"),
 				G_VARIANT_TYPE("ai"),
-				"ret = [100, 200, 300]",
+				pythoncode,
 				NULL);
+			g_free(pythoncode);
 
 			/* Put it together */
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock));
@@ -67,6 +85,9 @@ class CGroupReap : public ::testing::Test
 				cleartry++;
 			}
 			ASSERT_EQ(bus, nullptr);
+
+			g_debug("Killing the sleeper: %d", sleeppid);
+			kill(sleeppid, SIGKILL);
 		}
 
 		static gboolean pause_helper (gpointer pmainloop) {
@@ -88,9 +109,33 @@ class CGroupReap : public ::testing::Test
 				g_main_iteration(TRUE);
 			}
 		}
+
+		bool sleepRunning (void) {
+			gint status = 1;
+			gchar * cmdline = g_strdup_printf("ps %d", sleeppid);
+
+			g_spawn_command_line_sync(cmdline, NULL, NULL, &status, NULL);
+			g_free(cmdline);
+
+			return status == 0;
+		}
 };
 
 TEST_F(CGroupReap, Test)
 {
+	g_setenv("UPSTART_JOB", "foo", TRUE);
+	g_setenv("UPSTART_INSTANCE", "bar", TRUE);
 
+	ASSERT_TRUE(g_spawn_command_line_sync(CG_REAP_TOOL, NULL, NULL, NULL, NULL));
+	EXPECT_FALSE(sleepRunning());
+
+	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+	const DbusTestDbusMockCall * calls = NULL;
+	guint len = 0;
+
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(2, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/foo-bar")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 }
