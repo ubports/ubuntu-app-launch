@@ -421,10 +421,28 @@ TEST_F(LibUAL, ApplicationLog)
 
 TEST_F(LibUAL, ApplicationPid)
 {
+	/* Check primary pid, which comes from Upstart */
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("foo"), getpid());
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("bar"), 5678);
+
+	/* Look at the full PID list from CG Manager */
+	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+	const DbusTestDbusMockCall * calls = NULL;
+	guint len = 0;
+
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "foo"));
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(1, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-foo")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
 	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "foo"));
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(1, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-foo")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 }
 
 TEST_F(LibUAL, ApplicationId)
