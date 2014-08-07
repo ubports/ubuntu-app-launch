@@ -121,7 +121,7 @@ class CGroupReap : public ::testing::Test
 		}
 };
 
-TEST_F(CGroupReap, Test)
+TEST_F(CGroupReap, KillSleep)
 {
 	g_setenv("UPSTART_JOB", "foo", TRUE);
 	g_setenv("UPSTART_INSTANCE", "bar", TRUE);
@@ -138,4 +138,19 @@ TEST_F(CGroupReap, Test)
 	EXPECT_STREQ("GetTasks", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/foo-bar")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+}
+
+TEST_F(CGroupReap, NoVars)
+{
+	g_unsetenv("UPSTART_JOB");
+	g_setenv("UPSTART_INSTANCE", "bar", TRUE);
+
+	ASSERT_TRUE(g_spawn_command_line_sync(CG_REAP_TOOL, NULL, NULL, NULL, NULL));
+	EXPECT_TRUE(sleepRunning());
+
+	g_setenv("UPSTART_JOB", "foo", TRUE);
+	g_unsetenv("UPSTART_INSTANCE");
+
+	ASSERT_TRUE(g_spawn_command_line_sync(CG_REAP_TOOL, NULL, NULL, NULL, NULL));
+	EXPECT_TRUE(sleepRunning());
 }
