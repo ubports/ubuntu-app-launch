@@ -430,6 +430,7 @@ TEST_F(LibUAL, ApplicationPid)
 	const DbusTestDbusMockCall * calls = NULL;
 	guint len = 0;
 
+	/* Click in the set */
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "foo"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
 	EXPECT_EQ(1, len);
@@ -437,12 +438,30 @@ TEST_F(LibUAL, ApplicationPid)
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-foo")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
+	/* Click out of the set */
 	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "foo"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
 	EXPECT_EQ(1, len);
 	EXPECT_STREQ("GetTasks", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-foo")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
+	/* Legacy Single Instance */
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "single"));
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(1, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-single-")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
+	/* Legacy Multi Instance */
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "bar"));
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(1, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-bar-2342345")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
 }
 
 TEST_F(LibUAL, ApplicationId)
