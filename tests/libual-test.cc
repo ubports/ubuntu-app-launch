@@ -421,6 +421,11 @@ TEST_F(LibUAL, ApplicationLog)
 
 TEST_F(LibUAL, ApplicationPid)
 {
+	/* Check bad params */
+	EXPECT_EQ(0, ubuntu_app_launch_get_primary_pid(NULL));
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(0, "foo"));
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(100, NULL));
+
 	/* Check primary pid, which comes from Upstart */
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("foo"), getpid());
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("bar"), 5678);
