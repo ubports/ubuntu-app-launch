@@ -126,6 +126,11 @@ cgroup_manager_connection (void)
 }
 
 /* Get the PIDs for a particular cgroup */
+/* We're using the base cgroup 'freezer' in this code (and
+   in the Upstart jobs). Really the actual group is meaningless
+   we just need one that is in every kernel we need to support.
+   We're just using the cgroup as a bag of PIDs, not for
+   restricting any particular resource. */
 GList *
 pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gchar * instancename)
 {
