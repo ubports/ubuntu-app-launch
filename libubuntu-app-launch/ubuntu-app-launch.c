@@ -1045,6 +1045,9 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 	return pid;
 }
 
+/* Get the PIDs for an AppID. If it's click or legacy single instance that's
+   a simple call to the helper. But if it's not, we have to make a call for
+   each instance of the app that we have running. */
 GList *
 pids_for_appid (const gchar * appid)
 {
@@ -1102,7 +1105,7 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 		return FALSE;
 	}
 
-	GList * pidlist = pids_for_appid(appid); /* TODO: Turn appid into cgroup name */
+	GList * pidlist = pids_for_appid(appid);
 	GList * head;
 
 	for (head = pidlist; head != NULL; head = g_list_next(head)) {
