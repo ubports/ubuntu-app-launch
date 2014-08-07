@@ -623,4 +623,3 @@ starting_handshake_wait (handshake_t * handshake)
 
 	g_free(handshake);
 }
-
