@@ -15,6 +15,7 @@ env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
 export UBUNTU_APP_LAUNCH_ARCH
 
 apparmor switch ${APP_ID}
+cgroup freezer
 oom score 800
 
 # This is unconfined
@@ -29,3 +30,5 @@ end script
 
 # Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec
+
+post-stop exec @pkglibexecdir@/cgroup-reap-all

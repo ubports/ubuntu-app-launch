@@ -30,6 +30,7 @@ class LibUAL : public ::testing::Test
 	protected:
 		DbusTestService * service = NULL;
 		DbusTestDbusMock * mock = NULL;
+		DbusTestDbusMock * cgmock = NULL;
 		GDBusConnection * bus = NULL;
 		std::string last_focus_appid;
 		std::string last_resume_appid;
@@ -215,13 +216,29 @@ class LibUAL : public ::testing::Test
 				g_variant_new_string("untrusted-type:24034582324132:com.bar_foo_8432.13.1"),
 				NULL);
 
+			/* Create the cgroup manager mock */
+			cgmock = dbus_test_dbus_mock_new("org.test.cgmock");
+			g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock", TRUE);
+
+			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+			dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
+				"GetTasks",
+				G_VARIANT_TYPE("(ss)"),
+				G_VARIANT_TYPE("ai"),
+				"ret = [100, 200, 300]",
+				NULL);
+
 			/* Put it together */
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
+			dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock));
 			dbus_test_service_start_tasks(service);
 
 			bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 			g_dbus_connection_set_exit_on_close(bus, FALSE);
 			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
+
+			/* Make sure we pretend the CG manager is just on our bus */
+			g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS", "YES", TRUE);
 
 			ASSERT_TRUE(ubuntu_app_launch_observer_add_app_focus(focus_cb, this));
 			ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resume(resume_cb, this));
@@ -232,6 +249,7 @@ class LibUAL : public ::testing::Test
 			ubuntu_app_launch_observer_delete_app_resume(resume_cb, this);
 
 			g_clear_object(&mock);
+			g_clear_object(&cgmock);
 			g_clear_object(&service);
 
 			g_object_unref(bus);
@@ -403,10 +421,52 @@ TEST_F(LibUAL, ApplicationLog)
 
 TEST_F(LibUAL, ApplicationPid)
 {
+	/* Check bad params */
+	EXPECT_EQ(0, ubuntu_app_launch_get_primary_pid(NULL));
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(0, "foo"));
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(100, NULL));
+
+	/* Check primary pid, which comes from Upstart */
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("foo"), getpid());
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("bar"), 5678);
-	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(getpid(), "foo"));
-	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(5678, "foo"));
+
+	/* Look at the full PID list from CG Manager */
+	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+	const DbusTestDbusMockCall * calls = NULL;
+	guint len = 0;
+
+	/* Click in the set */
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "foo"));
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(1, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-foo")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
+	/* Click out of the set */
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "foo"));
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(1, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-foo")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
+	/* Legacy Single Instance */
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "single"));
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(1, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-single-")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
+	/* Legacy Multi Instance */
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "bar"));
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	EXPECT_EQ(1, len);
+	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-bar-2342345")));
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
 }
 
 TEST_F(LibUAL, ApplicationId)

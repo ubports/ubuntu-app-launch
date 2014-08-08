@@ -71,3 +71,12 @@ add_executable (exec-util-test
 target_link_libraries (exec-util-test gtest ubuntu-launcher ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (exec-util-test exec-util-test)
 
+# CGroup Reap Test
+
+add_definitions ( -DCG_REAP_TOOL="${CMAKE_BINARY_DIR}/cgroup-reap-all" )
+
+add_executable (cgroup-reap-test
+	cgroup-reap-test.cc)
+target_link_libraries (cgroup-reap-test gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
+add_test (cgroup-reap-test cgroup-reap-test)
+

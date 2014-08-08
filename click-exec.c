@@ -120,10 +120,12 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	g_debug("Setting 'APP_DIR' to '%s'", pkgdir);
-	set_upstart_variable("APP_DIR", pkgdir, FALSE);
+	EnvHandle * handle = env_handle_start();
 
-	set_confined_envvars(package, pkgdir);
+	g_debug("Setting 'APP_DIR' to '%s'", pkgdir);
+	env_handle_add(handle, "APP_DIR", pkgdir);
+
+	set_confined_envvars(handle, package, pkgdir);
 
 	tracepoint(upstart_app_launch, click_configured_env);
 
@@ -141,7 +143,7 @@ main (int argc, char * argv[])
 
 	GKeyFile * keyfile = g_key_file_new();
 
-	set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfile, FALSE);
+	env_handle_add(handle, "APP_DESKTOP_FILE_PATH", desktopfile);
 	g_key_file_load_from_file(keyfile, desktopfile, 0, &error);
 	if (error != NULL) {
 		g_warning("Unable to load desktop file '%s': %s", desktopfile, error->message);
@@ -161,14 +163,17 @@ main (int argc, char * argv[])
 	tracepoint(upstart_app_launch, click_read_desktop);
 
 	g_debug("Setting 'APP_EXEC' to '%s'", exec);
-	/* NOTE: This should be the last upstart variable set as it is sync
-	   so it will wait for a reply from Upstart implying that Upstart
-	   has seen all the other variable requests we made */
-	set_upstart_variable("APP_EXEC", exec, TRUE);
+	env_handle_add(handle, "APP_EXEC", exec);
 
 	g_free(exec);
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
+
+	tracepoint(upstart_app_launch, click_send_env_vars);
+
+	/* NOTE: We now are sending all of the env vars to Upstart */
+	env_handle_finish(handle);
+	handle = NULL; /* Cause errors */
 
 	tracepoint(upstart_app_launch, click_handshake_wait);
 
