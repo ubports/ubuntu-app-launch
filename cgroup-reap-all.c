@@ -29,23 +29,27 @@ main (int argc, char * argv[])
 
 	/* We're gonna try to kill things forever, literally. It's important
 	   enough that we can't consider failure an option. */
-	GList * pidlist = NULL;
-	while (g_list_length(pidlist = pids_from_cgroup(cgmanager, NULL, NULL)) > 1) {
+	gboolean killed = TRUE;
+	while (killed) {
+		GList * pidlist = pids_from_cgroup(cgmanager, NULL, NULL);
 		GList * head;
+
+		killed = FALSE;
 
 		for (head = pidlist; head != NULL; head = g_list_next(head)) {
 			GPid pid = GPOINTER_TO_INT(head->data);
 
-			if (pid != getpid()) {
+			/* We don't want to kill ourselves, or if we're being executed by
+			   a script, that script, either */
+			if (pid != getpid() && pid != getppid()) {
 				g_debug("Killing pid: %d", pid);
 				kill(pid, SIGKILL);
+				killed = TRUE;
 			}
 		}
 
 		g_list_free(pidlist);
 	}
-
-	g_list_free(pidlist);
 
 	g_clear_object(&cgmanager);
 
