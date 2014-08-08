@@ -49,9 +49,9 @@ class CGroupReap : public ::testing::Test
 			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
 			gchar * pythoncode = g_strdup_printf(
 				"if os.spawnlp(os.P_WAIT, 'ps', 'ps', '%d') == 0 :\n"
-				"  ret = [ %d ]\n"
+				"  ret = [ 1, %d ]\n"
 				"else:\n"
-				"  ret = [ ]",
+				"  ret = [ 1 ]",
 				sleeppid, sleeppid);
 			dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
 				"GetTasks",
@@ -136,21 +136,7 @@ TEST_F(CGroupReap, KillSleep)
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
 	EXPECT_EQ(2, len);
 	EXPECT_STREQ("GetTasks", calls->name);
-	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/foo-bar")));
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 }
 
-TEST_F(CGroupReap, NoVars)
-{
-	g_unsetenv("UPSTART_JOB");
-	g_setenv("UPSTART_INSTANCE", "bar", TRUE);
-
-	ASSERT_TRUE(g_spawn_command_line_sync(CG_REAP_TOOL, NULL, NULL, NULL, NULL));
-	EXPECT_TRUE(sleepRunning());
-
-	g_setenv("UPSTART_JOB", "foo", TRUE);
-	g_unsetenv("UPSTART_INSTANCE");
-
-	ASSERT_TRUE(g_spawn_command_line_sync(CG_REAP_TOOL, NULL, NULL, NULL, NULL));
-	EXPECT_TRUE(sleepRunning());
-}
