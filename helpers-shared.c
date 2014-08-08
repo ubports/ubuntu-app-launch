@@ -136,7 +136,10 @@ pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gcha
 {
 	GError * error = NULL;
 	const gchar * name = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME");
-	gchar * groupname = g_strdup_printf("upstart/%s-%s", jobname, instancename);
+	gchar * groupname = NULL;
+	if (jobname != NULL) {
+		groupname = g_strdup_printf("upstart/%s-%s", jobname, instancename);
+	}
 
 	g_debug("Looking for cg manager '%s' group '%s'", name, groupname);
 
@@ -145,7 +148,7 @@ pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gcha
 		"/org/linuxcontainers/cgmanager",
 		"org.linuxcontainers.cgmanager0_0",
 		"GetTasks",
-		g_variant_new("(ss)", "freezer", groupname),
+		g_variant_new("(ss)", "freezer", groupname ? groupname : ""),
 		G_VARIANT_TYPE("(ai)"),
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* default timeout */

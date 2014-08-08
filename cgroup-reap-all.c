@@ -24,31 +24,28 @@ int kill (pid_t pid, int signal);
 int
 main (int argc, char * argv[])
 {
-	const gchar * jobname = g_getenv("UPSTART_JOB");
-	const gchar * instance = g_getenv("UPSTART_INSTANCE");
-
-	if (jobname == NULL || instance == NULL) {
-		g_warning("Unable to get job information in cgroup reaper");
-		return 1;
-	}
-
 	GDBusConnection * cgmanager = cgroup_manager_connection();
 	g_return_val_if_fail(cgmanager != NULL, -1);
 
 	/* We're gonna try to kill things forever, literally. It's important
 	   enough that we can't consider failure an option. */
 	GList * pidlist = NULL;
-	while ((pidlist = pids_from_cgroup(cgmanager, jobname, instance)) != NULL) {
+	while (g_list_length(pidlist = pids_from_cgroup(cgmanager, NULL, NULL)) > 1) {
 		GList * head;
 
 		for (head = pidlist; head != NULL; head = g_list_next(head)) {
 			GPid pid = GPOINTER_TO_INT(head->data);
-			g_debug("Killing pid: %d", pid);
-			kill(pid, SIGKILL);
+
+			if (pid != getpid()) {
+				g_debug("Killing pid: %d", pid);
+				kill(pid, SIGKILL);
+			}
 		}
 
 		g_list_free(pidlist);
 	}
+
+	g_list_free(pidlist);
 
 	g_clear_object(&cgmanager);
 
