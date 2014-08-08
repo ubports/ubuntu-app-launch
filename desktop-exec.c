@@ -27,6 +27,8 @@
 #include "desktop-exec-trace.h"
 #include "recoverable-problem.h"
 
+const gchar * app_id = NULL;
+
 int
 main (int argc, char * argv[])
 {
@@ -35,7 +37,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	const gchar * app_id = g_getenv("APP_ID");
+	app_id = g_getenv("APP_ID");
 
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");
@@ -43,7 +45,7 @@ main (int argc, char * argv[])
 	}
 
 	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
-	tracepoint(upstart_app_launch, desktop_start);
+	tracepoint(upstart_app_launch, desktop_start, app_id);
 
 	/* Ensure we keep one connection open to the bus for the entire
 	   script even though different people need it throughout */
@@ -60,7 +62,7 @@ main (int argc, char * argv[])
 		g_warning("Unable to setup starting handshake");
 	}
 
-	tracepoint(upstart_app_launch, desktop_starting_sent);
+	tracepoint(upstart_app_launch, desktop_starting_sent, app_id);
 
 	gchar * desktopfilename = NULL;
 	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
@@ -110,7 +112,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	tracepoint(upstart_app_launch, desktop_found);
+	tracepoint(upstart_app_launch, desktop_found, app_id);
 
 	EnvHandle * handle = env_handle_start();
 
@@ -144,17 +146,17 @@ main (int argc, char * argv[])
 
 	g_key_file_free(keyfile);
 
-	tracepoint(upstart_app_launch, desktop_send_env_vars);
+	tracepoint(upstart_app_launch, desktop_send_env_vars, app_id);
 
 	/* Sync the env vars with Upstart */
 	env_handle_finish(handle);
 	handle = NULL; /* make errors not love */
 
-	tracepoint(upstart_app_launch, desktop_handshake_wait);
+	tracepoint(upstart_app_launch, desktop_handshake_wait, app_id);
 
 	starting_handshake_wait(handshake);
 
-	tracepoint(upstart_app_launch, desktop_handshake_complete);
+	tracepoint(upstart_app_launch, desktop_handshake_complete, app_id);
 
 	g_object_unref(bus);
 
