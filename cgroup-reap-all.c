@@ -20,10 +20,14 @@
 #include "helpers.h"
 
 int kill (pid_t pid, int signal);
+pid_t getpgid (pid_t);
 
 int
 main (int argc, char * argv[])
 {
+	/* Break off a new process group */
+	setpgid(0, 0);
+
 	GDBusConnection * cgmanager = cgroup_manager_connection();
 	g_return_val_if_fail(cgmanager != NULL, -1);
 
@@ -40,8 +44,9 @@ main (int argc, char * argv[])
 			GPid pid = GPOINTER_TO_INT(head->data);
 
 			/* We don't want to kill ourselves, or if we're being executed by
-			   a script, that script, either */
-			if (pid != getpid() && pid != getppid()) {
+			   a script, that script, either. We also don't want things in our
+			   process group which we forked at the opening */
+			if (pid != getpid() && pid != getppid() && getpgid(pid) != getpid()) {
 				g_debug("Killing pid: %d", pid);
 				kill(pid, SIGKILL);
 				killed = TRUE;
