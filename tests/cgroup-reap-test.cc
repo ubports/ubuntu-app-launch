@@ -49,9 +49,9 @@ class CGroupReap : public ::testing::Test
 			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
 			gchar * pythoncode = g_strdup_printf(
 				"if os.spawnlp(os.P_WAIT, 'ps', 'ps', '%d') == 0 :\n"
-				"  ret = [ 1, %d ]\n"
+				"  ret = [ %d ]\n"
 				"else:\n"
-				"  ret = [ 1 ]",
+				"  ret = [ ]",
 				sleeppid, sleeppid);
 			dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
 				"GetTasks",
