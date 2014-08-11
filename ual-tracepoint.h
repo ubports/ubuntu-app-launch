@@ -20,15 +20,17 @@
 #ifndef UAL_TRACEPOINT_H__
 #define UAL_TRACEPOINT_H__ 1
 
+#include <glib.h>
+
 extern int _ual_tracepoints_env_checked;
 extern int _ual_tracepoints_enabled;
 
 #define ual_tracepoint(point, ...) \
-	if (!_ual_tracepoints_env_checked) { \
+	if (G_UNLIKELY(!_ual_tracepoints_env_checked)) { \
 		_ual_tracepoints_enabled = getenv("UBUNTU_APP_LAUNCH_LTTNG_ENABLED") != NULL; \
 		_ual_tracepoints_env_checked = 1; \
 	} \
-	if (_ual_tracepoints_enabled) { \
+	if (G_UNLIKELY(_ual_tracepoints_enabled)) { \
 		tracepoint(ubuntu_app_launch, point, __VA_ARGS__); \
 	}
 
