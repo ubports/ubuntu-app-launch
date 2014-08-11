@@ -1,11 +1,56 @@
 
-TRACEPOINT_EVENT(upstart_app_launch, click_start, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, click_starting_sent, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, click_found_pkgdir, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, click_configured_env, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, click_read_manifest, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, click_read_desktop, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, click_send_env_vars, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, click_handshake_wait, TP_ARGS(0), TP_FIELDS())
-TRACEPOINT_EVENT(upstart_app_launch, click_handshake_complete, TP_ARGS(0), TP_FIELDS())
+TRACEPOINT_EVENT(upstart_app_launch, click_start,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, click_starting_sent,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, click_found_pkgdir,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, click_configured_env,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, click_read_manifest,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, click_read_desktop,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, click_send_env_vars,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, click_handshake_wait,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
+TRACEPOINT_EVENT(upstart_app_launch, click_handshake_complete,
+	TP_ARGS(const char *, appid),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+	)
+)
 
