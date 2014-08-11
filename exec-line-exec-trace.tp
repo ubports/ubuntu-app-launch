@@ -1,17 +1,17 @@
 
-TRACEPOINT_EVENT(upstart_app_launch, exec_start,
+TRACEPOINT_EVENT(ubuntu_app_launch, exec_start,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, exec_parse_complete,
+TRACEPOINT_EVENT(ubuntu_app_launch, exec_parse_complete,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, exec_pre_exec,
+TRACEPOINT_EVENT(ubuntu_app_launch, exec_pre_exec,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
