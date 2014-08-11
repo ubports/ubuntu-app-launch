@@ -25,6 +25,10 @@
 extern int _ual_tracepoints_env_checked;
 extern int _ual_tracepoints_enabled;
 
+/* Little macro that makes it so we can easily turn off all the tracepoints
+   if they're not needed. Also cleans up the code a bit by removing some common
+   elements */
+
 #define ual_tracepoint(point, ...) \
 	if (G_UNLIKELY(!_ual_tracepoints_env_checked)) { \
 		_ual_tracepoints_enabled = getenv("UBUNTU_APP_LAUNCH_LTTNG_ENABLED") != NULL; \
