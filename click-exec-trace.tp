@@ -1,53 +1,53 @@
 
-TRACEPOINT_EVENT(upstart_app_launch, click_start,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_start,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, click_starting_sent,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_starting_sent,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, click_found_pkgdir,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_found_pkgdir,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, click_configured_env,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_configured_env,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, click_read_manifest,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_read_manifest,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, click_read_desktop,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_read_desktop,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, click_send_env_vars,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_send_env_vars,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, click_handshake_wait,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_handshake_wait,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, click_handshake_complete,
+TRACEPOINT_EVENT(ubuntu_app_launch, click_handshake_complete,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
