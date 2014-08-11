@@ -1059,18 +1059,26 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 static GList *
 pids_for_appid (const gchar * appid)
 {
+	ual_tracepoint(pids_list_start, appid);
+
 	GDBusConnection * cgmanager = cgroup_manager_connection();
 	g_return_val_if_fail(cgmanager != NULL, NULL);
+
+	ual_tracepoint(pids_list_connected, appid);
 
 	if (is_click(appid)) {
 		GList * pids = pids_from_cgroup(cgmanager, "application-click", appid);
 		g_clear_object(&cgmanager);
+
+		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
 	} else if (legacy_single_instance(appid)) {
 		gchar * jobname = g_strdup_printf("%s-", appid);
 		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
 		g_free(jobname);
 		g_clear_object(&cgmanager);
+
+		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
 	}
 
@@ -1101,6 +1109,7 @@ pids_for_appid (const gchar * appid)
 
 	g_clear_object(&cgmanager);
 
+	ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 	return pids;
 }
 
