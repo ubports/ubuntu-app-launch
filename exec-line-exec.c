@@ -139,8 +139,6 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	ual_tracepoint(exec_parse_complete, app_id);
-
 	/* Now exec */
 	gchar ** nargv = (gchar**)g_array_free(newargv, FALSE);
 
