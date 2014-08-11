@@ -1,35 +1,35 @@
 
-TRACEPOINT_EVENT(upstart_app_launch, desktop_start,
+TRACEPOINT_EVENT(ubuntu_app_launch, desktop_start,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, desktop_starting_sent,
+TRACEPOINT_EVENT(ubuntu_app_launch, desktop_starting_sent,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, desktop_found,
+TRACEPOINT_EVENT(ubuntu_app_launch, desktop_found,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, desktop_send_env_vars,
+TRACEPOINT_EVENT(ubuntu_app_launch, desktop_send_env_vars,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, desktop_handshake_wait,
+TRACEPOINT_EVENT(ubuntu_app_launch, desktop_handshake_wait,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(upstart_app_launch, desktop_handshake_complete,
+TRACEPOINT_EVENT(ubuntu_app_launch, desktop_handshake_complete,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
