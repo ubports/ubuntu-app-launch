@@ -21,6 +21,7 @@
 #include <click.h>
 #include "helpers.h"
 #include "click-exec-trace.h"
+#include "ual-tracepoint.h"
 
 /*
 
@@ -54,7 +55,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	tracepoint(ubuntu_app_launch, click_start, app_id);
+	ual_tracepoint(click_start, app_id);
 
 	/* Ensure we keep one connection open to the bus for the entire
 	   script even though different people need it throughout */
@@ -71,7 +72,7 @@ main (int argc, char * argv[])
 		g_warning("Unable to setup starting handshake");
 	}
 
-	tracepoint(ubuntu_app_launch, click_starting_sent, app_id);
+	ual_tracepoint(click_starting_sent, app_id);
 
 	gchar * package = NULL;
 	/* 'Parse' the App ID */
@@ -111,7 +112,7 @@ main (int argc, char * argv[])
 	g_object_unref(user);
 	g_object_unref(db);
 
-	tracepoint(ubuntu_app_launch, click_found_pkgdir, app_id);
+	ual_tracepoint(click_found_pkgdir, app_id);
 
 	if (!g_file_test(pkgdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("Application directory '%s' doesn't exist", pkgdir);
@@ -127,7 +128,7 @@ main (int argc, char * argv[])
 
 	set_confined_envvars(handle, package, pkgdir);
 
-	tracepoint(ubuntu_app_launch, click_configured_env, app_id);
+	ual_tracepoint(click_configured_env, app_id);
 
 	gchar * desktopfile = manifest_to_desktop(pkgdir, app_id);
 
@@ -139,7 +140,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	tracepoint(ubuntu_app_launch, click_read_manifest, app_id);
+	ual_tracepoint(click_read_manifest, app_id);
 
 	GKeyFile * keyfile = g_key_file_new();
 
@@ -160,7 +161,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	tracepoint(ubuntu_app_launch, click_read_desktop, app_id);
+	ual_tracepoint(click_read_desktop, app_id);
 
 	g_debug("Setting 'APP_EXEC' to '%s'", exec);
 	env_handle_add(handle, "APP_EXEC", exec);
@@ -169,17 +170,17 @@ main (int argc, char * argv[])
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
 
-	tracepoint(ubuntu_app_launch, click_send_env_vars, app_id);
+	ual_tracepoint(click_send_env_vars, app_id);
 
 	/* NOTE: We now are sending all of the env vars to Upstart */
 	env_handle_finish(handle);
 	handle = NULL; /* Cause errors */
 
-	tracepoint(ubuntu_app_launch, click_handshake_wait, app_id);
+	ual_tracepoint(click_handshake_wait, app_id);
 
 	starting_handshake_wait(handshake);
 
-	tracepoint(ubuntu_app_launch, click_handshake_complete, app_id);
+	ual_tracepoint(click_handshake_complete, app_id);
 
 	g_object_unref(bus);
 
