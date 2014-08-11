@@ -610,19 +610,26 @@ add_session_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, co
 	return TRUE;
 }
 
-/* Handle the focus signal when it occurs, call the observer */
-static void
-focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+/* Generic handler for a bunch of our signals */
+static inline void
+generic_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
 	observer_t * observer = (observer_t *)user_data;
 	const gchar * appid = NULL;
-
-	ual_tracepoint(observer_start, "focus");
 
 	if (observer->func != NULL) {
 		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
+}
+
+/* Handle the focus signal when it occurs, call the observer */
+static void
+focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	ual_tracepoint(observer_start, "focus");
+
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	ual_tracepoint(observer_finish, "focus");
 }
@@ -639,7 +646,7 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 {
 	ual_tracepoint(observer_start, "resume");
 
-	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	GError * error = NULL;
 	g_dbus_connection_emit_signal(conn,
@@ -670,7 +677,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 {
 	ual_tracepoint(observer_start, "starting");
 
-	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	GError * error = NULL;
 	g_dbus_connection_emit_signal(conn,
