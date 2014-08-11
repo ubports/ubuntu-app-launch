@@ -30,6 +30,54 @@
 
 const gchar * app_id = NULL;
 
+/* Reports an error on the caller of UAL so that we can track
+   who is trying to launch bad AppIDs, and then fix their bug
+   so that we get better reporting upstream. */
+void
+report_error_on_caller (void) {
+	g_warning("Unable to find keyfile for application '%s'", app_id);
+
+	const gchar * props[3] = {
+		"AppId", NULL,
+		NULL
+	};
+	props[1] = app_id;
+
+	GPid pid = 0;
+	const gchar * launcher_pid = g_getenv("APP_LAUNCHER_PID");
+	if (launcher_pid != NULL) {
+		pid = atoi(launcher_pid);
+	}
+
+	/* Checking to see if we're using the command line tool to create
+	   the appid. Chances are in that case it's a user error, and we
+	   don't need to automatically record it, the user mistyped. */
+	gboolean debugtool = FALSE;
+	if (pid != 0) {
+		gchar * cmdpath = g_strdup_printf("/proc/%d/cmdline", pid);
+		gchar * cmdline = NULL;
+
+		if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
+			if (g_strstr_len(cmdline, -1, "ubuntu-app-launch") != NULL) {
+				debugtool = TRUE;
+			}
+
+			g_free(cmdline);
+		} else {
+			/* The caller has already exited, probably a debug tool */
+			debugtool = TRUE;
+		}
+
+		g_free(cmdpath);
+	}
+
+	if (!debugtool) {
+		report_recoverable_problem("ubuntu-app-launch-invalid-appid", pid, TRUE, props);
+	} else {
+		g_debug("Suppressing appid recoverable error for debug tool");
+	}
+}
+
 int
 main (int argc, char * argv[])
 {
@@ -68,47 +116,7 @@ main (int argc, char * argv[])
 	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
 	if (keyfile == NULL) {
-		g_warning("Unable to find keyfile for application '%s'", app_id);
-
-		const gchar * props[3] = {
-			"AppId", NULL,
-			NULL
-		};
-		props[1] = app_id;
-
-		GPid pid = 0;
-		const gchar * launcher_pid = g_getenv("APP_LAUNCHER_PID");
-		if (launcher_pid != NULL) {
-			pid = atoi(launcher_pid);
-		}
-
-		/* Checking to see if we're using the command line tool to create
-		   the appid. Chances are in that case it's a user error, and we
-		   don't need to automatically record it, the user mistyped. */
-		gboolean debugtool = FALSE;
-		if (pid != 0) {
-			gchar * cmdpath = g_strdup_printf("/proc/%d/cmdline", pid);
-			gchar * cmdline = NULL;
-
-			if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
-				if (g_strstr_len(cmdline, -1, "ubuntu-app-launch") != NULL) {
-					debugtool = TRUE;
-				}
-
-				g_free(cmdline);
-			} else {
-				/* The caller has already exited, probably a debug tool */
-				debugtool = TRUE;
-			}
-
-			g_free(cmdpath);
-		}
-
-		if (!debugtool) {
-			report_recoverable_problem("ubuntu-app-launch-invalid-appid", pid, TRUE, props);
-		} else {
-			g_debug("Suppressing appid recoverable error for debug tool");
-		}
+		report_error_on_caller();
 		return 1;
 	}
 
