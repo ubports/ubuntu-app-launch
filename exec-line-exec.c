@@ -41,8 +41,10 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	const gchar * app_id = g_getenv("APP_ID");
+
 	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
-	tracepoint(upstart_app_launch, exec_start);
+	tracepoint(upstart_app_launch, exec_start, app_id);
 
 	/* URIs */
 	const gchar * app_uris = g_getenv("APP_URIS");
@@ -136,12 +138,12 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	tracepoint(upstart_app_launch, exec_parse_complete);
+	tracepoint(upstart_app_launch, exec_parse_complete, app_id);
 
 	/* Now exec */
 	gchar ** nargv = (gchar**)g_array_free(newargv, FALSE);
 
-	tracepoint(upstart_app_launch, exec_pre_exec);
+	tracepoint(upstart_app_launch, exec_pre_exec, app_id);
 
 	int execret = execvp(nargv[0], nargv);
 
