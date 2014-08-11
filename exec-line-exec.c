@@ -42,9 +42,9 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	/* For the tracepoints */
 	const gchar * app_id = g_getenv("APP_ID");
 
-	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
 	ual_tracepoint(exec_start, app_id);
 
 	/* URIs */
