@@ -160,11 +160,11 @@ main (int argc, char * argv[])
 	env_handle_finish(handle);
 	handle = NULL; /* make errors not love */
 
-	ual_tracepoint(desktop_handshake_wait, app_id);
+	ual_tracepoint(handshake_wait, app_id);
 
 	starting_handshake_wait(handshake);
 
-	ual_tracepoint(desktop_handshake_complete, app_id);
+	ual_tracepoint(handshake_complete, app_id);
 
 	g_object_unref(bus);
 

@@ -23,13 +23,13 @@ TRACEPOINT_EVENT(ubuntu_app_launch, desktop_send_env_vars,
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(ubuntu_app_launch, desktop_handshake_wait,
+TRACEPOINT_EVENT(ubuntu_app_launch, handshake_wait,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
 	)
 )
-TRACEPOINT_EVENT(ubuntu_app_launch, desktop_handshake_complete,
+TRACEPOINT_EVENT(ubuntu_app_launch, handshake_complete,
 	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
