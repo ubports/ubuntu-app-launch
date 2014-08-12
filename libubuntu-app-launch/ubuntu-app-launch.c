@@ -197,6 +197,8 @@ is_click (const gchar * appid)
 static gboolean
 start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
 {
+	tracepoint(ubuntu_app_launch, libual_start, appid);
+
 	g_return_val_if_fail(appid != NULL, FALSE);
 
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
