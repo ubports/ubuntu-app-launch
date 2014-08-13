@@ -388,6 +388,20 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 	return found;
 }
 
+gboolean
+ubuntu_app_launch_pause_application (const gchar * appid)
+{
+	/* TODO: All of it */
+	return FALSE;
+}
+
+gboolean
+ubuntu_app_launch_resume_application (const gchar * appid)
+{
+	/* TODO: All of it */
+	return FALSE;
+}
+
 gchar *
 ubuntu_app_launch_application_log_path (const gchar * appid)
 {
