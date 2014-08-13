@@ -14,6 +14,7 @@ env APP_DESKTOP_FILE_PATH
 
 # This will be set to "unconfined" by desktop-exec if there is no confinement defined
 apparmor switch $APP_EXEC_POLICY
+cgroup freezer
 
 pre-start exec @pkglibexecdir@/desktop-exec
 
@@ -21,4 +22,7 @@ pre-start exec @pkglibexecdir@/desktop-exec
 exec @pkglibexecdir@/exec-line-exec
 
 post-start exec @pkglibexecdir@/zg-report-app open
-post-stop exec @pkglibexecdir@/zg-report-app close
+post-stop script
+	@pkglibexecdir@/zg-report-app close
+	@pkglibexecdir@/cgroup-reap-all
+end script

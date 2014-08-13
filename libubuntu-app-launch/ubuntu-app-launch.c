@@ -1059,6 +1059,57 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 	return pid;
 }
 
+/* Get the PIDs for an AppID. If it's click or legacy single instance that's
+   a simple call to the helper. But if it's not, we have to make a call for
+   each instance of the app that we have running. */
+static GList *
+pids_for_appid (const gchar * appid)
+{
+	GDBusConnection * cgmanager = cgroup_manager_connection();
+	g_return_val_if_fail(cgmanager != NULL, NULL);
+
+	if (is_click(appid)) {
+		GList * pids = pids_from_cgroup(cgmanager, "application-click", appid);
+		g_clear_object(&cgmanager);
+		return pids;
+	} else if (legacy_single_instance(appid)) {
+		gchar * jobname = g_strdup_printf("%s-", appid);
+		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
+		g_free(jobname);
+		g_clear_object(&cgmanager);
+		return pids;
+	}
+
+	/* If we're not single instance, we need to find all the pids for all
+	   the instances of the app */
+	unsigned int i;
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, NULL);
+
+	GList * pids = NULL;
+
+	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
+	g_array_set_clear_func(apps, free_helper);
+
+	apps_for_job(con, "application-legacy", apps, FALSE);
+	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
+	for (i = 0; i < apps->len; i++) {
+		const gchar * array_id = g_array_index(apps, const gchar *, i);
+		if (g_str_has_prefix(array_id, appiddash)) {
+			GList * morepids = pids_from_cgroup(cgmanager, "application-legacy", array_id);
+			pids = g_list_concat(pids, morepids);
+		}
+	}
+	g_free(appiddash);
+
+	g_array_free(apps, TRUE);
+	g_object_unref(con);
+
+	g_clear_object(&cgmanager);
+
+	return pids;
+}
+
 gboolean
 ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 {
@@ -1068,9 +1119,19 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 		return FALSE;
 	}
 
-	GPid primary = ubuntu_app_launch_get_primary_pid(appid);
+	GList * pidlist = pids_for_appid(appid);
+	GList * head;
 
-	return primary == pid;
+	for (head = pidlist; head != NULL; head = g_list_next(head)) {
+		GPid checkpid = GPOINTER_TO_INT(head->data);
+		if (checkpid == pid) {
+			g_list_free(pidlist);
+			return TRUE;
+		}
+	}
+
+	g_list_free(pidlist);
+	return FALSE;
 }
 
 gboolean
