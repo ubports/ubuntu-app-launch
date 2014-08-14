@@ -80,7 +80,7 @@ main (int argc, char * argv[])
 
 		/* If we've got an architecture set insert that into the
 		   path before everything else */
-		const gchar * archdir = g_getenv("UPSTART_APP_LAUNCH_ARCH");
+		const gchar * archdir = g_getenv("UBUNTU_APP_LAUNCH_ARCH");
 		if (archdir != NULL && strchr(archdir, ':') == NULL) {
 			path_libpath = g_build_filename(appdir, "lib", archdir, "bin", NULL);
 			import_libpath = g_build_filename(appdir, "lib", archdir, NULL);

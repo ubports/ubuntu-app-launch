@@ -26,7 +26,7 @@ set(LAUNCHER_SOURCES
 ubuntu-app-launch.c
 second-exec-core.c
 ubuntu-app-launch-trace.c
-"${CMAKE_SOURCE_DIR}/helpers-keyfile.c"
+"${CMAKE_SOURCE_DIR}/helpers-shared.c"
 )
 
 add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES})

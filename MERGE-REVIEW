@@ -12,9 +12,9 @@ and reviewers should ensure that they've done for a merge into the project.
  * Did the Jenkins build compile?  Pass?  Run unit tests successfully?
  * Are there appropriate tests to cover any new functionality?
  * If this MR effects application startup:
-   * Run test case: upstart-app-launch/click-app
-   * Run test case: upstart-app-launch/legacy-app
-   * Run test case: upstart-app-launch/secondary-activation
+   * Run test case: ubuntu-app-launch/click-app
+   * Run test case: ubuntu-app-launch/legacy-app
+   * Run test case: ubuntu-app-launch/secondary-activation
  * If this MR effect untrusted-helpers:
-   * Run test case: upstart-app-launch/helper-run
+   * Run test case: ubuntu-app-launch/helper-run
 

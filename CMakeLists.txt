@@ -28,7 +28,7 @@ endif()
 set(pkglibexecdir "${CMAKE_INSTALL_FULL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
 
 execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
-	OUTPUT_VARIABLE UPSTART_APP_LAUNCH_ARCH
+	OUTPUT_VARIABLE UBUNTU_APP_LAUNCH_ARCH
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
@@ -67,6 +67,9 @@ include_directories(${DBUSTEST_INCLUDE_DIRS})
 pkg_check_modules(LTTNG REQUIRED lttng-ust)
 include_directories(${LTTNG_INCLUDE_DIRS})
 
+pkg_check_modules(CGMANAGER REQUIRED libcgmanager)
+include_directories(${CGMANAGER_INCLUDE_DIRS})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
@@ -77,7 +80,7 @@ add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c helpers-keyfile.c)
+add_library(helpers STATIC helpers.c helpers-shared.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
 
 ####################
@@ -163,6 +166,15 @@ add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
 set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
 target_link_libraries(untrusted-helper-type-end ubuntu-launcher)
 install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
+# cgroup-reap-all
+####################
+
+add_executable(cgroup-reap-all cgroup-reap-all.c)
+set_target_properties(cgroup-reap-all PROPERTIES OUTPUT_NAME "cgroup-reap-all")
+target_link_libraries(cgroup-reap-all helpers)
+install(TARGETS cgroup-reap-all RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # ubuntu-app-launch-desktop.click-hook

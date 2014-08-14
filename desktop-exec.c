@@ -89,7 +89,7 @@ main (int argc, char * argv[])
 			gchar * cmdline = NULL;
 
 			if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
-				if (g_strstr_len(cmdline, -1, "upstart-app-launch") != NULL) {
+				if (g_strstr_len(cmdline, -1, "ubuntu-app-launch") != NULL) {
 					debugtool = TRUE;
 				}
 
@@ -103,7 +103,7 @@ main (int argc, char * argv[])
 		}
 
 		if (!debugtool) {
-			report_recoverable_problem("upstart-app-launch-invalid-appid", pid, TRUE, props);
+			report_recoverable_problem("ubuntu-app-launch-invalid-appid", pid, TRUE, props);
 		} else {
 			g_debug("Suppressing appid recoverable error for debug tool");
 		}

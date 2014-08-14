@@ -7,6 +7,7 @@ Build-Depends: click-dev (>= 0.2.2),
                dbus-x11,
                dbus-test-runner,
                debhelper (>= 9),
+               libcgmanager-dev,
                libclick-0.4-dev,
                libdbus-1-dev,
                libdbustest1-dev (>= 14.04.0),
@@ -48,6 +49,9 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          ubuntu-app-launch (= ${binary:Version}),
+Replaces: upstart-app-launch-tools
+Conflicts: upstart-app-launch-tools
+Provides: upstart-app-launch-tools
 Description: Tools for working wtih launched applications
  Upstart Job file and associated utilities that is used to launch
  applications in a standard and confined way.

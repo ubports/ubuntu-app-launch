@@ -18,6 +18,8 @@
  */
 
 #include "helpers.h"
+#include <gio/gio.h>
+#include <cgmanager/cgmanager.h>
 
 /* Check to make sure we have the sections and keys we want */
 static gboolean
@@ -93,3 +95,86 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 	return keyfile;
 }
 
+/* Get the connection to the cgroup manager */
+GDBusConnection *
+cgroup_manager_connection (void)
+{
+	GError * error = NULL;
+
+	GDBusConnection * cgmanager = NULL;
+
+	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS")) {
+		/* For working dbusmock */
+		g_debug("Connecting to CG Manager on session bus");
+		cgmanager = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	} else {
+		cgmanager = g_dbus_connection_new_for_address_sync(
+			CGMANAGER_DBUS_PATH,
+			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
+			NULL, /* Auth Observer */
+			NULL, /* Cancellable */
+			&error);
+	}
+
+	if (error != NULL) {
+		g_warning("Unable to connect to cgroup manager: %s", error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	return cgmanager;
+}
+
+/* Get the PIDs for a particular cgroup */
+/* We're using the base cgroup 'freezer' in this code (and
+   in the Upstart jobs). Really the actual group is meaningless
+   we just need one that is in every kernel we need to support.
+   We're just using the cgroup as a bag of PIDs, not for
+   restricting any particular resource. */
+GList *
+pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gchar * instancename)
+{
+	GError * error = NULL;
+	const gchar * name = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME");
+	gchar * groupname = NULL;
+	if (jobname != NULL) {
+		groupname = g_strdup_printf("upstart/%s-%s", jobname, instancename);
+	}
+
+	g_debug("Looking for cg manager '%s' group '%s'", name, groupname);
+
+	GVariant * vtpids = g_dbus_connection_call_sync(cgmanager,
+		name, /* bus name for direct connection is NULL */
+		"/org/linuxcontainers/cgmanager",
+		"org.linuxcontainers.cgmanager0_0",
+		"GetTasks",
+		g_variant_new("(ss)", "freezer", groupname ? groupname : ""),
+		G_VARIANT_TYPE("(ai)"),
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* default timeout */
+		NULL, /* cancellable */
+		&error);
+
+	g_free(groupname);
+
+	if (error != NULL) {
+		g_warning("Unable to get PID list from cgroup manager: %s", error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	GVariant * vpids = g_variant_get_child_value(vtpids, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, vpids);
+	gint32 pid;
+	GList * retval = NULL;
+
+	while (g_variant_iter_loop(&iter, "i", &pid)) {
+		retval = g_list_prepend(retval, GINT_TO_POINTER(pid));
+	}
+
+	g_variant_unref(vpids);
+	g_variant_unref(vtpids);
+
+	return retval;
+}
