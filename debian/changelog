@@ -1,3 +1,10 @@
+ubuntu-app-launch (0.4+14.10.20140808.2.is.0.4+14.10.20140808.2-0ubuntu1) utopic; urgency=medium
+
+  * Temporarily revert the cgroup support introduced in the last
+    version, as it was causing regressions in our test infrastructure
+
+ -- Lukasz 'sil2100' Zemczak <lukasz.zemczak@canonical.com>   Mon, 18 Aug 2014 19:01:39 +0200
+
 ubuntu-app-launch (0.4+14.10.20140808.2-0ubuntu1) utopic; urgency=low
 
   [ Ted Gould ]
