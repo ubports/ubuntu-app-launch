@@ -1,4 +1,4 @@
-ubuntu-app-launch (0.4+14.10.20140808.2.is.0.4+14.10.20140808.2-0ubuntu2) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.4+14.10.20140819-0ubuntu1) UNRELEASED; urgency=medium
 
   * Unrevert cgroup support
 
