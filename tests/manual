@@ -60,3 +60,15 @@ Test-case ubuntu-app-launch/cgroup-containment
         <dd>Type the command <tt>cat /proc/self/cgroup</tt></dd>
         <dd>Under the "freeze" cgroup the end of the path should include the AppID of the terminal. An example would be (the version many change): <tt>4:freezer:/user.slice/user-32011.slice/session-c2.scope/upstart/application-click-com.ubuntu.terminal_terminal_0.5.106</tt></dd>
 </dl>
+
+Test-case ubuntu-app-launch/correct-job-type
+<dl>
+    <dt>Launch the settings application: <tt>ubuntu-app-launch ubuntu-system-settings</tt></dt>
+        <dd>The settings application should be brought to focus and shown to the user</dd>
+    <dt>Launch the clock application: <tt>ubuntu-app-launch `ubuntu-app-triplet com.ubuntu.clock`</tt></dt>
+        <dd>The clock application should be brought to focus and shown to the user</dd>
+    <dt>Verify the settings app is running under the <tt>application-legacy</tt> upstart job</dt>
+        <dd>Running <tt>initctl list | grep application-legacy | grep ubuntu-system-settings</tt> should return a single entry</dd>
+    <dt>Verify the clock app is running under the <tt>application-click</tt> upstart job</dt>
+        <dd>Running <tt>initctl list | grep application-click | grep com.ubuntu.clock</tt> should return a single entry</dd>
+</dl>
