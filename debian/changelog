@@ -1,3 +1,10 @@
+ubuntu-app-launch (0.4+14.10.20140808.2-0ubuntu1) utopic; urgency=low
+
+  [ Ted Gould ]
+  * Use Upstart cgroup support in 1.13 to properly track PIDs
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 08 Aug 2014 03:59:40 +0000
+
 ubuntu-app-launch (0.4+14.10.20140605.3-0ubuntu1) utopic; urgency=medium
 
   [ Ted Gould ]
