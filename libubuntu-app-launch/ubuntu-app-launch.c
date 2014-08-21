@@ -28,6 +28,8 @@
 #include "second-exec-core.h"
 #include "helpers.h"
 #include "ual-tracepoint.h"
+#include "click-exec.h"
+#include "desktop-exec.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -251,6 +253,12 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 
 	if (test) {
 		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
+	}
+
+	if (click) {
+		click_task_setup(appid, (EnvHandle*)&builder);
+	} else {
+		desktop_task_setup(appid, (EnvHandle*)&builder);
 	}
 
 	g_variant_builder_close(&builder);
