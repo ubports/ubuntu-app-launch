@@ -25,6 +25,8 @@ ubuntu-app-launch.h
 set(LAUNCHER_SOURCES
 ubuntu-app-launch.c
 second-exec-core.c
+click-exec.c
+desktop-exec.c
 ubuntu-app-launch-trace.c
 "${CMAKE_SOURCE_DIR}/helpers-shared.c"
 )

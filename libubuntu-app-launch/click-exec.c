@@ -20,7 +20,7 @@
 #include <gio/gio.h>
 #include <click.h>
 #include "helpers.h"
-#include "click-exec-trace.h"
+#include "ubuntu-app-launch-trace.h"
 #include "ual-tracepoint.h"
 
 /*
@@ -40,19 +40,12 @@ https://click.readthedocs.org/en/latest/
 
 */
 
-int
-main (int argc, char * argv[])
+gboolean
+click_task_setup (const gchar * app_id, EnvHandle * envhandle)
 {
-	if (argc != 1 && argc != 3) {
-		g_error("Should be called as: %s", argv[0]);
-		return 1;
-	}
-
-	const gchar * app_id = g_getenv("APP_ID");
-
 	if (app_id == NULL) {
 		g_error("No APP ID defined");
-		return 1;
+		return FALSE;
 	}
 
 	ual_tracepoint(click_start, app_id);
@@ -64,7 +57,7 @@ main (int argc, char * argv[])
 	if (error != NULL) {
 		g_error("Unable to get session bus: %s", error->message);
 		g_error_free(error);
-		return 1;
+		return FALSE;
 	}
 
 	handshake_t * handshake = starting_handshake_start(app_id);
@@ -78,7 +71,7 @@ main (int argc, char * argv[])
 	/* 'Parse' the App ID */
 	if (!app_id_to_triplet(app_id, &package, NULL, NULL)) {
 		g_warning("Unable to parse App ID: '%s'", app_id);
-		return 1;
+		return FALSE;
 	}
 
 	/* Check click to find out where the files are */
@@ -89,7 +82,7 @@ main (int argc, char * argv[])
 		g_warning("Unable to read Click database: %s", error->message);
 		g_error_free(error);
 		g_free(package);
-		return 1;
+		return FALSE;
 	}
 	/* If TEST_CLICK_USER is unset, this uses the current user name. */
 	ClickUser * user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
@@ -98,7 +91,7 @@ main (int argc, char * argv[])
 		g_error_free(error);
 		g_free(package);
 		g_object_unref(db);
-		return 1;
+		return FALSE;
 	}
 	gchar * pkgdir = click_user_get_path(user, package, &error);
 	if (error != NULL) {
@@ -107,7 +100,7 @@ main (int argc, char * argv[])
 		g_free(package);
 		g_object_unref(user);
 		g_object_unref(db);
-		return 1;
+		return FALSE;
 	}
 	g_object_unref(user);
 	g_object_unref(db);
@@ -118,7 +111,7 @@ main (int argc, char * argv[])
 		g_warning("Application directory '%s' doesn't exist", pkgdir);
 		g_free(pkgdir);
 		g_free(package);
-		return 1;
+		return FALSE;
 	}
 
 	EnvHandle * handle = env_handle_start();
@@ -137,7 +130,7 @@ main (int argc, char * argv[])
 
 	if (desktopfile == NULL) {
 		g_warning("Desktop file unable to be found");
-		return 1;
+		return FALSE;
 	}
 
 	ual_tracepoint(click_read_manifest, app_id);
@@ -151,14 +144,14 @@ main (int argc, char * argv[])
 		g_error_free(error);
 		g_key_file_free(keyfile);
 		g_free(desktopfile);
-		return 1;
+		return FALSE;
 	}
 
 	/* This string is quoted using desktop file quoting:
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	gchar * exec = desktop_to_exec(keyfile, desktopfile);
 	if (exec == NULL) {
-		return 1;
+		return FALSE;
 	}
 
 	ual_tracepoint(click_read_desktop, app_id);
@@ -170,12 +163,6 @@ main (int argc, char * argv[])
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
 
-	ual_tracepoint(click_send_env_vars, app_id);
-
-	/* NOTE: We now are sending all of the env vars to Upstart */
-	env_handle_finish(handle);
-	handle = NULL; /* Cause errors */
-
 	ual_tracepoint(handshake_wait, app_id);
 
 	starting_handshake_wait(handshake);
@@ -184,5 +171,5 @@ main (int argc, char * argv[])
 
 	g_object_unref(bus);
 
-	return 0;
+	return TRUE;
 }
