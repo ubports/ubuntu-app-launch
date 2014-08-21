@@ -21,6 +21,8 @@
 #include <gio/gio.h>
 #include <cgmanager/cgmanager.h>
 
+#include "ual-tracepoint.h"
+
 /* Check to make sure we have the sections and keys we want */
 static gboolean
 verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
@@ -178,3 +180,8 @@ pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gcha
 
 	return retval;
 }
+
+/* Global markers for the ual_tracepoint macro */
+int _ual_tracepoints_env_checked = 0;
+int _ual_tracepoints_enabled = 0;
+
