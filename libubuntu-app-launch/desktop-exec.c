@@ -73,7 +73,7 @@ report_error_on_caller (const gchar * app_id) {
 }
 
 gboolean
-desktop_task_setup (const gchar * app_id, EnvHandle * handle)
+desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle)
 {
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");
@@ -81,16 +81,6 @@ desktop_task_setup (const gchar * app_id, EnvHandle * handle)
 	}
 
 	ual_tracepoint(desktop_start, app_id);
-
-	/* Ensure we keep one connection open to the bus for the entire
-	   script even though different people need it throughout */
-	GError * error = NULL;
-	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-	if (error != NULL) {
-		g_error("Unable to get session bus: %s", error->message);
-		g_error_free(error);
-		return FALSE;
-	}
 
 	handshake_t * handshake = starting_handshake_start(app_id);
 	if (handshake == NULL) {
@@ -144,8 +134,6 @@ desktop_task_setup (const gchar * app_id, EnvHandle * handle)
 	starting_handshake_wait(handshake);
 
 	ual_tracepoint(handshake_complete, app_id);
-
-	g_object_unref(bus);
 
 	return TRUE;
 }

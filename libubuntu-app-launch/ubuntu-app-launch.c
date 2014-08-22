@@ -256,9 +256,9 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	}
 
 	if (click) {
-		click_task_setup(appid, (EnvHandle*)&builder);
+		click_task_setup(con, appid, (EnvHandle*)&builder);
 	} else {
-		desktop_task_setup(appid, (EnvHandle*)&builder);
+		desktop_task_setup(con, appid, (EnvHandle*)&builder);
 	}
 
 	g_variant_builder_close(&builder);

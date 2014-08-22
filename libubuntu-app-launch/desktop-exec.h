@@ -20,5 +20,5 @@
 #include <glib.h>
 #include "helpers.h"
 
-gboolean desktop_task_setup (const gchar * appid, EnvHandle * envhandle);
+gboolean desktop_task_setup (GDBusConnection * bus, const gchar * appid, EnvHandle * envhandle);
 
