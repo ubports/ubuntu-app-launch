@@ -48,7 +48,7 @@ report_error_on_caller (const gchar * app_id) {
 	   don't need to automatically record it, the user mistyped. */
 	gboolean debugtool = FALSE;
 	if (pid != 0) {
-		gchar * cmdpath = g_strdup_printf("/proc/%d/cmdline", pid);
+		const gchar * cmdpath = "/proc/self/cmdline";
 		gchar * cmdline = NULL;
 
 		if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
@@ -61,8 +61,6 @@ report_error_on_caller (const gchar * app_id) {
 			/* The caller has already exited, probably a debug tool */
 			debugtool = TRUE;
 		}
-
-		g_free(cmdpath);
 	}
 
 	if (!debugtool) {
