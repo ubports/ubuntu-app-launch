@@ -43,10 +43,9 @@ https://click.readthedocs.org/en/latest/
 gboolean
 click_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle)
 {
-	if (app_id == NULL) {
-		g_error("No APP ID defined");
-		return FALSE;
-	}
+	g_return_val_if_fail(bus != NULL, FALSE);
+	g_return_val_if_fail(app_id != NULL, FALSE);
+	g_return_val_if_fail(handle != NULL, FALSE);
 
 	ual_tracepoint(click_start, app_id);
 
