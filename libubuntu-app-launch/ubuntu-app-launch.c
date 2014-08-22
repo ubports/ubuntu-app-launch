@@ -255,34 +255,39 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
 	}
 
+	gboolean setup_complete = FALSE;
 	if (click) {
-		click_task_setup(con, appid, (EnvHandle*)&builder);
+		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
 	} else {
-		desktop_task_setup(con, appid, (EnvHandle*)&builder);
+		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder);
 	}
 
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+	if (setup_complete) {
+		g_variant_builder_close(&builder);
+		g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 	
-	/* Call the job start function */
-	g_dbus_connection_call(con,
-	                       DBUS_SERVICE_UPSTART,
-	                       jobpath,
-	                       DBUS_INTERFACE_UPSTART_JOB,
-	                       "Start",
-	                       g_variant_builder_end(&builder),
-	                       NULL,
-	                       G_DBUS_CALL_FLAGS_NONE,
-	                       -1,
-	                       NULL, /* cancelable */
-	                       application_start_cb,
-	                       app_start_data);
+		/* Call the job start function */
+		g_dbus_connection_call(con,
+		                       DBUS_SERVICE_UPSTART,
+		                       jobpath,
+		                       DBUS_INTERFACE_UPSTART_JOB,
+		                       "Start",
+		                       g_variant_builder_end(&builder),
+		                       NULL,
+		                       G_DBUS_CALL_FLAGS_NONE,
+		                       -1,
+		                       NULL, /* cancelable */
+		                       application_start_cb,
+		                       app_start_data);
 
-	ual_tracepoint(libual_start_message_sent, appid);
+		ual_tracepoint(libual_start_message_sent, appid);
+	} else {
+		g_variant_builder_clear(&builder);
+	}
 
 	g_object_unref(con);
 
-	return TRUE;
+	return setup_complete;
 }
 
 gboolean
