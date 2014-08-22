@@ -73,7 +73,7 @@ report_error_on_caller (const gchar * app_id) {
 }
 
 gboolean
-desktop_task_setup (const gchar * app_id, EnvHandle * envhandle)
+desktop_task_setup (const gchar * app_id, EnvHandle * handle)
 {
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");
@@ -108,8 +108,6 @@ desktop_task_setup (const gchar * app_id, EnvHandle * envhandle)
 	}
 
 	ual_tracepoint(desktop_found, app_id);
-
-	EnvHandle * handle = env_handle_start();
 
 	/* Desktop file name so that libs can get other info from it */
 	if (desktopfilename != NULL) {

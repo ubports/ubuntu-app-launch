@@ -41,7 +41,7 @@ https://click.readthedocs.org/en/latest/
 */
 
 gboolean
-click_task_setup (const gchar * app_id, EnvHandle * envhandle)
+click_task_setup (const gchar * app_id, EnvHandle * handle)
 {
 	if (app_id == NULL) {
 		g_error("No APP ID defined");
@@ -113,8 +113,6 @@ click_task_setup (const gchar * app_id, EnvHandle * envhandle)
 		g_free(package);
 		return FALSE;
 	}
-
-	EnvHandle * handle = env_handle_start();
 
 	g_debug("Setting 'APP_DIR' to '%s'", pkgdir);
 	env_handle_add(handle, "APP_DIR", pkgdir);
