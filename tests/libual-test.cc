@@ -326,13 +326,13 @@ TEST_F(LibUAL, StartApplication)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_app2_1.2.3", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.multiple_first_1.2.3", NULL));
 	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now look at the details of the call */
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_app2_1.2.3", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.multiple_first_1.2.3", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -347,7 +347,7 @@ TEST_F(LibUAL, StartApplication)
 	g_variant_unref(block);
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	g_variant_unref(env);
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
@@ -359,7 +359,7 @@ TEST_F(LibUAL, StartApplication)
 		"file:///home/phablet/test.txt",
 		NULL
 	};
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_app2_1.2.3", urls));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.multiple_first_1.2.3", urls));
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -367,7 +367,7 @@ TEST_F(LibUAL, StartApplication)
 	EXPECT_EQ(1, len);
 
 	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	EXPECT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
 	g_variant_unref(env);
 
@@ -378,7 +378,7 @@ TEST_F(LibUAL, StartApplicationTest)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application_test("com.test.good_app2_1.2.3", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application_test("com.test.multiple_first_1.2.3", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -393,7 +393,7 @@ TEST_F(LibUAL, StartApplicationTest)
 	g_variant_unref(block);
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	EXPECT_TRUE(check_env(env, "QT_LOAD_TESTABILITY", "1"));
 	g_variant_unref(env);
 }
@@ -998,13 +998,13 @@ TEST_F(LibUAL, StartHelper)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.good_app2_1.2.3", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL));
 	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now look at the details of the call */
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.good_app2_1.2.3", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -1019,7 +1019,7 @@ TEST_F(LibUAL, StartHelper)
 	g_variant_unref(block);
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
 	g_variant_unref(env);
@@ -1027,7 +1027,7 @@ TEST_F(LibUAL, StartHelper)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now check a multi out */ 
-	gchar * instance_id = ubuntu_app_launch_start_multiple_helper("untrusted-type", "com.test.good_app2_1.2.3", NULL);
+	gchar * instance_id = ubuntu_app_launch_start_multiple_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL);
 	ASSERT_NE(nullptr, instance_id);
 	g_debug("Multi-instance ID: %s", instance_id);
 
@@ -1044,7 +1044,7 @@ TEST_F(LibUAL, StartHelper)
 	g_variant_unref(block);
 
 	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
 	g_variant_unref(env);
@@ -1059,7 +1059,7 @@ TEST_F(LibUAL, StartHelper)
 		"file:///home/phablet/test.txt",
 		NULL
 	};
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.good_app2_1.2.3", urls));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.multiple_first_1.2.3", urls));
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -1067,7 +1067,7 @@ TEST_F(LibUAL, StartHelper)
 	EXPECT_EQ(1, len);
 
 	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	EXPECT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
