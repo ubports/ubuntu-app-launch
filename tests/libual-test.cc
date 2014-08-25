@@ -769,7 +769,7 @@ TEST_F(LibUAL, UrlSendTest)
 	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	guint filter = g_dbus_connection_add_filter(session,
 		filter_func_good,
-		(gpointer)"/com.test.good_5fapplication_5f1.2.3",
+		(gpointer)"/com_2etest_2egood_5fapplication_5f1_2e2_2e3",
 		NULL);
 
 	const gchar * uris[] = {
@@ -872,7 +872,8 @@ TEST_F(LibUAL, UnityLostTest)
 
 	guint end = g_get_monotonic_time();
 
-	EXPECT_LT(end - start, 600 * 1000);
+	g_debug("Start call time: %d ms", (end - start) / 1000);
+	EXPECT_LT(end - start, 2000 * 1000);
 
 	pause(1000); /* Ensure all the events come through */
 
