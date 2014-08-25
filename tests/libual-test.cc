@@ -535,12 +535,12 @@ TEST_F(LibUAL, ApplicationList)
 
 	/* Not enforcing order, but wanting to use the GTest functions
 	   for "actually testing" so the errors look right. */
-	if (g_strcmp0(apps[0], "foo") == 0) {
-		ASSERT_STREQ(apps[0], "foo");
-		ASSERT_STREQ(apps[1], "bar");
+	if (g_strcmp0(apps[0], "com.test.good_application_1.2.3") == 0) {
+		ASSERT_STREQ("com.test.good_application_1.2.3", apps[0]);
+		ASSERT_STREQ("bar", apps[1]);
 	} else {
-		ASSERT_STREQ(apps[0], "bar");
-		ASSERT_STREQ(apps[1], "foo");
+		ASSERT_STREQ("bar", apps[0]);
+		ASSERT_STREQ("com.test.good_application_1.2.3", apps[1]);
 	}
 
 	g_strfreev(apps);
