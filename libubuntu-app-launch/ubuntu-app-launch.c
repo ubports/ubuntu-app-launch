@@ -217,8 +217,11 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 		jobpath = get_jobpath(con, "application-legacy");
 	}
 
-	if (jobpath == NULL)
+	if (jobpath == NULL) {
+		g_object_unref(con);
+		g_warning("Unable to get job path");
 		return FALSE;
+	}
 
 	ual_tracepoint(libual_job_path_determined, appid, jobpath);
 
