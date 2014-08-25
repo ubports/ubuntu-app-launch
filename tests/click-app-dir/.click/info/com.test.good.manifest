@@ -3,6 +3,9 @@
 	"hooks": {
 		"application": {
 			"desktop": "application.desktop"
+		},
+		"app2": {
+			"desktop": "application.desktop"
 		}
 	}
 }

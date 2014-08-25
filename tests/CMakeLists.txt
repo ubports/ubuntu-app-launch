@@ -36,8 +36,7 @@ add_executable (libual-test
 	libual-test.cc)
 target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
 
-# TODO: Comment out temporarily
-# add_test (NAME libual-test COMMAND libual-test)
+add_test (NAME libual-test COMMAND libual-test)
 
 # Failure Test
 

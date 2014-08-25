@@ -69,6 +69,10 @@ class LibUAL : public ::testing::Test
 		}
 
 		virtual void SetUp() {
+			/* Click DB test mode */
+			g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+			g_setenv("TEST_CLICK_USER", "test-user", TRUE);
+
 			gchar * linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
 			g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
 			g_free(linkfarmpath);
@@ -110,7 +114,7 @@ class LibUAL : public ::testing::Test
 				"Start",
 				G_VARIANT_TYPE("(asb)"),
 				NULL,
-				"if args[0][0] == 'APP_ID=foo':"
+				"if args[0][0] == 'APP_ID=com.test.good_application_1.2.3':"
 				"    raise dbus.exceptions.DBusException('Foo running', name='com.ubuntu.Upstart0_6.Error.AlreadyStarted')",
 				NULL);
 
@@ -132,7 +136,7 @@ class LibUAL : public ::testing::Test
 			dbus_test_dbus_mock_object_add_property(mock, instobj,
 				"name",
 				G_VARIANT_TYPE_STRING,
-				g_variant_new_string("foo"),
+				g_variant_new_string("com.test.good_application_1.2.3"),
 				NULL);
 			gchar * process_var = g_strdup_printf("[('main', %d)]", getpid());
 			dbus_test_dbus_mock_object_add_property(mock, instobj,
@@ -259,7 +263,7 @@ class LibUAL : public ::testing::Test
 				pause(100);
 				cleartry++;
 			}
-			ASSERT_EQ(bus, nullptr);
+			ASSERT_EQ(nullptr, bus);
 		}
 
 		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {
@@ -322,13 +326,13 @@ TEST_F(LibUAL, StartApplication)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_app2_1.2.3", NULL));
 	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now look at the details of the call */
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_app2_1.2.3", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -343,7 +347,7 @@ TEST_F(LibUAL, StartApplication)
 	g_variant_unref(block);
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
 	g_variant_unref(env);
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
@@ -355,7 +359,7 @@ TEST_F(LibUAL, StartApplication)
 		"file:///home/phablet/test.txt",
 		NULL
 	};
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foolike", urls));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_app2_1.2.3", urls));
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -363,7 +367,7 @@ TEST_F(LibUAL, StartApplication)
 	EXPECT_EQ(1, len);
 
 	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
 	EXPECT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
 	g_variant_unref(env);
 
@@ -374,7 +378,7 @@ TEST_F(LibUAL, StartApplicationTest)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application_test("foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application_test("com.test.good_app2_1.2.3", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -389,7 +393,7 @@ TEST_F(LibUAL, StartApplicationTest)
 	g_variant_unref(block);
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
 	EXPECT_TRUE(check_env(env, "QT_LOAD_TESTABILITY", "1"));
 	g_variant_unref(env);
 }
@@ -398,7 +402,7 @@ TEST_F(LibUAL, StopApplication)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	ASSERT_TRUE(ubuntu_app_launch_stop_application("foo"));
+	ASSERT_TRUE(ubuntu_app_launch_stop_application("com.test.good_application_1.2.3"));
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
@@ -406,8 +410,8 @@ TEST_F(LibUAL, StopApplication)
 
 TEST_F(LibUAL, ApplicationLog)
 {
-	gchar * click_log = ubuntu_app_launch_application_log_path("foo");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-click-foo.log", click_log);
+	gchar * click_log = ubuntu_app_launch_application_log_path("com.test.good_application_1.2.3");
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/upstart/application-click-com.test.good_application_1.2.3.log", click_log);
 	g_free(click_log);
 
 	gchar * legacy_single = ubuntu_app_launch_application_log_path("single");
@@ -423,11 +427,11 @@ TEST_F(LibUAL, ApplicationPid)
 {
 	/* Check bad params */
 	EXPECT_EQ(0, ubuntu_app_launch_get_primary_pid(NULL));
-	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(0, "foo"));
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(0, "com.test.good_application_1.2.3"));
 	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(100, NULL));
 
 	/* Check primary pid, which comes from Upstart */
-	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("foo"), getpid());
+	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("com.test.good_application_1.2.3"), getpid());
 	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("bar"), 5678);
 
 	/* Look at the full PID list from CG Manager */
@@ -436,19 +440,19 @@ TEST_F(LibUAL, ApplicationPid)
 	guint len = 0;
 
 	/* Click in the set */
-	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "foo"));
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "com.test.good_application_1.2.3"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
 	EXPECT_EQ(1, len);
 	EXPECT_STREQ("GetTasks", calls->name);
-	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-foo")));
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Click out of the set */
-	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "foo"));
+	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "com.test.good_application_1.2.3"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
 	EXPECT_EQ(1, len);
 	EXPECT_STREQ("GetTasks", calls->name);
-	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-foo")));
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Legacy Single Instance */
@@ -579,7 +583,7 @@ TEST_F(LibUAL, StartStopObserver)
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('started', ['JOB=application-click', 'INSTANCE=foo'])"),
+		g_variant_new_parsed("('started', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
 		NULL
 	);
 
@@ -593,7 +597,7 @@ TEST_F(LibUAL, StartStopObserver)
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=foo'])"),
+		g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
 		NULL
 	);
 
@@ -639,33 +643,33 @@ TEST_F(LibUAL, StartStopObserver)
 
 	/* Test Noise Start */
 	start_data.count = 0;
-	start_data.name = "foo";
+	start_data.name = "com.test.good_application_1.2.3";
 	stop_data.count = 0;
-	stop_data.name = "foo";
+	stop_data.name = "com.test.good_application_1.2.3";
 
 	/* A full lifecycle */
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('starting', ['JOB=application-click', 'INSTANCE=foo'])"),
+		g_variant_new_parsed("('starting', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
 		NULL
 	);
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('started', ['JOB=application-click', 'INSTANCE=foo'])"),
+		g_variant_new_parsed("('started', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
 		NULL
 	);
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('stopping', ['JOB=application-click', 'INSTANCE=foo'])"),
+		g_variant_new_parsed("('stopping', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
 		NULL
 	);
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=foo'])"),
+		g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
 		NULL
 	);
 
@@ -721,12 +725,12 @@ TEST_F(LibUAL, StartingResponses)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingBroadcast", /* signal */
-		g_variant_new("(s)", "foo"), /* params, the same */
+		g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
 		NULL);
 
 	pause(100);
 
-	EXPECT_EQ("foo", last_observer);
+	EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
 	EXPECT_EQ(1, starting_count);
 
 	EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
@@ -737,10 +741,10 @@ TEST_F(LibUAL, StartingResponses)
 
 TEST_F(LibUAL, AppIdTest)
 {
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", NULL));
 	pause(50); /* Ensure all the events come through */
-	EXPECT_EQ("foo", this->last_focus_appid);
-	EXPECT_EQ("foo", this->last_resume_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 GDBusMessage *
@@ -765,18 +769,18 @@ TEST_F(LibUAL, UrlSendTest)
 	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	guint filter = g_dbus_connection_add_filter(session,
 		filter_func_good,
-		(gpointer)"/foo",
+		(gpointer)"/com.test.good_5fapplication_5f1.2.3",
 		NULL);
 
 	const gchar * uris[] = {
 		"http://www.test.com",
 		NULL
 	};
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", uris));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
 	pause(100); /* Ensure all the events come through */
 
-	EXPECT_EQ("foo", this->last_focus_appid);
-	EXPECT_EQ("foo", this->last_resume_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 
 	g_dbus_connection_remove_filter(session, filter);
 
@@ -790,7 +794,7 @@ TEST_F(LibUAL, UrlSendTest)
 			"/", /* path */
 			"com.canonical.UbuntuAppLaunch", /* interface */
 			"UnityResumeResponse", /* signal */
-			g_variant_new("(s)", "foo"), /* params, the same */
+			g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
 			NULL);
 
 		pause(50); /* Ensure all the events come through */
@@ -806,21 +810,21 @@ TEST_F(LibUAL, UrlSendNoObjectTest)
 		NULL
 	};
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", uris));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
 	pause(100); /* Ensure all the events come through */
 
-	EXPECT_EQ("foo", this->last_focus_appid);
-	EXPECT_EQ("foo", this->last_resume_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 TEST_F(LibUAL, UnityTimeoutTest)
 {
 	this->resume_timeout = 100;
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", NULL));
 	pause(1000); /* Ensure all the events come through */
-	EXPECT_EQ("foo", this->last_focus_appid);
-	EXPECT_EQ("foo", this->last_resume_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 TEST_F(LibUAL, UnityTimeoutUriTest)
@@ -832,10 +836,10 @@ TEST_F(LibUAL, UnityTimeoutUriTest)
 		NULL
 	};
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", uris));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
 	pause(1000); /* Ensure all the events come through */
-	EXPECT_EQ("foo", this->last_focus_appid);
-	EXPECT_EQ("foo", this->last_resume_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 GDBusMessage *
@@ -864,7 +868,7 @@ TEST_F(LibUAL, UnityLostTest)
 		NULL
 	};
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", uris));
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
 
 	guint end = g_get_monotonic_time();
 
@@ -872,8 +876,8 @@ TEST_F(LibUAL, UnityLostTest)
 
 	pause(1000); /* Ensure all the events come through */
 
-	EXPECT_EQ("foo", this->last_focus_appid);
-	EXPECT_EQ("foo", this->last_resume_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 
 	g_dbus_connection_remove_filter(session, filter);
 	g_object_unref(session);
@@ -949,12 +953,12 @@ TEST_F(LibUAL, FailingObserver)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
-		g_variant_new("(ss)", "foo", "crash"), /* params, the same */
+		g_variant_new("(ss)", "com.test.good_application_1.2.3", "crash"), /* params, the same */
 		NULL);
 
 	pause(100);
 
-	EXPECT_EQ("foo", last_observer);
+	EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
 
 	last_observer.clear();
 
@@ -963,12 +967,12 @@ TEST_F(LibUAL, FailingObserver)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
-		g_variant_new("(ss)", "foo", "blahblah"), /* params, the same */
+		g_variant_new("(ss)", "com.test.good_application_1.2.3", "blahblah"), /* params, the same */
 		NULL);
 
 	pause(100);
 
-	EXPECT_EQ("foo", last_observer);
+	EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
 
 	last_observer.clear();
 
@@ -977,7 +981,7 @@ TEST_F(LibUAL, FailingObserver)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
-		g_variant_new("(ss)", "foo", "start-failure"), /* params, the same */
+		g_variant_new("(ss)", "com.test.good_application_1.2.3", "start-failure"), /* params, the same */
 		NULL);
 
 	pause(100);
@@ -994,13 +998,13 @@ TEST_F(LibUAL, StartHelper)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.good_app2_1.2.3", NULL));
 	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now look at the details of the call */
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "foolike", NULL));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.good_app2_1.2.3", NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -1015,7 +1019,7 @@ TEST_F(LibUAL, StartHelper)
 	g_variant_unref(block);
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
 	g_variant_unref(env);
@@ -1023,7 +1027,7 @@ TEST_F(LibUAL, StartHelper)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now check a multi out */ 
-	gchar * instance_id = ubuntu_app_launch_start_multiple_helper("untrusted-type", "foolike", NULL);
+	gchar * instance_id = ubuntu_app_launch_start_multiple_helper("untrusted-type", "com.test.good_app2_1.2.3", NULL);
 	ASSERT_NE(nullptr, instance_id);
 	g_debug("Multi-instance ID: %s", instance_id);
 
@@ -1040,7 +1044,7 @@ TEST_F(LibUAL, StartHelper)
 	g_variant_unref(block);
 
 	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
 	g_variant_unref(env);
@@ -1055,7 +1059,7 @@ TEST_F(LibUAL, StartHelper)
 		"file:///home/phablet/test.txt",
 		NULL
 	};
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "foolike", urls));
+	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.good_app2_1.2.3", urls));
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -1063,7 +1067,7 @@ TEST_F(LibUAL, StartHelper)
 	EXPECT_EQ(1, len);
 
 	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "foolike"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_app2_1.2.3"));
 	EXPECT_TRUE(check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
@@ -1077,7 +1081,7 @@ TEST_F(LibUAL, StopHelper)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic helper */
-	ASSERT_TRUE(ubuntu_app_launch_stop_helper("untrusted-type", "foo"));
+	ASSERT_TRUE(ubuntu_app_launch_stop_helper("untrusted-type", "com.test.good_application_1.2.3"));
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
@@ -1094,7 +1098,7 @@ TEST_F(LibUAL, StopHelper)
 	g_variant_unref(block);
 
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "foo"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_application_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
 	g_variant_unref(env);
@@ -1102,7 +1106,7 @@ TEST_F(LibUAL, StopHelper)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Multi helper */
-	ASSERT_TRUE(ubuntu_app_launch_stop_multiple_helper("untrusted-type", "foo", "instance-me"));
+	ASSERT_TRUE(ubuntu_app_launch_stop_multiple_helper("untrusted-type", "com.test.good_application_1.2.3", "instance-me"));
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
@@ -1119,7 +1123,7 @@ TEST_F(LibUAL, StopHelper)
 	g_variant_unref(block);
 
 	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "foo"));
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_application_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_TRUE(check_env(env, "INSTANCE_ID", "instance-me"));
 	g_variant_unref(env);
