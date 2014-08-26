@@ -61,6 +61,13 @@ add_test (zg-test zg-test)
 configure_file("exec-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh" @ONLY) 
 add_test (exec-test "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh")
 
+# Exec Utils
+
+add_executable (exec-util-test
+	exec-util-test.cc)
+target_link_libraries (exec-util-test gtest ubuntu-launcher ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
+add_test (exec-util-test exec-util-test)
+
 # CGroup Reap Test
 
 add_definitions ( -DCG_REAP_TOOL="${CMAKE_BINARY_DIR}/cgroup-reap-all" )
