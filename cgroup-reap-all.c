@@ -31,6 +31,9 @@ main (int argc, char * argv[])
 	GDBusConnection * cgmanager = cgroup_manager_connection();
 	g_return_val_if_fail(cgmanager != NULL, -1);
 
+	GPid selfpid = getpid();
+	GPid parentpid = getppid();
+
 	/* We're gonna try to kill things forever, literally. It's important
 	   enough that we can't consider failure an option. */
 	gboolean killed = TRUE;
@@ -46,7 +49,7 @@ main (int argc, char * argv[])
 			/* We don't want to kill ourselves, or if we're being executed by
 			   a script, that script, either. We also don't want things in our
 			   process group which we forked at the opening */
-			if (pid != getpid() && pid != getppid() && getpgid(pid) != getpid()) {
+			if (pid != selfpid && pid != parentpid && getpgid(pid) != selfpid) {
 				g_debug("Killing pid: %d", pid);
 				kill(pid, SIGKILL);
 				killed = TRUE;
