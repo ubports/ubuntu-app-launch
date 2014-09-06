@@ -390,14 +390,33 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 	return found;
 }
 
+/* Sets the OOM score to a particular value, returns true on NULL */
+static gboolean
+set_oom_value (GPid pid, const gchar * oomscore)
+{
+	if (oomscore == NULL) {
+		return TRUE;
+	}
+
+	/* TODO: Do it */
+
+	return TRUE;
+}
+
 /* Gets all the pids for an appid and sends a signal to all of them. This also
    loops to ensure no new pids are added while we're signaling */
 static gboolean
-signal_to_cgroup (const gchar * appid, int signal)
+signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 {
 	GHashTable * pidssignaled = g_hash_table_new(g_int_hash, g_int_equal);
 	guint hash_table_size = 0;
 	gboolean retval = TRUE;
+
+	/* In the test suite we can't set this becuase we don't have permissions,
+	   which sucks, but it's the reality of testing at package build time */
+	if (g_getenv("UBUNTU_APP_LAUNCH_NO_SET_OOM")) {
+		oomscore = NULL;
+	}
 
 	do {
 		hash_table_size = g_hash_table_size(pidssignaled);
@@ -422,6 +441,12 @@ signal_to_cgroup (const gchar * appid, int signal)
 				g_warning("Unable to send signal %d to pid %d", signal, pid);
 				retval = FALSE;
 			}
+
+			if (!set_oom_value(pid, oomscore)) {
+				g_warning("Unable to set OOM score '%s' on pid %d", oomscore, pid);
+				retval = FALSE;
+			}
+
 			g_hash_table_add(pidssignaled, iter->data);
 		}
 
@@ -437,13 +462,13 @@ signal_to_cgroup (const gchar * appid, int signal)
 gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
-	return signal_to_cgroup(appid, SIGSTOP);
+	return signal_to_cgroup(appid, SIGSTOP, "900");
 }
 
 gboolean
 ubuntu_app_launch_resume_application (const gchar * appid)
 {
-	return signal_to_cgroup(appid, SIGCONT);
+	return signal_to_cgroup(appid, SIGCONT, "100");
 }
 
 gchar *
