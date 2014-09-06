@@ -398,9 +398,13 @@ set_oom_value (GPid pid, const gchar * oomscore)
 		return TRUE;
 	}
 
-	/* TODO: Do it */
+	gchar * path = g_strdup_printf("/proc/%d/oom_score_adj", pid);
 
-	return TRUE;
+	gboolean res = g_file_set_contents(path, oomscore, -1, NULL);
+
+	g_free(path);
+
+	return res;
 }
 
 /* Gets all the pids for an appid and sends a signal to all of them. This also
