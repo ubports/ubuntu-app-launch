@@ -22,7 +22,7 @@
 gboolean
 timeout (gpointer user_data)
 {
-	g_printf("Data\n");
+	g_print("Data\n");
 	return TRUE;
 }
 

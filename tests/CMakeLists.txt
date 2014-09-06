@@ -36,6 +36,10 @@ add_executable (libual-test
 	libual-test.cc)
 target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
 
+add_executable (data-spew
+	data-spew.c)
+target_link_libraries (data-spew ${GLIB2_LIBRARIES})
+
 add_test (NAME libual-test COMMAND libual-test)
 
 # Failure Test
