@@ -1244,3 +1244,40 @@ TEST_F(LibUAL, StartStopHelperObserver)
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
 }
+
+TEST_F(LibUAL, PauseResume)
+{
+	g_setenv("UBUNTU_APP_LAUNCH_NO_SET_OOM", "TRUE", 1);
+
+	/* Setup some spew */
+	GPid spewpid = 0;
+	gint spewstdout = 0;
+	const gchar * spewline[] = { SPEW_UTILITY, NULL };
+	ASSERT_TRUE(g_spawn_async_with_pipes(NULL,
+		(gchar **)spewline,
+		NULL, /* environment */
+		G_SPAWN_DEFAULT,
+		NULL, NULL, /* child setup */
+		&spewpid,
+		NULL, /* stdin */
+		&spewstdout,
+		NULL, /* stderr */
+		NULL)); /* error */
+
+	GIOChannel * spewoutchan = g_io_channel_unix_new(spewstdout);
+
+	/* Setup the cgroup */
+
+
+
+	/* Test it */
+
+
+
+	/* Clean up */
+	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
+	ASSERT_TRUE(g_spawn_command_line_sync(killstr, NULL, NULL, NULL, NULL));
+	g_free(killstr);
+
+	g_io_channel_unref(spewoutchan);
+}

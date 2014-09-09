@@ -31,6 +31,7 @@ add_test (helper-handshake-test helper-handshake-test)
 # libUAL Test
 
 include_directories("${CMAKE_SOURCE_DIR}/libubuntu-app-launch")
+add_definitions ( -DSPEW_UTILITY="${CMAKE_CURRENT_BINARY_DIR}/data-spew" )
 
 add_executable (libual-test
 	libual-test.cc)
