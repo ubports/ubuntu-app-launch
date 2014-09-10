@@ -58,6 +58,7 @@ find_events_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	}
 
 	GHashTable * laststop = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_date_time_unref);
+	GHashTable * usage = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
 	while (zeitgeist_result_set_has_next(results)) {
 		ZeitgeistEvent * event = zeitgeist_result_set_next_value(results);
@@ -73,10 +74,12 @@ find_events_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 
 				if (starttime != NULL) {
 					GTimeSpan runtime = g_date_time_difference(stoptime, starttime);
-
-					g_debug("App %s use for %d seconds", appurl, (int)(runtime / G_TIME_SPAN_SECOND));
-
+					guint seconds = runtime / G_TIME_SPAN_SECOND;
 					g_date_time_unref(stoptime);
+
+					/* Update the usage table */
+					gint previoususage = GPOINTER_TO_UINT(g_hash_table_lookup(usage, appurl));
+					g_hash_table_insert(usage, g_strdup(appurl), GUINT_TO_POINTER(previoususage + seconds));
 				}
 
 				g_hash_table_remove(laststop, appurl);
@@ -93,13 +96,22 @@ find_events_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 			}
 		}
 
-		g_debug("Got %s for '%s' at %d" , eventtype, appurl, (int)zeitgeist_event_get_timestamp(event));
+		g_debug("Got %s for '%s'" , eventtype, appurl);
 
 		g_object_unref(subject);
 		g_object_unref(event);
 	}
 
+	GHashTableIter iter;
+	g_hash_table_iter_init(&iter, usage);
+	gpointer key, value;
+
+	while (g_hash_table_iter_next(&iter, &key, &value)) {
+		g_print("%s\t%d seconds\n", (gchar *)key, GPOINTER_TO_UINT(value));
+	}
+
 	g_hash_table_destroy(laststop);
+	g_hash_table_destroy(usage);
 	g_object_unref(results);
 
 	return;
