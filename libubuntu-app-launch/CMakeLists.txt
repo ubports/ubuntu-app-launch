@@ -45,6 +45,7 @@ target_link_libraries(ubuntu-launcher
 	${LTTNG_LIBRARIES}
 	${JSONGLIB_LIBRARIES}
 	${CLICK_LIBRARIES}
+	${ZEITGEIST_LIBRARIES}
 	-Wl,--no-undefined
 )
 

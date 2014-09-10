@@ -464,14 +464,64 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 	return retval;
 }
 
+/* Mostly here to just print a warning if we can't submit the event, they're
+   not critical to have */
+static void
+zg_insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+	GArray * result = NULL;
+
+	result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to submit Zeitgeist Event: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_array_free(result, TRUE);
+	return;
+}
+
 /* Function to report the access and leaving events to Zeitgeist so we
    can track application usage */
 static void
 report_zg_event (const gchar * appid, const gchar * eventtype)
 {
+	gchar * uri = NULL;
+	gchar * pkg = NULL;
+	gchar * app = NULL;
 
+	if (ubuntu_app_launch_app_id_parse(appid, &pkg, &app, NULL)) {
+		/* If it's parseable, use the short form */
+		uri = g_strdup_printf("application://%s_%s.desktop", pkg, app);
+		g_free(pkg);
+		g_free(app);
+	} else {
+		uri = g_strdup_printf("application://%s.desktop", appid);
+	}
 
+	ZeitgeistLog * log = zeitgeist_log_get_default();
 
+	ZeitgeistEvent * event = zeitgeist_event_new();
+	zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
+	zeitgeist_event_set_interpretation(event, eventtype);
+	zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
+
+	ZeitgeistSubject * subject = zeitgeist_subject_new();
+	zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
+	zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
+	zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
+	zeitgeist_subject_set_uri(subject, uri);
+
+	zeitgeist_event_add_subject(event, subject);
+
+	zeitgeist_log_insert_event(log, event, NULL, zg_insert_complete, NULL);
+
+	g_free(uri);
+	g_object_unref(log);
+	g_object_unref(event);
+	g_object_unref(subject);
 }
 
 gboolean
