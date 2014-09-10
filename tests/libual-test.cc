@@ -1267,8 +1267,21 @@ TEST_F(LibUAL, PauseResume)
 	GIOChannel * spewoutchan = g_io_channel_unix_new(spewstdout);
 
 	/* Setup the cgroup */
+	g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock2", TRUE);
+	DbusTestDbusMock * cgmock2 = dbus_test_dbus_mock_new("org.test.cgmock2");
+	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock2, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+	gchar * pypids = g_strdup_printf("ret = [%d]", spewpid);
+	dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
+		"GetTasks",
+		G_VARIANT_TYPE("(ss)"),
+		G_VARIANT_TYPE("ai"),
+		pypids,
+		NULL);
+	g_free(pypids);
 
-
+	dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock2));
+	dbus_test_task_run(DBUS_TEST_TASK(cgmock2));
+	g_object_unref(G_OBJECT(cgmock2));
 
 	/* Test it */
 
