@@ -23,6 +23,7 @@
 #include <upstart.h>
 #include <gio/gio.h>
 #include <string.h>
+#include <zeitgeist.h>
 
 #include "ubuntu-app-launch-trace.h"
 #include "second-exec-core.h"
@@ -463,15 +464,27 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 	return retval;
 }
 
+/* Function to report the access and leaving events to Zeitgeist so we
+   can track application usage */
+static void
+report_zg_event (const gchar * appid, const gchar * eventtype)
+{
+
+
+
+}
+
 gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
+	report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
 	return signal_to_cgroup(appid, SIGSTOP, "900");
 }
 
 gboolean
 ubuntu_app_launch_resume_application (const gchar * appid)
 {
+	report_zg_event(appid, ZEITGEIST_ZG_ACCESS_EVENT);
 	return signal_to_cgroup(appid, SIGCONT, "100");
 }
 
