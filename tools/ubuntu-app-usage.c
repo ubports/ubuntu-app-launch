@@ -40,9 +40,26 @@ build_event_templates (void)
 	return retval;
 }
 
+typedef struct {
+	gchar * name;
+	guint seconds;
+} usage_t;
+
+gint
+sort_by_usage (gconstpointer a, gconstpointer b)
+{
+	usage_t * ua = (usage_t *)a;
+	usage_t * ub = (usage_t *)b;
+
+	return ub->seconds - ua->seconds;
+}
+
 void
 print_usage (GHashTable * usage)
 {
+	GArray * sorter = g_array_new(FALSE, FALSE, sizeof(usage_t));
+	guint maxappname = 0;
+
 	GHashTableIter iter;
 	g_hash_table_iter_init(&iter, usage);
 	gpointer key, value;
@@ -53,8 +70,26 @@ print_usage (GHashTable * usage)
 		gchar * desktop = g_strrstr(appurl, ".desktop");
 		if (desktop != NULL)
 			desktop[0] = '\0';
-		g_print("%s\t%d seconds\n", appurl, GPOINTER_TO_UINT(value));
+
+		usage_t usage = {
+			.name = appurl,
+			.seconds = GPOINTER_TO_UINT(value)
+		};
+
+		maxappname = MAX(maxappname, strlen(appurl));
+
+		g_array_append_val(sorter, usage);
 	}
+
+	g_array_sort(sorter, sort_by_usage);
+
+	int i;
+	for (i = 0; i < sorter->len; i++) {
+		usage_t * usage = &g_array_index(sorter, usage_t, i);
+		g_print("%s %d seconds\n", usage->name, usage->seconds);
+	}
+
+	g_array_unref(sorter);
 }
 
 void
