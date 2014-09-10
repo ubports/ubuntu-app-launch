@@ -86,7 +86,10 @@ print_usage (GHashTable * usage)
 	int i;
 	for (i = 0; i < sorter->len; i++) {
 		usage_t * usage = &g_array_index(sorter, usage_t, i);
-		g_print("%s %d seconds\n", usage->name, usage->seconds);
+		gint spaceneeded = maxappname - strlen(usage->name);
+		gchar * space = g_strnfill(spaceneeded, ' ');
+		g_print("%s%s   %d seconds\n", usage->name, space, usage->seconds);
+		g_free(space);
 	}
 
 	g_array_unref(sorter);
