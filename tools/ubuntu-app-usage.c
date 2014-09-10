@@ -107,7 +107,12 @@ find_events_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	gpointer key, value;
 
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		g_print("%s\t%d seconds\n", (gchar *)key, GPOINTER_TO_UINT(value));
+		gchar * appurl = (gchar *)key;
+		appurl += strlen("application://");
+		gchar * desktop = g_strrstr(appurl, ".desktop");
+		if (desktop != NULL)
+			desktop[0] = '\0';
+		g_print("%s\t%d seconds\n", appurl, GPOINTER_TO_UINT(value));
 	}
 
 	g_hash_table_destroy(laststop);
