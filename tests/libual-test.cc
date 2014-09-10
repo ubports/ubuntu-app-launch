@@ -1245,6 +1245,27 @@ TEST_F(LibUAL, StartStopHelperObserver)
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
 }
 
+gboolean
+datain (GIOChannel * source, GIOCondition cond, gpointer data)
+{
+	gsize * datacnt = static_cast<gsize *>(data);
+	gchar * str = NULL;
+	gsize len = 0;
+	GError * error = NULL;
+
+	g_io_channel_read_line(source, &str, &len, NULL, &error);
+	g_free(str);
+
+	if (error != NULL) {
+		g_warning("Unable to read from channel: %s", error->message);
+		g_error_free(error);
+	}
+
+	*datacnt += len;
+
+	return TRUE;
+}
+
 TEST_F(LibUAL, PauseResume)
 {
 	g_setenv("UBUNTU_APP_LAUNCH_NO_SET_OOM", "TRUE", 1);
@@ -1264,7 +1285,10 @@ TEST_F(LibUAL, PauseResume)
 		NULL, /* stderr */
 		NULL)); /* error */
 
+	gsize datacnt = 0;
 	GIOChannel * spewoutchan = g_io_channel_unix_new(spewstdout);
+	g_io_channel_set_flags(spewoutchan, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_add_watch(spewoutchan, G_IO_IN, datain, &datacnt);
 
 	/* Setup the cgroup */
 	g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock2", TRUE);
@@ -1284,8 +1308,22 @@ TEST_F(LibUAL, PauseResume)
 	g_object_unref(G_OBJECT(cgmock2));
 
 	/* Test it */
+	pause(200);
 
+	EXPECT_NE(0, datacnt);
 
+	EXPECT_TRUE(ubuntu_app_launch_pause_application("foo"));
+	datacnt = 0; /* clear it */
+
+	pause(200);
+
+	EXPECT_EQ(0, datacnt);
+
+	EXPECT_TRUE(ubuntu_app_launch_resume_application("foo"));
+
+	pause(200);
+
+	EXPECT_NE(0, datacnt);
 
 	/* Clean up */
 	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
