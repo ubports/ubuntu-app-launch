@@ -1328,6 +1328,7 @@ TEST_F(LibUAL, PauseResume)
 
 	EXPECT_NE(0, datacnt);
 
+	/* Pause the app */
 	EXPECT_TRUE(ubuntu_app_launch_pause_application("foo"));
 	datacnt = 0; /* clear it */
 
@@ -1335,11 +1336,28 @@ TEST_F(LibUAL, PauseResume)
 
 	EXPECT_EQ(0, datacnt);
 
+	/* Check to make sure we sent the event to ZG */
+	guint numcalls = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(zgmock, zgobj, "InsertEvents", &numcalls, NULL);
+
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, numcalls);
+
+	dbus_test_dbus_mock_object_clear_method_calls(zgmock, zgobj, NULL);
+
+	/* No Resume the App */
 	EXPECT_TRUE(ubuntu_app_launch_resume_application("foo"));
 
 	pause(200);
 
 	EXPECT_NE(0, datacnt);
+
+	/* Check to make sure we sent the event to ZG */
+	numcalls = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(zgmock, zgobj, "InsertEvents", &numcalls, NULL);
+
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, numcalls);
 
 	/* Clean up */
 	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
