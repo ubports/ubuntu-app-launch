@@ -41,6 +41,23 @@ build_event_templates (void)
 }
 
 void
+print_usage (GHashTable * usage)
+{
+	GHashTableIter iter;
+	g_hash_table_iter_init(&iter, usage);
+	gpointer key, value;
+
+	while (g_hash_table_iter_next(&iter, &key, &value)) {
+		gchar * appurl = (gchar *)key;
+		appurl += strlen("application://");
+		gchar * desktop = g_strrstr(appurl, ".desktop");
+		if (desktop != NULL)
+			desktop[0] = '\0';
+		g_print("%s\t%d seconds\n", appurl, GPOINTER_TO_UINT(value));
+	}
+}
+
+void
 find_events_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 {
 	/* No matter what, we want to quit */
@@ -102,18 +119,7 @@ find_events_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 		g_object_unref(event);
 	}
 
-	GHashTableIter iter;
-	g_hash_table_iter_init(&iter, usage);
-	gpointer key, value;
-
-	while (g_hash_table_iter_next(&iter, &key, &value)) {
-		gchar * appurl = (gchar *)key;
-		appurl += strlen("application://");
-		gchar * desktop = g_strrstr(appurl, ".desktop");
-		if (desktop != NULL)
-			desktop[0] = '\0';
-		g_print("%s\t%d seconds\n", appurl, GPOINTER_TO_UINT(value));
-	}
+	print_usage(usage);
 
 	g_hash_table_destroy(laststop);
 	g_hash_table_destroy(usage);
