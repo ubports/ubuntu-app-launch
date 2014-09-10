@@ -57,14 +57,49 @@ find_events_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 		return;
 	}
 
+	GHashTable * laststop = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_date_time_unref);
+
 	while (zeitgeist_result_set_has_next(results)) {
 		ZeitgeistEvent * event = zeitgeist_result_set_next_value(results);
+		ZeitgeistSubject * subject = zeitgeist_event_get_subject(event, 0);
+		const gchar * eventtype = "unknown";
+		const gchar * appurl = zeitgeist_subject_get_uri(subject);
 
-		g_debug("Got Event");
+		if (g_strcmp0(zeitgeist_event_get_interpretation(event), ZEITGEIST_ZG_ACCESS_EVENT) == 0) {
+			eventtype = "started";
+			GDateTime * stoptime = g_hash_table_lookup(laststop, appurl);
+			if (stoptime != NULL) {
+				GDateTime * starttime = g_date_time_new_from_unix_utc(zeitgeist_event_get_timestamp(event) / 1000);
 
+				if (starttime != NULL) {
+					GTimeSpan runtime = g_date_time_difference(stoptime, starttime);
+
+					g_debug("App %s use for %d seconds", appurl, (int)(runtime / G_TIME_SPAN_SECOND));
+
+					g_date_time_unref(stoptime);
+				}
+
+				g_hash_table_remove(laststop, appurl);
+			}
+		} else {
+			eventtype = "stopped";
+
+			GDateTime * stoptime = g_date_time_new_from_unix_utc(zeitgeist_event_get_timestamp(event) / 1000);
+			if (stoptime != NULL) {
+				g_date_time_ref(stoptime);
+				g_hash_table_insert(laststop, g_strdup(appurl), stoptime);
+			} else {
+				g_debug("Unable to parse start time for: %s", appurl);
+			}
+		}
+
+		g_debug("Got %s for '%s' at %d" , eventtype, appurl, (int)zeitgeist_event_get_timestamp(event));
+
+		g_object_unref(subject);
 		g_object_unref(event);
 	}
 
+	g_hash_table_destroy(laststop);
 	g_object_unref(results);
 
 	return;
