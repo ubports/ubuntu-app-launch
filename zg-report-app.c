@@ -19,6 +19,7 @@
 
 
 #include <zeitgeist.h>
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 static gboolean
 watchdog_timeout (gpointer user_data)
