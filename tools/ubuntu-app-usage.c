@@ -43,6 +43,29 @@ build_event_templates (void)
 void
 find_events_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 {
+	/* No matter what, we want to quit */
+	g_main_loop_quit((GMainLoop *)user_data);
+
+	GError * error = NULL;
+	ZeitgeistResultSet * results = NULL;
+
+	results = zeitgeist_log_find_events_finish(ZEITGEIST_LOG(obj), res, &error);
+
+	if (error != NULL) {
+		g_error("Unable to get ZG events: %s", error->message);
+		g_error_free(error);
+		return;
+	}
+
+	while (zeitgeist_result_set_has_next(results)) {
+		ZeitgeistEvent * event = zeitgeist_result_set_next_value(results);
+
+		g_debug("Got Event");
+
+		g_object_unref(event);
+	}
+
+	g_object_unref(results);
 
 	return;
 }
