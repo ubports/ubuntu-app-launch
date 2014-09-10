@@ -22,7 +22,22 @@
 GPtrArray *
 build_event_templates (void)
 {
-	return g_ptr_array_new_with_free_func(g_object_unref);
+	GPtrArray * retval = g_ptr_array_new_with_free_func(g_object_unref);
+	ZeitgeistEvent * event;
+
+	event = zeitgeist_event_new();
+	zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
+	zeitgeist_event_set_interpretation(event, ZEITGEIST_ZG_ACCESS_EVENT);
+	zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
+	g_ptr_array_add(retval, event);
+
+	event = zeitgeist_event_new();
+	zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
+	zeitgeist_event_set_interpretation(event, ZEITGEIST_ZG_LEAVE_EVENT);
+	zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
+	g_ptr_array_add(retval, event);
+
+	return retval;
 }
 
 void
