@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 #include <gio/gio.h>
+#include <zeitgeist.h>
 
 extern "C" {
 #include "ubuntu-app-launch.h"
@@ -1306,6 +1307,21 @@ TEST_F(LibUAL, PauseResume)
 	dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock2));
 	dbus_test_task_run(DBUS_TEST_TASK(cgmock2));
 	g_object_unref(G_OBJECT(cgmock2));
+	
+	/* Setup ZG Mock */
+	DbusTestDbusMock * zgmock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
+	DbusTestDbusMockObject * zgobj = dbus_test_dbus_mock_get_object(zgmock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", NULL);
+
+	dbus_test_dbus_mock_object_add_method(zgmock, zgobj,
+		"InsertEvents",
+		G_VARIANT_TYPE("a(asaasay)"),
+		G_VARIANT_TYPE("au"),
+		"ret = [ 0 ]",
+		NULL);
+
+	dbus_test_service_add_task(service, DBUS_TEST_TASK(zgmock));
+	dbus_test_task_run(DBUS_TEST_TASK(zgmock));
+	g_object_unref(G_OBJECT(zgmock));
 
 	/* Test it */
 	pause(200);
@@ -1331,4 +1347,9 @@ TEST_F(LibUAL, PauseResume)
 	g_free(killstr);
 
 	g_io_channel_unref(spewoutchan);
+
+	/* Kill ZG default instance :-( */
+	ZeitgeistLog * log = zeitgeist_log_get_default();
+	g_object_unref(log);
+	g_object_unref(log);
 }
