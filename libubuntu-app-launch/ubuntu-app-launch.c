@@ -412,7 +412,7 @@ set_oom_value (GPid pid, const gchar * oomscore)
 static gboolean
 signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 {
-	GHashTable * pidssignaled = g_hash_table_new(g_int_hash, g_int_equal);
+	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
 	guint hash_table_size = 0;
 	gboolean retval = TRUE;
 
