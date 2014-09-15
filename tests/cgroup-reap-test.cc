@@ -30,9 +30,9 @@ class CGroupReap : public ::testing::Test
 		GPid sleeppid = 0;
 
 		virtual void SetUp() {
-			gchar * argv[] = { "sleep", "30", NULL };
+			const gchar * argv[] = { "sleep", "30", NULL };
 			g_spawn_async(NULL,
-			              argv,
+			              (gchar **)argv,
 			              NULL, /* env */
 			              G_SPAWN_SEARCH_PATH,
 			              NULL, NULL, /* child setup */

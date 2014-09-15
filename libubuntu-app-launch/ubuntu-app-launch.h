@@ -99,6 +99,26 @@ gboolean   ubuntu_app_launch_start_application_test    (const gchar *           
 gboolean   ubuntu_app_launch_stop_application         (const gchar *                     appid);
 
 /**
+ * ubuntu_app_launch_pause_application:
+ * @appid: ID of the application to pause
+ *
+ * Sends SIGSTOP to all processes related to the application
+ *
+ * Return value: Whether we were able to send SIGSTOP to all processes.
+ */
+gboolean   ubuntu_app_launch_pause_application         (const gchar *                     appid);
+
+/**
+ * ubuntu_app_launch_resume_application:
+ * @appid: ID of the application to pause
+ *
+ * Sends SIGCONT to all processes related to the application
+ *
+ * Return value: Whether we were able to send SIGCONT to all processes.
+ */
+gboolean   ubuntu_app_launch_resume_application         (const gchar *                     appid);
+
+/**
  * ubuntu_app_launch_application_log_path:
  * @appid: ID of the application
  *

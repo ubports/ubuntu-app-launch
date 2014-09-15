@@ -1244,3 +1244,91 @@ TEST_F(LibUAL, StartStopHelperObserver)
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
 }
+
+gboolean
+datain (GIOChannel * source, GIOCondition cond, gpointer data)
+{
+	gsize * datacnt = static_cast<gsize *>(data);
+	gchar * str = NULL;
+	gsize len = 0;
+	GError * error = NULL;
+
+	g_io_channel_read_line(source, &str, &len, NULL, &error);
+	g_free(str);
+
+	if (error != NULL) {
+		g_warning("Unable to read from channel: %s", error->message);
+		g_error_free(error);
+	}
+
+	*datacnt += len;
+
+	return TRUE;
+}
+
+TEST_F(LibUAL, PauseResume)
+{
+	g_setenv("UBUNTU_APP_LAUNCH_NO_SET_OOM", "TRUE", 1);
+
+	/* Setup some spew */
+	GPid spewpid = 0;
+	gint spewstdout = 0;
+	const gchar * spewline[] = { SPEW_UTILITY, NULL };
+	ASSERT_TRUE(g_spawn_async_with_pipes(NULL,
+		(gchar **)spewline,
+		NULL, /* environment */
+		G_SPAWN_DEFAULT,
+		NULL, NULL, /* child setup */
+		&spewpid,
+		NULL, /* stdin */
+		&spewstdout,
+		NULL, /* stderr */
+		NULL)); /* error */
+
+	gsize datacnt = 0;
+	GIOChannel * spewoutchan = g_io_channel_unix_new(spewstdout);
+	g_io_channel_set_flags(spewoutchan, G_IO_FLAG_NONBLOCK, NULL);
+	g_io_add_watch(spewoutchan, G_IO_IN, datain, &datacnt);
+
+	/* Setup the cgroup */
+	g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock2", TRUE);
+	DbusTestDbusMock * cgmock2 = dbus_test_dbus_mock_new("org.test.cgmock2");
+	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock2, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+	gchar * pypids = g_strdup_printf("ret = [%d]", spewpid);
+	dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
+		"GetTasks",
+		G_VARIANT_TYPE("(ss)"),
+		G_VARIANT_TYPE("ai"),
+		pypids,
+		NULL);
+	g_free(pypids);
+
+	dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock2));
+	dbus_test_task_run(DBUS_TEST_TASK(cgmock2));
+	g_object_unref(G_OBJECT(cgmock2));
+
+	/* Test it */
+	pause(200);
+
+	EXPECT_NE(0, datacnt);
+
+	EXPECT_TRUE(ubuntu_app_launch_pause_application("foo"));
+	datacnt = 0; /* clear it */
+
+	pause(200);
+
+	EXPECT_EQ(0, datacnt);
+
+	EXPECT_TRUE(ubuntu_app_launch_resume_application("foo"));
+
+	pause(200);
+
+	EXPECT_NE(0, datacnt);
+
+	/* Clean up */
+	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
+	ASSERT_TRUE(g_spawn_command_line_sync(killstr, NULL, NULL, NULL, NULL));
+	g_free(killstr);
+
+	g_io_channel_unref(spewoutchan);
+}

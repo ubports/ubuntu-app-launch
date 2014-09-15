@@ -31,6 +31,8 @@
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
+static GList * pids_for_appid (const gchar * appid);
+int kill (pid_t pid, int signal);
 
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
@@ -389,6 +391,91 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 	g_object_unref(con);
 
 	return found;
+}
+
+/* Sets the OOM score to a particular value, returns true on NULL */
+static gboolean
+set_oom_value (GPid pid, const gchar * oomscore)
+{
+	if (oomscore == NULL) {
+		return TRUE;
+	}
+
+	gchar * path = g_strdup_printf("/proc/%d/oom_score_adj", pid);
+
+	gboolean res = g_file_set_contents(path, oomscore, -1, NULL);
+
+	g_free(path);
+
+	return res;
+}
+
+/* Gets all the pids for an appid and sends a signal to all of them. This also
+   loops to ensure no new pids are added while we're signaling */
+static gboolean
+signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
+{
+	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
+	guint hash_table_size = 0;
+	gboolean retval = TRUE;
+
+	/* In the test suite we can't set this becuase we don't have permissions,
+	   which sucks, but it's the reality of testing at package build time */
+	if (g_getenv("UBUNTU_APP_LAUNCH_NO_SET_OOM")) {
+		oomscore = NULL;
+	}
+
+	do {
+		hash_table_size = g_hash_table_size(pidssignaled);
+		GList * pidlist = pids_for_appid(appid);
+		GList * iter;
+
+		if (pidlist == NULL) {
+			g_warning("Unable to get pids for '%s' to send signal %d", appid, signal);
+			retval = FALSE;
+			break;
+		}
+
+		for (iter = pidlist; iter != NULL; iter = g_list_next(iter)) {
+			if (g_hash_table_contains(pidssignaled, iter->data)) {
+				continue;
+			}
+
+			/* We've got a PID that we've not previously signaled */
+			GPid pid = GPOINTER_TO_INT(iter->data);
+			if (-1 == kill(pid, signal)) {
+				/* While that didn't work, we still want to try as many as we can */
+				g_warning("Unable to send signal %d to pid %d", signal, pid);
+				retval = FALSE;
+			}
+
+			if (!set_oom_value(pid, oomscore)) {
+				g_warning("Unable to set OOM score '%s' on pid %d", oomscore, pid);
+				retval = FALSE;
+			}
+
+			g_hash_table_add(pidssignaled, iter->data);
+		}
+
+		g_list_free(pidlist);
+	/* If it grew, then try again */
+	} while (hash_table_size != g_hash_table_size(pidssignaled));
+
+	g_hash_table_destroy(pidssignaled);
+
+	return retval;
+}
+
+gboolean
+ubuntu_app_launch_pause_application (const gchar * appid)
+{
+	return signal_to_cgroup(appid, SIGSTOP, "900");
+}
+
+gboolean
+ubuntu_app_launch_resume_application (const gchar * appid)
+{
+	return signal_to_cgroup(appid, SIGCONT, "100");
 }
 
 gchar *
