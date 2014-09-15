@@ -1,13 +1,24 @@
-ubuntu-app-launch (0.4+14.10.20140819-0ubuntu1) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.4+14.10.20140915.3-0ubuntu1) utopic; urgency=medium
 
   [ Ted Gould ]
   * Unrevert cgroup support
+  * Adding a manual test to verify the job running the application
+  * CGroup test and clarification comments
+  * Tracepoint got dropped in refactoring
+  * Use the Upstart 1.13 feature of multiple set for environment
+    variables
+  * Cleanup UAL LTTng tracepoints
+  * Provide a pause and resume function for AppIDs
+  * Rotate application and untrusted helper logs faster than other
+    services
+  * Add a tool to show application usage
+  * Reshuffle the pre-start jobs to save precious milliseconds
 
   [ Ubuntu daily release ]
   * debian/libubuntu-app-launch2.symbols: auto-update to released
     version
 
- -- Ted Gould <ted@ubuntu.com>  Mon, 18 Aug 2014 16:34:54 -0500
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 15 Sep 2014 19:40:21 +0000
 
 ubuntu-app-launch (0.4+14.10.20140808.3.is.0.4+14.10.20140605.3-0ubuntu1) utopic; urgency=medium
 
