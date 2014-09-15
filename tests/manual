@@ -49,3 +49,15 @@ Test-case ubuntu-app-launch/security-app-launch
     <dt>Execute the <tt>click-apparmor</tt> test to start and stop several confined applications</dt>
         <dd>Ensure that all applications start and stop correctly</dd>
 </dl>
+
+Test-case ubuntu-app-launch/correct-job-type
+<dl>
+    <dt>Launch the settings application: <tt>ubuntu-app-launch ubuntu-system-settings</tt></dt>
+        <dd>The settings application should be brought to focus and shown to the user</dd>
+    <dt>Launch the clock application: <tt>ubuntu-app-launch `ubuntu-app-triplet com.ubuntu.clock`</tt></dt>
+        <dd>The clock application should be brought to focus and shown to the user</dd>
+    <dt>Verify the settings app is running under the <tt>application-legacy</tt> upstart job</dt>
+        <dd>Running <tt>initctl list | grep application-legacy | grep ubuntu-system-settings</tt> should return a single entry</dd>
+    <dt>Verify the clock app is running under the <tt>application-click</tt> upstart job</dt>
+        <dd>Running <tt>initctl list | grep application-click | grep com.ubuntu.clock</tt> should return a single entry</dd>
+</dl>
