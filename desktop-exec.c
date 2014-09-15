@@ -26,6 +26,57 @@
 #include "helpers.h"
 #include "desktop-exec-trace.h"
 #include "recoverable-problem.h"
+#include "ual-tracepoint.h"
+
+const gchar * app_id = NULL;
+
+/* Reports an error on the caller of UAL so that we can track
+   who is trying to launch bad AppIDs, and then fix their bug
+   so that we get better reporting upstream. */
+void
+report_error_on_caller (void) {
+	g_warning("Unable to find keyfile for application '%s'", app_id);
+
+	const gchar * props[3] = {
+		"AppId", NULL,
+		NULL
+	};
+	props[1] = app_id;
+
+	GPid pid = 0;
+	const gchar * launcher_pid = g_getenv("APP_LAUNCHER_PID");
+	if (launcher_pid != NULL) {
+		pid = atoi(launcher_pid);
+	}
+
+	/* Checking to see if we're using the command line tool to create
+	   the appid. Chances are in that case it's a user error, and we
+	   don't need to automatically record it, the user mistyped. */
+	gboolean debugtool = FALSE;
+	if (pid != 0) {
+		gchar * cmdpath = g_strdup_printf("/proc/%d/cmdline", pid);
+		gchar * cmdline = NULL;
+
+		if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
+			if (g_strstr_len(cmdline, -1, "ubuntu-app-launch") != NULL) {
+				debugtool = TRUE;
+			}
+
+			g_free(cmdline);
+		} else {
+			/* The caller has already exited, probably a debug tool */
+			debugtool = TRUE;
+		}
+
+		g_free(cmdpath);
+	}
+
+	if (!debugtool) {
+		report_recoverable_problem("ubuntu-app-launch-invalid-appid", pid, TRUE, props);
+	} else {
+		g_debug("Suppressing appid recoverable error for debug tool");
+	}
+}
 
 int
 main (int argc, char * argv[])
@@ -35,15 +86,14 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	const gchar * app_id = g_getenv("APP_ID");
+	app_id = g_getenv("APP_ID");
 
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");
 		return 1;
 	}
 
-	g_setenv("LTTNG_UST_REGISTER_TIMEOUT", "0", FALSE); /* Set to zero if not set */
-	tracepoint(upstart_app_launch, desktop_start);
+	ual_tracepoint(desktop_start, app_id);
 
 	/* Ensure we keep one connection open to the bus for the entire
 	   script even though different people need it throughout */
@@ -60,57 +110,17 @@ main (int argc, char * argv[])
 		g_warning("Unable to setup starting handshake");
 	}
 
-	tracepoint(upstart_app_launch, desktop_starting_sent);
+	ual_tracepoint(desktop_starting_sent, app_id);
 
 	gchar * desktopfilename = NULL;
 	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
 	if (keyfile == NULL) {
-		g_warning("Unable to find keyfile for application '%s'", app_id);
-
-		const gchar * props[3] = {
-			"AppId", NULL,
-			NULL
-		};
-		props[1] = app_id;
-
-		GPid pid = 0;
-		const gchar * launcher_pid = g_getenv("APP_LAUNCHER_PID");
-		if (launcher_pid != NULL) {
-			pid = atoi(launcher_pid);
-		}
-
-		/* Checking to see if we're using the command line tool to create
-		   the appid. Chances are in that case it's a user error, and we
-		   don't need to automatically record it, the user mistyped. */
-		gboolean debugtool = FALSE;
-		if (pid != 0) {
-			gchar * cmdpath = g_strdup_printf("/proc/%d/cmdline", pid);
-			gchar * cmdline = NULL;
-
-			if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
-				if (g_strstr_len(cmdline, -1, "ubuntu-app-launch") != NULL) {
-					debugtool = TRUE;
-				}
-
-				g_free(cmdline);
-			} else {
-				/* The caller has already exited, probably a debug tool */
-				debugtool = TRUE;
-			}
-
-			g_free(cmdpath);
-		}
-
-		if (!debugtool) {
-			report_recoverable_problem("ubuntu-app-launch-invalid-appid", pid, TRUE, props);
-		} else {
-			g_debug("Suppressing appid recoverable error for debug tool");
-		}
+		report_error_on_caller();
 		return 1;
 	}
 
-	tracepoint(upstart_app_launch, desktop_found);
+	ual_tracepoint(desktop_found, app_id);
 
 	EnvHandle * handle = env_handle_start();
 
@@ -144,17 +154,17 @@ main (int argc, char * argv[])
 
 	g_key_file_free(keyfile);
 
-	tracepoint(upstart_app_launch, desktop_send_env_vars);
+	ual_tracepoint(desktop_send_env_vars, app_id);
 
 	/* Sync the env vars with Upstart */
 	env_handle_finish(handle);
 	handle = NULL; /* make errors not love */
 
-	tracepoint(upstart_app_launch, desktop_handshake_wait);
+	ual_tracepoint(handshake_wait, app_id);
 
 	starting_handshake_wait(handshake);
 
-	tracepoint(upstart_app_launch, desktop_handshake_complete);
+	ual_tracepoint(handshake_complete, app_id);
 
 	g_object_unref(bus);
 
