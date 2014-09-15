@@ -1,6 +1,11 @@
 ubuntu-app-launch (0.4+14.10.20140819-0ubuntu1) UNRELEASED; urgency=medium
 
+  [ Ted Gould ]
   * Unrevert cgroup support
+
+  [ Ubuntu daily release ]
+  * debian/libubuntu-app-launch2.symbols: auto-update to released
+    version
 
  -- Ted Gould <ted@ubuntu.com>  Mon, 18 Aug 2014 16:34:54 -0500
 
