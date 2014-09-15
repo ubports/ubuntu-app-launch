@@ -27,7 +27,8 @@
 
 #include "ubuntu-app-launch-trace.h"
 #include "second-exec-core.h"
-#include "../helpers.h"
+#include "helpers.h"
+#include "ual-tracepoint.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -66,7 +67,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GError * error = NULL;
 	GVariant * result = NULL;
 
-	tracepoint(ubuntu_app_launch, libual_start_message_callback, data->appid);
+	ual_tracepoint(libual_start_message_callback, data->appid);
 
 	g_debug("Started Message Callback: %s", data->appid);
 
@@ -143,7 +144,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 static gboolean
 legacy_single_instance (const gchar * appid)
 {
-	tracepoint(ubuntu_app_launch, desktop_single_start, appid);
+	ual_tracepoint(desktop_single_start, appid);
 
 	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
 
@@ -152,7 +153,7 @@ legacy_single_instance (const gchar * appid)
 		return FALSE;
 	}
 
-	tracepoint(ubuntu_app_launch, desktop_single_found, appid);
+	ual_tracepoint(desktop_single_found, appid);
 
 	gboolean singleinstance = FALSE;
 
@@ -171,7 +172,7 @@ legacy_single_instance (const gchar * appid)
 	
 	g_key_file_free(keyfile);
 
-	tracepoint(ubuntu_app_launch, desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
+	ual_tracepoint(desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
 
 	return singleinstance;
 }
@@ -199,13 +200,15 @@ is_click (const gchar * appid)
 static gboolean
 start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
 {
+	ual_tracepoint(libual_start, appid);
+
 	g_return_val_if_fail(appid != NULL, FALSE);
 
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
 
 	gboolean click = is_click(appid);
-	tracepoint(ubuntu_app_launch, libual_determine_type, appid, click ? "click" : "legacy");
+	ual_tracepoint(libual_determine_type, appid, click ? "click" : "legacy");
 
 	/* Figure out the DBus path for the job */
 	const gchar * jobpath = NULL;
@@ -218,7 +221,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	if (jobpath == NULL)
 		return FALSE;
 
-	tracepoint(ubuntu_app_launch, libual_job_path_determined, appid, jobpath);
+	ual_tracepoint(libual_job_path_determined, appid, jobpath);
 
 	/* Callback data */
 	app_start_t * app_start_data = g_new0(app_start_t, 1);
@@ -270,7 +273,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	                       application_start_cb,
 	                       app_start_data);
 
-	tracepoint(ubuntu_app_launch, libual_start_message_sent, appid);
+	ual_tracepoint(libual_start_message_sent, appid);
 
 	g_object_unref(con);
 
@@ -641,7 +644,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 	const gchar * signalname = NULL;
 	g_variant_get_child(params, 0, "&s", &signalname);
 
-	tracepoint(ubuntu_app_launch, observer_start, signalname);
+	ual_tracepoint(observer_start, signalname);
 
 	gchar * env = NULL;
 	GVariant * envs = g_variant_get_child_value(params, 1);
@@ -676,7 +679,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 		observer->func(instance, observer->user_data);
 	}
 
-	tracepoint(ubuntu_app_launch, observer_finish, signalname);
+	ual_tracepoint(observer_finish, signalname);
 
 	g_free(instance);
 }
@@ -759,21 +762,28 @@ add_session_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, co
 	return TRUE;
 }
 
-/* Handle the focus signal when it occurs, call the observer */
-static void
-focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+/* Generic handler for a bunch of our signals */
+static inline void
+generic_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
 	observer_t * observer = (observer_t *)user_data;
 	const gchar * appid = NULL;
-
-	tracepoint(ubuntu_app_launch, observer_start, "focus");
 
 	if (observer->func != NULL) {
 		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
+}
 
-	tracepoint(ubuntu_app_launch, observer_finish, "focus");
+/* Handle the focus signal when it occurs, call the observer */
+static void
+focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	ual_tracepoint(observer_start, "focus");
+
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
+
+	ual_tracepoint(observer_finish, "focus");
 }
 
 gboolean
@@ -786,9 +796,9 @@ ubuntu_app_launch_observer_add_app_focus (UbuntuAppLaunchAppObserver observer, g
 static void
 resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
-	tracepoint(ubuntu_app_launch, observer_start, "resume");
+	ual_tracepoint(observer_start, "resume");
 
-	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	GError * error = NULL;
 	g_dbus_connection_emit_signal(conn,
@@ -804,7 +814,7 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		g_error_free(error);
 	}
 
-	tracepoint(ubuntu_app_launch, observer_finish, "resume");
+	ual_tracepoint(observer_finish, "resume");
 }
 
 gboolean
@@ -817,9 +827,9 @@ ubuntu_app_launch_observer_add_app_resume (UbuntuAppLaunchAppObserver observer, 
 static void
 starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
-	tracepoint(ubuntu_app_launch, observer_start, "starting");
+	ual_tracepoint(observer_start, "starting");
 
-	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	GError * error = NULL;
 	g_dbus_connection_emit_signal(conn,
@@ -835,7 +845,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 		g_error_free(error);
 	}
 
-	tracepoint(ubuntu_app_launch, observer_finish, "starting");
+	ual_tracepoint(observer_finish, "starting");
 }
 
 gboolean
@@ -852,7 +862,7 @@ failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 	const gchar * appid = NULL;
 	const gchar * typestr = NULL;
 
-	tracepoint(ubuntu_app_launch, observer_start, "failed");
+	ual_tracepoint(observer_start, "failed");
 
 	if (observer->func != NULL) {
 		UbuntuAppLaunchAppFailed type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
@@ -869,7 +879,7 @@ failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		observer->func(appid, type, observer->user_data);
 	}
 
-	tracepoint(ubuntu_app_launch, observer_finish, "failed");
+	ual_tracepoint(observer_finish, "failed");
 }
 
 gboolean
@@ -1201,18 +1211,26 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 static GList *
 pids_for_appid (const gchar * appid)
 {
+	ual_tracepoint(pids_list_start, appid);
+
 	GDBusConnection * cgmanager = cgroup_manager_connection();
 	g_return_val_if_fail(cgmanager != NULL, NULL);
+
+	ual_tracepoint(pids_list_connected, appid);
 
 	if (is_click(appid)) {
 		GList * pids = pids_from_cgroup(cgmanager, "application-click", appid);
 		g_clear_object(&cgmanager);
+
+		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
 	} else if (legacy_single_instance(appid)) {
 		gchar * jobname = g_strdup_printf("%s-", appid);
 		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
 		g_free(jobname);
 		g_clear_object(&cgmanager);
+
+		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
 	}
 
@@ -1243,6 +1261,7 @@ pids_for_appid (const gchar * appid)
 
 	g_clear_object(&cgmanager);
 
+	ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 	return pids;
 }
 

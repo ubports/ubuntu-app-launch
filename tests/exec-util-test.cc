@@ -45,8 +45,8 @@ class ExecUtil : public ::testing::Test
 			DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, obj,
-				"SetEnv",
-				G_VARIANT_TYPE("(assb)"),
+				"SetEnvList",
+				G_VARIANT_TYPE("(asasb)"),
 				NULL,
 				"",
 				NULL);
@@ -92,10 +92,11 @@ TEST_F(ExecUtil, ClickExec)
 	g_spawn_command_line_sync(CLICK_EXEC_TOOL, NULL, NULL, NULL, NULL);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
 
-	ASSERT_EQ(11, len);
+	ASSERT_EQ(1, len);
 	ASSERT_NE(nullptr, calls);
+	ASSERT_STREQ("SetEnvList", calls[0].name);
 
 	unsigned int i;
 
@@ -113,12 +114,13 @@ TEST_F(ExecUtil, ClickExec)
 
 #define APP_DIR CMAKE_SOURCE_DIR "/click-root-dir/.click/users/test-user/com.test.good"
 
-	for (i = 0; i < len; i++) {
-		EXPECT_STREQ("SetEnv", calls[i].name);
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 1);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envarray);
+	gchar * envvar = NULL;
 
-		GVariant * envvar = g_variant_get_child_value(calls[i].params, 1);
-		gchar * var = g_variant_dup_string(envvar, NULL);
-		g_variant_unref(envvar);
+	while (g_variant_iter_loop(&iter, "s", &envvar)) {
+		gchar * var = g_strdup(envvar);
 
 		gchar * equal = g_strstr_len(var, -1, "=");
 		ASSERT_NE(equal, nullptr);
@@ -163,6 +165,8 @@ TEST_F(ExecUtil, ClickExec)
 		g_free(var);
 	}
 
+	g_variant_unref(envarray);
+
 #undef APP_DIR
 
 	EXPECT_TRUE(got_app_isolation);
@@ -187,10 +191,11 @@ TEST_F(ExecUtil, DesktopExec)
 	g_spawn_command_line_sync(DESKTOP_EXEC_TOOL, NULL, NULL, NULL, NULL);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
 
-	ASSERT_EQ(3, len);
+	ASSERT_EQ(1, len);
 	ASSERT_NE(nullptr, calls);
+	ASSERT_STREQ("SetEnvList", calls[0].name);
 
 	unsigned int i;
 
@@ -198,12 +203,13 @@ TEST_F(ExecUtil, DesktopExec)
 	bool got_app_desktop_path = false;
 	bool got_app_exec_policy = false;
 
-	for (i = 0; i < len; i++) {
-		EXPECT_STREQ("SetEnv", calls[i].name);
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 1);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envarray);
+	gchar * envvar = NULL;
 
-		GVariant * envvar = g_variant_get_child_value(calls[i].params, 1);
-		gchar * var = g_variant_dup_string(envvar, NULL);
-		g_variant_unref(envvar);
+	while (g_variant_iter_loop(&iter, "s", &envvar)) {
+		gchar * var = g_strdup(envvar);
 
 		gchar * equal = g_strstr_len(var, -1, "=");
 		ASSERT_NE(equal, nullptr);
@@ -227,6 +233,8 @@ TEST_F(ExecUtil, DesktopExec)
 
 		g_free(var);
 	}
+
+	g_variant_unref(envarray);
 
 	EXPECT_TRUE(got_app_exec);
 	EXPECT_TRUE(got_app_desktop_path);

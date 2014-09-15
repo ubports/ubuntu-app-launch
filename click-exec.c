@@ -21,6 +21,7 @@
 #include <click.h>
 #include "helpers.h"
 #include "click-exec-trace.h"
+#include "ual-tracepoint.h"
 
 /*
 
@@ -54,7 +55,7 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	tracepoint(upstart_app_launch, click_start);
+	ual_tracepoint(click_start, app_id);
 
 	/* Ensure we keep one connection open to the bus for the entire
 	   script even though different people need it throughout */
@@ -71,7 +72,7 @@ main (int argc, char * argv[])
 		g_warning("Unable to setup starting handshake");
 	}
 
-	tracepoint(upstart_app_launch, click_starting_sent);
+	ual_tracepoint(click_starting_sent, app_id);
 
 	gchar * package = NULL;
 	/* 'Parse' the App ID */
@@ -111,7 +112,7 @@ main (int argc, char * argv[])
 	g_object_unref(user);
 	g_object_unref(db);
 
-	tracepoint(upstart_app_launch, click_found_pkgdir);
+	ual_tracepoint(click_found_pkgdir, app_id);
 
 	if (!g_file_test(pkgdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_warning("Application directory '%s' doesn't exist", pkgdir);
@@ -120,12 +121,14 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	EnvHandle * handle = env_handle_start();
+
 	g_debug("Setting 'APP_DIR' to '%s'", pkgdir);
-	set_upstart_variable("APP_DIR", pkgdir, FALSE);
+	env_handle_add(handle, "APP_DIR", pkgdir);
 
-	set_confined_envvars(package, pkgdir);
+	set_confined_envvars(handle, package, pkgdir);
 
-	tracepoint(upstart_app_launch, click_configured_env);
+	ual_tracepoint(click_configured_env, app_id);
 
 	gchar * desktopfile = manifest_to_desktop(pkgdir, app_id);
 
@@ -137,11 +140,11 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	tracepoint(upstart_app_launch, click_read_manifest);
+	ual_tracepoint(click_read_manifest, app_id);
 
 	GKeyFile * keyfile = g_key_file_new();
 
-	set_upstart_variable("APP_DESKTOP_FILE_PATH", desktopfile, FALSE);
+	env_handle_add(handle, "APP_DESKTOP_FILE_PATH", desktopfile);
 	g_key_file_load_from_file(keyfile, desktopfile, 0, &error);
 	if (error != NULL) {
 		g_warning("Unable to load desktop file '%s': %s", desktopfile, error->message);
@@ -158,23 +161,26 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	tracepoint(upstart_app_launch, click_read_desktop);
+	ual_tracepoint(click_read_desktop, app_id);
 
 	g_debug("Setting 'APP_EXEC' to '%s'", exec);
-	/* NOTE: This should be the last upstart variable set as it is sync
-	   so it will wait for a reply from Upstart implying that Upstart
-	   has seen all the other variable requests we made */
-	set_upstart_variable("APP_EXEC", exec, TRUE);
+	env_handle_add(handle, "APP_EXEC", exec);
 
 	g_free(exec);
 	g_key_file_unref(keyfile);
 	g_free(desktopfile);
 
-	tracepoint(upstart_app_launch, click_handshake_wait);
+	ual_tracepoint(click_send_env_vars, app_id);
+
+	/* NOTE: We now are sending all of the env vars to Upstart */
+	env_handle_finish(handle);
+	handle = NULL; /* Cause errors */
+
+	ual_tracepoint(handshake_wait, app_id);
 
 	starting_handshake_wait(handshake);
 
-	tracepoint(upstart_app_launch, click_handshake_complete);
+	ual_tracepoint(handshake_complete, app_id);
 
 	g_object_unref(bus);
 
