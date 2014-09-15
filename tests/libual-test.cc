@@ -1334,7 +1334,7 @@ TEST_F(LibUAL, PauseResume)
 	EXPECT_NE(0, datacnt);
 
 	/* Pause the app */
-	EXPECT_TRUE(ubuntu_app_launch_pause_application("foo"));
+	EXPECT_TRUE(ubuntu_app_launch_pause_application("com.test.good_application_1.2.3"));
 	datacnt = 0; /* clear it */
 
 	pause(200);
@@ -1351,7 +1351,7 @@ TEST_F(LibUAL, PauseResume)
 	dbus_test_dbus_mock_object_clear_method_calls(zgmock, zgobj, NULL);
 
 	/* No Resume the App */
-	EXPECT_TRUE(ubuntu_app_launch_resume_application("foo"));
+	EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
 
 	pause(200);
 
