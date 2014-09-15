@@ -45,8 +45,17 @@ class ExecUtil : public ::testing::Test
 			DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
 
 			dbus_test_dbus_mock_object_add_method(mock, obj,
-				"SetEnvList",
-				G_VARIANT_TYPE("(asasb)"),
+				"GetJobByName",
+				G_VARIANT_TYPE("s"),
+				G_VARIANT_TYPE("o"),
+				"ret = dbus.ObjectPath('/com/test/job')",
+				NULL);
+
+			DbusTestDbusMockObject * jobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, jobobj,
+				"Start",
+				G_VARIANT_TYPE("(asb)"),
 				NULL,
 				"",
 				NULL);
@@ -83,20 +92,20 @@ class ExecUtil : public ::testing::Test
 
 TEST_F(ExecUtil, ClickExec)
 {
-	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	g_setenv("APP_ID", "com.test.good_application_1.2.3", TRUE);
 	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
 	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
+	g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", CMAKE_SOURCE_DIR "/link-farm", TRUE);
 
-	g_spawn_command_line_sync(CLICK_EXEC_TOOL, NULL, NULL, NULL, NULL);
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", NULL));
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 
 	ASSERT_EQ(1, len);
 	ASSERT_NE(nullptr, calls);
-	ASSERT_STREQ("SetEnvList", calls[0].name);
+	ASSERT_STREQ("Start", calls[0].name);
 
 	unsigned int i;
 
@@ -110,11 +119,13 @@ TEST_F(ExecUtil, ClickExec)
 	bool got_shader_dir = false;
 	bool got_app_dir = false;
 	bool got_app_exec = false;
+	bool got_app_id = false;
+	bool got_app_pid = false;
 	bool got_app_desktop_path = false;
 
 #define APP_DIR CMAKE_SOURCE_DIR "/click-root-dir/.click/users/test-user/com.test.good"
 
-	GVariant * envarray = g_variant_get_child_value(calls[0].params, 1);
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
 	GVariantIter iter;
 	g_variant_iter_init(&iter, envarray);
 	gchar * envvar = NULL;
@@ -154,6 +165,12 @@ TEST_F(ExecUtil, ClickExec)
 		} else if (g_strcmp0(var, "APP_EXEC") == 0) {
 			EXPECT_STREQ("foo", value);
 			got_app_exec = true;
+		} else if (g_strcmp0(var, "APP_ID") == 0) {
+			EXPECT_STREQ("com.test.good_application_1.2.3", value);
+			got_app_id = true;
+		} else if (g_strcmp0(var, "APP_LAUNCHER_PID") == 0) {
+			EXPECT_EQ(getpid(), atoi(value));
+			got_app_pid = true;
 		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
 			EXPECT_STREQ(APP_DIR "/application.desktop", value);
 			got_app_desktop_path = true;
@@ -179,31 +196,34 @@ TEST_F(ExecUtil, ClickExec)
 	EXPECT_TRUE(got_shader_dir);
 	EXPECT_TRUE(got_app_dir);
 	EXPECT_TRUE(got_app_exec);
+	EXPECT_TRUE(got_app_id);
+	EXPECT_TRUE(got_app_pid);
 	EXPECT_TRUE(got_app_desktop_path);
 }
 
 TEST_F(ExecUtil, DesktopExec)
 {
-	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	g_setenv("APP_ID", "foo", TRUE);
-
-	g_spawn_command_line_sync(DESKTOP_EXEC_TOOL, NULL, NULL, NULL, NULL);
+	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", NULL));
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 
 	ASSERT_EQ(1, len);
 	ASSERT_NE(nullptr, calls);
-	ASSERT_STREQ("SetEnvList", calls[0].name);
+	ASSERT_STREQ("Start", calls[0].name);
 
 	unsigned int i;
 
 	bool got_app_exec = false;
 	bool got_app_desktop_path = false;
 	bool got_app_exec_policy = false;
+	bool got_app_id = false;
+	bool got_app_pid = false;
+	bool got_instance_id = false;
 
-	GVariant * envarray = g_variant_get_child_value(calls[0].params, 1);
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
 	GVariantIter iter;
 	g_variant_iter_init(&iter, envarray);
 	gchar * envvar = NULL;
@@ -226,6 +246,14 @@ TEST_F(ExecUtil, DesktopExec)
 		} else if (g_strcmp0(var, "APP_EXEC_POLICY") == 0) {
 			EXPECT_STREQ("unconfined", value);
 			got_app_exec_policy = true;
+		} else if (g_strcmp0(var, "APP_ID") == 0) {
+			EXPECT_STREQ("foo", value);
+			got_app_id = true;
+		} else if (g_strcmp0(var, "APP_LAUNCHER_PID") == 0) {
+			EXPECT_EQ(getpid(), atoi(value));
+			got_app_pid = true;
+		} else if (g_strcmp0(var, "INSTANCE_ID") == 0) {
+			got_instance_id = true;
 		} else {
 			g_warning("Unknown variable! %s", var);
 			EXPECT_TRUE(false);
@@ -239,4 +267,7 @@ TEST_F(ExecUtil, DesktopExec)
 	EXPECT_TRUE(got_app_exec);
 	EXPECT_TRUE(got_app_desktop_path);
 	EXPECT_TRUE(got_app_exec_policy);
+	EXPECT_TRUE(got_app_id);
+	EXPECT_TRUE(got_app_pid);
+	EXPECT_TRUE(got_instance_id);
 }

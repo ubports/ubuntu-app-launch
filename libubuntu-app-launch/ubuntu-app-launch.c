@@ -29,6 +29,8 @@
 #include "second-exec-core.h"
 #include "helpers.h"
 #include "ual-tracepoint.h"
+#include "click-exec.h"
+#include "desktop-exec.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -218,8 +220,11 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 		jobpath = get_jobpath(con, "application-legacy");
 	}
 
-	if (jobpath == NULL)
+	if (jobpath == NULL) {
+		g_object_unref(con);
+		g_warning("Unable to get job path");
 		return FALSE;
+	}
 
 	ual_tracepoint(libual_job_path_determined, appid, jobpath);
 
@@ -256,28 +261,39 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
 	}
 
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-	
-	/* Call the job start function */
-	g_dbus_connection_call(con,
-	                       DBUS_SERVICE_UPSTART,
-	                       jobpath,
-	                       DBUS_INTERFACE_UPSTART_JOB,
-	                       "Start",
-	                       g_variant_builder_end(&builder),
-	                       NULL,
-	                       G_DBUS_CALL_FLAGS_NONE,
-	                       -1,
-	                       NULL, /* cancelable */
-	                       application_start_cb,
-	                       app_start_data);
+	gboolean setup_complete = FALSE;
+	if (click) {
+		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
+	} else {
+		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder);
+	}
 
-	ual_tracepoint(libual_start_message_sent, appid);
+	if (setup_complete) {
+		g_variant_builder_close(&builder);
+		g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+	
+		/* Call the job start function */
+		g_dbus_connection_call(con,
+		                       DBUS_SERVICE_UPSTART,
+		                       jobpath,
+		                       DBUS_INTERFACE_UPSTART_JOB,
+		                       "Start",
+		                       g_variant_builder_end(&builder),
+		                       NULL,
+		                       G_DBUS_CALL_FLAGS_NONE,
+		                       -1,
+		                       NULL, /* cancelable */
+		                       application_start_cb,
+		                       app_start_data);
+
+		ual_tracepoint(libual_start_message_sent, appid);
+	} else {
+		g_variant_builder_clear(&builder);
+	}
 
 	g_object_unref(con);
 
-	return TRUE;
+	return setup_complete;
 }
 
 gboolean

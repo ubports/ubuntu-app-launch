@@ -82,26 +82,6 @@ add_library(helpers STATIC helpers.c helpers-shared.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
 
 ####################
-# desktop-exec
-####################
-
-add_lttng_gen_tp(NAME desktop-exec-trace)
-add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c recoverable-problem.c)
-set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
-target_link_libraries(desktop-exec helpers ${LTTNG_LIBRARIES})
-install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# click-exec
-####################
-
-add_lttng_gen_tp(NAME click-exec-trace)
-add_executable(click-exec click-exec.c click-exec-trace.c)
-set_target_properties(click-exec PROPERTIES OUTPUT_NAME "click-exec")
-target_link_libraries(click-exec helpers ${LTTNG_LIBRARIES} ${CLICK_LIBRARIES})
-install(TARGETS click-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
 # desktop-hook
 ####################
 

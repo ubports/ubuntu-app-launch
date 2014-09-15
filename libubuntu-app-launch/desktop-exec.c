@@ -24,17 +24,15 @@
 #include <gio/gio.h>
 
 #include "helpers.h"
-#include "desktop-exec-trace.h"
+#include "ubuntu-app-launch-trace.h"
 #include "recoverable-problem.h"
 #include "ual-tracepoint.h"
-
-const gchar * app_id = NULL;
 
 /* Reports an error on the caller of UAL so that we can track
    who is trying to launch bad AppIDs, and then fix their bug
    so that we get better reporting upstream. */
 void
-report_error_on_caller (void) {
+report_error_on_caller (const gchar * app_id) {
 	g_warning("Unable to find keyfile for application '%s'", app_id);
 
 	const gchar * props[3] = {
@@ -43,18 +41,14 @@ report_error_on_caller (void) {
 	};
 	props[1] = app_id;
 
-	GPid pid = 0;
-	const gchar * launcher_pid = g_getenv("APP_LAUNCHER_PID");
-	if (launcher_pid != NULL) {
-		pid = atoi(launcher_pid);
-	}
+	GPid pid = getpid();
 
 	/* Checking to see if we're using the command line tool to create
 	   the appid. Chances are in that case it's a user error, and we
 	   don't need to automatically record it, the user mistyped. */
 	gboolean debugtool = FALSE;
 	if (pid != 0) {
-		gchar * cmdpath = g_strdup_printf("/proc/%d/cmdline", pid);
+		const gchar * cmdpath = "/proc/self/cmdline";
 		gchar * cmdline = NULL;
 
 		if (g_file_get_contents(cmdpath, &cmdline, NULL, NULL)) {
@@ -67,8 +61,6 @@ report_error_on_caller (void) {
 			/* The caller has already exited, probably a debug tool */
 			debugtool = TRUE;
 		}
-
-		g_free(cmdpath);
 	}
 
 	if (!debugtool) {
@@ -78,32 +70,15 @@ report_error_on_caller (void) {
 	}
 }
 
-int
-main (int argc, char * argv[])
+gboolean
+desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle)
 {
-	if (argc != 1) {
-		g_error("Should be called as: %s", argv[0]);
-		return 1;
-	}
-
-	app_id = g_getenv("APP_ID");
-
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");
-		return 1;
+		return FALSE;
 	}
 
 	ual_tracepoint(desktop_start, app_id);
-
-	/* Ensure we keep one connection open to the bus for the entire
-	   script even though different people need it throughout */
-	GError * error = NULL;
-	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-	if (error != NULL) {
-		g_error("Unable to get session bus: %s", error->message);
-		g_error_free(error);
-		return 1;
-	}
 
 	handshake_t * handshake = starting_handshake_start(app_id);
 	if (handshake == NULL) {
@@ -116,13 +91,11 @@ main (int argc, char * argv[])
 	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
 
 	if (keyfile == NULL) {
-		report_error_on_caller();
-		return 1;
+		report_error_on_caller(app_id);
+		return FALSE;
 	}
 
 	ual_tracepoint(desktop_found, app_id);
-
-	EnvHandle * handle = env_handle_start();
 
 	/* Desktop file name so that libs can get other info from it */
 	if (desktopfilename != NULL) {
@@ -154,19 +127,11 @@ main (int argc, char * argv[])
 
 	g_key_file_free(keyfile);
 
-	ual_tracepoint(desktop_send_env_vars, app_id);
-
-	/* Sync the env vars with Upstart */
-	env_handle_finish(handle);
-	handle = NULL; /* make errors not love */
-
 	ual_tracepoint(handshake_wait, app_id);
 
 	starting_handshake_wait(handshake);
 
 	ual_tracepoint(handshake_complete, app_id);
 
-	g_object_unref(bus);
-
-	return 0;
+	return TRUE;
 }
