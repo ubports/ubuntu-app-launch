@@ -1323,9 +1323,14 @@ TEST_F(LibUAL, PauseResume)
 	dbus_test_task_run(DBUS_TEST_TASK(zgmock));
 	g_object_unref(G_OBJECT(zgmock));
 
-	/* Test it */
-	pause(200);
+	/* Give things a chance to start */
+	do {
+		g_debug("Giving mocks a chance to start");
+		pause(200);
+	} while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING &&
+		dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
 
+	/* Test it */
 	EXPECT_NE(0, datacnt);
 
 	/* Pause the app */
