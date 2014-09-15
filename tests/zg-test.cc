@@ -114,8 +114,8 @@ TEST(ZGEvent, TimeoutTest)
 
 	guint64 end = g_get_monotonic_time();
 
-	/* Four seconds to do a two second op -- ARM Jenkins is slow */
-	EXPECT_LT(end - start, 4 * 1000 * 1000);
+	/* Fourteen seconds to do a two second op -- Jenkins is slow */
+	EXPECT_LT(end - start, 14 * 1000 * 1000);
 
 	g_object_unref(zgevent);
 	g_object_unref(service);
