@@ -1335,6 +1335,8 @@ TEST_F(LibUAL, PauseResume)
 
 	/* Pause the app */
 	EXPECT_TRUE(ubuntu_app_launch_pause_application("com.test.good_application_1.2.3"));
+
+	pause(0); /* Flush queued events */
 	datacnt = 0; /* clear it */
 
 	pause(200);
