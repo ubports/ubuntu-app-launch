@@ -80,3 +80,12 @@ set_target_properties(ubuntu-helper-list PROPERTIES OUTPUT_NAME "ubuntu-helper-l
 target_link_libraries(ubuntu-helper-list ubuntu-launcher)
 install(TARGETS ubuntu-helper-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
+########################
+# ubuntu-app-usage
+########################
+
+add_executable(ubuntu-app-usage ubuntu-app-usage.c)
+set_target_properties(ubuntu-app-usage PROPERTIES OUTPUT_NAME "ubuntu-app-usage")
+target_link_libraries(ubuntu-app-usage ubuntu-launcher)
+install(TARGETS ubuntu-app-usage RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+

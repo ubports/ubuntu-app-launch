@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 #include <gio/gio.h>
+#include <zeitgeist.h>
 
 extern "C" {
 #include "ubuntu-app-launch.h"
@@ -1306,24 +1307,64 @@ TEST_F(LibUAL, PauseResume)
 	dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock2));
 	dbus_test_task_run(DBUS_TEST_TASK(cgmock2));
 	g_object_unref(G_OBJECT(cgmock2));
+	
+	/* Setup ZG Mock */
+	DbusTestDbusMock * zgmock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
+	DbusTestDbusMockObject * zgobj = dbus_test_dbus_mock_get_object(zgmock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", NULL);
+
+	dbus_test_dbus_mock_object_add_method(zgmock, zgobj,
+		"InsertEvents",
+		G_VARIANT_TYPE("a(asaasay)"),
+		G_VARIANT_TYPE("au"),
+		"ret = [ 0 ]",
+		NULL);
+
+	dbus_test_service_add_task(service, DBUS_TEST_TASK(zgmock));
+	dbus_test_task_run(DBUS_TEST_TASK(zgmock));
+	g_object_unref(G_OBJECT(zgmock));
+
+	/* Give things a chance to start */
+	do {
+		g_debug("Giving mocks a chance to start");
+		pause(200);
+	} while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING &&
+		dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
 
 	/* Test it */
-	pause(200);
-
 	EXPECT_NE(0, datacnt);
 
-	EXPECT_TRUE(ubuntu_app_launch_pause_application("foo"));
+	/* Pause the app */
+	EXPECT_TRUE(ubuntu_app_launch_pause_application("com.test.good_application_1.2.3"));
+
+	pause(0); /* Flush queued events */
 	datacnt = 0; /* clear it */
 
 	pause(200);
 
 	EXPECT_EQ(0, datacnt);
 
-	EXPECT_TRUE(ubuntu_app_launch_resume_application("foo"));
+	/* Check to make sure we sent the event to ZG */
+	guint numcalls = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(zgmock, zgobj, "InsertEvents", &numcalls, NULL);
+
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, numcalls);
+
+	dbus_test_dbus_mock_object_clear_method_calls(zgmock, zgobj, NULL);
+
+	/* No Resume the App */
+	EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
 
 	pause(200);
 
 	EXPECT_NE(0, datacnt);
+
+	/* Check to make sure we sent the event to ZG */
+	numcalls = 0;
+	calls = dbus_test_dbus_mock_object_get_method_calls(zgmock, zgobj, "InsertEvents", &numcalls, NULL);
+
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, numcalls);
 
 	/* Clean up */
 	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
@@ -1331,4 +1372,9 @@ TEST_F(LibUAL, PauseResume)
 	g_free(killstr);
 
 	g_io_channel_unref(spewoutchan);
+
+	/* Kill ZG default instance :-( */
+	ZeitgeistLog * log = zeitgeist_log_get_default();
+	g_object_unref(log);
+	g_object_unref(log);
 }
