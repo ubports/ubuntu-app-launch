@@ -47,6 +47,9 @@ class CGroupReap : public ::testing::Test
 			g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock", TRUE);
 
 			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+			/* This Python code executes in dbusmock and checks to see if the sleeping
+			   process is running. If it is, it returns its PID in the list of PIDs, if
+			   not it doesn't return any PIDs. */
 			gchar * pythoncode = g_strdup_printf(
 				"if os.spawnlp(os.P_WAIT, 'ps', 'ps', '%d') == 0 :\n"
 				"  ret = [ %d ]\n"
