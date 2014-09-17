@@ -21,8 +21,6 @@ export UBUNTU_APP_LAUNCH_ARCH
 apparmor switch ${APP_ID}
 cgroup freezer
 
-pre-start exec @pkglibexecdir@/click-exec
-
 # Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec
 

@@ -1,6 +1,9 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
+# Get full logs in tests
+export G_MESSAGES_DEBUG=all
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
