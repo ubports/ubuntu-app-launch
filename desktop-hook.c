@@ -59,6 +59,9 @@ struct _app_state_t {
 	guint64 desktop_modified;
 };
 
+#define ICON_KEY "Icon"
+#define SYMBOLIC_ICON_KEY "X-Ubuntu-SymbolicIcon"
+
 /* Find an entry in the app array */
 app_state_t *
 find_app_entry (const gchar * name, GArray * app_array)
@@ -325,20 +328,20 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
 
 	/* Icon Handling */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "Icon", NULL)) {
-		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", "Icon", NULL);
+	if (g_key_file_has_key(keyfile, "Desktop Entry", ICON_KEY, NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", ICON_KEY, NULL);
 		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
 
 		/* If the icon in the path exists, let's use that */
 		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
-			g_key_file_set_string(keyfile, "Desktop Entry", "Icon", iconpath);
+			g_key_file_set_string(keyfile, "Desktop Entry", ICON_KEY, iconpath);
 			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Icon", originalicon);
+			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-" ICON_KEY, originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
 
-			report_recoverable_error(app_id, "Icon", originalicon, iconpath);
+			report_recoverable_error(app_id, ICON_KEY, originalicon, iconpath);
 		}
 
 		g_free(iconpath);
@@ -346,20 +349,20 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	/* SymbolicIcon Handling */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-SymbolicIcon", NULL)) {
-		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", "X-Ubuntu-SymbolicIcon", NULL);
+	if (g_key_file_has_key(keyfile, "Desktop Entry", SYMBOLIC_ICON_KEY, NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", SYMBOLIC_ICON_KEY, NULL);
 		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
 
 		/* If the icon in the path exists, let's use that */
 		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
-			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-SymbolicIcon", iconpath);
+			g_key_file_set_string(keyfile, "Desktop Entry", SYMBOLIC_ICON_KEY, iconpath);
 			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-SymbolicIcon", originalicon);
+			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-" SYMBOLIC_ICON_KEY, originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
 
-			report_recoverable_error(app_id, "X-Ubuntu-SymbolicIcon", originalicon, iconpath);
+			report_recoverable_error(app_id, SYMBOLIC_ICON_KEY, originalicon, iconpath);
 		}
 
 		g_free(iconpath);
