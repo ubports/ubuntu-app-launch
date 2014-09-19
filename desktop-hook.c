@@ -212,7 +212,7 @@ apport_child_timeout (gpointer user_data)
 
 /* Code to report an error, so we can start tracking how important this is */
 static void
-report_recoverable_error (const gchar * app_id, const gchar * originalicon, const gchar * iconpath)
+report_recoverable_error (const gchar * app_id, const gchar * iconfield, const gchar * originalicon, const gchar * iconpath)
 {
 	GError * error = NULL;
 	gint error_stdin = 0;
@@ -254,10 +254,14 @@ report_recoverable_error (const gchar * app_id, const gchar * originalicon, cons
 		write_string(error_stdin, iconpath);
 		write_null(error_stdin);
 
+		write_string(error_stdin, "IconField");
+		write_null(error_stdin);
+		write_string(error_stdin, iconfield);
+		write_null(error_stdin);
+
 		write_string(error_stdin, "DuplicateSignature");
 		write_null(error_stdin);
-		write_string(error_stdin, "icon-path-unhandled-");
-		write_string(error_stdin, app_id);
+		write_string(error_stdin, "icon-path-unhandled");
 		/* write_null(error_stdin); -- No final NULL */
 
 		close(error_stdin);
@@ -334,7 +338,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
 
-			report_recoverable_error(app_id, originalicon, iconpath);
+			report_recoverable_error(app_id, "Icon", originalicon, iconpath);
 		}
 
 		g_free(iconpath);
