@@ -61,6 +61,7 @@ struct _app_state_t {
 
 #define ICON_KEY "Icon"
 #define SYMBOLIC_ICON_KEY "X-Ubuntu-SymbolicIcon"
+#define DESKTOP_GROUP "Desktop Entry"
 
 /* Find an entry in the app array */
 app_state_t *
@@ -316,27 +317,27 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	/* Path Hanlding */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
-		gchar * oldpath = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, "Path", NULL)) {
+		gchar * oldpath = g_key_file_get_string(keyfile, DESKTOP_GROUP, "Path", NULL);
 		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old-Path.", from, oldpath);
 
-		g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Path", oldpath);
+		g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Old-Path", oldpath);
 
 		g_free(oldpath);
 	}
 
-	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, "Path", appdir);
 
 	/* Icon Handling */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", ICON_KEY, NULL)) {
-		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", ICON_KEY, NULL);
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, ICON_KEY, NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, DESKTOP_GROUP, ICON_KEY, NULL);
 		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
 
 		/* If the icon in the path exists, let's use that */
 		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
-			g_key_file_set_string(keyfile, "Desktop Entry", ICON_KEY, iconpath);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, ICON_KEY, iconpath);
 			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-" ICON_KEY, originalicon);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Old-" ICON_KEY, originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
@@ -349,15 +350,15 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	/* SymbolicIcon Handling */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", SYMBOLIC_ICON_KEY, NULL)) {
-		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", SYMBOLIC_ICON_KEY, NULL);
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, NULL);
 		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
 
 		/* If the icon in the path exists, let's use that */
 		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
-			g_key_file_set_string(keyfile, "Desktop Entry", SYMBOLIC_ICON_KEY, iconpath);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, iconpath);
 			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-" SYMBOLIC_ICON_KEY, originalicon);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Old-" SYMBOLIC_ICON_KEY, originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
@@ -377,12 +378,12 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	gchar * newexec = g_strdup_printf("aa-exec-click -p %s -- %s", app_id, oldexec);
-	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, "Exec", newexec);
 	g_free(newexec);
 	g_free(oldexec);
 
 	/* Adding an Application ID */
-	g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", app_id);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Application-ID", app_id);
 
 	/* Output */
 	gsize datalen = 0;
@@ -476,7 +477,7 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 		G_KEY_FILE_NONE,
 		NULL);
 
-	if (!g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", NULL)) {
+	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, "X-Ubuntu-Application-ID", NULL)) {
 		g_debug("Desktop file '%s' is not one created by us.", desktoppath);
 		g_key_file_unref(keyfile);
 		g_free(desktoppath);
