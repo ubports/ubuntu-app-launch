@@ -59,12 +59,16 @@ struct _app_state_t {
 	guint64 desktop_modified;
 };
 
-#define APP_ID_KEY "X-Ubuntu-Application-ID"
-#define PATH_KEY "Path"
-#define EXEC_KEY "Exec"
-#define ICON_KEY "Icon"
-#define SYMBOLIC_ICON_KEY "X-Ubuntu-SymbolicIcon"
-#define DESKTOP_GROUP "Desktop Entry"
+/* Desktop Group */
+#define DESKTOP_GROUP      "Desktop Entry"
+/* Desktop Keys */
+#define APP_ID_KEY         "X-Ubuntu-Application-ID"
+#define PATH_KEY           "Path"
+#define EXEC_KEY           "Exec"
+#define ICON_KEY           "Icon"
+#define SYMBOLIC_ICON_KEY  "X-Ubuntu-SymbolicIcon"
+/* Other */
+#define OLD_KEY_PREFIX     "X-Ubuntu-Old-"
 
 /* Find an entry in the app array */
 app_state_t *
@@ -322,9 +326,9 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	/* Path Hanlding */
 	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, PATH_KEY, NULL)) {
 		gchar * oldpath = g_key_file_get_string(keyfile, DESKTOP_GROUP, PATH_KEY, NULL);
-		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old" PATH_KEY ".", from, oldpath);
+		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as " OLD_KEY_PREFIX PATH_KEY ".", from, oldpath);
 
-		g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Old" PATH_KEY, oldpath);
+		g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX PATH_KEY, oldpath);
 
 		g_free(oldpath);
 	}
@@ -340,7 +344,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
 			g_key_file_set_string(keyfile, DESKTOP_GROUP, ICON_KEY, iconpath);
 			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Old-" ICON_KEY, originalicon);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX ICON_KEY, originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
@@ -361,7 +365,7 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
 			g_key_file_set_string(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, iconpath);
 			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Old-" SYMBOLIC_ICON_KEY, originalicon);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX SYMBOLIC_ICON_KEY, originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
