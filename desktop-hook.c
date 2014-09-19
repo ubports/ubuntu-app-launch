@@ -59,6 +59,9 @@ struct _app_state_t {
 	guint64 desktop_modified;
 };
 
+#define APP_ID_KEY "X-Ubuntu-Application-ID"
+#define PATH_KEY "Path"
+#define EXEC_KEY "Exec"
 #define ICON_KEY "Icon"
 #define SYMBOLIC_ICON_KEY "X-Ubuntu-SymbolicIcon"
 #define DESKTOP_GROUP "Desktop Entry"
@@ -317,16 +320,16 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	/* Path Hanlding */
-	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, "Path", NULL)) {
-		gchar * oldpath = g_key_file_get_string(keyfile, DESKTOP_GROUP, "Path", NULL);
-		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old-Path.", from, oldpath);
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, PATH_KEY, NULL)) {
+		gchar * oldpath = g_key_file_get_string(keyfile, DESKTOP_GROUP, PATH_KEY, NULL);
+		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old" PATH_KEY ".", from, oldpath);
 
-		g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Old-Path", oldpath);
+		g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Old" PATH_KEY, oldpath);
 
 		g_free(oldpath);
 	}
 
-	g_key_file_set_string(keyfile, DESKTOP_GROUP, "Path", appdir);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, PATH_KEY, appdir);
 
 	/* Icon Handling */
 	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, ICON_KEY, NULL)) {
@@ -378,12 +381,12 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	gchar * newexec = g_strdup_printf("aa-exec-click -p %s -- %s", app_id, oldexec);
-	g_key_file_set_string(keyfile, DESKTOP_GROUP, "Exec", newexec);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, EXEC_KEY, newexec);
 	g_free(newexec);
 	g_free(oldexec);
 
 	/* Adding an Application ID */
-	g_key_file_set_string(keyfile, DESKTOP_GROUP, "X-Ubuntu-Application-ID", app_id);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, APP_ID_KEY, app_id);
 
 	/* Output */
 	gsize datalen = 0;
@@ -477,7 +480,7 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 		G_KEY_FILE_NONE,
 		NULL);
 
-	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, "X-Ubuntu-Application-ID", NULL)) {
+	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, APP_ID_KEY, NULL)) {
 		g_debug("Desktop file '%s' is not one created by us.", desktoppath);
 		g_key_file_unref(keyfile);
 		g_free(desktoppath);
