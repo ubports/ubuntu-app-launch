@@ -421,18 +421,18 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	}
 
 	gchar * path = g_strdup_printf("/proc/%d/oom_score_adj", pid);
-	int adj = open(path, 0, "w");
+	FILE * adj = fopen(path, "w");
 	int openerr = errno;
 	g_free(path);
 
-	if (adj <= 0) {
+	if (adj == NULL) {
 		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
 		return FALSE;
 	}
 
-	ssize_t writesize = write(adj, oomscore, strlen(oomscore));
+	size_t writesize = fwrite(oomscore, strlen(oomscore), 1, adj);
 	int writeerr = errno;
-	close(adj);
+	fclose(adj);
 
 	if (writesize == strlen(oomscore))
 		return TRUE;
