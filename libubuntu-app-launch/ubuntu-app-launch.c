@@ -431,12 +431,17 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	}
 
 	ssize_t writesize = write(adj, oomscore, strlen(oomscore));
+	int writeerr = errno;
 	close(adj);
 
 	if (writesize == strlen(oomscore))
 		return TRUE;
 	
-	g_warning("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
+	if (writesize < 0)
+		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(writeerr));
+	else
+		g_warning("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
+
 	return FALSE;
 }
 
