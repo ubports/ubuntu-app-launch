@@ -16,6 +16,9 @@ env APP_DESKTOP_FILE_PATH
 apparmor switch $APP_EXEC_POLICY
 cgroup freezer
 
+# Initial OOM Score
+oom score 110
+
 # This could be confined
 exec @pkglibexecdir@/exec-line-exec
 
