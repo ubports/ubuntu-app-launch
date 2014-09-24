@@ -23,6 +23,7 @@
 #include <upstart.h>
 #include <gio/gio.h>
 #include <string.h>
+#include <fcntl.h>
 #include <zeitgeist.h>
 
 #include "ubuntu-app-launch-trace.h"
@@ -419,12 +420,17 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	}
 
 	gchar * path = g_strdup_printf("/proc/%d/oom_score_adj", pid);
-
-	gboolean res = g_file_set_contents(path, oomscore, -1, NULL);
-
+	int adj = open(path, 0, "w");
 	g_free(path);
 
-	return res;
+	if (adj == 0) {
+		return FALSE;
+	}
+
+	ssize_t writesize = write(adj, oomscore, strlen(oomscore));
+	close(adj);
+
+	return writesize == strlen(oomscore);
 }
 
 /* Gets all the pids for an appid and sends a signal to all of them. This also
