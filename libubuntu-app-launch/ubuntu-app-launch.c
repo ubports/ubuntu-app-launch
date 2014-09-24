@@ -425,7 +425,7 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	int openerr = errno;
 	g_free(path);
 
-	if (adj == 0) {
+	if (adj <= 0) {
 		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
 		return FALSE;
 	}
@@ -433,7 +433,11 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	ssize_t writesize = write(adj, oomscore, strlen(oomscore));
 	close(adj);
 
-	return writesize == strlen(oomscore);
+	if (writesize == strlen(oomscore))
+		return TRUE;
+	
+	g_warning("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
+	return FALSE;
 }
 
 /* Gets all the pids for an appid and sends a signal to all of them. This also
