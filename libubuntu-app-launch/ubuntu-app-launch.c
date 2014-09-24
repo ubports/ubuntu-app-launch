@@ -24,6 +24,7 @@
 #include <gio/gio.h>
 #include <string.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <zeitgeist.h>
 
 #include "ubuntu-app-launch-trace.h"
@@ -421,9 +422,11 @@ set_oom_value (GPid pid, const gchar * oomscore)
 
 	gchar * path = g_strdup_printf("/proc/%d/oom_score_adj", pid);
 	int adj = open(path, 0, "w");
+	int openerr = errno;
 	g_free(path);
 
 	if (adj == 0) {
+		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
 		return FALSE;
 	}
 
@@ -473,7 +476,6 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 			}
 
 			if (!set_oom_value(pid, oomscore)) {
-				g_warning("Unable to set OOM score '%s' on pid %d", oomscore, pid);
 				retval = FALSE;
 			}
 
