@@ -59,6 +59,17 @@ struct _app_state_t {
 	guint64 desktop_modified;
 };
 
+/* Desktop Group */
+#define DESKTOP_GROUP      "Desktop Entry"
+/* Desktop Keys */
+#define APP_ID_KEY         "X-Ubuntu-Application-ID"
+#define PATH_KEY           "Path"
+#define EXEC_KEY           "Exec"
+#define ICON_KEY           "Icon"
+#define SYMBOLIC_ICON_KEY  "X-Ubuntu-SymbolicIcon"
+/* Other */
+#define OLD_KEY_PREFIX     "X-Ubuntu-Old-"
+
 /* Find an entry in the app array */
 app_state_t *
 find_app_entry (const gchar * name, GArray * app_array)
@@ -212,7 +223,7 @@ apport_child_timeout (gpointer user_data)
 
 /* Code to report an error, so we can start tracking how important this is */
 static void
-report_recoverable_error (const gchar * app_id, const gchar * originalicon, const gchar * iconpath)
+report_recoverable_error (const gchar * app_id, const gchar * iconfield, const gchar * originalicon, const gchar * iconpath)
 {
 	GError * error = NULL;
 	gint error_stdin = 0;
@@ -254,10 +265,14 @@ report_recoverable_error (const gchar * app_id, const gchar * originalicon, cons
 		write_string(error_stdin, iconpath);
 		write_null(error_stdin);
 
+		write_string(error_stdin, "IconField");
+		write_null(error_stdin);
+		write_string(error_stdin, iconfield);
+		write_null(error_stdin);
+
 		write_string(error_stdin, "DuplicateSignature");
 		write_null(error_stdin);
-		write_string(error_stdin, "icon-path-unhandled-");
-		write_string(error_stdin, app_id);
+		write_string(error_stdin, "icon-path-unhandled");
 		/* write_null(error_stdin); -- No final NULL */
 
 		close(error_stdin);
@@ -309,32 +324,53 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	/* Path Hanlding */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
-		gchar * oldpath = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
-		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old-Path.", from, oldpath);
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, PATH_KEY, NULL)) {
+		gchar * oldpath = g_key_file_get_string(keyfile, DESKTOP_GROUP, PATH_KEY, NULL);
+		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as " OLD_KEY_PREFIX PATH_KEY ".", from, oldpath);
 
-		g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Path", oldpath);
+		g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX PATH_KEY, oldpath);
 
 		g_free(oldpath);
 	}
 
-	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, PATH_KEY, appdir);
 
 	/* Icon Handling */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "Icon", NULL)) {
-		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", "Icon", NULL);
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, ICON_KEY, NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, DESKTOP_GROUP, ICON_KEY, NULL);
 		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
 
 		/* If the icon in the path exists, let's use that */
 		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
-			g_key_file_set_string(keyfile, "Desktop Entry", "Icon", iconpath);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, ICON_KEY, iconpath);
 			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Icon", originalicon);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX ICON_KEY, originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
 
-			report_recoverable_error(app_id, originalicon, iconpath);
+			report_recoverable_error(app_id, ICON_KEY, originalicon, iconpath);
+		}
+
+		g_free(iconpath);
+		g_free(originalicon);
+	}
+
+	/* SymbolicIcon Handling */
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, NULL);
+		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
+
+		/* If the icon in the path exists, let's use that */
+		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, iconpath);
+			/* Save the old value, because, debugging */
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX SYMBOLIC_ICON_KEY, originalicon);
+		} else {
+			/* So here we are, realizing all is lost.  Let's file a bug. */
+			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
+
+			report_recoverable_error(app_id, SYMBOLIC_ICON_KEY, originalicon, iconpath);
 		}
 
 		g_free(iconpath);
@@ -349,12 +385,12 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	gchar * newexec = g_strdup_printf("aa-exec-click -p %s -- %s", app_id, oldexec);
-	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, EXEC_KEY, newexec);
 	g_free(newexec);
 	g_free(oldexec);
 
 	/* Adding an Application ID */
-	g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", app_id);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, APP_ID_KEY, app_id);
 
 	/* Output */
 	gsize datalen = 0;
@@ -448,7 +484,7 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 		G_KEY_FILE_NONE,
 		NULL);
 
-	if (!g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", NULL)) {
+	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, APP_ID_KEY, NULL)) {
 		g_debug("Desktop file '%s' is not one created by us.", desktoppath);
 		g_key_file_unref(keyfile);
 		g_free(desktoppath);
