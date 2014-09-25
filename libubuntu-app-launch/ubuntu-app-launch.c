@@ -444,11 +444,10 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	if (writesize == strlen(oomscore))
 		return TRUE;
 	
-	if (writesize < 0)
+	if (writeerr != 0)
 		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(writeerr));
 	else
-		/* A lot of times this seems to be the PID dying. We don't want
-		   to have that show up in logs unless we turn on debug messages */
+		/* No error, but yet, wrong size. Not sure, what could cause this. */
 		g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
 
 	return FALSE;
