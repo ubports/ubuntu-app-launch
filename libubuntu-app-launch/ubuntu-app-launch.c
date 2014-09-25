@@ -437,7 +437,7 @@ set_oom_value (GPid pid, const gchar * oomscore)
 		return FALSE;
 	}
 
-	size_t writesize = fwrite(oomscore, strlen(oomscore), 1, adj);
+	size_t writesize = fwrite(oomscore, 1, strlen(oomscore), adj);
 	int writeerr = errno;
 	fclose(adj);
 
