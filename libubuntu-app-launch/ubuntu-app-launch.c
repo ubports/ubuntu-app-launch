@@ -416,11 +416,15 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 static gboolean
 set_oom_value (GPid pid, const gchar * oomscore)
 {
-	if (oomscore == NULL) {
-		return TRUE;
+	static const gchar * procpath = NULL;
+	if (procpath == NULL) {
+		procpath = g_getenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH");
+		if (procpath == NULL) {
+			procpath = "/proc";
+		}
 	}
 
-	gchar * path = g_strdup_printf("/proc/%d/oom_score_adj", pid);
+	gchar * path = g_strdup_printf("%s/%d/oom_score_adj", procpath, pid);
 	FILE * adj = fopen(path, "w");
 	int openerr = errno;
 	g_free(path);
@@ -453,12 +457,6 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
 	guint hash_table_size = 0;
 	gboolean retval = TRUE;
-
-	/* In the test suite we can't set this becuase we don't have permissions,
-	   which sucks, but it's the reality of testing at package build time */
-	if (g_getenv("UBUNTU_APP_LAUNCH_NO_SET_OOM")) {
-		oomscore = NULL;
-	}
 
 	do {
 		hash_table_size = g_hash_table_size(pidssignaled);
