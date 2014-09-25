@@ -31,10 +31,15 @@ add_test (helper-handshake-test helper-handshake-test)
 # libUAL Test
 
 include_directories("${CMAKE_SOURCE_DIR}/libubuntu-app-launch")
+add_definitions ( -DSPEW_UTILITY="${CMAKE_CURRENT_BINARY_DIR}/data-spew" )
 
 add_executable (libual-test
 	libual-test.cc)
 target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+
+add_executable (data-spew
+	data-spew.c)
+target_link_libraries (data-spew ${GLIB2_LIBRARIES})
 
 add_test (NAME libual-test COMMAND libual-test)
 
@@ -62,9 +67,6 @@ configure_file("exec-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh" @ONL
 add_test (exec-test "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh")
 
 # Exec Utils
-
-add_definitions ( -DCLICK_EXEC_TOOL="${CMAKE_BINARY_DIR}/click-exec" )
-add_definitions ( -DDESKTOP_EXEC_TOOL="${CMAKE_BINARY_DIR}/desktop-exec" )
 
 add_executable (exec-util-test
 	exec-util-test.cc)

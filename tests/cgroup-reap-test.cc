@@ -30,9 +30,9 @@ class CGroupReap : public ::testing::Test
 		GPid sleeppid = 0;
 
 		virtual void SetUp() {
-			gchar * argv[] = { "sleep", "30", NULL };
+			const gchar * argv[] = { "sleep", "30", NULL };
 			g_spawn_async(NULL,
-			              argv,
+			              (gchar **)argv,
 			              NULL, /* env */
 			              G_SPAWN_SEARCH_PATH,
 			              NULL, NULL, /* child setup */
@@ -47,6 +47,9 @@ class CGroupReap : public ::testing::Test
 			g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock", TRUE);
 
 			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
+			/* This Python code executes in dbusmock and checks to see if the sleeping
+			   process is running. If it is, it returns its PID in the list of PIDs, if
+			   not it doesn't return any PIDs. */
 			gchar * pythoncode = g_strdup_printf(
 				"if os.spawnlp(os.P_WAIT, 'ps', 'ps', '%d') == 0 :\n"
 				"  ret = [ %d ]\n"

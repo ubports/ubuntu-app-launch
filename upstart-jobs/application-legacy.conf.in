@@ -16,8 +16,6 @@ env APP_DESKTOP_FILE_PATH
 apparmor switch $APP_EXEC_POLICY
 cgroup freezer
 
-pre-start exec @pkglibexecdir@/desktop-exec
-
 # This could be confined
 exec @pkglibexecdir@/exec-line-exec
 

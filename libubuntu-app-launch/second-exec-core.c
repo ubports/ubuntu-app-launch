@@ -24,6 +24,7 @@
 #include "helpers.h"
 #include "second-exec-core.h"
 #include "ubuntu-app-launch-trace.h"
+#include "ual-tracepoint.h"
 
 typedef struct {
 	GDBusConnection * bus;
@@ -44,7 +45,7 @@ static void second_exec_complete (second_exec_t * data);
 static gboolean
 timer_cb (gpointer user_data)
 {
-	tracepoint(ubuntu_app_launch, second_exec_resume_timeout, ((second_exec_t *)user_data)->appid);
+	ual_tracepoint(second_exec_resume_timeout, ((second_exec_t *)user_data)->appid);
 	g_warning("Unity didn't respond in 500ms to resume the app");
 	second_exec_complete(user_data);
 	return G_SOURCE_REMOVE;
@@ -54,7 +55,7 @@ timer_cb (gpointer user_data)
 static void
 connection_count_dec (second_exec_t * data)
 {
-	tracepoint(ubuntu_app_launch, second_exec_connection_complete, data->appid);
+	ual_tracepoint(second_exec_connection_complete, data->appid);
 	data->connections_open--;
 	if (data->connections_open == 0) {
 		g_debug("Finished finding connections");
@@ -79,7 +80,7 @@ unity_resume_cb (GDBusConnection * connection, const gchar * sender, const gchar
 {
 	second_exec_t * data = (second_exec_t *)user_data;
 	g_debug("Unity Completed Resume");
-	tracepoint(ubuntu_app_launch, second_exec_resume_complete, data->appid);
+	ual_tracepoint(second_exec_resume_complete, data->appid);
 
 	if (data->timer != 0) {
 		g_source_remove(data->timer);
@@ -188,12 +189,12 @@ send_open_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 {
 	GError * error = NULL;
 
-	tracepoint(ubuntu_app_launch, second_exec_app_contacted, ((second_exec_t *)user_data)->appid);
+	ual_tracepoint(second_exec_app_contacted, ((second_exec_t *)user_data)->appid);
 
 	g_dbus_connection_call_finish(G_DBUS_CONNECTION(object), res, &error);
 
 	if (error != NULL) {
-		tracepoint(ubuntu_app_launch, second_exec_app_error, ((second_exec_t *)user_data)->appid);
+		ual_tracepoint(second_exec_app_error, ((second_exec_t *)user_data)->appid);
 		/* Mostly just to free the error, but printing for debugging */
 		g_debug("Unable to send Open: %s", error->message);
 		g_error_free(error);
@@ -207,7 +208,7 @@ send_open_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 static void
 contact_app (GDBusConnection * bus, const gchar * dbus_name, second_exec_t * data)
 {
-	tracepoint(ubuntu_app_launch, second_exec_contact_app, data->appid, dbus_name);
+	ual_tracepoint(second_exec_contact_app, data->appid, dbus_name);
 
 	parse_uris(data);
 	app_id_to_dbus_path(data);
@@ -244,7 +245,7 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 	GError * error = NULL;
 	GVariant * vpid = NULL;
 
-	tracepoint(ubuntu_app_launch, second_exec_got_pid, data->data->appid, data->name);
+	ual_tracepoint(second_exec_got_pid, data->data->appid, data->name);
 
 	vpid = g_dbus_connection_call_finish(G_DBUS_CONNECTION(object), res, &error);
 
@@ -307,7 +308,7 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 	}
 
 	g_debug("Got bus names");
-	tracepoint(ubuntu_app_launch, second_exec_got_dbus_names, data->appid);
+	ual_tracepoint(second_exec_got_dbus_names, data->appid);
 
 	/* Next figure out what we're looking for (and if there is something to look for) */
 	/* NOTE: We're getting the PID *after* the list of connections so
@@ -320,7 +321,7 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 	}
 
 	g_debug("Primary PID: %d", data->app_pid);
-	tracepoint(ubuntu_app_launch, second_exec_got_primary_pid, data->appid);
+	ual_tracepoint(second_exec_got_primary_pid, data->appid);
 
 	/* Get the names */
 	GVariant * names = g_variant_get_child_value(listnames, 0);
@@ -338,7 +339,7 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 		pid_data->data = data;
 		pid_data->name = g_strdup(name);
 
-		tracepoint(ubuntu_app_launch, second_exec_request_pid, data->appid, pid_data->name);
+		ual_tracepoint(second_exec_request_pid, data->appid, pid_data->name);
 
 		/* Get the PIDs */
 		g_dbus_connection_call(session,
@@ -365,7 +366,7 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 gboolean
 second_exec (const gchar * app_id, const gchar * appuris)
 {
-	tracepoint(ubuntu_app_launch, second_exec_start, app_id, appuris);
+	ual_tracepoint(second_exec_start, app_id, appuris);
 
 	/* DBus tell us! */
 	GError * error = NULL;
@@ -394,7 +395,7 @@ second_exec (const gchar * app_id, const gchar * appuris)
 		NULL); /* user data destroy */
 
 	g_debug("Sending resume request");
-	tracepoint(ubuntu_app_launch, second_exec_emit_resume, app_id);
+	ual_tracepoint(second_exec_emit_resume, app_id);
 
 	/* Send unfreeze to to Unity */
 	g_dbus_connection_emit_signal(session,
@@ -435,7 +436,7 @@ static void
 second_exec_complete (second_exec_t * data)
 {
 	GError * error = NULL;
-	tracepoint(ubuntu_app_launch, second_exec_emit_focus, data->appid);
+	ual_tracepoint(second_exec_emit_focus, data->appid);
 
 	/* Now that we're done sending the info to the app, we can ask
 	   Unity to focus the application. */
@@ -461,7 +462,7 @@ second_exec_complete (second_exec_t * data)
 		error = NULL;
 	}
 
-	tracepoint(ubuntu_app_launch, second_exec_finish, data->appid);
+	ual_tracepoint(second_exec_finish, data->appid);
 
 	/* Clean up */
 	if (data->signal != 0)

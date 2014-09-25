@@ -23,13 +23,19 @@
 #include <upstart.h>
 #include <gio/gio.h>
 #include <string.h>
+#include <zeitgeist.h>
 
 #include "ubuntu-app-launch-trace.h"
 #include "second-exec-core.h"
-#include "../helpers.h"
+#include "helpers.h"
+#include "ual-tracepoint.h"
+#include "click-exec.h"
+#include "desktop-exec.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
+static GList * pids_for_appid (const gchar * appid);
+int kill (pid_t pid, int signal);
 
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
@@ -63,7 +69,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 	GError * error = NULL;
 	GVariant * result = NULL;
 
-	tracepoint(ubuntu_app_launch, libual_start_message_callback, data->appid);
+	ual_tracepoint(libual_start_message_callback, data->appid);
 
 	g_debug("Started Message Callback: %s", data->appid);
 
@@ -140,7 +146,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 static gboolean
 legacy_single_instance (const gchar * appid)
 {
-	tracepoint(ubuntu_app_launch, desktop_single_start, appid);
+	ual_tracepoint(desktop_single_start, appid);
 
 	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
 
@@ -149,7 +155,7 @@ legacy_single_instance (const gchar * appid)
 		return FALSE;
 	}
 
-	tracepoint(ubuntu_app_launch, desktop_single_found, appid);
+	ual_tracepoint(desktop_single_found, appid);
 
 	gboolean singleinstance = FALSE;
 
@@ -168,7 +174,7 @@ legacy_single_instance (const gchar * appid)
 	
 	g_key_file_free(keyfile);
 
-	tracepoint(ubuntu_app_launch, desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
+	ual_tracepoint(desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
 
 	return singleinstance;
 }
@@ -196,13 +202,15 @@ is_click (const gchar * appid)
 static gboolean
 start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
 {
+	ual_tracepoint(libual_start, appid);
+
 	g_return_val_if_fail(appid != NULL, FALSE);
 
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
 
 	gboolean click = is_click(appid);
-	tracepoint(ubuntu_app_launch, libual_determine_type, appid, click ? "click" : "legacy");
+	ual_tracepoint(libual_determine_type, appid, click ? "click" : "legacy");
 
 	/* Figure out the DBus path for the job */
 	const gchar * jobpath = NULL;
@@ -212,10 +220,13 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 		jobpath = get_jobpath(con, "application-legacy");
 	}
 
-	if (jobpath == NULL)
+	if (jobpath == NULL) {
+		g_object_unref(con);
+		g_warning("Unable to get job path");
 		return FALSE;
+	}
 
-	tracepoint(ubuntu_app_launch, libual_job_path_determined, appid, jobpath);
+	ual_tracepoint(libual_job_path_determined, appid, jobpath);
 
 	/* Callback data */
 	app_start_t * app_start_data = g_new0(app_start_t, 1);
@@ -250,28 +261,39 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
 	}
 
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-	
-	/* Call the job start function */
-	g_dbus_connection_call(con,
-	                       DBUS_SERVICE_UPSTART,
-	                       jobpath,
-	                       DBUS_INTERFACE_UPSTART_JOB,
-	                       "Start",
-	                       g_variant_builder_end(&builder),
-	                       NULL,
-	                       G_DBUS_CALL_FLAGS_NONE,
-	                       -1,
-	                       NULL, /* cancelable */
-	                       application_start_cb,
-	                       app_start_data);
+	gboolean setup_complete = FALSE;
+	if (click) {
+		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
+	} else {
+		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder);
+	}
 
-	tracepoint(ubuntu_app_launch, libual_start_message_sent, appid);
+	if (setup_complete) {
+		g_variant_builder_close(&builder);
+		g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+	
+		/* Call the job start function */
+		g_dbus_connection_call(con,
+		                       DBUS_SERVICE_UPSTART,
+		                       jobpath,
+		                       DBUS_INTERFACE_UPSTART_JOB,
+		                       "Start",
+		                       g_variant_builder_end(&builder),
+		                       NULL,
+		                       G_DBUS_CALL_FLAGS_NONE,
+		                       -1,
+		                       NULL, /* cancelable */
+		                       application_start_cb,
+		                       app_start_data);
+
+		ual_tracepoint(libual_start_message_sent, appid);
+	} else {
+		g_variant_builder_clear(&builder);
+	}
 
 	g_object_unref(con);
 
-	return TRUE;
+	return setup_complete;
 }
 
 gboolean
@@ -388,6 +410,153 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 	return found;
 }
 
+/* Sets the OOM score to a particular value, returns true on NULL */
+static gboolean
+set_oom_value (GPid pid, const gchar * oomscore)
+{
+	if (oomscore == NULL) {
+		return TRUE;
+	}
+
+	gchar * path = g_strdup_printf("/proc/%d/oom_score_adj", pid);
+
+	gboolean res = g_file_set_contents(path, oomscore, -1, NULL);
+
+	g_free(path);
+
+	return res;
+}
+
+/* Gets all the pids for an appid and sends a signal to all of them. This also
+   loops to ensure no new pids are added while we're signaling */
+static gboolean
+signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
+{
+	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
+	guint hash_table_size = 0;
+	gboolean retval = TRUE;
+
+	/* In the test suite we can't set this becuase we don't have permissions,
+	   which sucks, but it's the reality of testing at package build time */
+	if (g_getenv("UBUNTU_APP_LAUNCH_NO_SET_OOM")) {
+		oomscore = NULL;
+	}
+
+	do {
+		hash_table_size = g_hash_table_size(pidssignaled);
+		GList * pidlist = pids_for_appid(appid);
+		GList * iter;
+
+		if (pidlist == NULL) {
+			g_warning("Unable to get pids for '%s' to send signal %d", appid, signal);
+			retval = FALSE;
+			break;
+		}
+
+		for (iter = pidlist; iter != NULL; iter = g_list_next(iter)) {
+			if (g_hash_table_contains(pidssignaled, iter->data)) {
+				continue;
+			}
+
+			/* We've got a PID that we've not previously signaled */
+			GPid pid = GPOINTER_TO_INT(iter->data);
+			if (-1 == kill(pid, signal)) {
+				/* While that didn't work, we still want to try as many as we can */
+				g_warning("Unable to send signal %d to pid %d", signal, pid);
+				retval = FALSE;
+			}
+
+			if (!set_oom_value(pid, oomscore)) {
+				g_warning("Unable to set OOM score '%s' on pid %d", oomscore, pid);
+				retval = FALSE;
+			}
+
+			g_hash_table_add(pidssignaled, iter->data);
+		}
+
+		g_list_free(pidlist);
+	/* If it grew, then try again */
+	} while (hash_table_size != g_hash_table_size(pidssignaled));
+
+	g_hash_table_destroy(pidssignaled);
+
+	return retval;
+}
+
+/* Mostly here to just print a warning if we can't submit the event, they're
+   not critical to have */
+static void
+zg_insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
+{
+	GError * error = NULL;
+	GArray * result = NULL;
+
+	result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to submit Zeitgeist Event: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_array_free(result, TRUE);
+	return;
+}
+
+/* Function to report the access and leaving events to Zeitgeist so we
+   can track application usage */
+static void
+report_zg_event (const gchar * appid, const gchar * eventtype)
+{
+	gchar * uri = NULL;
+	gchar * pkg = NULL;
+	gchar * app = NULL;
+
+	if (ubuntu_app_launch_app_id_parse(appid, &pkg, &app, NULL)) {
+		/* If it's parseable, use the short form */
+		uri = g_strdup_printf("application://%s_%s.desktop", pkg, app);
+		g_free(pkg);
+		g_free(app);
+	} else {
+		uri = g_strdup_printf("application://%s.desktop", appid);
+	}
+
+	ZeitgeistLog * log = zeitgeist_log_get_default();
+
+	ZeitgeistEvent * event = zeitgeist_event_new();
+	zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
+	zeitgeist_event_set_interpretation(event, eventtype);
+	zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
+
+	ZeitgeistSubject * subject = zeitgeist_subject_new();
+	zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
+	zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
+	zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
+	zeitgeist_subject_set_uri(subject, uri);
+
+	zeitgeist_event_add_subject(event, subject);
+
+	zeitgeist_log_insert_event(log, event, NULL, zg_insert_complete, NULL);
+
+	g_free(uri);
+	g_object_unref(log);
+	g_object_unref(event);
+	g_object_unref(subject);
+}
+
+gboolean
+ubuntu_app_launch_pause_application (const gchar * appid)
+{
+	report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
+	return signal_to_cgroup(appid, SIGSTOP, "900");
+}
+
+gboolean
+ubuntu_app_launch_resume_application (const gchar * appid)
+{
+	report_zg_event(appid, ZEITGEIST_ZG_ACCESS_EVENT);
+	return signal_to_cgroup(appid, SIGCONT, "100");
+}
+
 gchar *
 ubuntu_app_launch_application_log_path (const gchar * appid)
 {
@@ -491,7 +660,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 	const gchar * signalname = NULL;
 	g_variant_get_child(params, 0, "&s", &signalname);
 
-	tracepoint(ubuntu_app_launch, observer_start, signalname);
+	ual_tracepoint(observer_start, signalname);
 
 	gchar * env = NULL;
 	GVariant * envs = g_variant_get_child_value(params, 1);
@@ -526,7 +695,7 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 		observer->func(instance, observer->user_data);
 	}
 
-	tracepoint(ubuntu_app_launch, observer_finish, signalname);
+	ual_tracepoint(observer_finish, signalname);
 
 	g_free(instance);
 }
@@ -609,21 +778,28 @@ add_session_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, co
 	return TRUE;
 }
 
-/* Handle the focus signal when it occurs, call the observer */
-static void
-focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+/* Generic handler for a bunch of our signals */
+static inline void
+generic_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
 	observer_t * observer = (observer_t *)user_data;
 	const gchar * appid = NULL;
-
-	tracepoint(ubuntu_app_launch, observer_start, "focus");
 
 	if (observer->func != NULL) {
 		g_variant_get(params, "(&s)", &appid);
 		observer->func(appid, observer->user_data);
 	}
+}
 
-	tracepoint(ubuntu_app_launch, observer_finish, "focus");
+/* Handle the focus signal when it occurs, call the observer */
+static void
+focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	ual_tracepoint(observer_start, "focus");
+
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
+
+	ual_tracepoint(observer_finish, "focus");
 }
 
 gboolean
@@ -636,9 +812,9 @@ ubuntu_app_launch_observer_add_app_focus (UbuntuAppLaunchAppObserver observer, g
 static void
 resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
-	tracepoint(ubuntu_app_launch, observer_start, "resume");
+	ual_tracepoint(observer_start, "resume");
 
-	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	GError * error = NULL;
 	g_dbus_connection_emit_signal(conn,
@@ -654,7 +830,7 @@ resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		g_error_free(error);
 	}
 
-	tracepoint(ubuntu_app_launch, observer_finish, "resume");
+	ual_tracepoint(observer_finish, "resume");
 }
 
 gboolean
@@ -667,9 +843,9 @@ ubuntu_app_launch_observer_add_app_resume (UbuntuAppLaunchAppObserver observer, 
 static void
 starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
-	tracepoint(ubuntu_app_launch, observer_start, "starting");
+	ual_tracepoint(observer_start, "starting");
 
-	focus_signal_cb(conn, sender, object, interface, signal, params, user_data);
+	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
 
 	GError * error = NULL;
 	g_dbus_connection_emit_signal(conn,
@@ -685,7 +861,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 		g_error_free(error);
 	}
 
-	tracepoint(ubuntu_app_launch, observer_finish, "starting");
+	ual_tracepoint(observer_finish, "starting");
 }
 
 gboolean
@@ -702,7 +878,7 @@ failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 	const gchar * appid = NULL;
 	const gchar * typestr = NULL;
 
-	tracepoint(ubuntu_app_launch, observer_start, "failed");
+	ual_tracepoint(observer_start, "failed");
 
 	if (observer->func != NULL) {
 		UbuntuAppLaunchAppFailed type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
@@ -719,7 +895,7 @@ failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		observer->func(appid, type, observer->user_data);
 	}
 
-	tracepoint(ubuntu_app_launch, observer_finish, "failed");
+	ual_tracepoint(observer_finish, "failed");
 }
 
 gboolean
@@ -1051,18 +1227,26 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 static GList *
 pids_for_appid (const gchar * appid)
 {
+	ual_tracepoint(pids_list_start, appid);
+
 	GDBusConnection * cgmanager = cgroup_manager_connection();
 	g_return_val_if_fail(cgmanager != NULL, NULL);
+
+	ual_tracepoint(pids_list_connected, appid);
 
 	if (is_click(appid)) {
 		GList * pids = pids_from_cgroup(cgmanager, "application-click", appid);
 		g_clear_object(&cgmanager);
+
+		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
 	} else if (legacy_single_instance(appid)) {
 		gchar * jobname = g_strdup_printf("%s-", appid);
 		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
 		g_free(jobname);
 		g_clear_object(&cgmanager);
+
+		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
 	}
 
@@ -1093,6 +1277,7 @@ pids_for_appid (const gchar * appid)
 
 	g_clear_object(&cgmanager);
 
+	ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 	return pids;
 }
 

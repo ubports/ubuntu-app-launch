@@ -33,7 +33,7 @@ execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
 )
 set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -std=c99")
 
 enable_testing()
 
@@ -82,26 +82,6 @@ add_library(helpers STATIC helpers.c helpers-shared.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
 
 ####################
-# desktop-exec
-####################
-
-add_lttng_gen_tp(NAME desktop-exec-trace)
-add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c recoverable-problem.c)
-set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
-target_link_libraries(desktop-exec helpers ${LTTNG_LIBRARIES})
-install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# click-exec
-####################
-
-add_lttng_gen_tp(NAME click-exec-trace)
-add_executable(click-exec click-exec.c click-exec-trace.c)
-set_target_properties(click-exec PROPERTIES OUTPUT_NAME "click-exec")
-target_link_libraries(click-exec helpers ${LTTNG_LIBRARIES} ${CLICK_LIBRARIES})
-install(TARGETS click-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
 # desktop-hook
 ####################
 
@@ -127,7 +107,7 @@ install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 add_executable(zg-report-app zg-report-app.c)
 set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
-target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
+target_link_libraries(zg-report-app ubuntu-launcher ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
