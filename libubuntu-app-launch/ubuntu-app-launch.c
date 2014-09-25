@@ -430,7 +430,10 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	g_free(path);
 
 	if (adj == NULL) {
-		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
+		if (openerr != ENOENT)
+			/* ENOENT happens a fair amount because of races, so it's not
+			   worth printing a warning about */
+			g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
 		return FALSE;
 	}
 
@@ -444,7 +447,9 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	if (writesize < 0)
 		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(writeerr));
 	else
-		g_warning("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
+		/* A lot of times this seems to be the PID dying. We don't want
+		   to have that show up in logs unless we turn on debug messages */
+		g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
 
 	return FALSE;
 }
