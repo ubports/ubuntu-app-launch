@@ -435,10 +435,21 @@ set_oom_value (GPid pid, const gchar * oomscore)
 		case ENOENT:
 			/* ENOENT happens a fair amount because of races, so it's not
 			   worth printing a warning about */
+			return TRUE;
+		case EACCES: {
+			/* We can get this error when trying to set the OOM value on
+			   Oxide renderers because they're started by the sandbox and
+			   don't have their adjustment value available for us to write.
+			   We have a helper to deal with this, but it's kinda expensive
+			   so we only use it when we have to. */
+			gchar * cmdline = g_strdup_printf(OOM_HELPER " %d %s", pid, oomscore);
+			g_spawn_command_line_async(cmdline, NULL);
+			g_free(cmdline);
+			return TRUE;
+		}
+		default:
 			g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
 			return FALSE;
-		default:
-			return TRUE;
 		}
 	}
 

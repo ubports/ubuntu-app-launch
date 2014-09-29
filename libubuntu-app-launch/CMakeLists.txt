@@ -17,6 +17,7 @@ set(ABI_VERSION 2)
 add_lttng_gen_tp(NAME ubuntu-app-launch-trace)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" )
 
 set(LAUNCHER_HEADERS
 ubuntu-app-launch.h
