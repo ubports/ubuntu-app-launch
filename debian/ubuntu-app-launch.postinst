@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+# Make the setuid helper setuid
+
+if [ "$1" = configure ]; then
+	chmod u+s /usr/lib/*/ubuntu-app-launch/oom-adjust-setuid-helper
+fi
