@@ -55,7 +55,7 @@ main (int argc, char * argv[])
 	}
 
 	struct stat piddirstat = {0};
-	if (fstat(piddir, &piddirstat) <= 0) {
+	if (fstat(piddir, &piddirstat) < 0) {
 		close(piddir);
 		fprintf(stderr, "Unable stat PID directory '%s' for '%s': %s\n", pidpath, argv[1], strerror(errno));
 		return -1;
