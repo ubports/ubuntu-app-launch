@@ -417,9 +417,10 @@ static gboolean
 set_oom_value (GPid pid, const gchar * oomscore)
 {
 	static const gchar * procpath = NULL;
-	if (procpath == NULL) {
+	if (G_UNLIKELY(procpath == NULL)) {
+		/* Set by the test suite, probably not anyone else */
 		procpath = g_getenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH");
-		if (procpath == NULL) {
+		if (G_LIKELY(procpath == NULL)) {
 			procpath = "/proc";
 		}
 	}
