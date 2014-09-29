@@ -31,7 +31,7 @@ int
 main (int argc, char * argv[])
 {
 	if (argc != 3) {
-		fprintf(stderr, "Usage: %s <pid> <value>", argv[0]);
+		fprintf(stderr, "Usage: %s <pid> <value>\n", argv[0]);
 		return -1;
 	}
 
@@ -39,7 +39,7 @@ main (int argc, char * argv[])
 	   get used for nefarious tasks. */
 	int pidval = atoi(argv[1]);
 	if ((pidval < 1) || (pidval >= 32768)) {
-		fprintf(stderr, "PID passed %s is invalid: %d", argv[1], pidval);
+		fprintf(stderr, "PID passed %s is invalid: %d\n", argv[1], pidval);
 		return -1;
 	}
 
@@ -50,20 +50,20 @@ main (int argc, char * argv[])
 
 	int piddir = open(pidpath, O_RDONLY | O_DIRECTORY);
 	if (piddir < 0) {
-		fprintf(stderr, "Unable open PID directory '%s' for '%s': %s", pidpath, argv[1], strerror(errno));
+		fprintf(stderr, "Unable open PID directory '%s' for '%s': %s\n", pidpath, argv[1], strerror(errno));
 		return -1;
 	}
 
 	struct stat piddirstat = {0};
 	if (fstat(piddir, &piddirstat) <= 0) {
 		close(piddir);
-		fprintf(stderr, "Unable stat PID directory '%s' for '%s': %s", pidpath, argv[1], strerror(errno));
+		fprintf(stderr, "Unable stat PID directory '%s' for '%s': %s\n", pidpath, argv[1], strerror(errno));
 		return -1;
 	}
 
 	if (getuid() != piddirstat.st_uid) {
 		close(piddir);
-		fprintf(stderr, "PID directory '%s' is not owned by %d but by %d", pidpath, getuid(), piddirstat.st_uid);
+		fprintf(stderr, "PID directory '%s' is not owned by %d but by %d\n", pidpath, getuid(), piddirstat.st_uid);
 		return -1;
 	}
 
@@ -78,7 +78,7 @@ main (int argc, char * argv[])
 		if (openerr != ENOENT) {
 			/* ENOENT happens a fair amount because of races, so it's not
 			   worth printing a warning about */
-			fprintf(stderr, "Unable to set OOM value on '%s' to '%s': %s", argv[1], argv[2], strerror(openerr));
+			fprintf(stderr, "Unable to set OOM value on '%s' to '%s': %s\n", argv[1], argv[2], strerror(openerr));
 			return openerr;
 		} else {
 			return 0;
@@ -95,10 +95,10 @@ main (int argc, char * argv[])
 		return 0;
 	
 	if (writeerr != 0)
-		fprintf(stderr, "Unable to set OOM value on '%s' to '%s': %s", argv[1], argv[2], strerror(writeerr));
+		fprintf(stderr, "Unable to set OOM value on '%s' to '%s': %s\n", argv[1], argv[2], strerror(writeerr));
 	else
 		/* No error, but yet, wrong size. Not sure, what could cause this. */
-		fprintf(stderr, "Unable to set OOM value on '%s' to '%s': Wrote %d bytes", argv[1], argv[2], (int)writesize);
+		fprintf(stderr, "Unable to set OOM value on '%s' to '%s': Wrote %d bytes\n", argv[1], argv[2], (int)writesize);
 
 	return -1;
 }
