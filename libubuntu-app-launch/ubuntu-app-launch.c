@@ -23,6 +23,8 @@
 #include <upstart.h>
 #include <gio/gio.h>
 #include <string.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <zeitgeist.h>
 
 #include "ubuntu-app-launch-trace.h"
@@ -414,17 +416,45 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 static gboolean
 set_oom_value (GPid pid, const gchar * oomscore)
 {
-	if (oomscore == NULL) {
-		return TRUE;
+	static const gchar * procpath = NULL;
+	if (G_UNLIKELY(procpath == NULL)) {
+		/* Set by the test suite, probably not anyone else */
+		procpath = g_getenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH");
+		if (G_LIKELY(procpath == NULL)) {
+			procpath = "/proc";
+		}
 	}
 
-	gchar * path = g_strdup_printf("/proc/%d/oom_score_adj", pid);
-
-	gboolean res = g_file_set_contents(path, oomscore, -1, NULL);
-
+	gchar * path = g_strdup_printf("%s/%d/oom_score_adj", procpath, pid);
+	FILE * adj = fopen(path, "w");
+	int openerr = errno;
 	g_free(path);
 
-	return res;
+	if (adj == NULL) {
+		if (openerr != ENOENT) {
+			/* ENOENT happens a fair amount because of races, so it's not
+			   worth printing a warning about */
+			g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
+			return FALSE;
+		} else {
+			return TRUE;
+		}
+	}
+
+	size_t writesize = fwrite(oomscore, 1, strlen(oomscore), adj);
+	int writeerr = errno;
+	fclose(adj);
+
+	if (writesize == strlen(oomscore))
+		return TRUE;
+	
+	if (writeerr != 0)
+		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(writeerr));
+	else
+		/* No error, but yet, wrong size. Not sure, what could cause this. */
+		g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
+
+	return FALSE;
 }
 
 /* Gets all the pids for an appid and sends a signal to all of them. This also
@@ -435,12 +465,6 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
 	guint hash_table_size = 0;
 	gboolean retval = TRUE;
-
-	/* In the test suite we can't set this becuase we don't have permissions,
-	   which sucks, but it's the reality of testing at package build time */
-	if (g_getenv("UBUNTU_APP_LAUNCH_NO_SET_OOM")) {
-		oomscore = NULL;
-	}
 
 	do {
 		hash_table_size = g_hash_table_size(pidssignaled);
@@ -467,7 +491,6 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 			}
 
 			if (!set_oom_value(pid, oomscore)) {
-				g_warning("Unable to set OOM score '%s' on pid %d", oomscore, pid);
 				retval = FALSE;
 			}
 
