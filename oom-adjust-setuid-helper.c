@@ -17,23 +17,64 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 int
 main (int argc, char * argv[])
 {
 	if (argc != 3) {
-		fprintf(stderr, "Usage: %s <oom file> <value>", argv[0]);
+		fprintf(stderr, "Usage: %s <pid> <value>", argv[0]);
 		return -1;
 	}
 
-	FILE * adj = fopen(argv[1], "w");
+	/* Not we turn this into an integer and back so that we can ensure we don't
+	   get used for nefarious tasks. */
+	int pidval = atoi(argv[1]);
+	if ((pidval < 1) || (pidval >= 32768)) {
+		fprintf(stderr, "PID passed %s is invalid: %d", argv[1], pidval);
+		return -1;
+	}
+
+	/* Open up the PID directory first, to ensure that it is actually one of
+	   ours, so that we can't be used to set a OOM value on just anything */
+	char pidpath[32];
+	snprintf(pidpath, sizeof(pidpath), "/proc/%d", pidval);
+
+	int piddir = open(pidpath, O_RDONLY | O_DIRECTORY);
+	if (piddir < 0) {
+		fprintf(stderr, "Unable open PID directory '%s' for '%s': %s", pidpath, argv[1], strerror(errno));
+		return -1;
+	}
+
+	struct stat piddirstat = {0};
+	if (fstat(piddir, &piddirstat) <= 0) {
+		close(piddir);
+		fprintf(stderr, "Unable stat PID directory '%s' for '%s': %s", pidpath, argv[1], strerror(errno));
+		return -1;
+	}
+
+	if (getuid() != piddirstat.st_uid) {
+		close(piddir);
+		fprintf(stderr, "PID directory '%s' is not owned by %d but by %d", pidpath, getuid(), piddirstat.st_uid);
+		return -1;
+	}
+
+	/* Looks good, let's try to get the actual oom_adj_score file to write
+	   the value to it. */
+	int adj = openat(piddir, "oom_score_adj", O_WRONLY);
 	int openerr = errno;
 
-	if (adj == NULL) {
+	if (adj == 0) {
+		close(piddir);
+
 		if (openerr != ENOENT) {
 			/* ENOENT happens a fair amount because of races, so it's not
 			   worth printing a warning about */
@@ -44,9 +85,11 @@ main (int argc, char * argv[])
 		}
 	}
 
-	size_t writesize = fwrite(argv[2], 1, strlen(argv[2]), adj);
+	size_t writesize = write(adj, argv[2], strlen(argv[2]));
 	int writeerr = errno;
-	fclose(adj);
+
+	close(adj);
+	close(piddir);
 
 	if (writesize == strlen(argv[2]))
 		return 0;
