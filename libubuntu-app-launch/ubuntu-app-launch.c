@@ -431,11 +431,14 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	g_free(path);
 
 	if (adj == NULL) {
-		if (openerr != ENOENT)
+		if (openerr != ENOENT) {
 			/* ENOENT happens a fair amount because of races, so it's not
 			   worth printing a warning about */
 			g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
-		return FALSE;
+			return FALSE;
+		} else {
+			return TRUE;
+		}
 	}
 
 	size_t writesize = fwrite(oomscore, 1, strlen(oomscore), adj);
