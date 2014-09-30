@@ -72,7 +72,7 @@ main (int argc, char * argv[])
 	int adj = openat(piddir, "oom_score_adj", O_WRONLY);
 	int openerr = errno;
 
-	if (adj == 0) {
+	if (adj < 0) {
 		close(piddir);
 
 		if (openerr != ENOENT) {
