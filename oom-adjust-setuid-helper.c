@@ -32,7 +32,7 @@ main (int argc, char * argv[])
 {
 	if (argc != 3) {
 		fprintf(stderr, "Usage: %s <pid> <value>\n", argv[0]);
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	/* Not we turn this into an integer and back so that we can ensure we don't
@@ -40,7 +40,7 @@ main (int argc, char * argv[])
 	int pidval = atoi(argv[1]);
 	if ((pidval < 1) || (pidval >= 32768)) {
 		fprintf(stderr, "PID passed %s is invalid: %d\n", argv[1], pidval);
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	/* Open up the PID directory first, to ensure that it is actually one of
@@ -51,20 +51,20 @@ main (int argc, char * argv[])
 	int piddir = open(pidpath, O_RDONLY | O_DIRECTORY);
 	if (piddir < 0) {
 		fprintf(stderr, "Unable open PID directory '%s' for '%s': %s\n", pidpath, argv[1], strerror(errno));
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	struct stat piddirstat = {0};
 	if (fstat(piddir, &piddirstat) < 0) {
 		close(piddir);
 		fprintf(stderr, "Unable stat PID directory '%s' for '%s': %s\n", pidpath, argv[1], strerror(errno));
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	if (getuid() != piddirstat.st_uid) {
 		close(piddir);
 		fprintf(stderr, "PID directory '%s' is not owned by %d but by %d\n", pidpath, getuid(), piddirstat.st_uid);
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 
 	/* Looks good, let's try to get the actual oom_adj_score file to write
@@ -81,7 +81,7 @@ main (int argc, char * argv[])
 			fprintf(stderr, "Unable to set OOM value on '%s' to '%s': %s\n", argv[1], argv[2], strerror(openerr));
 			return openerr;
 		} else {
-			return 0;
+			exit(EXIT_SUCCESS);
 		}
 	}
 
@@ -92,7 +92,7 @@ main (int argc, char * argv[])
 	close(piddir);
 
 	if (writesize == strlen(argv[2]))
-		return 0;
+		exit(EXIT_SUCCESS);
 	
 	if (writeerr != 0)
 		fprintf(stderr, "Unable to set OOM value on '%s' to '%s': %s\n", argv[1], argv[2], strerror(writeerr));
@@ -100,5 +100,5 @@ main (int argc, char * argv[])
 		/* No error, but yet, wrong size. Not sure, what could cause this. */
 		fprintf(stderr, "Unable to set OOM value on '%s' to '%s': Wrote %d bytes\n", argv[1], argv[2], (int)writesize);
 
-	return -1;
+	exit(EXIT_FAILURE);
 }
