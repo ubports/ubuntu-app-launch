@@ -39,7 +39,7 @@ main (int argc, char * argv[])
 	   get used for nefarious tasks. */
 	int pidval = atoi(argv[1]);
 	if ((pidval < 1) || (pidval >= 32768)) {
-		fprintf(stderr, "PID passed %s is invalid: %d\n", argv[1], pidval);
+		fprintf(stderr, "PID passed is invalid: %d\n", pidval);
 		exit(EXIT_FAILURE);
 	}
 
@@ -50,14 +50,14 @@ main (int argc, char * argv[])
 
 	int piddir = open(pidpath, O_RDONLY | O_DIRECTORY);
 	if (piddir < 0) {
-		fprintf(stderr, "Unable open PID directory '%s' for '%s': %s\n", pidpath, argv[1], strerror(errno));
+		fprintf(stderr, "Unable open PID directory '%s' for '%d': %s\n", pidpath, pidval, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
 	struct stat piddirstat = {0};
 	if (fstat(piddir, &piddirstat) < 0) {
 		close(piddir);
-		fprintf(stderr, "Unable stat PID directory '%s' for '%s': %s\n", pidpath, argv[1], strerror(errno));
+		fprintf(stderr, "Unable stat PID directory '%s' for '%d': %s\n", pidpath, pidval, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
@@ -78,7 +78,7 @@ main (int argc, char * argv[])
 		if (openerr != ENOENT) {
 			/* ENOENT happens a fair amount because of races, so it's not
 			   worth printing a warning about */
-			fprintf(stderr, "Unable to set OOM value on '%s' to '%s': %s\n", argv[1], argv[2], strerror(openerr));
+			fprintf(stderr, "Unable to set OOM value on '%d': %s\n", pidval, strerror(openerr));
 			return openerr;
 		} else {
 			exit(EXIT_SUCCESS);
@@ -95,10 +95,10 @@ main (int argc, char * argv[])
 		exit(EXIT_SUCCESS);
 	
 	if (writeerr != 0)
-		fprintf(stderr, "Unable to set OOM value on '%s' to '%s': %s\n", argv[1], argv[2], strerror(writeerr));
+		fprintf(stderr, "Unable to set OOM value on '%d': %s\n", pidval, strerror(writeerr));
 	else
 		/* No error, but yet, wrong size. Not sure, what could cause this. */
-		fprintf(stderr, "Unable to set OOM value on '%s' to '%s': Wrote %d bytes\n", argv[1], argv[2], (int)writesize);
+		fprintf(stderr, "Unable to set OOM value on '%d': Wrote %d bytes\n", pidval, (int)writesize);
 
 	exit(EXIT_FAILURE);
 }
