@@ -13,3 +13,8 @@ export G_MESSAGES_DEBUG=all
 override_dh_click:
 	dh_click --name ubuntu-app-launch-desktop
 
+override_dh_installdeb:
+	sed -e"s/#MULTIARCH#/$(DEB_HOST_MULTIARCH)/g" \
+		debian/ubuntu-app-launch.postinst.in \
+		> debian/ubuntu-app-launch.postinst
+	dh_installdeb
