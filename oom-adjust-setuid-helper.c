@@ -35,11 +35,19 @@ main (int argc, char * argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	/* Not we turn this into an integer and back so that we can ensure we don't
+	/* Not we turn the pid into an integer and back so that we can ensure we don't
 	   get used for nefarious tasks. */
 	int pidval = atoi(argv[1]);
 	if ((pidval < 1) || (pidval >= 32768)) {
 		fprintf(stderr, "PID passed is invalid: %d\n", pidval);
+		exit(EXIT_FAILURE);
+	}
+
+	/* Not we turn the oom value into an integer and back so that we can ensure we don't
+	   get used for nefarious tasks. */
+	int oomval = atoi(argv[2]);
+	if ((oomval < -1000) || (oomval >= 1000)) {
+		fprintf(stderr, "OOM Value passed is invalid: %d\n", oomval);
 		exit(EXIT_FAILURE);
 	}
 
@@ -78,27 +86,30 @@ main (int argc, char * argv[])
 		/* ENOENT happens a fair amount because of races, so it's not
 		   worth printing a warning about */
 		if (openerr != ENOENT) {
-			fprintf(stderr, "Unable to set OOM value on '%d': %s\n", pidval, strerror(openerr));
+			fprintf(stderr, "Unable to set OOM value of '%d' on '%d': %s\n", oomval, pidval, strerror(openerr));
 			exit(EXIT_FAILURE);
 		} else {
 			exit(EXIT_SUCCESS);
 		}
 	}
 
-	size_t writesize = write(adj, argv[2], strlen(argv[2]));
+	char oomstring[32];
+	snprintf(oomstring, sizeof(oomstring), "%d", oomval);
+
+	size_t writesize = write(adj, oomstring, strlen(oomstring));
 	int writeerr = errno;
 
 	close(adj);
 	close(piddir);
 
-	if (writesize == strlen(argv[2]))
+	if (writesize == strlen(oomstring))
 		exit(EXIT_SUCCESS);
 	
 	if (writeerr != 0)
-		fprintf(stderr, "Unable to set OOM value on '%d': %s\n", pidval, strerror(writeerr));
+		fprintf(stderr, "Unable to set OOM value of '%d' on '%d': %s\n", oomval, pidval, strerror(writeerr));
 	else
 		/* No error, but yet, wrong size. Not sure, what could cause this. */
-		fprintf(stderr, "Unable to set OOM value on '%d': Wrote %d bytes\n", pidval, (int)writesize);
+		fprintf(stderr, "Unable to set OOM value of '%d' on '%d': Wrote %d bytes\n", oomval, pidval, (int)writesize);
 
 	exit(EXIT_FAILURE);
 }
