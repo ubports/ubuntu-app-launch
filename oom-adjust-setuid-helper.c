@@ -75,11 +75,11 @@ main (int argc, char * argv[])
 	if (adj < 0) {
 		close(piddir);
 
+		/* ENOENT happens a fair amount because of races, so it's not
+		   worth printing a warning about */
 		if (openerr != ENOENT) {
-			/* ENOENT happens a fair amount because of races, so it's not
-			   worth printing a warning about */
 			fprintf(stderr, "Unable to set OOM value on '%d': %s\n", pidval, strerror(openerr));
-			return openerr;
+			exit(EXIT_FAILURE);
 		} else {
 			exit(EXIT_SUCCESS);
 		}
