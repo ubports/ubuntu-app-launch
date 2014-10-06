@@ -1274,7 +1274,7 @@ datain (GIOChannel * source, GIOCondition cond, gpointer data)
 
 TEST_F(LibUAL, PauseResume)
 {
-	g_setenv("UBUNTU_APP_LAUNCH_NO_SET_OOM", "TRUE", 1);
+	g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/libual-proc" , 1);
 
 	/* Setup some spew */
 	GPid spewpid = 0;
@@ -1295,6 +1295,13 @@ TEST_F(LibUAL, PauseResume)
 	GIOChannel * spewoutchan = g_io_channel_unix_new(spewstdout);
 	g_io_channel_set_flags(spewoutchan, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_add_watch(spewoutchan, G_IO_IN, datain, &datacnt);
+
+	/* Setup our OOM adjust file */
+	gchar * procdir = g_strdup_printf(CMAKE_BINARY_DIR "/libual-proc/%d", spewpid);
+	ASSERT_EQ(0, g_mkdir_with_parents(procdir, 0700));
+	gchar * oomadjfile = g_strdup_printf("%s/oom_score_adj", procdir);
+	g_free(procdir);
+	ASSERT_TRUE(g_file_set_contents(oomadjfile, "0", -1, NULL));
 
 	/* Setup the cgroup */
 	g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock2", TRUE);
@@ -1346,6 +1353,7 @@ TEST_F(LibUAL, PauseResume)
 
 	pause(200);
 
+	/* Check data coming out */
 	EXPECT_EQ(0, datacnt);
 
 	/* Check to make sure we sent the event to ZG */
@@ -1356,8 +1364,14 @@ TEST_F(LibUAL, PauseResume)
 	EXPECT_EQ(1, numcalls);
 
 	dbus_test_dbus_mock_object_clear_method_calls(zgmock, zgobj, NULL);
+	
+	/* Check to ensure we set the OOM score */
+	gchar * pauseoomscore = NULL;
+	ASSERT_TRUE(g_file_get_contents(oomadjfile, &pauseoomscore, NULL, NULL));
+	EXPECT_STREQ("900", pauseoomscore);
+	g_free(pauseoomscore);
 
-	/* No Resume the App */
+	/* Now Resume the App */
 	EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
 
 	pause(200);
@@ -1371,6 +1385,12 @@ TEST_F(LibUAL, PauseResume)
 	EXPECT_NE(nullptr, calls);
 	EXPECT_EQ(1, numcalls);
 
+	/* Check to ensure we set the OOM score */
+	gchar * resumeoomscore = NULL;
+	ASSERT_TRUE(g_file_get_contents(oomadjfile, &resumeoomscore, NULL, NULL));
+	EXPECT_STREQ("100", resumeoomscore);
+	g_free(resumeoomscore);
+
 	/* Clean up */
 	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
 	ASSERT_TRUE(g_spawn_command_line_sync(killstr, NULL, NULL, NULL, NULL));
@@ -1378,8 +1398,12 @@ TEST_F(LibUAL, PauseResume)
 
 	g_io_channel_unref(spewoutchan);
 
+	g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
+
 	/* Kill ZG default instance :-( */
 	ZeitgeistLog * log = zeitgeist_log_get_default();
 	g_object_unref(log);
 	g_object_unref(log);
+	
+	g_free(oomadjfile);
 }
