@@ -147,6 +147,14 @@ target_link_libraries(cgroup-reap-all helpers)
 install(TARGETS cgroup-reap-all RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# oom-adjust-setuid-helper
+####################
+
+add_executable(oom-adjust-setuid-helper oom-adjust-setuid-helper.c)
+set_target_properties(oom-adjust-setuid-helper PROPERTIES OUTPUT_NAME "oom-adjust-setuid-helper")
+install(TARGETS oom-adjust-setuid-helper RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # ubuntu-app-launch-desktop.click-hook
 ####################
 

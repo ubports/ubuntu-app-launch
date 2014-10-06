@@ -412,6 +412,39 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 	return found;
 }
 
+/* Set the OOM value using the helper as an async task */
+static gboolean
+use_oom_helper (GPid pid, const gchar * oomscore)
+{
+	GError * error = NULL;
+	const gchar * args[4] = {
+		OOM_HELPER,
+		NULL, /* pid */
+		oomscore,
+		NULL
+	};
+	gchar * pidstr = g_strdup_printf("%d", pid);
+	args[1] = pidstr;
+
+	g_spawn_async(NULL, /* working dir */
+		(gchar **)args,
+		NULL, /* env */
+		G_SPAWN_DEFAULT,
+		NULL, NULL, /* child setup */
+		NULL, /* pid */
+		&error); /* error */
+
+	g_free(pidstr);
+
+	if (error != NULL) {
+		g_warning("Unable to launch OOM helper '" OOM_HELPER "' on PID '%d': %s", pid, error->message);
+		g_error_free(error);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 /* Sets the OOM score to a particular value, returns true on NULL */
 static gboolean
 set_oom_value (GPid pid, const gchar * oomscore)
@@ -431,13 +464,22 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	g_free(path);
 
 	if (adj == NULL) {
-		if (openerr != ENOENT) {
+		switch (openerr) {
+		case ENOENT:
 			/* ENOENT happens a fair amount because of races, so it's not
 			   worth printing a warning about */
+			return TRUE;
+		case EACCES: {
+			/* We can get this error when trying to set the OOM value on
+			   Oxide renderers because they're started by the sandbox and
+			   don't have their adjustment value available for us to write.
+			   We have a helper to deal with this, but it's kinda expensive
+			   so we only use it when we have to. */
+			return use_oom_helper(pid, oomscore);
+		}
+		default:
 			g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
 			return FALSE;
-		} else {
-			return TRUE;
 		}
 	}
 
