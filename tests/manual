@@ -57,7 +57,7 @@ Test-case ubuntu-app-launch/cgroup-containment
     <dt>Launch the Terminal app</dt>
         <dd>A new application should open with a terminal prompt where you can type commands</dd>
     <dt>Ensure the Terminal is in a terminal specific cgroup</dt>
-        <dd>Type the command <tt>cat /proc/self/cgroup</tt></dd>
+        <dd>Type the command <tt>cat /proc/self/cgroup</tt> on the Terminal app.</dd>
         <dd>Under the "freeze" cgroup the end of the path should include the AppID of the terminal. An example would be (the version many change): <tt>4:freezer:/user.slice/user-32011.slice/session-c2.scope/upstart/application-click-com.ubuntu.terminal_terminal_0.5.106</tt></dd>
 </dl>
 
