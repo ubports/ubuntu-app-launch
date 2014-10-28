@@ -227,7 +227,7 @@ class LibUAL : public ::testing::Test
 
 			DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
 			dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
-				"GetTasks",
+				"GetTasksRecursive",
 				G_VARIANT_TYPE("(ss)"),
 				G_VARIANT_TYPE("ai"),
 				"ret = [100, 200, 300]",
@@ -442,33 +442,33 @@ TEST_F(LibUAL, ApplicationPid)
 
 	/* Click in the set */
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "com.test.good_application_1.2.3"));
-	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
-	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Click out of the set */
 	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "com.test.good_application_1.2.3"));
-	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
-	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Legacy Single Instance */
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "single"));
-	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
-	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-single-")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Legacy Multi Instance */
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "bar"));
-	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasks", &len, NULL);
+	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
-	EXPECT_STREQ("GetTasks", calls->name);
+	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-bar-2342345")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
@@ -1309,7 +1309,7 @@ TEST_F(LibUAL, PauseResume)
 	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock2, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
 	gchar * pypids = g_strdup_printf("ret = [%d]", spewpid);
 	dbus_test_dbus_mock_object_add_method(cgmock, cgobject,
-		"GetTasks",
+		"GetTasksRecursive",
 		G_VARIANT_TYPE("(ss)"),
 		G_VARIANT_TYPE("ai"),
 		pypids,

@@ -149,7 +149,7 @@ pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gcha
 		name, /* bus name for direct connection is NULL */
 		"/org/linuxcontainers/cgmanager",
 		"org.linuxcontainers.cgmanager0_0",
-		"GetTasks",
+		"GetTasksRecursive",
 		g_variant_new("(ss)", "freezer", groupname ? groupname : ""),
 		G_VARIANT_TYPE("(ai)"),
 		G_DBUS_CALL_FLAGS_NONE,
