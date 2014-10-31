@@ -1,3 +1,15 @@
+ubuntu-app-launch (0.4+15.04.20141031-0ubuntu1) vivid; urgency=low
+
+  [ Chris Townsend ]
+  * Change GetTasks to GetTasksRecursive so it searches all pids related
+    to a cgroup instead of just the first pid. (LP: #1386357)
+
+  [ Leo Arias ]
+  * On the cgroup manual test, make it clear that the command must be
+    run on the app.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 31 Oct 2014 15:02:48 +0000
+
 ubuntu-app-launch (0.4+14.10.20141006-0ubuntu1) utopic; urgency=low
 
   [ Ted Gould ]
