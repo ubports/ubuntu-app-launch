@@ -97,34 +97,85 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 	return keyfile;
 }
 
+typedef struct {
+	GMainLoop * loop;
+	GCancellable * cancel;
+	GDBusConnection * con;
+} cgm_connection_t;
+
+/* Function that gets executed when we timeout trying to connect. This
+   is related to: LP #1377332 */
+static gboolean
+cgroup_manager_connection_timeout_cb (gpointer data)
+{
+	cgm_connection_t * connection = (cgm_connection_t *)data;
+	g_cancellable_cancel(connection->cancel);
+	/* TODO: Recoverable error */
+	return G_SOURCE_CONTINUE;
+}
+
+static void
+cgroup_manager_connection_core_cb (GDBusConnection *(*finish_func)(GAsyncResult * res, GError ** error), GAsyncResult * res, cgm_connection_t * connection)
+{
+	GError * error = NULL;
+
+	connection->con = finish_func(res, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to get cgmanager connection: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_main_loop_quit(connection->loop);
+}
+
+static void
+cgroup_manager_connection_bus_cb (GObject * obj, GAsyncResult * res, gpointer data)
+{
+	cgroup_manager_connection_core_cb(g_bus_get_finish, res, (cgm_connection_t *)data);
+}
+
+static void
+cgroup_manager_connection_addr_cb (GObject * obj, GAsyncResult * res, gpointer data)
+{
+	cgroup_manager_connection_core_cb(g_dbus_connection_new_for_address_finish, res, (cgm_connection_t *)data);
+}
+
 /* Get the connection to the cgroup manager */
 GDBusConnection *
 cgroup_manager_connection (void)
 {
-	GError * error = NULL;
-
-	GDBusConnection * cgmanager = NULL;
+	cgm_connection_t connection = {
+		.loop = g_main_loop_new(NULL, FALSE),
+		.con = NULL,
+		.cancel = g_cancellable_new()
+	};
+	guint timeout = g_timeout_add_seconds(1, cgroup_manager_connection_timeout_cb, &connection);
 
 	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS")) {
 		/* For working dbusmock */
 		g_debug("Connecting to CG Manager on session bus");
-		cgmanager = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+		g_bus_get(G_BUS_TYPE_SESSION,
+			connection.cancel,
+			cgroup_manager_connection_bus_cb,
+			&connection);
 	} else {
-		cgmanager = g_dbus_connection_new_for_address_sync(
+		g_dbus_connection_new_for_address(
 			CGMANAGER_DBUS_PATH,
 			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
 			NULL, /* Auth Observer */
-			NULL, /* Cancellable */
-			&error);
+			connection.cancel, /* Cancellable */
+			cgroup_manager_connection_addr_cb,
+			&connection);
 	}
 
-	if (error != NULL) {
-		g_warning("Unable to connect to cgroup manager: %s", error->message);
-		g_error_free(error);
-		return NULL;
-	}
+	g_main_loop_run(connection.loop);
 
-	return cgmanager;
+	g_source_remove(timeout);
+	g_main_loop_unref(connection.loop);
+	g_object_unref(connection.cancel);
+
+	return connection.con;
 }
 
 /* Get the PIDs for a particular cgroup */
