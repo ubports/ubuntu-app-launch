@@ -78,7 +78,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c helpers-shared.c)
+add_library(helpers STATIC helpers.c helpers-shared.c libubuntu-app-launch/recoverable-problem.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
 
 ####################

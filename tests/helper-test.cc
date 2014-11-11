@@ -428,7 +428,7 @@ TEST_F(HelperTest, ManifestToDesktop)
 	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
 	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.good_application_1.2.3");
-	ASSERT_STREQ(desktop, CMAKE_SOURCE_DIR "/click-app-dir/application.desktop");
+	ASSERT_STREQ(CMAKE_SOURCE_DIR "/click-app-dir/application.desktop", desktop);
 	g_free(desktop);
 	desktop = NULL;
 

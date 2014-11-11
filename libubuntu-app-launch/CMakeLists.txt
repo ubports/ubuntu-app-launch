@@ -29,9 +29,6 @@ second-exec-core.c
 click-exec.c
 desktop-exec.c
 ubuntu-app-launch-trace.c
-recoverable-problem.c
-"${CMAKE_SOURCE_DIR}/helpers-shared.c"
-"${CMAKE_SOURCE_DIR}/helpers.c"
 )
 
 add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES})
@@ -51,6 +48,7 @@ target_link_libraries(ubuntu-launcher
 	${JSONGLIB_LIBRARIES}
 	${CLICK_LIBRARIES}
 	${ZEITGEIST_LIBRARIES}
+	helpers
 	-Wl,--no-undefined
 )
 
