@@ -1,3 +1,11 @@
+ubuntu-app-launch (0.4+15.04.20141118-0ubuntu1) vivid; urgency=low
+
+  [ Ted Gould ]
+  * Attenting to connect to cgmanager for 1 second and then failing and
+    reporting a recoverable error. (LP: #1377332)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 18 Nov 2014 21:10:45 +0000
+
 ubuntu-app-launch (0.4+15.04.20141031-0ubuntu1) vivid; urgency=low
 
   [ Chris Townsend ]
