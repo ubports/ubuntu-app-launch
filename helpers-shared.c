@@ -179,7 +179,11 @@ cgroup_manager_connection (void)
 		.con = NULL,
 		.cancel = g_cancellable_new()
 	};
-	guint timeout = g_timeout_add_seconds(1, cgroup_manager_connection_timeout_cb, &connection);
+	
+	GSource * timesrc = g_timeout_source_new_seconds(1);
+	g_source_set_callback(timesrc, cgroup_manager_connection_timeout_cb, &connection, NULL);
+	guint timeout = g_source_attach(timesrc, context);
+	g_source_unref(timesrc);
 
 	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS")) {
 		/* For working dbusmock */
