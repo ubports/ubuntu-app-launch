@@ -229,6 +229,9 @@ cgroup_manager_unref_weak (gpointer mainp, GObject * old_obj)
 void
 cgroup_manager_unref (GDBusConnection * cgmanager)
 {
+	if (cgmanager == NULL)
+		return;
+
 	GMainContext * creationcontext = g_object_get_data(G_OBJECT(cgmanager), "cgmanager-context");
 	if (creationcontext == NULL) {
 		g_object_unref(cgmanager);
