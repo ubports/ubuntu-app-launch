@@ -171,6 +171,7 @@ cgroup_manager_connection_addr_cb (GObject * obj, GAsyncResult * res, gpointer d
 GDBusConnection *
 cgroup_manager_connection (void)
 {
+	gboolean use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != NULL;
 	GMainContext * context = g_main_context_new();
 	g_main_context_push_thread_default(context);
 
@@ -185,7 +186,7 @@ cgroup_manager_connection (void)
 	guint timeout = g_source_attach(timesrc, context);
 	g_source_unref(timesrc);
 
-	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS")) {
+	if (use_session_bus) {
 		/* For working dbusmock */
 		g_debug("Connecting to CG Manager on session bus");
 		g_bus_get(G_BUS_TYPE_SESSION,
@@ -209,9 +210,43 @@ cgroup_manager_connection (void)
 	g_object_unref(connection.cancel);
 
 	g_main_context_pop_thread_default(context);
-	g_main_context_unref(context);
+
+	if (!use_session_bus && connection.con != NULL) {
+		g_object_set_data(G_OBJECT(connection.con), "cgmanager-context", context);
+	} else {
+		g_main_context_unref(context);
+	}
 
 	return connection.con;
+}
+
+static void
+cgroup_manager_unref_weak (gpointer mainp, GObject * old_obj)
+{
+	g_main_loop_quit((GMainLoop *)mainp);
+}
+
+void
+cgroup_manager_unref (GDBusConnection * cgmanager)
+{
+	GMainContext * creationcontext = g_object_get_data(G_OBJECT(cgmanager), "cgmanager-context");
+	if (creationcontext == NULL) {
+		g_object_unref(cgmanager);
+		return;
+	}
+
+	g_main_context_push_thread_default(creationcontext);
+
+	GMainLoop * shutdownloop = g_main_loop_new(creationcontext, FALSE);
+	g_object_weak_ref(G_OBJECT(cgmanager), cgroup_manager_unref_weak, shutdownloop);
+
+	g_object_unref(cgmanager);
+	g_main_loop_run(shutdownloop);
+
+	g_main_loop_unref(shutdownloop);
+
+	g_main_context_pop_thread_default(creationcontext);
+	g_main_context_unref(creationcontext);
 }
 
 /* Get the PIDs for a particular cgroup */
