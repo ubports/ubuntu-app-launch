@@ -183,8 +183,7 @@ cgroup_manager_connection (void)
 	
 	GSource * timesrc = g_timeout_source_new_seconds(1);
 	g_source_set_callback(timesrc, cgroup_manager_connection_timeout_cb, &connection, NULL);
-	guint timeout = g_source_attach(timesrc, context);
-	g_source_unref(timesrc);
+	g_source_attach(timesrc, context);
 
 	if (use_session_bus) {
 		/* For working dbusmock */
@@ -205,7 +204,9 @@ cgroup_manager_connection (void)
 
 	g_main_loop_run(connection.loop);
 
-	g_source_remove(timeout);
+	g_source_destroy(timesrc);
+	g_source_unref(timesrc);
+
 	g_main_loop_unref(connection.loop);
 	g_object_unref(connection.cancel);
 
