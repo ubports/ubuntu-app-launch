@@ -171,8 +171,11 @@ cgroup_manager_connection_addr_cb (GObject * obj, GAsyncResult * res, gpointer d
 GDBusConnection *
 cgroup_manager_connection (void)
 {
+	GMainContext * context = g_main_context_new();
+	g_main_context_push_thread_default(context);
+
 	cgm_connection_t connection = {
-		.loop = g_main_loop_new(NULL, FALSE),
+		.loop = g_main_loop_new(context, FALSE),
 		.con = NULL,
 		.cancel = g_cancellable_new()
 	};
@@ -200,6 +203,9 @@ cgroup_manager_connection (void)
 	g_source_remove(timeout);
 	g_main_loop_unref(connection.loop);
 	g_object_unref(connection.cancel);
+
+	g_main_context_pop_thread_default(context);
+	g_main_context_unref(context);
 
 	return connection.con;
 }
