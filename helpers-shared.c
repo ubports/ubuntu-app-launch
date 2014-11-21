@@ -98,22 +98,6 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 	return keyfile;
 }
 
-/* Quick way to get the pid of cgmanager to report a bug on it */
-static GPid
-discover_cgmanager_pid (void)
-{
-	gchar * outbuf = NULL;
-	GPid outpid = 0;
-	
-	if (g_spawn_command_line_sync("pidof cgmanager", &outbuf, NULL, NULL, NULL)) {
-		outpid = g_ascii_strtoull(outbuf, NULL, 10);
-	}
-
-	g_free(outbuf);
-
-	return outpid;
-}
-
 /* Structure to handle data for the cgmanager connection
    set of callbacks */
 typedef struct {
@@ -127,15 +111,9 @@ typedef struct {
 static gboolean
 cgroup_manager_connection_timeout_cb (gpointer data)
 {
-	GPid cgmanager_pid = 0;
 	cgm_connection_t * connection = (cgm_connection_t *)data;
 
 	g_cancellable_cancel(connection->cancel);
-
-	cgmanager_pid = discover_cgmanager_pid();
-	if (cgmanager_pid != 0) {
-		report_recoverable_problem("ubuntu-app-launch-cgmanager-connection-timeout", cgmanager_pid, FALSE, NULL);
-	}
 
 	return G_SOURCE_CONTINUE;
 }
