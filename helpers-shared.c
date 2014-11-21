@@ -221,12 +221,6 @@ cgroup_manager_connection (void)
 	return connection.con;
 }
 
-static void
-cgroup_manager_unref_weak (gpointer mainp, GObject * old_obj)
-{
-	g_main_loop_quit((GMainLoop *)mainp);
-}
-
 void
 cgroup_manager_unref (GDBusConnection * cgmanager)
 {
@@ -239,17 +233,15 @@ cgroup_manager_unref (GDBusConnection * cgmanager)
 		return;
 	}
 
-	g_main_context_push_thread_default(creationcontext);
+	GError * error = NULL;
+	g_dbus_connection_close_sync(cgmanager, NULL, &error);
 
-	GMainLoop * shutdownloop = g_main_loop_new(creationcontext, FALSE);
-	g_object_weak_ref(G_OBJECT(cgmanager), cgroup_manager_unref_weak, shutdownloop);
+	if (error != NULL) {
+		g_warning("Unable to close CGManager Connection: %s", error->message);
+		g_error_free(error);
+	}
 
 	g_object_unref(cgmanager);
-	g_main_loop_run(shutdownloop);
-
-	g_main_loop_unref(shutdownloop);
-
-	g_main_context_pop_thread_default(creationcontext);
 	g_main_context_unref(creationcontext);
 }
 
