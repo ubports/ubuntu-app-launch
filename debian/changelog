@@ -1,3 +1,13 @@
+ubuntu-app-launch (0.4+15.04.20141121-0ubuntu1) vivid; urgency=low
+
+  [ Ted Gould ]
+  * Remove reporting a recoverable problem on cgmanager (LP: #1394919)
+  * Use a version script to ensure we're not leaking symbols
+  * Create a custom GMainContext when waiting on the CGManager DBus
+    connection. (LP: #1394622)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 21 Nov 2014 21:17:30 +0000
+
 ubuntu-app-launch (0.4+15.04.20141118-0ubuntu1) vivid; urgency=low
 
   [ Ted Gould ]
