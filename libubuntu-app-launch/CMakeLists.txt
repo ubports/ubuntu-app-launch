@@ -40,6 +40,8 @@ set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
 	SOVERSION ${ABI_VERSION}
 	OUTPUT_NAME "ubuntu-app-launch"
+	LINK_FLAGS "${ldflags} -Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libubuntu-app-launch.map"
+	LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/libubuntu-app-launch.map"
 )
 
 target_link_libraries(ubuntu-launcher
