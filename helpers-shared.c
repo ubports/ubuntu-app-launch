@@ -149,14 +149,21 @@ cgroup_manager_connection_addr_cb (GObject * obj, GAsyncResult * res, gpointer d
 GDBusConnection *
 cgroup_manager_connection (void)
 {
+	gboolean use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != NULL;
+	GMainContext * context = g_main_context_new();
+	g_main_context_push_thread_default(context);
+
 	cgm_connection_t connection = {
-		.loop = g_main_loop_new(NULL, FALSE),
+		.loop = g_main_loop_new(context, FALSE),
 		.con = NULL,
 		.cancel = g_cancellable_new()
 	};
-	guint timeout = g_timeout_add_seconds(1, cgroup_manager_connection_timeout_cb, &connection);
+	
+	GSource * timesrc = g_timeout_source_new_seconds(1);
+	g_source_set_callback(timesrc, cgroup_manager_connection_timeout_cb, &connection, NULL);
+	g_source_attach(timesrc, context);
 
-	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS")) {
+	if (use_session_bus) {
 		/* For working dbusmock */
 		g_debug("Connecting to CG Manager on session bus");
 		g_bus_get(G_BUS_TYPE_SESSION,
@@ -175,11 +182,53 @@ cgroup_manager_connection (void)
 
 	g_main_loop_run(connection.loop);
 
-	g_source_remove(timeout);
+	g_source_destroy(timesrc);
+	g_source_unref(timesrc);
+
 	g_main_loop_unref(connection.loop);
 	g_object_unref(connection.cancel);
 
+	g_main_context_pop_thread_default(context);
+
+	if (!use_session_bus && connection.con != NULL) {
+		g_object_set_data(G_OBJECT(connection.con), "cgmanager-context", context);
+	} else {
+		g_main_context_unref(context);
+	}
+
 	return connection.con;
+}
+
+/* This does a complex unref for the case that we're not using a shared
+   pointer. In that case the initialization happens under the context that
+   we used for the timeout, and it turns out GDBus saves that context to
+   use for the close event. Upon the task closing it sends an idle source
+   to that context which free's the last bit of memory. So we need the events
+   on that context to be executed or we just leak. So what this does is force
+   a close synchronously so that the event gets placed on the context and then
+   frees the context to ensure that all of the events are processed. */
+void
+cgroup_manager_unref (GDBusConnection * cgmanager)
+{
+	if (cgmanager == NULL)
+		return;
+
+	GMainContext * creationcontext = g_object_get_data(G_OBJECT(cgmanager), "cgmanager-context");
+	if (creationcontext == NULL) {
+		g_object_unref(cgmanager);
+		return;
+	}
+
+	GError * error = NULL;
+	g_dbus_connection_close_sync(cgmanager, NULL, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to close CGManager Connection: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_object_unref(cgmanager);
+	g_main_context_unref(creationcontext);
 }
 
 /* Get the PIDs for a particular cgroup */

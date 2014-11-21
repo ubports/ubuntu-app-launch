@@ -59,7 +59,7 @@ main (int argc, char * argv[])
 		g_list_free(pidlist);
 	}
 
-	g_clear_object(&cgmanager);
+	cgroup_manager_unref(cgmanager);
 
 	return 0;
 }
