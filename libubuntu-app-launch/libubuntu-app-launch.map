@@ -1,0 +1,6 @@
+{
+global:
+	ubuntu_app_launch_*;
+local:
+	*;
+};
