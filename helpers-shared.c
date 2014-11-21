@@ -221,6 +221,14 @@ cgroup_manager_connection (void)
 	return connection.con;
 }
 
+/* This does a complex unref for the case that we're not using a shared
+   pointer. In that case the initialization happens under the context that
+   we used for the timeout, and it turns out GDBus saves that context to
+   use for the close event. Upon the task closing it sends an idle source
+   to that context which free's the last bit of memory. So we need the events
+   on that context to be executed or we just leak. So what this does is force
+   a close synchronously so that the event gets placed on the context and then
+   frees the context to ensure that all of the events are processed. */
 void
 cgroup_manager_unref (GDBusConnection * cgmanager)
 {
