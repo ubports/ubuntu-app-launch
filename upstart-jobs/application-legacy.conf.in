@@ -27,7 +27,8 @@ post-stop script
 	@pkglibexecdir@/zg-report-app close
 	@pkglibexecdir@/cgroup-reap-all
 
-	if [ ! -e "${HOME}/.cache/ubuntu-app-launch/save-application-logs" ] ; then
+	DEVELOPER_MODE=`gdbus call --system --dest com.canonical.PropertyService --object-path /com/canonical/PropertyService --method com.canonical.PropertyService.GetProperty adb`
+	if [ "$DEVELOPER_MODE" != "(true,)" ] ; then
 		rm -f ${HOME}/.cache/upstart/application-legacy-${APP_ID}-${INSTANCE_ID}.log*
 	fi
 end script
