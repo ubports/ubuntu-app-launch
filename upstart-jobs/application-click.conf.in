@@ -28,4 +28,8 @@ post-start exec @pkglibexecdir@/zg-report-app open
 post-stop script
 	@pkglibexecdir@/zg-report-app close
 	@pkglibexecdir@/cgroup-reap-all
+
+	if [ ! -e "${HOME}/.cache/ubuntu-app-launch/save-application-logs" ] ; then
+		rm -f ${HOME}/.cache/upstart/application-click-${APP_ID}.log*
+	fi
 end script
