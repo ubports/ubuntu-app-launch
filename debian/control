@@ -16,6 +16,7 @@ Build-Depends: click-dev (>= 0.2.2),
                libgtest-dev,
                libjson-glib-dev,
                liblttng-ust-dev,
+               libmirclient-dev (>= 0.5),
                libnih-dbus-dev,
                libnih-dev,
                libupstart-dev,
@@ -101,3 +102,13 @@ Description: typelib file for libubuntu-app-launch2
  This package can be used by other packages using the GIRepository format to
  generate dynamic bindings for libubuntu-app-launch2.
 
+Package: ubuntu-app-test
+Architecture: any
+Section: devel
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         qtchooser,
+Description: Small application to help test apps
+ Uses trusted prompt sessions to provide a way to easily
+ run a command on the command line to look at stdout or
+ stderr for developers.

@@ -1,0 +1,4 @@
+usr/share/applications/ubuntu-app-test.desktop
+usr/share/ubuntu-app-launch/ubuntu-app-test.qml
+usr/share/icons/hicolor/scalable/apps/ubuntu-app-test.svg
+usr/bin/ubuntu-app-test
