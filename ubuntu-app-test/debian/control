@@ -1,0 +1,20 @@
+Source: ubuntu-app-test
+Section: gnome
+Priority: optional
+Maintainer: Ted Gould <ted@ubuntu.com>
+Build-Depends: cmake,
+               debhelper (>= 9),
+               libmirclient-dev (>= 0.5),
+               libubuntu-app-launch2-dev,
+Standards-Version: 3.9.4
+Homepage: http://launchpad.net/~ted/+junk/ubuntu-test-app
+
+Package: ubuntu-app-test
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         qtchooser,
+Description: Small application to help test apps
+ Uses trusted prompt sessions to provide a way to easily
+ run a command on the command line to look at stdout or
+ stderr for developers.
