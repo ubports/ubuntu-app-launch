@@ -1,6 +1,6 @@
 
 #include <gio/gio.h>
-#include <ubuntu-app-launch.h>
+#include "ubuntu-app-launch.h"
 
 #include <mir_toolkit/mir_connection.h>
 #include <mir_toolkit/mir_prompt_session.h>
