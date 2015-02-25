@@ -499,10 +499,19 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	return FALSE;
 }
 
+/* Throw out a DBus signal that we've signalled all of these processes. This
+   is the fun GVariant building part. */
+static void
+notify_signalling (GList * pids, const gchar * appid, const gchar * signal_name)
+{
+
+
+}
+
 /* Gets all the pids for an appid and sends a signal to all of them. This also
    loops to ensure no new pids are added while we're signaling */
 static gboolean
-signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
+signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore, const gchar * signal_name)
 {
 	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
 	guint hash_table_size = 0;
@@ -543,6 +552,7 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 	/* If it grew, then try again */
 	} while (hash_table_size != g_hash_table_size(pidssignaled));
 
+	notify_signalling(g_hash_table_get_keys(pidssignaled), appid, signal_name);
 	g_hash_table_destroy(pidssignaled);
 
 	return retval;
@@ -612,14 +622,14 @@ gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
 	report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
-	return signal_to_cgroup(appid, SIGSTOP, "900");
+	return signal_to_cgroup(appid, SIGSTOP, "900", "ApplicationPaused");
 }
 
 gboolean
 ubuntu_app_launch_resume_application (const gchar * appid)
 {
 	report_zg_event(appid, ZEITGEIST_ZG_ACCESS_EVENT);
-	return signal_to_cgroup(appid, SIGCONT, "100");
+	return signal_to_cgroup(appid, SIGCONT, "100", "ApplicationResumed");
 }
 
 gchar *
