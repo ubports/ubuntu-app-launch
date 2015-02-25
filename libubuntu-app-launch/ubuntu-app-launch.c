@@ -1249,7 +1249,7 @@ ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObs
 }
 
 gboolean
-ubuntu_app_launch_observer_delete_app_reesumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
 	return paused_resumed_delete(observer, user_data, &resumed_array);
 }
