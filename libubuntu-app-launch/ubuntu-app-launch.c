@@ -1116,8 +1116,6 @@ paused_resumed_generic (UbuntuAppLaunchAppPausedResumedObserver observer, gpoint
 		observert,
 		NULL); /* user data destroy */
 
-	g_object_unref(conn);
-
 	return TRUE;
 }
 
@@ -1215,6 +1213,45 @@ ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver o
 	failed_array = g_list_delete_link(failed_array, look);
 
 	return TRUE;
+}
+
+static gboolean
+paused_resumed_delete (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, GList ** list)
+{
+	paused_resumed_observer_t * observert = NULL;
+	GList * look;
+
+	for (look = *list; look != NULL; look = g_list_next(look)) {
+		observert = (paused_resumed_observer_t *)look->data;
+
+		if (observert->func == observer && observert->user_data == user_data) {
+			break;
+		}
+	}
+
+	if (look == NULL) {
+		return FALSE;
+	}
+
+	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
+	g_object_unref(observert->conn);
+
+	g_free(observert);
+	*list = g_list_delete_link(*list, look);
+
+	return TRUE;
+}
+
+gboolean
+ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+{
+	return paused_resumed_delete(observer, user_data, &paused_array);
+}
+
+gboolean
+ubuntu_app_launch_observer_delete_app_reesumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+{
+	return paused_resumed_delete(observer, user_data, &resumed_array);
 }
 
 typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);
