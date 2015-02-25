@@ -1020,8 +1020,9 @@ paused_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * ob
 		GVariantIter thispid;
 		g_variant_iter_init(&thispid, pids);
 
-		while (g_variant_iter_loop(&thispid, "x", &pid)) {
-			g_array_append_val(pidarray, pid);
+		while (g_variant_iter_loop(&thispid, "t", &pid)) {
+			GPid gpid = (GPid)pid; /* Should be a no-op for most architectures, but just in case */
+			g_array_append_val(pidarray, gpid);
 		}
 
 		observer->func(g_variant_get_string(appid, NULL), (GPid *)pidarray->data, observer->user_data);
