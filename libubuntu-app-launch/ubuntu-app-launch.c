@@ -709,6 +709,15 @@ struct _failed_observer_t {
 	gpointer user_data;
 };
 
+/* The data we keep for each failed observer */
+typedef struct _paused_observer_t paused_observer_t;
+struct _paused_observer_t {
+	GDBusConnection * conn;
+	guint sighandle;
+	UbuntuAppLaunchAppPausedObserver func;
+	gpointer user_data;
+};
+
 /* The lists of Observers */
 static GList * starting_array = NULL;
 static GList * started_array = NULL;
@@ -716,6 +725,7 @@ static GList * stop_array = NULL;
 static GList * focus_array = NULL;
 static GList * resume_array = NULL;
 static GList * failed_array = NULL;
+static GList * paused_array = NULL;
 
 static void
 observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
@@ -988,6 +998,67 @@ ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver obse
 		NULL, /* arg0 */
 		G_DBUS_SIGNAL_FLAGS_NONE,
 		failed_signal_cb,
+		observert,
+		NULL); /* user data destroy */
+
+	return TRUE;
+}
+
+/* Handle the paused signal when it occurs, call the observer */
+static void
+paused_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	paused_observer_t * observer = (paused_observer_t *)user_data;
+
+	ual_tracepoint(observer_start, "paused");
+
+	if (observer->func != NULL) {
+		GArray * pidarray = g_array_new(TRUE, TRUE, sizeof(GPid));
+		GVariant * appid = g_variant_get_child_value(params, 0);
+		GVariant * pids = g_variant_get_child_value(params, 1);
+		guint64 pid;
+		GVariantIter thispid;
+		g_variant_iter_init(&thispid, pids);
+
+		while (g_variant_iter_loop(&thispid, "x", &pid)) {
+			g_array_append_val(pidarray, pid);
+		}
+
+		observer->func(g_variant_get_string(appid, NULL), (GPid *)pidarray->data, observer->user_data);
+
+		g_array_free(pidarray, TRUE);
+		g_variant_unref(appid);
+		g_variant_unref(pids);
+	}
+
+	ual_tracepoint(observer_finish, "paused");
+}
+
+gboolean
+ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedObserver observer, gpointer user_data)
+{
+	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+
+	if (conn == NULL) {
+		return FALSE;
+	}
+
+	paused_observer_t * observert = g_new0(paused_observer_t, 1);
+
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
+
+	paused_array = g_list_prepend(paused_array, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
+		NULL, /* sender */
+		"com.canonical.UbuntuAppLaunch", /* interface */
+		"ApplicationPaused", /* signal */
+		"/", /* path */
+		NULL, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		paused_signal_cb,
 		observert,
 		NULL); /* user data destroy */
 
