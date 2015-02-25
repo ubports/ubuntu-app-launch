@@ -504,8 +504,48 @@ set_oom_value (GPid pid, const gchar * oomscore)
 static void
 notify_signalling (GList * pids, const gchar * appid, const gchar * signal_name)
 {
+	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	if (conn == NULL) {
+		return;
+	}
 
+	/* Pull together a PID array */
+	GVariant *pidarray = NULL;
+	if (pids == NULL) {
+		pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, NULL, 0);
+	} else {
+		GList * i;
+		GVariantBuilder builder;
+		g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
 
+		for (i = pids; i != NULL; i = g_list_next(i))
+			g_variant_builder_add_value(&builder, g_variant_new_uint64(GPOINTER_TO_INT(i->data)));
+
+		pidarray = g_variant_builder_end(&builder);
+	}
+
+	/* Combine into the wrapping tuple */
+	GVariantBuilder btuple;
+	g_variant_builder_init(&btuple, G_VARIANT_TYPE_TUPLE);
+	g_variant_builder_add_value(&btuple, g_variant_new_string(appid));
+	g_variant_builder_add_value(&btuple, pidarray);
+
+	/* Emit !!! */
+	GError * error = NULL;
+	g_dbus_connection_emit_signal(conn,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UbuntuAppLaunch", /* interface */
+		signal_name, /* signal */
+		g_variant_builder_end(&btuple), /* params, the same */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to emit signal '%s' for appid '%s': %s", signal_name, appid, error->message);
+		g_error_free(error);
+	}
+
+	g_object_unref(conn);
 }
 
 /* Gets all the pids for an appid and sends a signal to all of them. This also
@@ -1072,6 +1112,8 @@ ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedObserver obse
 		paused_signal_cb,
 		observert,
 		NULL); /* user data destroy */
+
+	g_object_unref(conn);
 
 	return TRUE;
 }
