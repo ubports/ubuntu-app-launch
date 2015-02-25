@@ -53,13 +53,13 @@ typedef void (*UbuntuAppLaunchAppObserver) (const gchar * appid, gpointer user_d
 typedef void (*UbuntuAppLaunchAppFailedObserver) (const gchar * appid, UbuntuAppLaunchAppFailed failure_type, gpointer user_data);
 
 /**
- * UbuntuAppLaunchAppPausedObserver:
+ * UbuntuAppLaunchAppPausedResumedObserver:
  * @appid: App ID of the application being paused
  * @pids: Zero terminated array of PIDs
  *
- * Function prototype for application paused observers.
+ * Function prototype for application paused and resumed observers.
  */
-typedef void (*UbuntuAppLaunchAppPausedObserver) (const gchar * appid, GPid * pids, gpointer user_data);
+typedef void (*UbuntuAppLaunchAppPausedResumedObserver) (const gchar * appid, GPid * pids, gpointer user_data);
 
 /**
  * UbuntuAppLaunchHelperObserver:
@@ -228,8 +228,21 @@ gboolean   ubuntu_app_launch_observer_add_app_failed   (UbuntuAppLaunchAppFailed
  *
  * Return value: Whether adding the observer was successful.
  */
-gboolean   ubuntu_app_launch_observer_add_app_paused   (UbuntuAppLaunchAppPausedObserver observer,
-                                                        gpointer                         user_data);
+gboolean   ubuntu_app_launch_observer_add_app_paused   (UbuntuAppLaunchAppPausedResumedObserver observer,
+                                                        gpointer                                user_data);
+
+/**
+ * ubuntu_app_launch_observer_add_app_resumed:
+ * @observer: (scope notified): Callback when an application is resumed
+ * @user_data: (allow-none) (closure): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * is resumed. Which is after the SIGCONT has been sent to the pids.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_add_app_resumed  (UbuntuAppLaunchAppPausedResumedObserver observer,
+                                                        gpointer                                user_data);
 
 /**
  * ubuntu_app_launch_observer_delete_app_starting:
@@ -318,8 +331,21 @@ gboolean   ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFaile
  *
  * Return value: Whether deleting the observer was successful.
  */
-gboolean   ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedObserver        observer,
+gboolean   ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer,
                                                          gpointer                                user_data);
+
+/**
+ * ubuntu_app_launch_observer_delete_app_resumed:
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data to pass to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedObserver  observer,
+                                                          gpointer                                 user_data);
 
 /**
  * ubuntu_app_launch_list_running_apps:
