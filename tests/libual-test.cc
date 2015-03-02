@@ -1276,7 +1276,8 @@ static void
 signal_increment (GDBusConnection * connection, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
 {
 	guint * count = (guint *)user_data;
-	*count++;
+	g_debug("Count incremented to: %d", *count + 1);
+	*count = *count + 1;
 }
 
 TEST_F(LibUAL, PauseResume)
@@ -1352,11 +1353,30 @@ TEST_F(LibUAL, PauseResume)
 	/* Setup signal handling */
 	guint paused_count = 0;
 	guint resumed_count = 0;
-	guint paused_signal = g_dbus_connection_signal_subscribe(bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationPaused", nullptr, nullptr, G_DBUS_SIGNAL_FLAGS_NONE, signal_increment, &paused_count, nullptr);
-	guint resumed_signal = g_dbus_connection_signal_subscribe(bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationResumed", nullptr, nullptr, G_DBUS_SIGNAL_FLAGS_NONE, signal_increment, &resumed_count, nullptr);
+	guint paused_signal = g_dbus_connection_signal_subscribe(bus,
+		nullptr,
+		"com.canonical.UbuntuAppLaunch",
+		"ApplicationPaused",
+		"/",
+		nullptr,
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		signal_increment,
+		&paused_count,
+		nullptr);
+	guint resumed_signal = g_dbus_connection_signal_subscribe(bus,
+		nullptr,
+		"com.canonical.UbuntuAppLaunch",
+		"ApplicationResumed",
+		"/",
+		nullptr,
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		signal_increment,
+		&resumed_count,
+		nullptr);
 
 	/* Test it */
 	EXPECT_NE(0, datacnt);
+	paused_count = 0;
 
 	/* Pause the app */
 	EXPECT_TRUE(ubuntu_app_launch_pause_application("com.test.good_application_1.2.3"));
@@ -1367,6 +1387,7 @@ TEST_F(LibUAL, PauseResume)
 	pause(200);
 
 	/* Check data coming out */
+	EXPECT_EQ(1, paused_count);
 	EXPECT_EQ(0, datacnt);
 
 	/* Check to make sure we sent the event to ZG */
@@ -1383,6 +1404,7 @@ TEST_F(LibUAL, PauseResume)
 	ASSERT_TRUE(g_file_get_contents(oomadjfile, &pauseoomscore, NULL, NULL));
 	EXPECT_STREQ("900", pauseoomscore);
 	g_free(pauseoomscore);
+	resumed_count = 0;
 
 	/* Now Resume the App */
 	EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
@@ -1390,6 +1412,7 @@ TEST_F(LibUAL, PauseResume)
 	pause(200);
 
 	EXPECT_NE(0, datacnt);
+	EXPECT_EQ(1, resumed_count);
 
 	/* Check to make sure we sent the event to ZG */
 	numcalls = 0;
