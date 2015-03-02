@@ -543,6 +543,8 @@ notify_signalling (GList * pids, const gchar * appid, const gchar * signal_name)
 	if (error != NULL) {
 		g_warning("Unable to emit signal '%s' for appid '%s': %s", signal_name, appid, error->message);
 		g_error_free(error);
+	} else {
+		g_debug("Emmitted '%s' to DBus", signal_name);
 	}
 
 	g_object_unref(conn);
