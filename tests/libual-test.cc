@@ -1272,6 +1272,13 @@ datain (GIOChannel * source, GIOCondition cond, gpointer data)
 	return TRUE;
 }
 
+static void
+signal_increment (GDBusConnection * connection, const gchar * sender, const gchar * path, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	guint * count = (guint *)user_data;
+	*count++;
+}
+
 TEST_F(LibUAL, PauseResume)
 {
 	g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/libual-proc" , 1);
@@ -1342,6 +1349,12 @@ TEST_F(LibUAL, PauseResume)
 	} while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING &&
 		dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
 
+	/* Setup signal handling */
+	guint paused_count = 0;
+	guint resumed_count = 0;
+	guint paused_signal = g_dbus_connection_signal_subscribe(bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationPaused", nullptr, nullptr, G_DBUS_SIGNAL_FLAGS_NONE, signal_increment, &paused_count, nullptr);
+	guint resumed_signal = g_dbus_connection_signal_subscribe(bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationResumed", nullptr, nullptr, G_DBUS_SIGNAL_FLAGS_NONE, signal_increment, &resumed_count, nullptr);
+
 	/* Test it */
 	EXPECT_NE(0, datacnt);
 
@@ -1399,6 +1412,9 @@ TEST_F(LibUAL, PauseResume)
 	g_io_channel_unref(spewoutchan);
 
 	g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
+
+	g_dbus_connection_signal_unsubscribe(bus, paused_signal);
+	g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
 
 	/* Kill ZG default instance :-( */
 	ZeitgeistLog * log = zeitgeist_log_get_default();
