@@ -20,5 +20,13 @@
 			<arg type="s" name="appid" />
 			<arg type="s" name="stage" />
 		</signal>
+		<signal name="ApplicationPaused">
+			<arg type="s" name="appid" />
+			<arg type="at" name="pids" />
+		</signal>
+		<signal name="ApplicationResumed">
+			<arg type="s" name="appid" />
+			<arg type="at" name="pids" />
+		</signal>
 	</interface>
 </node>
