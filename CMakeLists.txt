@@ -73,7 +73,7 @@ include_directories(${LTTNG_INCLUDE_DIRS})
 pkg_check_modules(CGMANAGER REQUIRED libcgmanager)
 include_directories(${CGMANAGER_INCLUDE_DIRS})
 
-pkg_check_modules(MIR REQUIRED mirclient)
+pkg_check_modules(MIR mirclient)
 include_directories(${MIR_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
