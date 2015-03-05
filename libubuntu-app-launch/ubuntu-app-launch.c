@@ -499,10 +499,61 @@ set_oom_value (GPid pid, const gchar * oomscore)
 	return FALSE;
 }
 
+/* Throw out a DBus signal that we've signalled all of these processes. This
+   is the fun GVariant building part. */
+static void
+notify_signalling (GList * pids, const gchar * appid, const gchar * signal_name)
+{
+	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	if (conn == NULL) {
+		return;
+	}
+
+	/* Pull together a PID array */
+	GVariant *pidarray = NULL;
+	if (pids == NULL) {
+		pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, NULL, 0);
+	} else {
+		GList * i;
+		GVariantBuilder builder;
+		g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
+
+		for (i = pids; i != NULL; i = g_list_next(i))
+			g_variant_builder_add_value(&builder, g_variant_new_uint64(GPOINTER_TO_INT(i->data)));
+
+		pidarray = g_variant_builder_end(&builder);
+	}
+
+	/* Combine into the wrapping tuple */
+	GVariantBuilder btuple;
+	g_variant_builder_init(&btuple, G_VARIANT_TYPE_TUPLE);
+	g_variant_builder_add_value(&btuple, g_variant_new_string(appid));
+	g_variant_builder_add_value(&btuple, pidarray);
+
+	/* Emit !!! */
+	GError * error = NULL;
+	g_dbus_connection_emit_signal(conn,
+		NULL, /* destination */
+		"/", /* path */
+		"com.canonical.UbuntuAppLaunch", /* interface */
+		signal_name, /* signal */
+		g_variant_builder_end(&btuple), /* params, the same */
+		&error);
+
+	if (error != NULL) {
+		g_warning("Unable to emit signal '%s' for appid '%s': %s", signal_name, appid, error->message);
+		g_error_free(error);
+	} else {
+		g_debug("Emmitted '%s' to DBus", signal_name);
+	}
+
+	g_object_unref(conn);
+}
+
 /* Gets all the pids for an appid and sends a signal to all of them. This also
    loops to ensure no new pids are added while we're signaling */
 static gboolean
-signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
+signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore, const gchar * signal_name)
 {
 	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
 	guint hash_table_size = 0;
@@ -543,6 +594,7 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore)
 	/* If it grew, then try again */
 	} while (hash_table_size != g_hash_table_size(pidssignaled));
 
+	notify_signalling(g_hash_table_get_keys(pidssignaled), appid, signal_name);
 	g_hash_table_destroy(pidssignaled);
 
 	return retval;
@@ -612,14 +664,14 @@ gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
 	report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
-	return signal_to_cgroup(appid, SIGSTOP, "900");
+	return signal_to_cgroup(appid, SIGSTOP, "900", "ApplicationPaused");
 }
 
 gboolean
 ubuntu_app_launch_resume_application (const gchar * appid)
 {
 	report_zg_event(appid, ZEITGEIST_ZG_ACCESS_EVENT);
-	return signal_to_cgroup(appid, SIGCONT, "100");
+	return signal_to_cgroup(appid, SIGCONT, "100", "ApplicationResumed");
 }
 
 gchar *
@@ -709,6 +761,16 @@ struct _failed_observer_t {
 	gpointer user_data;
 };
 
+/* The data we keep for each failed observer */
+typedef struct _paused_resumed_observer_t paused_resumed_observer_t;
+struct _paused_resumed_observer_t {
+	GDBusConnection * conn;
+	guint sighandle;
+	UbuntuAppLaunchAppPausedResumedObserver func;
+	gpointer user_data;
+	const gchar * lttng_signal;
+};
+
 /* The lists of Observers */
 static GList * starting_array = NULL;
 static GList * started_array = NULL;
@@ -716,6 +778,8 @@ static GList * stop_array = NULL;
 static GList * focus_array = NULL;
 static GList * resume_array = NULL;
 static GList * failed_array = NULL;
+static GList * paused_array = NULL;
+static GList * resumed_array = NULL;
 
 static void
 observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
@@ -994,6 +1058,81 @@ ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver obse
 	return TRUE;
 }
 
+/* Handle the paused signal when it occurs, call the observer */
+static void
+paused_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+{
+	paused_resumed_observer_t * observer = (paused_resumed_observer_t *)user_data;
+
+	ual_tracepoint(observer_start, observer->lttng_signal);
+
+	if (observer->func != NULL) {
+		GArray * pidarray = g_array_new(TRUE, TRUE, sizeof(GPid));
+		GVariant * appid = g_variant_get_child_value(params, 0);
+		GVariant * pids = g_variant_get_child_value(params, 1);
+		guint64 pid;
+		GVariantIter thispid;
+		g_variant_iter_init(&thispid, pids);
+
+		while (g_variant_iter_loop(&thispid, "t", &pid)) {
+			GPid gpid = (GPid)pid; /* Should be a no-op for most architectures, but just in case */
+			g_array_append_val(pidarray, gpid);
+		}
+
+		observer->func(g_variant_get_string(appid, NULL), (GPid *)pidarray->data, observer->user_data);
+
+		g_array_free(pidarray, TRUE);
+		g_variant_unref(appid);
+		g_variant_unref(pids);
+	}
+
+	ual_tracepoint(observer_finish, observer->lttng_signal);
+}
+
+static gboolean
+paused_resumed_generic (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, GList ** queue, const gchar * signal_name, const gchar * lttng_signal)
+{
+	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+
+	if (conn == NULL) {
+		return FALSE;
+	}
+
+	paused_resumed_observer_t * observert = g_new0(paused_resumed_observer_t, 1);
+
+	observert->conn = conn;
+	observert->func = observer;
+	observert->user_data = user_data;
+	observert->lttng_signal = lttng_signal;
+
+	*queue = g_list_prepend(*queue, observert);
+
+	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
+		NULL, /* sender */
+		"com.canonical.UbuntuAppLaunch", /* interface */
+		signal_name, /* signal */
+		"/", /* path */
+		NULL, /* arg0 */
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		paused_signal_cb,
+		observert,
+		NULL); /* user data destroy */
+
+	return TRUE;
+}
+
+gboolean
+ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+{
+	return paused_resumed_generic(observer, user_data, &paused_array, "ApplicationPaused", "paused");
+}
+
+gboolean
+ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+{
+	return paused_resumed_generic(observer, user_data, &resumed_array, "ApplicationResumed", "resumed");
+}
+
 static gboolean
 delete_app_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, GList ** list)
 {
@@ -1076,6 +1215,45 @@ ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver o
 	failed_array = g_list_delete_link(failed_array, look);
 
 	return TRUE;
+}
+
+static gboolean
+paused_resumed_delete (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, GList ** list)
+{
+	paused_resumed_observer_t * observert = NULL;
+	GList * look;
+
+	for (look = *list; look != NULL; look = g_list_next(look)) {
+		observert = (paused_resumed_observer_t *)look->data;
+
+		if (observert->func == observer && observert->user_data == user_data) {
+			break;
+		}
+	}
+
+	if (look == NULL) {
+		return FALSE;
+	}
+
+	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
+	g_object_unref(observert->conn);
+
+	g_free(observert);
+	*list = g_list_delete_link(*list, look);
+
+	return TRUE;
+}
+
+gboolean
+ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+{
+	return paused_resumed_delete(observer, user_data, &paused_array);
+}
+
+gboolean
+ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+{
+	return paused_resumed_delete(observer, user_data, &resumed_array);
 }
 
 typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);
