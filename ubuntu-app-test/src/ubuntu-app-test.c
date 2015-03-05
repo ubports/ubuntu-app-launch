@@ -64,6 +64,13 @@ main (int argc, char * argv[])
 		return -1;
 	}
 
+	gchar * mirpath = g_build_filename(g_get_user_runtime_dir(), "mir_socket_trusted", NULL);
+	if (!g_file_test(mirpath, G_FILE_TEST_EXISTS)) {
+		g_free(mirpath);
+		g_debug("No Mir detected, exec'ing assuming we're under X11");
+		return execvp(argv[1], argv + 1);
+	}
+
 	GMainLoop * loop = g_main_loop_new(NULL, FALSE);
 
 	ubuntu_app_launch_observer_add_app_failed(app_failed, loop);
@@ -86,7 +93,6 @@ main (int argc, char * argv[])
 		return -1;
 	}
 
-	gchar * mirpath = g_build_filename(g_get_user_runtime_dir(), "mir_socket_trusted", NULL);
 	MirConnection * mir = mir_connect_sync(mirpath, "ubuntu-app-test");
 	g_free(mirpath);
 
