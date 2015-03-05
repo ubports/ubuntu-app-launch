@@ -26,6 +26,9 @@ if (EXISTS "/etc/debian_version")
 endif()
 
 set(pkglibexecdir "${CMAKE_INSTALL_FULL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_PKGLIBEXECDIR "${CMAKE_INSTALL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_FULL_PKGLIBEXECDIR "${CMAKE_INSTALL_FULL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_FULL_PKGDATADIR "${CMAKE_INSTALL_FULL_DATADIR}/${CMAKE_PROJECT_NAME}")
 
 execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
 	OUTPUT_VARIABLE UBUNTU_APP_LAUNCH_ARCH
@@ -69,6 +72,9 @@ include_directories(${LTTNG_INCLUDE_DIRS})
 
 pkg_check_modules(CGMANAGER REQUIRED libcgmanager)
 include_directories(${CGMANAGER_INCLUDE_DIRS})
+
+pkg_check_modules(MIR mirclient)
+include_directories(${MIR_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -163,6 +169,7 @@ configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE
 add_subdirectory(libubuntu-app-launch)
 add_subdirectory(upstart-jobs)
 add_subdirectory(tools)
+add_subdirectory(ubuntu-app-test)
 
 # testing & coverage
 if (${enable_tests})

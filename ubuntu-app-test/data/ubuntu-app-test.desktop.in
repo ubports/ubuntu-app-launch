@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Ubuntu App Test
+Comment=A shell used to test applications
+Exec=qmlscene @pkgdatadir@/ubuntu-app-test.qml
+Type=Application
+Terminal=false
+Icon=ubuntu-app-test
+X-Ayatana-Appmenu-Show-Stubs=false
+X-Ubuntu-Touch=true
+X-Ubuntu-Single-Instance=true

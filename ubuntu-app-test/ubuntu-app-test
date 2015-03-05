@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Used for Architectures that don't have Mir, otherwise we build the executable
+
+echo "ubuntu-app-test doesn't work on this architecture, sorry"
+exit 1
