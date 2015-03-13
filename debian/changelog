@@ -1,3 +1,13 @@
+ubuntu-app-launch (0.4+15.04.20150313.2-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Rodney Dawes ]
+  * Save status from waitpid and exit with it. (LP: #1431565)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 13 Mar 2015 16:05:56 +0000
+
 ubuntu-app-launch (0.4+15.04.20150305.1-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]
