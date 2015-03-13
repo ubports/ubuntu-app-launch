@@ -107,13 +107,14 @@ main (int argc, char * argv[])
 	g_free(sock);
 
 	pid_t subpid = 0;
+	int exit_status = -1;
 	if ((subpid = fork()) == 0) {
 		return execvp(argv[1], argv + 1);
 	}
-	waitpid(subpid, NULL, 0);
+	waitpid(subpid, &exit_status, 0);
 
 	mir_prompt_session_release_sync(session);
 	mir_connection_release(mir);
 
-	return 0;
+	return WEXITSTATUS(exit_status);
 }
