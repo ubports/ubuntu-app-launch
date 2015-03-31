@@ -136,11 +136,23 @@ add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 	return;
 }
 
+/* Look at the desktop file and ensure that it was built by us, and if it
+   was that its source still existts */
+gboolean
+desktop_source_exists (const gchar * dir, const gchar * name)
+{
+	return TRUE;
+}
+
 /* Look at an desktop file entry */
 void
 add_desktop_file (const gchar * dir, const gchar * name, GArray * app_array)
 {
 	if (!g_str_has_suffix(name, ".desktop")) {
+		return;
+	}
+
+	if (!desktop_source_exists(dir, name)) {
 		return;
 	}
 
