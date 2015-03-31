@@ -142,7 +142,35 @@ add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 gboolean
 desktop_source_exists (const gchar * dir, const gchar * name)
 {
-	return TRUE;
+	gchar * desktopfile = g_build_filename(dir, name, NULL);
+
+	GKeyFile * keyfile = g_key_file_new();
+	g_key_file_load_from_file(keyfile,
+		desktopfile,
+		G_KEY_FILE_NONE,
+		NULL); /* No error */
+
+	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, NULL)) {
+		g_free(desktopfile);
+		g_key_file_free(keyfile);
+		return FALSE;
+	}
+
+	/* At this point we know the key exists, so if we can't find the source
+	   file we want to delete the file as well. We need to replace it. */
+	gchar * originalfile = g_key_file_get_string(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, NULL);
+	g_key_file_free(keyfile);
+	gboolean found = TRUE;
+
+	if (!g_file_test(originalfile, G_FILE_TEST_EXISTS)) {
+		g_remove(desktopfile);
+		found = FALSE;
+	}
+
+	g_free(originalfile);
+	g_free(desktopfile);
+
+	return found;
 }
 
 /* Look at an desktop file entry */
