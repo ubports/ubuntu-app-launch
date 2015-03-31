@@ -721,6 +721,14 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 	return path;
 }
 
+gboolean
+ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+
+
+	return FALSE;
+}
+
 static GDBusConnection *
 gdbus_upstart_ref (void) {
 	static GDBusConnection * gdbus_upstart = NULL;
