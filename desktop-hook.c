@@ -67,6 +67,7 @@ struct _app_state_t {
 #define EXEC_KEY           "Exec"
 #define ICON_KEY           "Icon"
 #define SYMBOLIC_ICON_KEY  "X-Ubuntu-SymbolicIcon"
+#define SOURCE_FILE_KEY    "X-Ubuntu-UAL-Source-Desktop"
 /* Other */
 #define OLD_KEY_PREFIX     "X-Ubuntu-Old-"
 
@@ -403,6 +404,9 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 
 	/* Adding an Application ID */
 	g_key_file_set_string(keyfile, DESKTOP_GROUP, APP_ID_KEY, app_id);
+
+	/* Adding the source file path */
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, from);
 
 	/* Output */
 	gsize datalen = 0;
