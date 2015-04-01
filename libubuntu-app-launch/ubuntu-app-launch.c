@@ -37,6 +37,7 @@
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 static GList * pids_for_appid (const gchar * appid);
+static JsonObject * get_manifest (const gchar * pkg, gchar ** pkgpath);
 int kill (pid_t pid, int signal);
 
 /* Function to take the urls and escape them so that they can be
@@ -769,8 +770,52 @@ app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 static gboolean
 app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 {
+	gchar * package = NULL;
+	gchar * application = NULL;
 
-	return FALSE;
+	if (!ubuntu_app_launch_app_id_parse(appid, &package, &application, NULL)) {
+		return FALSE;
+	}
+
+	JsonObject * manifest = get_manifest(package, appdir);
+	if (manifest == NULL) {
+		g_free(package);
+		g_free(application);
+		return FALSE;
+	}
+
+	g_free(package);
+
+	if (appdesktop != NULL) {
+		JsonObject * hooks = json_object_get_object_member(manifest, "hooks");
+		if (hooks == NULL) {
+			json_object_unref(manifest);
+			g_free(application);
+			return FALSE;
+		}
+
+		JsonObject * appobj = json_object_get_object_member(hooks, application);
+		g_free(application);
+
+		if (appobj == NULL) {
+			json_object_unref(manifest);
+			return FALSE;
+		}
+
+		const gchar * desktop = json_object_get_string_member(appobj, "desktop");
+		if (desktop == NULL) {
+			json_object_unref(manifest);
+			return FALSE;
+		}
+
+		*appdesktop = g_strdup(desktop);
+	} else {
+		g_free(application);
+	}
+
+	json_object_unref(manifest);
+
+	return TRUE;
 }
 
 gboolean
