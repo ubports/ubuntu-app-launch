@@ -721,12 +721,66 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 	return path;
 }
 
+/* Look to see if the app id results in a desktop file, if so, fill in the params */
+static gboolean
+evaluate_dir (const gchar * dir, const gchar * desktop, gchar ** appdir, gchar ** appdesktop)
+{
+	char * fulldir = g_build_filename(dir, "applications", desktop, NULL);
+
+	if (g_file_test(fulldir, G_FILE_TEST_EXISTS)) {
+		if (appdir != NULL) {
+			*appdir = g_strdup(dir);
+		}
+
+		if (appdesktop != NULL) {
+			*appdesktop = g_strdup_printf("applications/%s", desktop);
+		}
+	}
+
+	g_free(fulldir);
+	return FALSE;
+}
+
+/* Handle the legacy case where we look through the data directories */
+static gboolean
+app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+	gchar * desktop = g_strdup_printf("%s.desktop", appid);
+
+	/* Special case the user's dir */
+	if (evaluate_dir(g_get_user_data_dir(), desktop, appdir, appdesktop)) {
+		g_free(desktop);
+		return TRUE;
+	}
+
+	const char * const * data_dirs = g_get_system_data_dirs();
+	int i;
+	for (i = 0; data_dirs[i] != NULL; i++) {
+		if (evaluate_dir(data_dirs[i], desktop, appdir, appdesktop)) {
+			g_free(desktop);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+/* Get the information on where the desktop file is from libclick */
+static gboolean
+app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+
+	return FALSE;
+}
+
 gboolean
 ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 {
-
-
-	return FALSE;
+	if (is_click(appid)) {
+		return app_info_click(appid, appdir, appdesktop);
+	} else {
+		return app_info_legacy(appid, appdir, appdesktop);
+	}
 }
 
 static GDBusConnection *
