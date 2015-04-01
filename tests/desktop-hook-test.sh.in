@@ -1,0 +1,19 @@
+#!/bin/bash
+
+TEST_DIR=@CMAKE_CURRENT_BINARY_DIR@
+SRC_DIR=@CMAKE_CURRENT_SOURCE_DIR@
+
+CACHE_DIR=${TEST_DIR}/desktop-hook-test-click-dir
+CLICK_DIR=${CACHE_DIR}/ubuntu-app-launch/desktop/
+
+DATA_DIR=${TEST_DIR}/desktop-hook-test-apps-dir
+APPS_DIR=${DATA_DIR}/applications/
+
+rm -rf ${CLICK_DIR}
+mkdir -p ${CLICK_DIR}
+cp ${SRC_DIR}/applications/* ${CLICK_DIR}
+
+export XDG_CACHE_HOME=${CACHE_DIR}
+export XDG_DATA_HOME=${DATA_DIR}
+
+@CMAKE_BINARY_DIR@/desktop-hook
