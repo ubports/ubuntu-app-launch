@@ -9,11 +9,19 @@ CLICK_DIR=${CACHE_DIR}/ubuntu-app-launch/desktop/
 DATA_DIR=${TEST_DIR}/desktop-hook-test-apps-dir
 APPS_DIR=${DATA_DIR}/applications/
 
-rm -rf ${CLICK_DIR}
+# Remove the old directories
+rm -rf ${CACHE_DIR}
+rm -rf ${DATA_DIR}
+
+# Copy our source applications
 mkdir -p ${CLICK_DIR}
 cp ${SRC_DIR}/applications/* ${CLICK_DIR}
 
+# Setup the environment
 export XDG_CACHE_HOME=${CACHE_DIR}
 export XDG_DATA_HOME=${DATA_DIR}
 
+# Run the tool
 @CMAKE_BINARY_DIR@/desktop-hook
+
+# Verify the results
