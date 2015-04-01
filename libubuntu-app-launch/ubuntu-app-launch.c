@@ -1647,7 +1647,7 @@ ubuntu_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** 
 
 /* Try and get a manifest and do a couple sanity checks on it */
 static JsonObject *
-get_manifest (const gchar * pkg)
+get_manifest (const gchar * pkg, gchar ** pkgpath)
 {
 	/* Get the directory from click */
 	GError * error = NULL;
@@ -1675,6 +1675,16 @@ get_manifest (const gchar * pkg)
 		g_error_free(error);
 		g_object_unref(user);
 		return NULL;
+	}
+
+	if (pkgpath != NULL) {
+		*pkgpath = click_user_get_path(user, pkg, &error);
+		if (error != NULL) {
+			g_warning("Unable to get the Click package directory for %s: %s", pkg, error->message);
+			g_error_free(error);
+			g_object_unref(user);
+			return NULL;
+		}
 	}
 	g_object_unref(user);
 
@@ -1714,7 +1724,7 @@ manifest_app_name (JsonObject ** manifest, const gchar * pkg, const gchar * orig
 	}
 
 	if (*manifest == NULL) {
-		*manifest = get_manifest(pkg);
+		*manifest = get_manifest(pkg, NULL);
 	}
 
 	JsonObject * hooks = json_object_get_object_member(*manifest, "hooks");
@@ -1759,7 +1769,7 @@ manifest_version (JsonObject ** manifest, const gchar * pkg, const gchar * origi
 		return original_ver;
 	} else  {
 		if (*manifest == NULL) {
-			*manifest = get_manifest(pkg);
+			*manifest = get_manifest(pkg, NULL);
 		}
 		g_return_val_if_fail(*manifest != NULL, NULL);
 
