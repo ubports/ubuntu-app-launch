@@ -470,14 +470,28 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 		return;
 	}
 
-	/* Check click to find out where the files are */
-	ClickUser * user = click_user_new_for_user(NULL, NULL, &error);
+	/* Read in the database */
+	ClickDB * db = click_db_new();
+	click_db_read(db, g_getenv("TEST_CLICK_DB"), &error);
 	if (error != NULL) {
 		g_warning("Unable to read Click database: %s", error->message);
 		g_error_free(error);
 		g_free(package);
+		g_object_unref(db);
 		return;
 	}
+
+	/* Check click to find out where the files are */
+	ClickUser * user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		g_error_free(error);
+		g_free(package);
+		g_object_unref(db);
+		return;
+	}
+	g_object_unref(db);
+
 	gchar * pkgdir = click_user_get_path(user, package, &error);
 	if (error != NULL) {
 		g_warning("Unable to get the Click package directory for %s: %s", package, error->message);
