@@ -48,3 +48,11 @@ grep "^Exec=aa-exec-click -p com.test.multiple_first_1.2.3 --" ${APPS_DIR}/com.t
 grep "^X-Ubuntu-Application-ID=com.test.good_application_1.2.3" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null
 grep "^X-Ubuntu-Application-ID=com.test.multiple_first_1.2.3" ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop > /dev/null
 
+# Remove a source file and make sure it goes
+
+rm -f ${CLICK_DIR}/com.test.multiple_first_1.2.3.desktop
+@CMAKE_BINARY_DIR@/desktop-hook
+if [ -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
+	echo "Not cleaning up deleted files"
+	exit 1
+fi
