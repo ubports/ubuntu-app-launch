@@ -84,5 +84,6 @@ add_test (cgroup-reap-test cgroup-reap-test)
 
 # Desktop Hook Test
 
+configure_file ("click-db2-dir/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-db2-dir/test.conf" @ONLY)
 configure_file ("desktop-hook-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/desktop-hook-test.sh" @ONLY)
 add_test (desktop-hook-test desktop-hook-test.sh)

@@ -57,32 +57,18 @@ if [ -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
 	exit 1
 fi
 
-# Build a new source directory
+# Verify the good file is in the old root
+grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_SOURCE_DIR@/click-root-dir" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null 
 
-CACHE2_DIR=${TEST_DIR}/desktop-hook-test-click-dir2
-CLICK2_DIR=${CACHE2_DIR}/ubuntu-app-launch/desktop/
-rm -rf ${CACHE2_DIR}
-mkdir -p ${CLICK2_DIR}
-cp ${SRC_DIR}/link-farm/* ${CLICK2_DIR}
-
-# Point to the new directory and run the tool
-export XDG_CACHE_HOME=${CACHE2_DIR}
+# Point to the new db and run
+export TEST_CLICK_DB=@CMAKE_CURRENT_SOURCE_DIR@/click-db2-dir
 @CMAKE_BINARY_DIR@/desktop-hook
 
-# Verify that we now have two files again
+# Verify that we have the file and it's in the new root
 if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.3.desktop ] ; then
 	echo "Desktop file not created for: com.test.good_application_1.2.3"
 	exit 1
 fi
-if [ ! -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
-	echo "Desktop file not created for: com.test.multiple_first_1.2.3"
-	exit 1
-fi
 
-# Now switch back and ensure it goes away
-export XDG_CACHE_HOME=${CACHE_DIR}
-@CMAKE_BINARY_DIR@/desktop-hook
-if [ -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
-	echo "Not cleaning up deleted files"
-	exit 1
-fi
+grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_SOURCE_DIR@/click-root2-dir" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null 
+
