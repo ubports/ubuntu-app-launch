@@ -27,3 +27,13 @@ export TEST_CLICK_USER=test-user
 @CMAKE_BINARY_DIR@/desktop-hook
 
 # Verify the results
+if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.3.desktop ] ; then
+	echo "Desktop file not created for: com.test.good_application_1.2.3"
+	exit 1
+fi
+
+if [ ! -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
+	echo "Desktop file not created for: com.test.multiple_first_1.2.3"
+	exit 1
+fi
+
