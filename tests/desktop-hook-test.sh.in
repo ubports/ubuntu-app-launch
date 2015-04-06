@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 TEST_DIR=@CMAKE_CURRENT_BINARY_DIR@
 SRC_DIR=@CMAKE_CURRENT_SOURCE_DIR@
@@ -36,4 +36,7 @@ if [ ! -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
 	echo "Desktop file not created for: com.test.multiple_first_1.2.3"
 	exit 1
 fi
+
+grep "Exec=aa-exec-click -p com.test.good_application_1.2.3 --" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null
+grep "Exec=aa-exec-click -p com.test.multiple_first_1.2.3 --" ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop > /dev/null
 
