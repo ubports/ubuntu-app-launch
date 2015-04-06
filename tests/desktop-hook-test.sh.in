@@ -17,10 +17,13 @@ rm -rf ${DATA_DIR}
 mkdir -p ${CLICK_DIR}
 cp ${SRC_DIR}/link-farm/* ${CLICK_DIR}
 
+# Build our root dir
+ln -s @CMAKE_CURRENT_SOURCE_DIR@/click-root-dir @CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook
+
 # Setup the environment
 export XDG_CACHE_HOME=${CACHE_DIR}
 export XDG_DATA_HOME=${DATA_DIR}
-export TEST_CLICK_DB=@CMAKE_CURRENT_SOURCE_DIR@/click-db-dir
+export TEST_CLICK_DB=@CMAKE_CURRENT_SOURCE_DIR@/click-desktop-hook-db
 export TEST_CLICK_USER=test-user
 
 # Run the tool
@@ -57,11 +60,14 @@ if [ -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
 	exit 1
 fi
 
-# Verify the good file is in the old root
-grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_SOURCE_DIR@/click-root-dir" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null 
+# Verify the good file is in the desktop hook root
+grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null 
+
+# Remove our root
+rm -f @CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook
 
 # Point to the new db and run
-export TEST_CLICK_DB=@CMAKE_CURRENT_SOURCE_DIR@/click-db2-dir
+export TEST_CLICK_DB=@CMAKE_CURRENT_SOURCE_DIR@/click-db-dir
 @CMAKE_BINARY_DIR@/desktop-hook
 
 # Verify that we have the file and it's in the new root
@@ -70,5 +76,5 @@ if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.3.desktop ] ; then
 	exit 1
 fi
 
-grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_SOURCE_DIR@/click-root2-dir" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null 
+grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_SOURCE_DIR@/click-root-dir" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null 
 
