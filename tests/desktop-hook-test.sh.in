@@ -26,7 +26,8 @@ export TEST_CLICK_USER=test-user
 # Run the tool
 @CMAKE_BINARY_DIR@/desktop-hook
 
-# Verify the results
+# Check that the files exist
+
 if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.3.desktop ] ; then
 	echo "Desktop file not created for: com.test.good_application_1.2.3"
 	exit 1
@@ -37,6 +38,13 @@ if [ ! -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
 	exit 1
 fi
 
-grep "Exec=aa-exec-click -p com.test.good_application_1.2.3 --" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null
-grep "Exec=aa-exec-click -p com.test.multiple_first_1.2.3 --" ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop > /dev/null
+# Verify we're adding containment to them
+
+grep "^Exec=aa-exec-click -p com.test.good_application_1.2.3 --" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null
+grep "^Exec=aa-exec-click -p com.test.multiple_first_1.2.3 --" ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop > /dev/null
+
+# Make sure they have the AppID (people started using it) :-/
+
+grep "^X-Ubuntu-Application-ID=com.test.good_application_1.2.3" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null
+grep "^X-Ubuntu-Application-ID=com.test.multiple_first_1.2.3" ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop > /dev/null
 
