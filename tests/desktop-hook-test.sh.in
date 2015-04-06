@@ -12,6 +12,7 @@ APPS_DIR=${DATA_DIR}/applications/
 # Remove the old directories
 rm -rf ${CACHE_DIR}
 rm -rf ${DATA_DIR}
+rm -f @CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook
 
 # Copy our source applications
 mkdir -p ${CLICK_DIR}
@@ -23,7 +24,7 @@ ln -s @CMAKE_CURRENT_SOURCE_DIR@/click-root-dir @CMAKE_CURRENT_BINARY_DIR@/click
 # Setup the environment
 export XDG_CACHE_HOME=${CACHE_DIR}
 export XDG_DATA_HOME=${DATA_DIR}
-export TEST_CLICK_DB=@CMAKE_CURRENT_SOURCE_DIR@/click-desktop-hook-db
+export TEST_CLICK_DB=@CMAKE_CURRENT_BINARY_DIR@/click-desktop-hook-db
 export TEST_CLICK_USER=test-user
 
 # Run the tool
@@ -77,7 +78,7 @@ grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_BINARY_DIR@/click-root-desktop
 rm -f @CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook
 
 # Point to the new db and run
-export TEST_CLICK_DB=@CMAKE_CURRENT_SOURCE_DIR@/click-db-dir
+export TEST_CLICK_DB=@CMAKE_CURRENT_BINARY_DIR@/click-db-dir
 @CMAKE_BINARY_DIR@/desktop-hook
 
 # Verify that we have the file and it's in the new root
