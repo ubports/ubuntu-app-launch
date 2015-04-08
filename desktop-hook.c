@@ -138,7 +138,7 @@ add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 }
 
 /* Look at the desktop file and ensure that it was built by us, and if it
-   was that its source still existts */
+   was that its source still exists */
 gboolean
 desktop_source_exists (const gchar * dir, const gchar * name)
 {
