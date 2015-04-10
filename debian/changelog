@@ -1,3 +1,10 @@
+ubuntu-app-launch (0.4+15.04.20150410-0ubuntu1) vivid; urgency=medium
+
+  [ Ted Gould ]
+  * Have desktop hook verify source file still exists (LP: #1437355)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 10 Apr 2015 16:58:30 +0000
+
 ubuntu-app-launch (0.4+15.04.20150403-0ubuntu1) vivid; urgency=medium
 
   [ Ted Gould ]
