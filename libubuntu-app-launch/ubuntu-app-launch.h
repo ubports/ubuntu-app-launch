@@ -18,6 +18,7 @@
  */
 
 #include <glib.h>
+#include <mir_toolkit/mir_prompt_session.h>
 
 #ifndef __UBUNTU_APP_LAUNCH_H__
 #define __UBUNTU_APP_LAUNCH_H__ 1
@@ -463,6 +464,12 @@ gboolean   ubuntu_app_launch_start_helper              (const gchar *           
 gchar *    ubuntu_app_launch_start_multiple_helper     (const gchar *                     type,
                                                          const gchar *                     appid,
                                                          const gchar * const *             uris);
+
+
+gchar *    ubuntu_app_launch_start_session_helper  (const gchar *            type,
+                                                    MirPromptSession *       session,
+                                                    const gchar *            appid,
+                                                    const gchar * const *    uris);
 
 /**
  * ubuntu_app_launch_stop_helper:
