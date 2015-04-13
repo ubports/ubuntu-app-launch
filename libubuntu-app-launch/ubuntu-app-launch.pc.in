@@ -2,7 +2,7 @@ libdir=@libdir@
 includedir=@includedir@
 
 Cflags: -I${includedir}/libubuntu-app-launch-@apiversion@
-Requires: glib-2.0
+Requires: glib-2.0 mirclient
 Libs: -L${libdir} -lubuntu-app-launch
 
 Name: libubuntu-app-launch
