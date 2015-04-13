@@ -451,7 +451,7 @@ gboolean   ubuntu_app_launch_start_helper              (const gchar *           
  * @appid: App ID of the helper
  * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
  *
- * Start an untrusted helper for a specific @type on a given
+ * Start an untrusted helper for a specific @type of a given
  * @appid.  We don't know how that is done specifically, as Upstart
  * will call a helper for that type.  And then execute it under the
  * Apparmor profile for that helper type.  This function is different
@@ -465,7 +465,24 @@ gchar *    ubuntu_app_launch_start_multiple_helper     (const gchar *           
                                                          const gchar *                     appid,
                                                          const gchar * const *             uris);
 
-
+/**
+ * ubuntu_app_launch_start_session_helper:
+ * @type: Type of helper
+ * @session: Mir Trusted Prompt Session to run the helper under
+ * @appid: App ID of the helper
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
+ *
+ * Start an untrusted helper for a specific @type of a given
+ * @appid running under a Mir Trusted Prompt Session @session. The
+ * helper's MIR_SOCKET environment variable will be set appripriately
+ * so that the helper will draw on the correct surfaces. Otherwise this
+ * is the same as #ubuntu_app_launch_start_multiple_helper.
+ *
+ * It is important that all exec tools for @type call the function
+ * #ubuntu_app_launch_helper_set_exec to set the exec line.
+ *
+ * Return value: The generated instance ID or NULL on failure
+ */
 gchar *    ubuntu_app_launch_start_session_helper  (const gchar *            type,
                                                     MirPromptSession *       session,
                                                     const gchar *            appid,
@@ -580,6 +597,27 @@ gboolean   ubuntu_app_launch_observer_delete_helper_started (UbuntuAppLaunchHelp
 gboolean   ubuntu_app_launch_observer_delete_helper_stop    (UbuntuAppLaunchHelperObserver    observer,
                                                               const gchar *                     helper_type,
                                                               gpointer                          user_data);
+
+/**
+ * ubuntu_app_launch_helper_set_exec:
+ * @execline: Exec line to be executed, in Desktop file format
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
+ *
+ * A function to be called by an untrusted helper exec
+ * tool to set the exec line. The exec tool should determine
+ * what should be executed from some sort of configuration
+ * based on its type (usually a configuration file from a click
+ * package). Once it determines the exec line it can set it
+ * with this function and exit.
+ *
+ * If @uris is set to %NULL then the URIs will be gotten from
+ * the environment. If this behavor is not desired you can set
+ * the parameter to a single %NULL entry.
+ *
+ * Return Value: Whether we were able to set the exec line
+ */
+gboolean   ubuntu_app_launch_helper_set_exec       (const gchar *            execline,
+                                                    const gchar * const *    uris);
 
 #ifdef __cplusplus
 }
