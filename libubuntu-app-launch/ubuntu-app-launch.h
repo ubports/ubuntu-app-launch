@@ -601,7 +601,6 @@ gboolean   ubuntu_app_launch_observer_delete_helper_stop    (UbuntuAppLaunchHelp
 /**
  * ubuntu_app_launch_helper_set_exec:
  * @execline: Exec line to be executed, in Desktop file format
- * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
  *
  * A function to be called by an untrusted helper exec
  * tool to set the exec line. The exec tool should determine
@@ -610,14 +609,9 @@ gboolean   ubuntu_app_launch_observer_delete_helper_stop    (UbuntuAppLaunchHelp
  * package). Once it determines the exec line it can set it
  * with this function and exit.
  *
- * If @uris is set to %NULL then the URIs will be gotten from
- * the environment. If this behavor is not desired you can set
- * the parameter to a single %NULL entry.
- *
  * Return Value: Whether we were able to set the exec line
  */
-gboolean   ubuntu_app_launch_helper_set_exec       (const gchar *            execline,
-                                                    const gchar * const *    uris);
+gboolean   ubuntu_app_launch_helper_set_exec       (const gchar *            execline);
 
 #ifdef __cplusplus
 }

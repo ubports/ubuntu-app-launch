@@ -2202,3 +2202,54 @@ ubuntu_app_launch_observer_delete_helper_stop (UbuntuAppLaunchHelperObserver obs
 	return delete_helper_generic(observer, helper_type, user_data, &helper_stopped_obs);
 }
 
+gboolean
+ubuntu_app_launch_helper_set_exec (const gchar * execline)
+{
+	g_return_val_if_fail(execline != NULL, FALSE);
+	g_return_val_if_fail(execline[0] != '\0', FALSE);
+
+	/* Check to see if we can get the job environment */
+	const gchar * job_name = g_getenv("UPSTART_JOB");
+	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
+	g_return_if_fail(job_name != NULL);
+
+	GError * error = NULL;
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to get session bus: %s", error->message);
+		g_error_free(error);
+		return FALSE;
+	}
+
+	GVariantBuilder builder; /* Target: (assb) */
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+	/* Setup the job properties */
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
+	if (instance_name != NULL)
+		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
+	g_variant_builder_close(&builder);
+
+	/* The value itself */
+	gchar * envstr = g_strdup_printf("APP_EXEC=%s", execline);
+	g_variant_builder_add_value(&builder, g_variant_new_take_string(envstr));
+
+	/* Do we want to replace?  Yes, we do! */
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+	g_dbus_connection_call(bus,
+		"com.ubuntu.Upstart",
+		"/com/ubuntu/Upstart",
+		"com.ubuntu.Upstart0_6",
+		"SetEnv",
+		g_variant_builder_end(&builder),
+		NULL, /* reply */
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout */
+		NULL, /* cancelable */
+		NULL, NULL); /* callback */
+
+	g_object_unref(bus);
+}
