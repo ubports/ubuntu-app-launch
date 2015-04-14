@@ -2211,6 +2211,7 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline)
 	/* Check to see if we can get the job environment */
 	const gchar * job_name = g_getenv("UPSTART_JOB");
 	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
+	const gchar * demangler = g_getenv("UBUNTU_APP_LAUNCH_DEMANGLE");
 	g_return_if_fail(job_name != NULL);
 
 	GError * error = NULL;
@@ -2233,7 +2234,12 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline)
 	g_variant_builder_close(&builder);
 
 	/* The value itself */
-	gchar * envstr = g_strdup_printf("APP_EXEC=%s", execline);
+	gchar * envstr = NULL;
+	if (demangler) {
+		envstr = g_strdup_printf("APP_EXEC=" DEMANGLER_PATH " %s", execline);
+	} else {
+		envstr = g_strdup_printf("APP_EXEC=%s", execline);
+	}
 	g_variant_builder_add_value(&builder, g_variant_new_take_string(envstr));
 
 	/* Do we want to replace?  Yes, we do! */
