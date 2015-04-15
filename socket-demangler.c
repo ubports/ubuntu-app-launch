@@ -30,13 +30,18 @@
 int
 main (int argc, char * argv[])
 {
-	const gchar * mir_socket = g_getenv("PAY_SERVICE_MIR_SOCKET");
+	const gchar * mir_name =   g_getenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
+	const gchar * mir_socket = g_getenv("UBUNTU_APP_LAUNCH_DEMANGLE_PATH");
 	if (mir_socket == NULL || mir_socket[0] == '\0') {
-		g_error("Unable to find Mir connection from Pay Service");
+		g_error("Unable to find Mir path for service");
+		return -1;
+	}
+	if (mir_name == NULL || mir_name[0] == '\0') {
+		g_error("Unable to find Mir name for service");
 		return -1;
 	}
 
-	g_print("Mir Connection Path: %s\n", mir_socket);
+	g_print("Mir Connection Path: %s:%s\n", mir_name, mir_socket);
 
 	GError * error = NULL;
 	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
@@ -52,9 +57,9 @@ main (int argc, char * argv[])
 
 	retval = g_dbus_connection_call_with_unix_fd_list_sync(
 		bus,
-		"com.canonical.pay",
+		mir_name,
 		mir_socket,
-		"com.canonical.pay.payui",
+		"com.canonical.UbuntuAppLaunch.demangler",
 		"GetMirSocket",
 		NULL,
 		G_VARIANT_TYPE("(h)"),
