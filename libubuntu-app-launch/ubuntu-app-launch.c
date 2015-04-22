@@ -1826,6 +1826,24 @@ ubuntu_app_launch_start_multiple_helper (const gchar * type, const gchar * appid
 	return NULL;
 }
 
+gchar *
+ubuntu_app_launch_start_session_helper (const gchar * type, MirPromptSession * session, const gchar * appid, const gchar * const * uris)
+{
+	g_return_val_if_fail(type != NULL, NULL);
+	g_return_val_if_fail(session != NULL, NULL);
+	g_return_val_if_fail(appid != NULL, NULL);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, NULL);
+
+	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
+
+	if (start_helper_core(type, appid, uris, instanceid)) {
+		return instanceid;
+	}
+
+	g_free(instanceid);
+	return NULL;
+}
+
 /* Print an error if we couldn't stop it */
 static void
 stop_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
