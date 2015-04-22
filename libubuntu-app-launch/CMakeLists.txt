@@ -17,6 +17,7 @@ set(ABI_VERSION 2)
 add_lttng_gen_tp(NAME ubuntu-app-launch-trace)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" )
 
 set(LAUNCHER_HEADERS
 ubuntu-app-launch.h
@@ -28,9 +29,6 @@ second-exec-core.c
 click-exec.c
 desktop-exec.c
 ubuntu-app-launch-trace.c
-recoverable-problem.c
-"${CMAKE_SOURCE_DIR}/helpers-shared.c"
-"${CMAKE_SOURCE_DIR}/helpers.c"
 )
 
 add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES})
@@ -39,6 +37,8 @@ set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
 	SOVERSION ${ABI_VERSION}
 	OUTPUT_NAME "ubuntu-app-launch"
+	LINK_FLAGS "${ldflags} -Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libubuntu-app-launch.map"
+	LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/libubuntu-app-launch.map"
 )
 
 target_link_libraries(ubuntu-launcher
@@ -50,6 +50,7 @@ target_link_libraries(ubuntu-launcher
 	${JSONGLIB_LIBRARIES}
 	${CLICK_LIBRARIES}
 	${ZEITGEIST_LIBRARIES}
+	helpers
 	-Wl,--no-undefined
 )
 

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -e
+
+# Make the setuid helper setuid
+
+if [ "$1" = configure ]; then
+	chmod u+s /usr/lib/#MULTIARCH#/ubuntu-app-launch/oom-adjust-setuid-helper
+fi
+
+#DEBHELPER#
+
+exit 0

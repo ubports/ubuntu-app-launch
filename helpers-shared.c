@@ -22,6 +22,7 @@
 #include <cgmanager/cgmanager.h>
 
 #include "ual-tracepoint.h"
+#include "libubuntu-app-launch/recoverable-problem.h"
 
 /* Check to make sure we have the sections and keys we want */
 static gboolean
@@ -97,34 +98,137 @@ keyfile_for_appid (const gchar * appid, gchar ** desktopfile)
 	return keyfile;
 }
 
+/* Structure to handle data for the cgmanager connection
+   set of callbacks */
+typedef struct {
+	GMainLoop * loop;
+	GCancellable * cancel;
+	GDBusConnection * con;
+} cgm_connection_t;
+
+/* Function that gets executed when we timeout trying to connect. This
+   is related to: LP #1377332 */
+static gboolean
+cgroup_manager_connection_timeout_cb (gpointer data)
+{
+	cgm_connection_t * connection = (cgm_connection_t *)data;
+
+	g_cancellable_cancel(connection->cancel);
+
+	return G_SOURCE_CONTINUE;
+}
+
+static void
+cgroup_manager_connection_core_cb (GDBusConnection *(*finish_func)(GAsyncResult * res, GError ** error), GAsyncResult * res, cgm_connection_t * connection)
+{
+	GError * error = NULL;
+
+	connection->con = finish_func(res, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to get cgmanager connection: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_main_loop_quit(connection->loop);
+}
+
+static void
+cgroup_manager_connection_bus_cb (GObject * obj, GAsyncResult * res, gpointer data)
+{
+	cgroup_manager_connection_core_cb(g_bus_get_finish, res, (cgm_connection_t *)data);
+}
+
+static void
+cgroup_manager_connection_addr_cb (GObject * obj, GAsyncResult * res, gpointer data)
+{
+	cgroup_manager_connection_core_cb(g_dbus_connection_new_for_address_finish, res, (cgm_connection_t *)data);
+}
+
 /* Get the connection to the cgroup manager */
 GDBusConnection *
 cgroup_manager_connection (void)
 {
-	GError * error = NULL;
+	gboolean use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != NULL;
+	GMainContext * context = g_main_context_new();
+	g_main_context_push_thread_default(context);
 
-	GDBusConnection * cgmanager = NULL;
+	cgm_connection_t connection = {
+		.loop = g_main_loop_new(context, FALSE),
+		.con = NULL,
+		.cancel = g_cancellable_new()
+	};
+	
+	GSource * timesrc = g_timeout_source_new_seconds(1);
+	g_source_set_callback(timesrc, cgroup_manager_connection_timeout_cb, &connection, NULL);
+	g_source_attach(timesrc, context);
 
-	if (g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS")) {
+	if (use_session_bus) {
 		/* For working dbusmock */
 		g_debug("Connecting to CG Manager on session bus");
-		cgmanager = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+		g_bus_get(G_BUS_TYPE_SESSION,
+			connection.cancel,
+			cgroup_manager_connection_bus_cb,
+			&connection);
 	} else {
-		cgmanager = g_dbus_connection_new_for_address_sync(
+		g_dbus_connection_new_for_address(
 			CGMANAGER_DBUS_PATH,
 			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT,
 			NULL, /* Auth Observer */
-			NULL, /* Cancellable */
-			&error);
+			connection.cancel, /* Cancellable */
+			cgroup_manager_connection_addr_cb,
+			&connection);
 	}
+
+	g_main_loop_run(connection.loop);
+
+	g_source_destroy(timesrc);
+	g_source_unref(timesrc);
+
+	g_main_loop_unref(connection.loop);
+	g_object_unref(connection.cancel);
+
+	g_main_context_pop_thread_default(context);
+
+	if (!use_session_bus && connection.con != NULL) {
+		g_object_set_data(G_OBJECT(connection.con), "cgmanager-context", context);
+	} else {
+		g_main_context_unref(context);
+	}
+
+	return connection.con;
+}
+
+/* This does a complex unref for the case that we're not using a shared
+   pointer. In that case the initialization happens under the context that
+   we used for the timeout, and it turns out GDBus saves that context to
+   use for the close event. Upon the task closing it sends an idle source
+   to that context which free's the last bit of memory. So we need the events
+   on that context to be executed or we just leak. So what this does is force
+   a close synchronously so that the event gets placed on the context and then
+   frees the context to ensure that all of the events are processed. */
+void
+cgroup_manager_unref (GDBusConnection * cgmanager)
+{
+	if (cgmanager == NULL)
+		return;
+
+	GMainContext * creationcontext = g_object_get_data(G_OBJECT(cgmanager), "cgmanager-context");
+	if (creationcontext == NULL) {
+		g_object_unref(cgmanager);
+		return;
+	}
+
+	GError * error = NULL;
+	g_dbus_connection_close_sync(cgmanager, NULL, &error);
 
 	if (error != NULL) {
-		g_warning("Unable to connect to cgroup manager: %s", error->message);
+		g_warning("Unable to close CGManager Connection: %s", error->message);
 		g_error_free(error);
-		return NULL;
 	}
 
-	return cgmanager;
+	g_object_unref(cgmanager);
+	g_main_context_unref(creationcontext);
 }
 
 /* Get the PIDs for a particular cgroup */
@@ -149,7 +253,7 @@ pids_from_cgroup (GDBusConnection * cgmanager, const gchar * jobname, const gcha
 		name, /* bus name for direct connection is NULL */
 		"/org/linuxcontainers/cgmanager",
 		"org.linuxcontainers.cgmanager0_0",
-		"GetTasks",
+		"GetTasksRecursive",
 		g_variant_new("(ss)", "freezer", groupname ? groupname : ""),
 		G_VARIANT_TYPE("(ai)"),
 		G_DBUS_CALL_FLAGS_NONE,

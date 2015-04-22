@@ -53,6 +53,15 @@ typedef void (*UbuntuAppLaunchAppObserver) (const gchar * appid, gpointer user_d
 typedef void (*UbuntuAppLaunchAppFailedObserver) (const gchar * appid, UbuntuAppLaunchAppFailed failure_type, gpointer user_data);
 
 /**
+ * UbuntuAppLaunchAppPausedResumedObserver:
+ * @appid: App ID of the application being paused
+ * @pids: Zero terminated array of PIDs
+ *
+ * Function prototype for application paused and resumed observers.
+ */
+typedef void (*UbuntuAppLaunchAppPausedResumedObserver) (const gchar * appid, GPid * pids, gpointer user_data);
+
+/**
  * UbuntuAppLaunchHelperObserver:
  *
  * Function to watch for helpers that are starting and stopping
@@ -210,6 +219,32 @@ gboolean   ubuntu_app_launch_observer_add_app_failed   (UbuntuAppLaunchAppFailed
                                                          gpointer                          user_data);
 
 /**
+ * ubuntu_app_launch_observer_add_app_paused:
+ * @observer: (scope notified): Callback when an application is paused
+ * @user_data: (allow-none) (closure): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * is paused.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_add_app_paused   (UbuntuAppLaunchAppPausedResumedObserver observer,
+                                                        gpointer                                user_data);
+
+/**
+ * ubuntu_app_launch_observer_add_app_resumed:
+ * @observer: (scope notified): Callback when an application is resumed
+ * @user_data: (allow-none) (closure): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * is resumed. Which is after the SIGCONT has been sent to the pids.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_add_app_resumed  (UbuntuAppLaunchAppPausedResumedObserver observer,
+                                                        gpointer                                user_data);
+
+/**
  * ubuntu_app_launch_observer_delete_app_starting:
  * @observer: (scope notified): Callback to remove
  * @user_data: (closure) (allow-none): Data that was passed to the observer
@@ -221,6 +256,7 @@ gboolean   ubuntu_app_launch_observer_add_app_failed   (UbuntuAppLaunchAppFailed
  */
 gboolean   ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver       observer,
                                                             gpointer                          user_data);
+
 /**
  * ubuntu_app_launch_observer_delete_app_started:
  * @observer: (scope notified): Callback to remove
@@ -284,6 +320,33 @@ gboolean   ubuntu_app_launch_observer_delete_app_resume   (UbuntuAppLaunchAppObs
  */
 gboolean   ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver        observer,
                                                           gpointer                                 user_data);
+
+/**
+ * ubuntu_app_launch_observer_delete_app_paused:
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data to pass to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer,
+                                                         gpointer                                user_data);
+
+/**
+ * ubuntu_app_launch_observer_delete_app_resumed:
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data to pass to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedObserver  observer,
+                                                          gpointer                                 user_data);
+
 /**
  * ubuntu_app_launch_list_running_apps:
  *

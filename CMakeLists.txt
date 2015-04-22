@@ -26,6 +26,9 @@ if (EXISTS "/etc/debian_version")
 endif()
 
 set(pkglibexecdir "${CMAKE_INSTALL_FULL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_PKGLIBEXECDIR "${CMAKE_INSTALL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_FULL_PKGLIBEXECDIR "${CMAKE_INSTALL_FULL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_FULL_PKGDATADIR "${CMAKE_INSTALL_FULL_DATADIR}/${CMAKE_PROJECT_NAME}")
 
 execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
 	OUTPUT_VARIABLE UBUNTU_APP_LAUNCH_ARCH
@@ -70,6 +73,9 @@ include_directories(${LTTNG_INCLUDE_DIRS})
 pkg_check_modules(CGMANAGER REQUIRED libcgmanager)
 include_directories(${CGMANAGER_INCLUDE_DIRS})
 
+pkg_check_modules(MIR mirclient)
+include_directories(${MIR_INCLUDE_DIRS})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
@@ -80,7 +86,7 @@ add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c helpers-shared.c)
+add_library(helpers STATIC helpers.c helpers-shared.c libubuntu-app-launch/recoverable-problem.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
 
 ####################
@@ -157,6 +163,14 @@ target_link_libraries(cgroup-reap-all helpers)
 install(TARGETS cgroup-reap-all RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# oom-adjust-setuid-helper
+####################
+
+add_executable(oom-adjust-setuid-helper oom-adjust-setuid-helper.c)
+set_target_properties(oom-adjust-setuid-helper PROPERTIES OUTPUT_NAME "oom-adjust-setuid-helper")
+install(TARGETS oom-adjust-setuid-helper RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # ubuntu-app-launch-desktop.click-hook
 ####################
 
@@ -165,6 +179,7 @@ configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE
 add_subdirectory(libubuntu-app-launch)
 add_subdirectory(upstart-jobs)
 add_subdirectory(tools)
+add_subdirectory(ubuntu-app-test)
 
 # testing & coverage
 if (${enable_tests})

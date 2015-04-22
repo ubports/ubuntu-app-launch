@@ -1,3 +1,88 @@
+ubuntu-app-launch (0.4+15.04.20150403-0ubuntu1) vivid; urgency=medium
+
+  [ Ted Gould ]
+  * When Mir isn't available just exec with X11
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 03 Apr 2015 17:30:48 +0000
+
+ubuntu-app-launch (0.4+15.04.20150313.2-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Rodney Dawes ]
+  * Save status from waitpid and exit with it. (LP: #1431565)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 13 Mar 2015 16:05:56 +0000
+
+ubuntu-app-launch (0.4+15.04.20150305.1-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * debian/libubuntu-app-launch2.symbols: auto-update to released
+    version
+
+  [ Ted Gould ]
+  * Add a test tool to run an application from the command line (LP:
+    #1425286)
+  * Emit a signal when applications are paused or resumed (LP: #1425285)
+  * Remove application log on exit if not in developer mode (LP:
+    #1414039)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 05 Mar 2015 14:36:35 +0000
+
+ubuntu-app-launch (0.4+15.04.20141121-0ubuntu1) vivid; urgency=low
+
+  [ Ted Gould ]
+  * Remove reporting a recoverable problem on cgmanager (LP: #1394919)
+  * Use a version script to ensure we're not leaking symbols
+  * Create a custom GMainContext when waiting on the CGManager DBus
+    connection. (LP: #1394622)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 21 Nov 2014 21:17:30 +0000
+
+ubuntu-app-launch (0.4+15.04.20141118-0ubuntu1) vivid; urgency=low
+
+  [ Ted Gould ]
+  * Attenting to connect to cgmanager for 1 second and then failing and
+    reporting a recoverable error. (LP: #1377332)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 18 Nov 2014 21:10:45 +0000
+
+ubuntu-app-launch (0.4+15.04.20141031-0ubuntu1) vivid; urgency=low
+
+  [ Chris Townsend ]
+  * Change GetTasks to GetTasksRecursive so it searches all pids related
+    to a cgroup instead of just the first pid. (LP: #1386357)
+
+  [ Leo Arias ]
+  * On the cgroup manual test, make it clear that the command must be
+    run on the app.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 31 Oct 2014 15:02:48 +0000
+
+ubuntu-app-launch (0.4+14.10.20141006-0ubuntu1) utopic; urgency=low
+
+  [ Ted Gould ]
+  * Set OOM adjustment without using temporary files. (LP: #1374177)
+  * Use a setuid helper for OOM adjustment of Oxide renderers
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 06 Oct 2014 14:33:13 +0000
+
+ubuntu-app-launch (0.4+14.10.20140925-0ubuntu1) utopic; urgency=low
+
+  [ Martin Pitt ]
+  * Upstart dep updated to trunk
+
+  [ Ted Gould ]
+  * Upstart dep updated to trunk
+  * Add handling for X-Ubuntu-SymbolicIcon in desktop hook (LP:
+    #1365408)
+
+  [ CI bot ]
+  * Adjust upstart recommends to upstart-bin (LP: #1351306)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 25 Sep 2014 14:43:28 +0000
+
 ubuntu-app-launch (0.4+14.10.20140915.3-0ubuntu1) utopic; urgency=medium
 
   [ Ted Gould ]
