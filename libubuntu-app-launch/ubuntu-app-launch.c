@@ -1826,6 +1826,51 @@ ubuntu_app_launch_start_multiple_helper (const gchar * type, const gchar * appid
 	return NULL;
 }
 
+/* Transfer from Mir's data structure to ours */
+static void
+get_mir_session_fd_helper (MirPromptSession * session, size_t count, int const * fdin, void * user_data)
+{
+	if (count != 1) {
+		g_warning("Mir trusted session returned %d FDs instead of one", (int)count);
+		return;
+	}
+
+	int * retfd = (int *)user_data;
+	*retfd = fdin[0];
+}
+
+/* Setup to get the FD from Mir, blocking */
+static int
+get_mir_session_fd (MirPromptSession * session)
+{
+	int retfd = 0;
+	MirWaitHandle * wait = mir_prompt_session_new_fds_for_prompt_providers(session,
+		1,
+		get_mir_session_fd_helper,
+		&retfd);
+
+	mir_wait_for(wait);
+
+	return retfd;
+}
+
+/* Sets up the DBus proxy to send to the demangler */
+static gchar *
+build_proxy_socket_path (const gchar * appid, int mirfd)
+{
+	// TODO
+
+	return NULL;
+}
+
+/* Cleans up if we need to early */
+static void
+remove_socket_path (const gchar * path)
+{
+	// TODO
+
+}
+
 gchar *
 ubuntu_app_launch_start_session_helper (const gchar * type, MirPromptSession * session, const gchar * appid, const gchar * const * uris)
 {
@@ -1834,12 +1879,25 @@ ubuntu_app_launch_start_session_helper (const gchar * type, MirPromptSession * s
 	g_return_val_if_fail(appid != NULL, NULL);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, NULL);
 
+	int mirfd = get_mir_session_fd(session);
+	if (mirfd == 0)
+		return NULL;
+
+	gchar * socket_path = build_proxy_socket_path(appid, mirfd);
+	if (socket_path == NULL) {
+		close(mirfd);
+		return NULL;
+	}
+
 	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
 
 	if (start_helper_core(type, appid, uris, instanceid)) {
 		return instanceid;
 	}
 
+	remove_socket_path(socket_path);
+	g_free(socket_path);
+	close(mirfd);
 	g_free(instanceid);
 	return NULL;
 }
