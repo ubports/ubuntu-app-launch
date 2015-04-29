@@ -42,6 +42,7 @@ int kill (pid_t pid, int signal);
 static gchar * escape_dbus_string (const gchar * input);
 
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path);
+G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd);
 
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
@@ -1924,7 +1925,7 @@ proxy_mir_socket (GObject * obj, GDBusMethodInvocation * invocation, gpointer us
 		return FALSE;
 	}   
 
-	// TODO clear fd
+	g_object_set_qdata(obj, mir_fd_quark(), 0);
 	// TODO unexport
 
 	return TRUE;
@@ -1991,6 +1992,8 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 	}
 
 	g_object_set_qdata_full(skel, proxy_path_quark(), g_strdup(socket_name), g_free);
+	g_object_set_qdata(skel, mir_fd_quark(), GINT_TO_POINTER(mirfd));
+	/* TODO: Handle closing on cleanup */
 	open_proxies = g_list_prepend(open_proxies, skel);
 
 	g_object_unref(session);
