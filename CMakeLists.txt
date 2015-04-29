@@ -36,7 +36,7 @@ execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
 )
 set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -std=c99")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -Wno-error=deprecated-declarations -std=c99")
 
 enable_testing()
 

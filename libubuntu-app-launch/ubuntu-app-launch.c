@@ -38,6 +38,7 @@ static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * ap
 static void free_helper (gpointer value);
 static GList * pids_for_appid (const gchar * appid);
 int kill (pid_t pid, int signal);
+static gchar * escape_dbus_string (const gchar * input);
 
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
@@ -1854,21 +1855,115 @@ get_mir_session_fd (MirPromptSession * session)
 	return retfd;
 }
 
-/* Sets up the DBus proxy to send to the demangler */
-static gchar *
-build_proxy_socket_path (const gchar * appid, int mirfd)
-{
-	// TODO
+static GList * open_proxies = NULL;
 
-	return NULL;
+static gint
+remove_socket_path_find (gconstpointer a, gconstpointer b) 
+{
+	GObject * obj = (GObject *)a;
+	const gchar * path = (const gchar *)b;
+
+	gchar * objpath = g_object_get_data(obj, "path");
+	
+	return g_strcmp0(objpath, path);
 }
 
 /* Cleans up if we need to early */
 static void
 remove_socket_path (const gchar * path)
 {
-	// TODO
+	GList * thisproxy = g_list_find_custom(open_proxies, path, remove_socket_path_find);
+	if (thisproxy == NULL)
+		return;
 
+	GObject * obj = G_OBJECT(thisproxy->data);
+	open_proxies = g_list_remove(open_proxies, thisproxy);
+	g_object_unref(obj);
+}
+
+static void
+proxy_cleanup_list (void)
+{
+	while (open_proxies) {
+		GObject * obj = G_OBJECT(open_proxies->data);
+		gchar * path = g_object_get_data(obj, "path");
+		remove_socket_path(path);
+	}
+}
+
+static void
+proxy_mir_socket (void)
+{
+	// TODO
+}
+
+/* Sets up the DBus proxy to send to the demangler */
+static gchar *
+build_proxy_socket_path (const gchar * appid, int mirfd)
+{
+	static gboolean final_cleanup = FALSE;
+	if (!final_cleanup) {
+		g_atexit(proxy_cleanup_list);
+		final_cleanup = TRUE;
+	}
+
+	GError * error = NULL;
+	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	if (error != NULL) {
+		g_warning("Unable to get session bus: %s", error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	/* Export an Object on DBus */
+	//payuiobj = proxy_pay_payui_skeleton_new(),
+	GObject * skel = NULL;
+	g_signal_connect(skel, "handle-get-mir-socket", G_CALLBACK(proxy_mir_socket), GINT_TO_POINTER(mirfd));
+
+	gchar * encoded_appid = escape_dbus_string(appid);
+	gchar * socket_name = NULL;
+	/* Loop until we fine an object path that isn't taken (probably only once) */
+	while (socket_name == NULL) {
+		gchar* tryname = g_strdup_printf("/com/canonical/UbuntuAppLaunch/%s/%X", encoded_appid, g_random_int());
+		g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skel),
+			session,
+			tryname,
+			&error);
+
+		if (error == NULL) {
+			socket_name = tryname;
+		} else {
+			/* Always print the error, but if the object path is in use let's
+			   not exit the loop. Let's just try again. */
+			bool exitnow = (error->domain != G_DBUS_ERROR || error->code != G_DBUS_ERROR_OBJECT_PATH_IN_USE);
+			g_critical("Unable to export payui object: %s", error->message);
+			g_error_free(error);
+			if (exitnow) {
+				g_free(tryname);
+				break;
+			}
+		}
+
+		g_free(tryname);
+	}
+	g_free(encoded_appid);
+
+	/* If we didn't get a socket name, we should just exit. And
+	   make sure to clean up the socket. */
+	if (socket_name == NULL) {   
+		g_object_unref(skel);
+		g_object_unref(session);
+		g_critical("Unable to export object to any name");
+		return NULL;
+	}
+
+	// TODO: qdata
+	g_object_set_data_full(skel, "path", g_strdup(socket_name), g_free);
+	open_proxies = g_list_prepend(open_proxies, skel);
+
+	g_object_unref(session);
+
+	return socket_name;
 }
 
 gchar *
@@ -2335,3 +2430,28 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline)
 
 	g_object_unref(bus);
 }
+
+static gchar *
+escape_dbus_string (const gchar * input)
+{
+	static const gchar *xdigits = "0123456789abcdef";
+	GString *escaped;
+	gchar c;
+
+	g_return_val_if_fail (input != NULL, NULL);
+
+	escaped = g_string_new (NULL);
+	while ((c = *input++)) {
+		if (g_ascii_isalnum (c) || c == '.') {
+			g_string_append_c (escaped, c);
+		} else {
+			g_string_append_c (escaped, '-');
+			g_string_append_c (escaped, xdigits[c >> 4]);
+			g_string_append_c (escaped, xdigits[c & 0xf]);
+		}
+	}
+
+	return g_string_free (escaped, FALSE);
+}
+
+
