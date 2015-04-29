@@ -40,6 +40,8 @@ static GList * pids_for_appid (const gchar * appid);
 int kill (pid_t pid, int signal);
 static gchar * escape_dbus_string (const gchar * input);
 
+G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path);
+
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
 static gchar *
@@ -1863,7 +1865,7 @@ remove_socket_path_find (gconstpointer a, gconstpointer b)
 	GObject * obj = (GObject *)a;
 	const gchar * path = (const gchar *)b;
 
-	gchar * objpath = g_object_get_data(obj, "path");
+	gchar * objpath = g_object_get_qdata(obj, proxy_path_quark());
 	
 	return g_strcmp0(objpath, path);
 }
@@ -1886,7 +1888,7 @@ proxy_cleanup_list (void)
 {
 	while (open_proxies) {
 		GObject * obj = G_OBJECT(open_proxies->data);
-		gchar * path = g_object_get_data(obj, "path");
+		gchar * path = g_object_get_qdata(obj, proxy_path_quark());
 		remove_socket_path(path);
 	}
 }
@@ -1957,8 +1959,7 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 		return NULL;
 	}
 
-	// TODO: qdata
-	g_object_set_data_full(skel, "path", g_strdup(socket_name), g_free);
+	g_object_set_qdata_full(skel, proxy_path_quark(), g_strdup(socket_name), g_free);
 	open_proxies = g_list_prepend(open_proxies, skel);
 
 	g_object_unref(session);
@@ -2431,6 +2432,7 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline)
 	g_object_unref(bus);
 }
 
+/* ensure that all characters are valid in the dbus output string */
 static gchar *
 escape_dbus_string (const gchar * input)
 {
@@ -2453,5 +2455,4 @@ escape_dbus_string (const gchar * input)
 
 	return g_string_free (escaped, FALSE);
 }
-
 
