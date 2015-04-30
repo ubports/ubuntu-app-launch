@@ -1895,6 +1895,16 @@ remove_socket_path (const gchar * path)
 	g_object_unref(obj);
 }
 
+/* Small timeout function that shouldn't, in most cases, ever do anything.
+   But we need it here to ensure we don't leave things on the bus */
+static gboolean
+proxy_timeout (gpointer user_data)
+{
+	const gchar * path = (const gchar *)user_data;
+	remove_socket_path(path);
+	return G_SOURCE_REMOVE;
+}
+
 /* Removes the whole list of proxies if they are there */
 static void
 proxy_cleanup_list (void)
@@ -2004,8 +2014,13 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 
 	g_object_set_qdata_full(skel, proxy_path_quark(), g_strdup(socket_name), g_free);
 	g_object_set_qdata(skel, mir_fd_quark(), GINT_TO_POINTER(mirfd));
-	/* TODO: Handle closing on cleanup */
 	open_proxies = g_list_prepend(open_proxies, skel);
+
+	g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
+	                           5,
+	                           proxy_timeout,
+	                           g_strdup(socket_name),
+	                           g_free);
 
 	g_object_unref(session);
 
