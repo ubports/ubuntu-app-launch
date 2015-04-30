@@ -35,6 +35,7 @@
 #include "click-exec.h"
 #include "desktop-exec.h"
 #include "recoverable-problem.h"
+#include "proxy-socket-demangler.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -1985,8 +1986,8 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 
 	/* Export an Object on DBus */
 	//payuiobj = proxy_pay_payui_skeleton_new(),
-	GObject * skel = NULL;
-	g_signal_connect(skel, "handle-get-mir-socket", G_CALLBACK(proxy_mir_socket), GINT_TO_POINTER(mirfd));
+	proxySocketDemangler * skel = proxy_socket_demangler_skeleton_new();
+	g_signal_connect(G_OBJECT(skel), "handle-get-mir-socket", G_CALLBACK(proxy_mir_socket), GINT_TO_POINTER(mirfd));
 
 	gchar * encoded_appid = escape_dbus_string(appid);
 	gchar * socket_name = NULL;
@@ -2025,8 +2026,8 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 		return NULL;
 	}
 
-	g_object_set_qdata_full(skel, proxy_path_quark(), g_strdup(socket_name), g_free);
-	g_object_set_qdata(skel, mir_fd_quark(), GINT_TO_POINTER(mirfd));
+	g_object_set_qdata_full(G_OBJECT(skel), proxy_path_quark(), g_strdup(socket_name), g_free);
+	g_object_set_qdata(G_OBJECT(skel), mir_fd_quark(), GINT_TO_POINTER(mirfd));
 	open_proxies = g_list_prepend(open_proxies, skel);
 
 	g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
