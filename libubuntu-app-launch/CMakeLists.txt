@@ -80,6 +80,8 @@ install(
 	DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
+add_gdbus_codegen_with_namespace(SERVICE_LIB_GEN_SOURCES proxy-payui com.canonical. proxy ${CMAKE_SOURCE_DIR}/data/com.canonical.pay.payui.xml)
+
 ##########################
 # Introspection
 ##########################

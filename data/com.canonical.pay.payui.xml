@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<node>
+	<interface name="com.canonical.pay.payui">
+		<method name="GetMirSocket">
+			<arg type="h" name="handle" direction="out" />
+		</method>
+	</interface>
+</node>
