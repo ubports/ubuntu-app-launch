@@ -31,7 +31,13 @@ desktop-exec.c
 ubuntu-app-launch-trace.c
 )
 
-add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES})
+set(LAUNCHER_GEN_SOURCES
+)
+
+add_gdbus_codegen_with_namespace(LAUNCHER_GEN_SOURCES proxy-socket-demangler com.canonical.UbuntuAppLaunch. proxy ${CMAKE_SOURCE_DIR}/data/com.canonical.UbuntuAppLaunch.SocketDemangler.xml)
+
+
+add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES} ${LAUNCHER_GEN_SOURCES})
 
 set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
@@ -79,8 +85,6 @@ install(
 	FILES "${CMAKE_CURRENT_BINARY_DIR}/ubuntu-app-launch-${API_VERSION}.pc"
 	DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
-
-add_gdbus_codegen_with_namespace(SERVICE_LIB_GEN_SOURCES proxy-payui com.canonical. proxy ${CMAKE_SOURCE_DIR}/data/com.canonical.pay.payui.xml)
 
 ##########################
 # Introspection
