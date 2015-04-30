@@ -1882,9 +1882,20 @@ remove_socket_path (const gchar * path)
 
 	GObject * obj = G_OBJECT(thisproxy->data);
 	open_proxies = g_list_remove(open_proxies, thisproxy);
+
+	/* Remove ourselves from DBus if we weren't already */
+	g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(obj));
+
+	/* If we still have FD, close it */
+	int mirfd = GPOINTER_TO_INT(g_object_get_qdata(obj, mir_fd_quark()));
+	if (mirfd != 0) {
+		close(mirfd);
+	}
+
 	g_object_unref(obj);
 }
 
+/* Removes the whole list of proxies if they are there */
 static void
 proxy_cleanup_list (void)
 {
@@ -1926,7 +1937,7 @@ proxy_mir_socket (GObject * obj, GDBusMethodInvocation * invocation, gpointer us
 	}   
 
 	g_object_set_qdata(obj, mir_fd_quark(), 0);
-	// TODO unexport
+	g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(obj));
 
 	return TRUE;
 }
