@@ -34,6 +34,7 @@
 #include "ual-tracepoint.h"
 #include "click-exec.h"
 #include "desktop-exec.h"
+#include "recoverable-problem.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -1873,12 +1874,12 @@ remove_socket_path_find (gconstpointer a, gconstpointer b)
 }
 
 /* Cleans up if we need to early */
-static void
+static gboolean
 remove_socket_path (const gchar * path)
 {
 	GList * thisproxy = g_list_find_custom(open_proxies, path, remove_socket_path_find);
 	if (thisproxy == NULL)
-		return;
+		return FALSE;
 
 	GObject * obj = G_OBJECT(thisproxy->data);
 	open_proxies = g_list_remove(open_proxies, thisproxy);
@@ -1893,6 +1894,8 @@ remove_socket_path (const gchar * path)
 	}
 
 	g_object_unref(obj);
+
+	return TRUE;
 }
 
 /* Small timeout function that shouldn't, in most cases, ever do anything.
@@ -1901,7 +1904,17 @@ static gboolean
 proxy_timeout (gpointer user_data)
 {
 	const gchar * path = (const gchar *)user_data;
-	remove_socket_path(path);
+	if (remove_socket_path(path)) {
+		/* This is actually an error, we should expect not to find
+		   this here to do anything with it. */
+		const gchar * props[3] = {
+			"UbuntuAppLaunchProxyDbusPath",
+			NULL,
+			NULL
+		};
+		props[1] = path;
+		report_recoverable_problem("ubuntu-app-launch-mir-fd-proxy", 0, TRUE, props);
+	}
 	return G_SOURCE_REMOVE;
 }
 
