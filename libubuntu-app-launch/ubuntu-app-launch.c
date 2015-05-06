@@ -1883,7 +1883,7 @@ remove_socket_path (const gchar * path)
 		return FALSE;
 
 	GObject * obj = G_OBJECT(thisproxy->data);
-	open_proxies = g_list_remove(open_proxies, thisproxy);
+	open_proxies = g_list_delete_link(open_proxies, thisproxy);
 
 	/* Remove ourselves from DBus if we weren't already */
 	g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(obj));
@@ -2031,7 +2031,7 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 	open_proxies = g_list_prepend(open_proxies, skel);
 
 	g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
-	                           5,
+	                           2,
 	                           proxy_timeout,
 	                           g_strdup(socket_name),
 	                           g_free);
