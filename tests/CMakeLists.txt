@@ -34,7 +34,8 @@ include_directories("${CMAKE_SOURCE_DIR}/libubuntu-app-launch")
 add_definitions ( -DSPEW_UTILITY="${CMAKE_CURRENT_BINARY_DIR}/data-spew" )
 
 add_executable (libual-test
-	libual-test.cc)
+	libual-test.cc
+	mir-mock.cpp)
 target_link_libraries (libual-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
 
 add_executable (data-spew
