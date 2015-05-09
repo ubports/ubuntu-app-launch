@@ -266,37 +266,52 @@ class LibUAL : public ::testing::Test
 			}
 			ASSERT_EQ(nullptr, bus);
 		}
-
-		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {
-			GVariantIter iter;
-			g_variant_iter_init(&iter, env_array);
+		
+		GVariant * find_env (GVariant * env_array, const gchar * var) {
+			int i;
 			gchar * envvar = NULL;
-			bool found = false;
+			GVariant * retval = nullptr;
 
-			while (g_variant_iter_loop(&iter, "s", &envvar)) {
+			for (i = 0; i < g_variant_n_children(env_array); i++) {
+				GVariant * child = g_variant_get_child_value(env_array, i);
+				const gchar * envvar = g_variant_get_string(child, nullptr);
+
 				if (g_str_has_prefix(envvar, var)) {
-					if (found) {
+					if (retval != nullptr) {
 						g_warning("Found the env var more than once!");
-						return false;
+						g_variant_unref(retval);
+						return nullptr;
 					}
 
-					if (value != NULL) {
-						gchar * combined = g_strdup_printf("%s=%s", var, value);
-						if (g_strcmp0(envvar, combined) == 0) {
-							found = true;
-						}
-						g_free(combined);
-					} else {
-						found = true;
-					}
+					retval = child;
+				} else {
+					g_variant_unref(child);
 				}
 			}
 
-			if (!found) {
+			if (!retval) {
 				gchar * envstr = g_variant_print(env_array, FALSE);
-				g_warning("Unable to find '%s' with value '%s' in '%s'", var, value, envstr);
+				g_warning("Unable to find '%s' in '%s'", var, envstr);
 				g_free(envstr);
 			}
+
+			return retval;
+		}
+
+		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {
+			bool found = false;
+			GVariant * val = find_env(env_array, var);
+			if (val == nullptr)
+				return false;
+
+			const gchar * envvar = g_variant_get_string(val, nullptr);
+
+			gchar * combined = g_strdup_printf("%s=%s", var, value);
+			if (g_strcmp0(envvar, combined) == 0) {
+				found = true;
+			}
+
+			g_variant_unref(val);
 
 			return found;
 		}
