@@ -1446,3 +1446,36 @@ TEST_F(LibUAL, PauseResume)
 	
 	g_free(oomadjfile);
 }
+
+TEST_F(LibUAL, StartSessionHelper)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
+	MirConnection * conn = mir_connect_sync("libual-test", "start-session-helper"); // Mocked, doesn't need cleaning up
+	MirPromptSession * msession = mir_connection_create_prompt_session_sync(conn, 5, nullptr, nullptr);
+
+	/* Basic make sure we can send the event */
+	gchar * instance_id = ubuntu_app_launch_start_session_helper("untrusted-type", msession, "com.test.multiple_first_1.2.3", NULL);
+	ASSERT_NE(nullptr, instance_id);
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
+	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	return;
+}

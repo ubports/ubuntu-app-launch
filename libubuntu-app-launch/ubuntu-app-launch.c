@@ -1985,7 +1985,6 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 	}
 
 	/* Export an Object on DBus */
-	//payuiobj = proxy_pay_payui_skeleton_new(),
 	proxySocketDemangler * skel = proxy_socket_demangler_skeleton_new();
 	g_signal_connect(G_OBJECT(skel), "handle-get-mir-socket", G_CALLBACK(proxy_mir_socket), GINT_TO_POINTER(mirfd));
 
