@@ -17,6 +17,9 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <future>
+#include <thread>
+
 #include <gtest/gtest.h>
 #include <gio/gio.h>
 #include <zeitgeist.h>
@@ -1518,22 +1521,34 @@ TEST_F(LibUAL, StartSessionHelper)
 	g_variant_unref(mpathv);
 
 	/* Exec our tool */
-	gchar * socketstdout = nullptr;
-	GError * error = nullptr;
-	g_spawn_command_line_sync(
-			SOCKET_DEMANGLER " " SOCKET_TOOL,
-			&socketstdout,
-			nullptr,
-			nullptr,
-			&error);
-	if (error != nullptr) {
-		fprintf(stderr, "Unable to spawn '" SOCKET_DEMANGLER " " SOCKET_TOOL "': %s\n", error->message);
-		g_error_free(error);
-		ASSERT_NE(nullptr, error);
+	std::promise<std::string> outputpromise;
+	std::thread t([&outputpromise]() {
+		gchar * socketstdout = nullptr;
+		GError * error = nullptr;
+		g_spawn_command_line_sync(
+				SOCKET_DEMANGLER " " SOCKET_TOOL,
+				&socketstdout,
+				nullptr,
+				nullptr,
+				&error);
+
+		if (error != nullptr) {
+			fprintf(stderr, "Unable to spawn '" SOCKET_DEMANGLER " " SOCKET_TOOL "': %s\n", error->message);
+			g_error_free(error);
+			outputpromise.set_value(std::string(""));
+		} else {
+			outputpromise.set_value(std::string(socketstdout));
+			g_free(socketstdout);
+		}
+	});
+	t.detach();
+
+	auto outputfuture = outputpromise.get_future();
+	while (!outputfuture.valid()) {
+		pause(100);
 	}
 
-	ASSERT_STREQ(filedata, socketstdout);
-	g_free(socketstdout);
+	ASSERT_STREQ(filedata, outputfuture.get().c_str());
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
