@@ -113,6 +113,13 @@ class LibUAL : public ::testing::Test
 				"	ret = dbus.ObjectPath('/com/test/untrusted/helper')\n",
 				NULL);
 
+			dbus_test_dbus_mock_object_add_method(mock, obj,
+				"SetEnv",
+				G_VARIANT_TYPE("(assb)"),
+				NULL,
+				"",
+				NULL);
+
 			/* Click App */
 			DbusTestDbusMockObject * jobobj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
@@ -1552,4 +1559,42 @@ TEST_F(LibUAL, StartSessionHelper)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	return;
+}
+
+TEST_F(LibUAL, SetExec)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+	const char * exec = "lets exec this";
+
+	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	ASSERT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	gchar * appexecstr = g_strdup_printf("APP_EXEC=%s", exec);
+	GVariant * appexecenv = g_variant_get_child_value(calls[0].params, 1);
+	EXPECT_STREQ(appexecstr, g_variant_get_string(appexecenv, nullptr));
+	g_variant_unref(appexecenv);
+	g_free(appexecstr);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Now check for the demangler */
+	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", g_dbus_connection_get_unique_name(bus), TRUE);
+	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec));
+
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	ASSERT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	gchar * demangleexecstr = g_strdup_printf("APP_EXEC=%s %s", SOCKET_DEMANGLER_INSTALL, exec);
+	appexecenv = g_variant_get_child_value(calls[0].params, 1);
+	EXPECT_STREQ(demangleexecstr, g_variant_get_string(appexecenv, nullptr));
+	g_variant_unref(appexecenv);
+	g_free(demangleexecstr);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 }

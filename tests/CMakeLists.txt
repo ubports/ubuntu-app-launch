@@ -34,6 +34,7 @@ include_directories("${CMAKE_SOURCE_DIR}/libubuntu-app-launch")
 add_definitions ( -DSPEW_UTILITY="${CMAKE_CURRENT_BINARY_DIR}/data-spew" )
 add_definitions ( -DSESSION_TEMP_FILE="${CMAKE_CURRENT_BINARY_DIR}/libual-test-session-start-temp" )
 add_definitions ( -DSOCKET_DEMANGLER="${CMAKE_BINARY_DIR}/socket-demangler" )
+add_definitions ( -DSOCKET_DEMANGLER_INSTALL="${pkglibexecdir}/socket-demangler" )
 add_definitions ( -DSOCKET_TOOL="${CMAKE_CURRENT_BINARY_DIR}/socket-tool" )
 
 add_executable (libual-test
