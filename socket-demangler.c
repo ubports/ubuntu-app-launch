@@ -41,8 +41,6 @@ main (int argc, char * argv[])
 		return -1;
 	}
 
-	g_print("Mir Connection Path: %s:%s\n", mir_name, mir_socket);
-
 	GError * error = NULL;
 	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 
@@ -59,7 +57,7 @@ main (int argc, char * argv[])
 		bus,
 		mir_name,
 		mir_socket,
-		"com.canonical.UbuntuAppLaunch.demangler",
+		"com.canonical.UbuntuAppLaunch.SocketDemangler",
 		"GetMirSocket",
 		NULL,
 		G_VARIANT_TYPE("(h)"),
@@ -116,7 +114,6 @@ main (int argc, char * argv[])
 
 	gchar * mirsocketbuf = g_strdup_printf("fd://%d", fd);
 	setenv("MIR_SOCKET", mirsocketbuf, 1);
-	g_print("Setting MIR_SOCKET to: '%s'\n", mirsocketbuf);
 
 	g_free(mirsocketbuf);
 

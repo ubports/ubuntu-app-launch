@@ -20,10 +20,12 @@
 #include <gtest/gtest.h>
 #include <gio/gio.h>
 #include <zeitgeist.h>
+#include "mir-mock.h"
 
 extern "C" {
 #include "ubuntu-app-launch.h"
 #include "libdbustest/dbus-test.h"
+#include <fcntl.h>
 }
 
 class LibUAL : public ::testing::Test
@@ -1468,6 +1470,12 @@ TEST_F(LibUAL, StartSessionHelper)
 	MirConnection * conn = mir_connect_sync("libual-test", "start-session-helper"); // Mocked, doesn't need cleaning up
 	MirPromptSession * msession = mir_connection_create_prompt_session_sync(conn, 5, nullptr, nullptr);
 
+	/* Building a temporary file and making an FD for it */
+	const char * filedata = "This is some data that we should get on the other side\n";
+	ASSERT_TRUE(g_file_set_contents(SESSION_TEMP_FILE, filedata, strlen(filedata), nullptr) == TRUE);
+	int mirfd = open(SESSION_TEMP_FILE, 0);
+	mir_mock_set_trusted_fd(mirfd);
+
 	/* Basic make sure we can send the event */
 	gchar * instance_id = ubuntu_app_launch_start_session_helper("untrusted-type", msession, "com.test.multiple_first_1.2.3", NULL);
 	ASSERT_NE(nullptr, instance_id);
@@ -1484,11 +1492,48 @@ TEST_F(LibUAL, StartSessionHelper)
 	EXPECT_TRUE(g_variant_get_boolean(block));
 	g_variant_unref(block);
 
+	/* Check the environment */
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
 	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
+
+	GVariant * mnamev = find_env(env, "UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
+	ASSERT_NE(nullptr, mnamev); /* Have to assert because, eh, GVariant */
+	EXPECT_STREQ(g_dbus_connection_get_unique_name(bus), g_variant_get_string(mnamev, nullptr) + strlen("UBUNTU_APP_LAUNCH_DEMANGLE_NAME="));
+	GVariant * mpathv = find_env(env, "UBUNTU_APP_LAUNCH_DEMANGLE_PATH");
+	ASSERT_NE(nullptr, mpathv); /* Have to assert because, eh, GVariant */
+
 	g_variant_unref(env);
+
+	/* Setup environment for call */
+	const gchar * mname = g_variant_get_string(mnamev, nullptr);
+	mname += strlen("UBUNTU_APP_LAUNCH_DEMANGLE_NAME=");
+	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", mname, TRUE);
+	g_variant_unref(mnamev);
+
+	const gchar * mpath = g_variant_get_string(mpathv, nullptr);
+	mpath += strlen("UBUNTU_APP_LAUNCH_DEMANGLE_PATH=");
+	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_PATH", mpath, TRUE);
+	g_variant_unref(mpathv);
+
+	/* Exec our tool */
+	gchar * socketstdout = nullptr;
+	GError * error = nullptr;
+	g_spawn_command_line_sync(
+			SOCKET_DEMANGLER " " SOCKET_TOOL,
+			&socketstdout,
+			nullptr,
+			nullptr,
+			&error);
+	if (error != nullptr) {
+		fprintf(stderr, "Unable to spawn '" SOCKET_DEMANGLER " " SOCKET_TOOL "': %s\n", error->message);
+		g_error_free(error);
+		ASSERT_NE(nullptr, error);
+	}
+
+	ASSERT_STREQ(filedata, socketstdout);
+	g_free(socketstdout);
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 

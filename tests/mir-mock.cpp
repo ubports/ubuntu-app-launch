@@ -10,6 +10,7 @@
 static const char * valid_trust_session = "In the circle of trust";
 static bool valid_trust_connection = true;
 static pid_t last_trust_pid = 0;
+static int trusted_fd = 1234;
 
 MirPromptSession *
 mir_connection_create_prompt_session_sync(MirConnection * connection, pid_t pid, void (*)(MirPromptSession *, MirPromptSessionState, void*data), void * context) {
@@ -43,7 +44,7 @@ mir_prompt_session_new_fds_for_prompt_providers (MirPromptSession * session, uns
 		int fdlist[numfds];
 
 		for (int i = 0; i < numfds; i++) 
-			fdlist[i] = 1234;
+			fdlist[i] = trusted_fd;
 
 		cb(session, numfds, fdlist, data);
 	});
@@ -97,4 +98,9 @@ mir_connection_release (MirConnection * con)
 		std::cerr << "Releasing a Mir Connection that isn't valid" << std::endl;
 		exit(1);
 	}
+}
+
+void mir_mock_set_trusted_fd (int fd)
+{
+	trusted_fd = fd;
 }
