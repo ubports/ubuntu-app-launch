@@ -1887,6 +1887,8 @@ remove_socket_path (const gchar * path)
 	if (thisproxy == NULL)
 		return FALSE;
 
+	g_debug("Removing Mir Socket Proxy: %s", path);
+
 	GObject * obj = G_OBJECT(thisproxy->data);
 	open_proxies = g_list_delete_link(open_proxies, thisproxy);
 
@@ -1938,6 +1940,7 @@ proxy_cleanup_list (void)
 static gboolean
 proxy_mir_socket (GObject * obj, GDBusMethodInvocation * invocation, gpointer user_data)
 {
+	g_debug("Called to give Mir socket");
 	int fd = GPOINTER_TO_INT(user_data);
 
 	if (fd == 0) {
@@ -1955,6 +1958,9 @@ proxy_mir_socket (GObject * obj, GDBusMethodInvocation * invocation, gpointer us
 
 	if (error == NULL) {   
 		g_dbus_method_invocation_return_value_with_unix_fd_list(invocation, tuple, list);
+	} else {
+		g_variant_ref_sink(tuple);
+		g_variant_unref(tuple);
 	}
 
 	g_object_unref(list);
