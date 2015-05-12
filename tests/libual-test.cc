@@ -1543,7 +1543,7 @@ TEST_F(LibUAL, StartSessionHelper)
 	t.detach();
 
 	auto outputfuture = outputpromise.get_future();
-	while (!outputfuture.valid()) {
+	while (outputfuture.wait_for(std::chrono::milliseconds{1}) != std::future_status::ready) {
 		pause();
 	}
 
