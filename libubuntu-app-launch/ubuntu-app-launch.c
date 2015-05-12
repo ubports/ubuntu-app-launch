@@ -1760,7 +1760,7 @@ start_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
    to define the instance.  In the end there's only one job with
    an array of instances. */
 static gboolean
-start_helper_core (const gchar * type, const gchar * appid, const gchar * const * uris, const gchar * instance)
+start_helper_core (const gchar * type, const gchar * appid, const gchar * const * uris, const gchar * instance, const gchar * mirsocketpath)
 {
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
@@ -1782,6 +1782,11 @@ start_helper_core (const gchar * type, const gchar * appid, const gchar * const 
 
 	if (instance != NULL) {
 		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instance)));
+	}
+
+	if (mirsocketpath != NULL) {
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("UBUNTU_APP_LAUNCH_DEMANGLE_PATH=%s", mirsocketpath)));
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("UBUNTU_APP_LAUNCH_DEMANGLE_NAME=%s", g_dbus_connection_get_unique_name(con))));
 	}
 
 	g_variant_builder_close(&builder);
@@ -1813,7 +1818,7 @@ ubuntu_app_launch_start_helper (const gchar * type, const gchar * appid, const g
 	g_return_val_if_fail(appid != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
 
-	return start_helper_core(type, appid, uris, NULL);
+	return start_helper_core(type, appid, uris, NULL, NULL);
 }
 
 gchar *
@@ -1825,7 +1830,7 @@ ubuntu_app_launch_start_multiple_helper (const gchar * type, const gchar * appid
 
 	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
 
-	if (start_helper_core(type, appid, uris, instanceid)) {
+	if (start_helper_core(type, appid, uris, instanceid, NULL)) {
 		return instanceid;
 	}
 
@@ -2000,6 +2005,7 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 
 		if (error == NULL) {
 			socket_name = tryname;
+			g_debug("Exporting Mir socket on path: %s", socket_name);
 		} else {
 			/* Always print the error, but if the object path is in use let's
 			   not exit the loop. Let's just try again. */
@@ -2010,9 +2016,9 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 				g_free(tryname);
 				break;
 			}
-		}
 
-		g_free(tryname);
+			g_free(tryname);
+		}
 	}
 	g_free(encoded_appid);
 
@@ -2060,7 +2066,7 @@ ubuntu_app_launch_start_session_helper (const gchar * type, MirPromptSession * s
 
 	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
 
-	if (start_helper_core(type, appid, uris, instanceid)) {
+	if (start_helper_core(type, appid, uris, instanceid, socket_path)) {
 		return instanceid;
 	}
 
@@ -2517,10 +2523,10 @@ escape_dbus_string (const gchar * input)
 
 	escaped = g_string_new (NULL);
 	while ((c = *input++)) {
-		if (g_ascii_isalnum (c) || c == '.') {
+		if (g_ascii_isalnum (c)) {
 			g_string_append_c (escaped, c);
 		} else {
-			g_string_append_c (escaped, '-');
+			g_string_append_c (escaped, '_');
 			g_string_append_c (escaped, xdigits[c >> 4]);
 			g_string_append_c (escaped, xdigits[c & 0xf]);
 		}
