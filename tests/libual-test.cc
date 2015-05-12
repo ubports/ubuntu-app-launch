@@ -321,15 +321,14 @@ class LibUAL : public ::testing::Test
 			return found;
 		}
 
-		static gboolean pause_helper (gpointer pmainloop) {
-			g_main_loop_quit(static_cast<GMainLoop *>(pmainloop));
-			return G_SOURCE_REMOVE;
-		}
-
-		void pause (guint time) {
+		void pause (guint time = 0) {
 			if (time > 0) {
 				GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
-				g_timeout_add(time, pause_helper, mainloop);
+
+				g_timeout_add(time, [](gpointer pmainloop) -> gboolean {
+					g_main_loop_quit(static_cast<GMainLoop *>(pmainloop));
+					return G_SOURCE_REMOVE;
+				}, mainloop);
 
 				g_main_loop_run(mainloop);
 
@@ -1545,7 +1544,7 @@ TEST_F(LibUAL, StartSessionHelper)
 
 	auto outputfuture = outputpromise.get_future();
 	while (!outputfuture.valid()) {
-		pause(100);
+		pause();
 	}
 
 	ASSERT_STREQ(filedata, outputfuture.get().c_str());
