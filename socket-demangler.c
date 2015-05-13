@@ -117,6 +117,5 @@ main (int argc, char * argv[])
 
 	g_free(mirsocketbuf);
 
-	/* Thought, is argv NULL terminated? */
 	return execvp(argv[1], argv + 1);
 }
