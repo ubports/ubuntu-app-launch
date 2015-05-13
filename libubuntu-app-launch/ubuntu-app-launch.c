@@ -2515,6 +2515,8 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline)
 		NULL, NULL); /* callback */
 
 	g_object_unref(bus);
+
+	return TRUE;
 }
 
 /* ensure that all characters are valid in the dbus output string */
