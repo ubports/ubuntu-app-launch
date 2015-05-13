@@ -90,3 +90,8 @@ add_executable (cgroup-reap-test
 target_link_libraries (cgroup-reap-test gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (cgroup-reap-test cgroup-reap-test)
 
+# Desktop Hook Test
+
+configure_file ("click-desktop-hook-db/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-desktop-hook-db/test.conf" @ONLY)
+configure_file ("desktop-hook-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/desktop-hook-test.sh" @ONLY)
+add_test (desktop-hook-test desktop-hook-test.sh)

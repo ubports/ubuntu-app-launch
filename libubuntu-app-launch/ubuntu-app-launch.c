@@ -1603,6 +1603,7 @@ get_manifest (const gchar * pkg)
 	if (error != NULL) {
 		g_warning("Unable to read Click database: %s", error->message);
 		g_error_free(error);
+		g_object_unref(db);
 		return NULL;
 	}
 	/* If TEST_CLICK_USER is unset, this uses the current user name. */
