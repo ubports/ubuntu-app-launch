@@ -474,7 +474,7 @@ gchar *    ubuntu_app_launch_start_multiple_helper     (const gchar *           
  *
  * Start an untrusted helper for a specific @type of a given
  * @appid running under a Mir Trusted Prompt Session @session. The
- * helper's MIR_SOCKET environment variable will be set appripriately
+ * helper's MIR_SOCKET environment variable will be set appropriately
  * so that the helper will draw on the correct surfaces. Otherwise this
  * is the same as #ubuntu_app_launch_start_multiple_helper.
  *
