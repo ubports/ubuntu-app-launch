@@ -1567,6 +1567,7 @@ TEST_F(LibUAL, SetExec)
 
 	const char * exec = "lets exec this";
 
+	g_unsetenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
 	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec));
 
 	guint len = 0;
