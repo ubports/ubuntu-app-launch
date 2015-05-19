@@ -2017,7 +2017,7 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 			/* Always print the error, but if the object path is in use let's
 			   not exit the loop. Let's just try again. */
 			bool exitnow = (error->domain != G_DBUS_ERROR || error->code != G_DBUS_ERROR_OBJECT_PATH_IN_USE);
-			g_critical("Unable to export payui object: %s", error->message);
+			g_critical("Unable to export trusted session object: %s", error->message);
 			g_error_free(error);
 			if (exitnow) {
 				g_free(tryname);
