@@ -1972,7 +1972,7 @@ proxy_mir_socket (GObject * obj, GDBusMethodInvocation * invocation, gpointer us
 		return FALSE;
 	}   
 
-	g_object_set_qdata(obj, mir_fd_quark(), 0);
+	g_object_steal_qdata(obj, mir_fd_quark());
 	g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(obj));
 
 	return TRUE;
