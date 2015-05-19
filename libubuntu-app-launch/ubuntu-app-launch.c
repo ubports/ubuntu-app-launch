@@ -2018,13 +2018,13 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 			   not exit the loop. Let's just try again. */
 			bool exitnow = (error->domain != G_DBUS_ERROR || error->code != G_DBUS_ERROR_OBJECT_PATH_IN_USE);
 			g_critical("Unable to export trusted session object: %s", error->message);
-			g_error_free(error);
+
+			g_clear_error(&error);
+			g_free(tryname);
+
 			if (exitnow) {
-				g_free(tryname);
 				break;
 			}
-
-			g_free(tryname);
 		}
 	}
 	g_free(encoded_appid);
