@@ -41,6 +41,8 @@ main (int argc, char * argv[])
 		return -1;
 	}
 
+	g_debug("Mir socket connection to %s:%s", mir_name, mir_socket);
+
 	GError * error = NULL;
 	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 
@@ -114,6 +116,7 @@ main (int argc, char * argv[])
 
 	gchar * mirsocketbuf = g_strdup_printf("fd://%d", fd);
 	setenv("MIR_SOCKET", mirsocketbuf, 1);
+	g_debug("MIR_SOCKET=%s", mirsocketbuf);
 
 	g_free(mirsocketbuf);
 
