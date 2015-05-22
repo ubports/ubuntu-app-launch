@@ -1531,6 +1531,8 @@ TEST_F(LibUAL, StartSessionHelper)
 	std::thread t([&outputpromise]() {
 		gchar * socketstdout = nullptr;
 		GError * error = nullptr;
+		g_unsetenv("G_MESSAGES_DEBUG");
+
 		g_spawn_command_line_sync(
 				SOCKET_DEMANGLER " " SOCKET_TOOL,
 				&socketstdout,
