@@ -1900,6 +1900,16 @@ remove_socket_path (const gchar * path)
 	int mirfd = GPOINTER_TO_INT(g_object_get_qdata(obj, mir_fd_quark()));
 	if (mirfd != 0) {
 		close(mirfd);
+
+		/* This is actually an error, we should expect not to find
+		   this here to do anything with it. */
+		const gchar * props[3] = {
+			"UbuntuAppLaunchProxyDbusPath",
+			NULL,
+			NULL
+		};
+		props[1] = path;
+		report_recoverable_problem("ubuntu-app-launch-mir-fd-proxy", 0, TRUE, props);
 	}
 
 	g_object_unref(obj);
@@ -1913,17 +1923,7 @@ static gboolean
 proxy_timeout (gpointer user_data)
 {
 	const gchar * path = (const gchar *)user_data;
-	if (remove_socket_path(path)) {
-		/* This is actually an error, we should expect not to find
-		   this here to do anything with it. */
-		const gchar * props[3] = {
-			"UbuntuAppLaunchProxyDbusPath",
-			NULL,
-			NULL
-		};
-		props[1] = path;
-		report_recoverable_problem("ubuntu-app-launch-mir-fd-proxy", 0, TRUE, props);
-	}
+	remove_socket_path(path);
 	return G_SOURCE_REMOVE;
 }
 
@@ -1972,8 +1972,7 @@ proxy_mir_socket (GObject * obj, GDBusMethodInvocation * invocation, gpointer us
 		return FALSE;
 	}   
 
-	g_object_steal_qdata(obj, mir_fd_quark());
-	g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(obj));
+	g_object_set_qdata(obj, mir_fd_quark(), GINT_TO_POINTER(0));
 
 	return TRUE;
 }
