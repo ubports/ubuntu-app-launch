@@ -151,9 +151,10 @@ desktop_source_exists (const gchar * dir, const gchar * name)
 		NULL); /* No error */
 
 	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, NULL)) {
+		gboolean hasappid = g_key_file_has_key(keyfile, DESKTOP_GROUP, APP_ID_KEY, NULL);
 		g_free(desktopfile);
 		g_key_file_free(keyfile);
-		return FALSE;
+		return hasappid;
 	}
 
 	/* At this point we know the key exists, so if we can't find the source
