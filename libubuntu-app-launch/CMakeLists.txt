@@ -17,7 +17,7 @@ set(ABI_VERSION 2)
 add_lttng_gen_tp(NAME ubuntu-app-launch-trace)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
-add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" )
+add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" -DDEMANGLER_PATH="${pkglibexecdir}/socket-demangler" )
 
 set(LAUNCHER_HEADERS
 ubuntu-app-launch.h
@@ -31,7 +31,13 @@ desktop-exec.c
 ubuntu-app-launch-trace.c
 )
 
-add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES})
+set(LAUNCHER_GEN_SOURCES
+)
+
+add_gdbus_codegen_with_namespace(LAUNCHER_GEN_SOURCES proxy-socket-demangler com.canonical.UbuntuAppLaunch. proxy ${CMAKE_SOURCE_DIR}/data/com.canonical.UbuntuAppLaunch.SocketDemangler.xml)
+
+
+add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES} ${LAUNCHER_GEN_SOURCES})
 
 set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
@@ -50,6 +56,7 @@ target_link_libraries(ubuntu-launcher
 	${JSONGLIB_LIBRARIES}
 	${CLICK_LIBRARIES}
 	${ZEITGEIST_LIBRARIES}
+	${MIR_LIBRARIES}
 	helpers
 	-Wl,--no-undefined
 )
@@ -91,7 +98,8 @@ set(UbuntuAppLaunch_2_gir "ubuntu-app-launch")
 set(UbuntuAppLaunch_2_gir_INCLUDES GObject-2.0)
 
 gir_get_cflags(_cflags)
-set(UbuntuAppLaunch_2_gir_CFLAGS ${c_flags})
+list_prefix(MIR_C_INCLUDES MIR_INCLUDE_DIRS "-I")
+set(UbuntuAppLaunch_2_gir_CFLAGS ${c_flags} ${MIR_C_INCLUDES})
 set(UbuntuAppLaunch_2_gir_LIBS ubuntu-app-launch)
 
 list_make_absolute(_abs_introspection_files _introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
