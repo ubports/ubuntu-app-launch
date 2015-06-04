@@ -1571,7 +1571,7 @@ TEST_F(LibUAL, SetExec)
 
 	g_setenv("UPSTART_JOB", "fubar", TRUE);
 	g_unsetenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
-	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec));
+	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, NULL));
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
@@ -1588,7 +1588,7 @@ TEST_F(LibUAL, SetExec)
 
 	/* Now check for the demangler */
 	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", g_dbus_connection_get_unique_name(bus), TRUE);
-	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec));
+	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, NULL));
 
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 	ASSERT_NE(nullptr, calls);
@@ -1599,6 +1599,20 @@ TEST_F(LibUAL, SetExec)
 	EXPECT_STREQ(demangleexecstr, g_variant_get_string(appexecenv, nullptr));
 	g_variant_unref(appexecenv);
 	g_free(demangleexecstr);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Now check for the directory */
+	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", g_dbus_connection_get_unique_name(bus), TRUE);
+	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, "/not/a/real/directory"));
+
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	ASSERT_NE(nullptr, calls);
+	EXPECT_EQ(2, len);
+
+	appexecenv = g_variant_get_child_value(calls[1].params, 1);
+	EXPECT_STREQ("APP_DIR=/not/a/real/directory", g_variant_get_string(appexecenv, nullptr));
+	g_variant_unref(appexecenv);
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 }

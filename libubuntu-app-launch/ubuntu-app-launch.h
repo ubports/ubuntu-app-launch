@@ -601,6 +601,8 @@ gboolean   ubuntu_app_launch_observer_delete_helper_stop    (UbuntuAppLaunchHelp
 /**
  * ubuntu_app_launch_helper_set_exec:
  * @execline: Exec line to be executed, in Desktop file format
+ * @directory: (allow-none): The directory that the exec line should
+ *     be executed in.
  *
  * A function to be called by an untrusted helper exec
  * tool to set the exec line. The exec tool should determine
@@ -611,7 +613,8 @@ gboolean   ubuntu_app_launch_observer_delete_helper_stop    (UbuntuAppLaunchHelp
  *
  * Return Value: Whether we were able to set the exec line
  */
-gboolean   ubuntu_app_launch_helper_set_exec       (const gchar *            execline);
+gboolean   ubuntu_app_launch_helper_set_exec       (const gchar *            execline,
+                                                    const gchar *            directory);
 
 #ifdef __cplusplus
 }

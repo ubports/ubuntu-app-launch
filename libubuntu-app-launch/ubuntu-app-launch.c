@@ -2459,8 +2459,40 @@ ubuntu_app_launch_observer_delete_helper_stop (UbuntuAppLaunchHelperObserver obs
 	return delete_helper_generic(observer, helper_type, user_data, &helper_stopped_obs);
 }
 
+/* Sets an environment variable in Upstart */
+static void
+set_var (GDBusConnection * bus, const gchar * job_name, const gchar * instance_name, const gchar * envvar)
+{
+	GVariantBuilder builder; /* Target: (assb) */
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+	/* Setup the job properties */
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
+	if (instance_name != NULL)
+		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
+	g_variant_builder_close(&builder);
+
+	g_variant_builder_add_value(&builder, g_variant_new_string(envvar));
+
+	/* Do we want to replace?  Yes, we do! */
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+	g_dbus_connection_call(bus,
+		"com.ubuntu.Upstart",
+		"/com/ubuntu/Upstart",
+		"com.ubuntu.Upstart0_6",
+		"SetEnv",
+		g_variant_builder_end(&builder),
+		NULL, /* reply */
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout */
+		NULL, /* cancelable */
+		NULL, NULL); /* callback */
+}
+
 gboolean
-ubuntu_app_launch_helper_set_exec (const gchar * execline)
+ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directory)
 {
 	g_return_val_if_fail(execline != NULL, FALSE);
 	g_return_val_if_fail(execline[0] != '\0', FALSE);
@@ -2480,44 +2512,29 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline)
 		return FALSE;
 	}
 
-	GVariantBuilder builder; /* Target: (assb) */
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-
-	/* Setup the job properties */
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
-	if (instance_name != NULL)
-		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
-	g_variant_builder_close(&builder);
-
-	/* The value itself */
+	/* The exec value */
 	gchar * envstr = NULL;
 	if (demangler) {
 		envstr = g_strdup_printf("APP_EXEC=" DEMANGLER_PATH " %s", execline);
 	} else {
 		envstr = g_strdup_printf("APP_EXEC=%s", execline);
 	}
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(envstr));
 
-	/* Do we want to replace?  Yes, we do! */
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+	set_var(bus, job_name, instance_name, envstr);
+	g_free(envstr);
 
-	g_dbus_connection_call(bus,
-		"com.ubuntu.Upstart",
-		"/com/ubuntu/Upstart",
-		"com.ubuntu.Upstart0_6",
-		"SetEnv",
-		g_variant_builder_end(&builder),
-		NULL, /* reply */
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout */
-		NULL, /* cancelable */
-		NULL, NULL); /* callback */
+	/* The directory value */
+	if (directory != NULL) {
+		gchar * direnv = g_strdup_printf("APP_DIR=%s", directory);
+		set_var(bus, job_name, instance_name, direnv);
+		g_free(direnv);
+	}
 
 	g_object_unref(bus);
 
 	return TRUE;
 }
+
 
 /* ensure that all characters are valid in the dbus output string */
 static gchar *
