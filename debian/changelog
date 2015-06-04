@@ -1,8 +1,12 @@
-ubuntu-app-launch (0.5-0ubuntu1) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.5+15.10.20150604-0ubuntu1) wily; urgency=medium
 
+  [ Ted Gould ]
   * Add an untrusted helper that works with Mir trusted prompt sessions.
 
- -- Ted Gould <ted@ubuntu.com>  Wed, 13 May 2015 09:03:13 -0500
+  [ CI Train Bot ]
+  * debian/libubuntu-app-launch2.symbols: update to released version.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 04 Jun 2015 20:35:57 +0000
 
 ubuntu-app-launch (0.4+15.04.20150410-0ubuntu1) vivid; urgency=medium
 
