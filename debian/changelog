@@ -1,3 +1,12 @@
+ubuntu-app-launch (0.5+15.10.20150605-0ubuntu1) wily; urgency=medium
+
+  [ Ted Gould ]
+  * Don't error on ZG failure (LP: #1452178)
+  * Fallback to looking for the AppID tag if the source is missing (LP:
+    #1461138)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 05 Jun 2015 19:49:48 +0000
+
 ubuntu-app-launch (0.5+15.10.20150604-0ubuntu1) wily; urgency=medium
 
   [ Ted Gould ]
