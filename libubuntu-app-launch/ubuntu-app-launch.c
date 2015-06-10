@@ -22,6 +22,7 @@
 #include <click.h>
 #include <upstart.h>
 #include <gio/gio.h>
+#include <gio/gunixfdlist.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -33,11 +34,17 @@
 #include "ual-tracepoint.h"
 #include "click-exec.h"
 #include "desktop-exec.h"
+#include "recoverable-problem.h"
+#include "proxy-socket-demangler.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 static GList * pids_for_appid (const gchar * appid);
 int kill (pid_t pid, int signal);
+static gchar * escape_dbus_string (const gchar * input);
+
+G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path);
+G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd);
 
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
@@ -1596,6 +1603,7 @@ get_manifest (const gchar * pkg)
 	if (error != NULL) {
 		g_warning("Unable to read Click database: %s", error->message);
 		g_error_free(error);
+		g_object_unref(db);
 		return NULL;
 	}
 	/* If TEST_CLICK_USER is unset, this uses the current user name. */
@@ -1753,7 +1761,7 @@ start_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
    to define the instance.  In the end there's only one job with
    an array of instances. */
 static gboolean
-start_helper_core (const gchar * type, const gchar * appid, const gchar * const * uris, const gchar * instance)
+start_helper_core (const gchar * type, const gchar * appid, const gchar * const * uris, const gchar * instance, const gchar * mirsocketpath)
 {
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	g_return_val_if_fail(con != NULL, FALSE);
@@ -1775,6 +1783,11 @@ start_helper_core (const gchar * type, const gchar * appid, const gchar * const 
 
 	if (instance != NULL) {
 		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instance)));
+	}
+
+	if (mirsocketpath != NULL) {
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("UBUNTU_APP_LAUNCH_DEMANGLE_PATH=%s", mirsocketpath)));
+		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("UBUNTU_APP_LAUNCH_DEMANGLE_NAME=%s", g_dbus_connection_get_unique_name(con))));
 	}
 
 	g_variant_builder_close(&builder);
@@ -1806,7 +1819,7 @@ ubuntu_app_launch_start_helper (const gchar * type, const gchar * appid, const g
 	g_return_val_if_fail(appid != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
 
-	return start_helper_core(type, appid, uris, NULL);
+	return start_helper_core(type, appid, uris, NULL, NULL);
 }
 
 gchar *
@@ -1818,10 +1831,254 @@ ubuntu_app_launch_start_multiple_helper (const gchar * type, const gchar * appid
 
 	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
 
-	if (start_helper_core(type, appid, uris, instanceid)) {
+	if (start_helper_core(type, appid, uris, instanceid, NULL)) {
 		return instanceid;
 	}
 
+	g_free(instanceid);
+	return NULL;
+}
+
+/* Transfer from Mir's data structure to ours */
+static void
+get_mir_session_fd_helper (MirPromptSession * session, size_t count, int const * fdin, void * user_data)
+{
+	if (count != 1) {
+		g_warning("Mir trusted session returned %d FDs instead of one", (int)count);
+		return;
+	}
+
+	int * retfd = (int *)user_data;
+	*retfd = fdin[0];
+}
+
+/* Setup to get the FD from Mir, blocking */
+static int
+get_mir_session_fd (MirPromptSession * session)
+{
+	int retfd = 0;
+	MirWaitHandle * wait = mir_prompt_session_new_fds_for_prompt_providers(session,
+		1,
+		get_mir_session_fd_helper,
+		&retfd);
+
+	mir_wait_for(wait);
+
+	return retfd;
+}
+
+static GList * open_proxies = NULL;
+
+static gint
+remove_socket_path_find (gconstpointer a, gconstpointer b) 
+{
+	GObject * obj = (GObject *)a;
+	const gchar * path = (const gchar *)b;
+
+	gchar * objpath = g_object_get_qdata(obj, proxy_path_quark());
+	
+	return g_strcmp0(objpath, path);
+}
+
+/* Cleans up if we need to early */
+static gboolean
+remove_socket_path (const gchar * path)
+{
+	GList * thisproxy = g_list_find_custom(open_proxies, path, remove_socket_path_find);
+	if (thisproxy == NULL)
+		return FALSE;
+
+	g_debug("Removing Mir Socket Proxy: %s", path);
+
+	GObject * obj = G_OBJECT(thisproxy->data);
+	open_proxies = g_list_delete_link(open_proxies, thisproxy);
+
+	/* Remove ourselves from DBus if we weren't already */
+	g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(obj));
+
+	/* If we still have FD, close it */
+	int mirfd = GPOINTER_TO_INT(g_object_get_qdata(obj, mir_fd_quark()));
+	if (mirfd != 0) {
+		close(mirfd);
+
+		/* This is actually an error, we should expect not to find
+		   this here to do anything with it. */
+		const gchar * props[3] = {
+			"UbuntuAppLaunchProxyDbusPath",
+			NULL,
+			NULL
+		};
+		props[1] = path;
+		report_recoverable_problem("ubuntu-app-launch-mir-fd-proxy", 0, TRUE, props);
+	}
+
+	g_object_unref(obj);
+
+	return TRUE;
+}
+
+/* Small timeout function that shouldn't, in most cases, ever do anything.
+   But we need it here to ensure we don't leave things on the bus */
+static gboolean
+proxy_timeout (gpointer user_data)
+{
+	const gchar * path = (const gchar *)user_data;
+	remove_socket_path(path);
+	return G_SOURCE_REMOVE;
+}
+
+/* Removes the whole list of proxies if they are there */
+static void
+proxy_cleanup_list (void)
+{
+	while (open_proxies) {
+		GObject * obj = G_OBJECT(open_proxies->data);
+		gchar * path = g_object_get_qdata(obj, proxy_path_quark());
+		remove_socket_path(path);
+	}
+}
+
+static gboolean
+proxy_mir_socket (GObject * obj, GDBusMethodInvocation * invocation, gpointer user_data)
+{
+	g_debug("Called to give Mir socket");
+	int fd = GPOINTER_TO_INT(user_data);
+
+	if (fd == 0) {
+		g_critical("No FDs to give!");
+		return FALSE;
+	}
+
+	/* Index into fds */
+	GVariant* handle = g_variant_new_handle(0);
+	GVariant* tuple = g_variant_new_tuple(&handle, 1);
+
+	GError* error = NULL;
+	GUnixFDList* list = g_unix_fd_list_new();
+	g_unix_fd_list_append(list, fd, &error);
+
+	if (error == NULL) {   
+		g_dbus_method_invocation_return_value_with_unix_fd_list(invocation, tuple, list);
+	} else {
+		g_variant_ref_sink(tuple);
+		g_variant_unref(tuple);
+	}
+
+	g_object_unref(list);
+
+	if (error != NULL) {   
+		g_critical("Unable to pass FD %d: %s", fd, error->message);
+		g_error_free(error);
+		return FALSE;
+	}   
+
+	g_object_set_qdata(obj, mir_fd_quark(), GINT_TO_POINTER(0));
+
+	return TRUE;
+}
+
+/* Sets up the DBus proxy to send to the demangler */
+static gchar *
+build_proxy_socket_path (const gchar * appid, int mirfd)
+{
+	static gboolean final_cleanup = FALSE;
+	if (!final_cleanup) {
+		g_atexit(proxy_cleanup_list);
+		final_cleanup = TRUE;
+	}
+
+	GError * error = NULL;
+	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	if (error != NULL) {
+		g_warning("Unable to get session bus: %s", error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	/* Export an Object on DBus */
+	proxySocketDemangler * skel = proxy_socket_demangler_skeleton_new();
+	g_signal_connect(G_OBJECT(skel), "handle-get-mir-socket", G_CALLBACK(proxy_mir_socket), GINT_TO_POINTER(mirfd));
+
+	gchar * encoded_appid = escape_dbus_string(appid);
+	gchar * socket_name = NULL;
+	/* Loop until we fine an object path that isn't taken (probably only once) */
+	while (socket_name == NULL) {
+		gchar* tryname = g_strdup_printf("/com/canonical/UbuntuAppLaunch/%s/%X", encoded_appid, g_random_int());
+		g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skel),
+			session,
+			tryname,
+			&error);
+
+		if (error == NULL) {
+			socket_name = tryname;
+			g_debug("Exporting Mir socket on path: %s", socket_name);
+		} else {
+			/* Always print the error, but if the object path is in use let's
+			   not exit the loop. Let's just try again. */
+			bool exitnow = (error->domain != G_DBUS_ERROR || error->code != G_DBUS_ERROR_OBJECT_PATH_IN_USE);
+			g_critical("Unable to export trusted session object: %s", error->message);
+
+			g_clear_error(&error);
+			g_free(tryname);
+
+			if (exitnow) {
+				break;
+			}
+		}
+	}
+	g_free(encoded_appid);
+
+	/* If we didn't get a socket name, we should just exit. And
+	   make sure to clean up the socket. */
+	if (socket_name == NULL) {   
+		g_object_unref(skel);
+		g_object_unref(session);
+		g_critical("Unable to export object to any name");
+		return NULL;
+	}
+
+	g_object_set_qdata_full(G_OBJECT(skel), proxy_path_quark(), g_strdup(socket_name), g_free);
+	g_object_set_qdata(G_OBJECT(skel), mir_fd_quark(), GINT_TO_POINTER(mirfd));
+	open_proxies = g_list_prepend(open_proxies, skel);
+
+	g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
+	                           2,
+	                           proxy_timeout,
+	                           g_strdup(socket_name),
+	                           g_free);
+
+	g_object_unref(session);
+
+	return socket_name;
+}
+
+gchar *
+ubuntu_app_launch_start_session_helper (const gchar * type, MirPromptSession * session, const gchar * appid, const gchar * const * uris)
+{
+	g_return_val_if_fail(type != NULL, NULL);
+	g_return_val_if_fail(session != NULL, NULL);
+	g_return_val_if_fail(appid != NULL, NULL);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, NULL);
+
+	int mirfd = get_mir_session_fd(session);
+	if (mirfd == 0)
+		return NULL;
+
+	gchar * socket_path = build_proxy_socket_path(appid, mirfd);
+	if (socket_path == NULL) {
+		close(mirfd);
+		return NULL;
+	}
+
+	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
+
+	if (start_helper_core(type, appid, uris, instanceid, socket_path)) {
+		return instanceid;
+	}
+
+	remove_socket_path(socket_path);
+	g_free(socket_path);
+	close(mirfd);
 	g_free(instanceid);
 	return NULL;
 }
@@ -2200,5 +2457,106 @@ ubuntu_app_launch_observer_delete_helper_stop (UbuntuAppLaunchHelperObserver obs
 	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
 
 	return delete_helper_generic(observer, helper_type, user_data, &helper_stopped_obs);
+}
+
+/* Sets an environment variable in Upstart */
+static void
+set_var (GDBusConnection * bus, const gchar * job_name, const gchar * instance_name, const gchar * envvar)
+{
+	GVariantBuilder builder; /* Target: (assb) */
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+	/* Setup the job properties */
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
+	if (instance_name != NULL)
+		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
+	g_variant_builder_close(&builder);
+
+	g_variant_builder_add_value(&builder, g_variant_new_string(envvar));
+
+	/* Do we want to replace?  Yes, we do! */
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+	g_dbus_connection_call(bus,
+		"com.ubuntu.Upstart",
+		"/com/ubuntu/Upstart",
+		"com.ubuntu.Upstart0_6",
+		"SetEnv",
+		g_variant_builder_end(&builder),
+		NULL, /* reply */
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout */
+		NULL, /* cancelable */
+		NULL, NULL); /* callback */
+}
+
+gboolean
+ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directory)
+{
+	g_return_val_if_fail(execline != NULL, FALSE);
+	g_return_val_if_fail(execline[0] != '\0', FALSE);
+
+	/* Check to see if we can get the job environment */
+	const gchar * job_name = g_getenv("UPSTART_JOB");
+	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
+	const gchar * demangler = g_getenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
+	g_return_if_fail(job_name != NULL);
+
+	GError * error = NULL;
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+
+	if (error != NULL) {
+		g_warning("Unable to get session bus: %s", error->message);
+		g_error_free(error);
+		return FALSE;
+	}
+
+	/* The exec value */
+	gchar * envstr = NULL;
+	if (demangler) {
+		envstr = g_strdup_printf("APP_EXEC=" DEMANGLER_PATH " %s", execline);
+	} else {
+		envstr = g_strdup_printf("APP_EXEC=%s", execline);
+	}
+
+	set_var(bus, job_name, instance_name, envstr);
+	g_free(envstr);
+
+	/* The directory value */
+	if (directory != NULL) {
+		gchar * direnv = g_strdup_printf("APP_DIR=%s", directory);
+		set_var(bus, job_name, instance_name, direnv);
+		g_free(direnv);
+	}
+
+	g_object_unref(bus);
+
+	return TRUE;
+}
+
+
+/* ensure that all characters are valid in the dbus output string */
+static gchar *
+escape_dbus_string (const gchar * input)
+{
+	static const gchar *xdigits = "0123456789abcdef";
+	GString *escaped;
+	gchar c;
+
+	g_return_val_if_fail (input != NULL, NULL);
+
+	escaped = g_string_new (NULL);
+	while ((c = *input++)) {
+		if (g_ascii_isalnum (c)) {
+			g_string_append_c (escaped, c);
+		} else {
+			g_string_append_c (escaped, '_');
+			g_string_append_c (escaped, xdigits[c >> 4]);
+			g_string_append_c (escaped, xdigits[c & 0xf]);
+		}
+	}
+
+	return g_string_free (escaped, FALSE);
 }
 

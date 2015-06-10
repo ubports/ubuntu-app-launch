@@ -17,13 +17,18 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <future>
+#include <thread>
+
 #include <gtest/gtest.h>
 #include <gio/gio.h>
 #include <zeitgeist.h>
+#include "mir-mock.h"
 
 extern "C" {
 #include "ubuntu-app-launch.h"
 #include "libdbustest/dbus-test.h"
+#include <fcntl.h>
 }
 
 class LibUAL : public ::testing::Test
@@ -106,6 +111,13 @@ class LibUAL : public ::testing::Test
 				"	ret = dbus.ObjectPath('/com/test/application_legacy')\n"
 				"elif args[0] == 'untrusted-helper':\n"
 				"	ret = dbus.ObjectPath('/com/test/untrusted/helper')\n",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock, obj,
+				"SetEnv",
+				G_VARIANT_TYPE("(assb)"),
+				NULL,
+				"",
 				NULL);
 
 			/* Click App */
@@ -266,50 +278,64 @@ class LibUAL : public ::testing::Test
 			}
 			ASSERT_EQ(nullptr, bus);
 		}
-
-		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {
-			GVariantIter iter;
-			g_variant_iter_init(&iter, env_array);
+		
+		GVariant * find_env (GVariant * env_array, const gchar * var) {
+			int i;
 			gchar * envvar = NULL;
-			bool found = false;
+			GVariant * retval = nullptr;
 
-			while (g_variant_iter_loop(&iter, "s", &envvar)) {
+			for (i = 0; i < g_variant_n_children(env_array); i++) {
+				GVariant * child = g_variant_get_child_value(env_array, i);
+				const gchar * envvar = g_variant_get_string(child, nullptr);
+
 				if (g_str_has_prefix(envvar, var)) {
-					if (found) {
+					if (retval != nullptr) {
 						g_warning("Found the env var more than once!");
-						return false;
+						g_variant_unref(retval);
+						return nullptr;
 					}
 
-					if (value != NULL) {
-						gchar * combined = g_strdup_printf("%s=%s", var, value);
-						if (g_strcmp0(envvar, combined) == 0) {
-							found = true;
-						}
-						g_free(combined);
-					} else {
-						found = true;
-					}
+					retval = child;
+				} else {
+					g_variant_unref(child);
 				}
 			}
 
-			if (!found) {
+			if (!retval) {
 				gchar * envstr = g_variant_print(env_array, FALSE);
-				g_warning("Unable to find '%s' with value '%s' in '%s'", var, value, envstr);
+				g_warning("Unable to find '%s' in '%s'", var, envstr);
 				g_free(envstr);
 			}
+
+			return retval;
+		}
+
+		bool check_env (GVariant * env_array, const gchar * var, const gchar * value) {
+			bool found = false;
+			GVariant * val = find_env(env_array, var);
+			if (val == nullptr)
+				return false;
+
+			const gchar * envvar = g_variant_get_string(val, nullptr);
+
+			gchar * combined = g_strdup_printf("%s=%s", var, value);
+			if (g_strcmp0(envvar, combined) == 0) {
+				found = true;
+			}
+
+			g_variant_unref(val);
 
 			return found;
 		}
 
-		static gboolean pause_helper (gpointer pmainloop) {
-			g_main_loop_quit(static_cast<GMainLoop *>(pmainloop));
-			return G_SOURCE_REMOVE;
-		}
-
-		void pause (guint time) {
+		void pause (guint time = 0) {
 			if (time > 0) {
 				GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
-				g_timeout_add(time, pause_helper, mainloop);
+
+				g_timeout_add(time, [](gpointer pmainloop) -> gboolean {
+					g_main_loop_quit(static_cast<GMainLoop *>(pmainloop));
+					return G_SOURCE_REMOVE;
+				}, mainloop);
 
 				g_main_loop_run(mainloop);
 
@@ -1445,4 +1471,148 @@ TEST_F(LibUAL, PauseResume)
 	g_object_unref(log);
 	
 	g_free(oomadjfile);
+}
+
+TEST_F(LibUAL, StartSessionHelper)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
+	MirConnection * conn = mir_connect_sync("libual-test", "start-session-helper"); // Mocked, doesn't need cleaning up
+	MirPromptSession * msession = mir_connection_create_prompt_session_sync(conn, 5, nullptr, nullptr);
+
+	/* Building a temporary file and making an FD for it */
+	const char * filedata = "This is some data that we should get on the other side\n";
+	ASSERT_TRUE(g_file_set_contents(SESSION_TEMP_FILE, filedata, strlen(filedata), nullptr) == TRUE);
+	int mirfd = open(SESSION_TEMP_FILE, 0);
+	mir_mock_set_trusted_fd(mirfd);
+
+	/* Basic make sure we can send the event */
+	gchar * instance_id = ubuntu_app_launch_start_session_helper("untrusted-type", msession, "com.test.multiple_first_1.2.3", NULL);
+	ASSERT_NE(nullptr, instance_id);
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	EXPECT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	EXPECT_STREQ("Start", calls->name);
+	EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	EXPECT_TRUE(g_variant_get_boolean(block));
+	g_variant_unref(block);
+
+	/* Check the environment */
+	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
+	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
+	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
+
+	GVariant * mnamev = find_env(env, "UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
+	ASSERT_NE(nullptr, mnamev); /* Have to assert because, eh, GVariant */
+	EXPECT_STREQ(g_dbus_connection_get_unique_name(bus), g_variant_get_string(mnamev, nullptr) + strlen("UBUNTU_APP_LAUNCH_DEMANGLE_NAME="));
+	GVariant * mpathv = find_env(env, "UBUNTU_APP_LAUNCH_DEMANGLE_PATH");
+	ASSERT_NE(nullptr, mpathv); /* Have to assert because, eh, GVariant */
+
+	g_variant_unref(env);
+
+	/* Setup environment for call */
+	const gchar * mname = g_variant_get_string(mnamev, nullptr);
+	mname += strlen("UBUNTU_APP_LAUNCH_DEMANGLE_NAME=");
+	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", mname, TRUE);
+	g_variant_unref(mnamev);
+
+	const gchar * mpath = g_variant_get_string(mpathv, nullptr);
+	mpath += strlen("UBUNTU_APP_LAUNCH_DEMANGLE_PATH=");
+	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_PATH", mpath, TRUE);
+	g_variant_unref(mpathv);
+
+	/* Exec our tool */
+	std::promise<std::string> outputpromise;
+	std::thread t([&outputpromise]() {
+		gchar * socketstdout = nullptr;
+		GError * error = nullptr;
+		g_unsetenv("G_MESSAGES_DEBUG");
+
+		g_spawn_command_line_sync(
+				SOCKET_DEMANGLER " " SOCKET_TOOL,
+				&socketstdout,
+				nullptr,
+				nullptr,
+				&error);
+
+		if (error != nullptr) {
+			fprintf(stderr, "Unable to spawn '" SOCKET_DEMANGLER " " SOCKET_TOOL "': %s\n", error->message);
+			g_error_free(error);
+			outputpromise.set_value(std::string(""));
+		} else {
+			outputpromise.set_value(std::string(socketstdout));
+			g_free(socketstdout);
+		}
+	});
+	t.detach();
+
+	auto outputfuture = outputpromise.get_future();
+	while (outputfuture.wait_for(std::chrono::milliseconds{1}) != std::future_status::ready) {
+		pause();
+	}
+
+	ASSERT_STREQ(filedata, outputfuture.get().c_str());
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	return;
+}
+
+TEST_F(LibUAL, SetExec)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+
+	const char * exec = "lets exec this";
+
+	g_setenv("UPSTART_JOB", "fubar", TRUE);
+	g_unsetenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
+	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	ASSERT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	gchar * appexecstr = g_strdup_printf("APP_EXEC=%s", exec);
+	GVariant * appexecenv = g_variant_get_child_value(calls[0].params, 1);
+	EXPECT_STREQ(appexecstr, g_variant_get_string(appexecenv, nullptr));
+	g_variant_unref(appexecenv);
+	g_free(appexecstr);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Now check for the demangler */
+	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", g_dbus_connection_get_unique_name(bus), TRUE);
+	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, NULL));
+
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	ASSERT_NE(nullptr, calls);
+	EXPECT_EQ(1, len);
+
+	gchar * demangleexecstr = g_strdup_printf("APP_EXEC=%s %s", SOCKET_DEMANGLER_INSTALL, exec);
+	appexecenv = g_variant_get_child_value(calls[0].params, 1);
+	EXPECT_STREQ(demangleexecstr, g_variant_get_string(appexecenv, nullptr));
+	g_variant_unref(appexecenv);
+	g_free(demangleexecstr);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Now check for the directory */
+	g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", g_dbus_connection_get_unique_name(bus), TRUE);
+	EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, "/not/a/real/directory"));
+
+	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
+	ASSERT_NE(nullptr, calls);
+	EXPECT_EQ(2, len);
+
+	appexecenv = g_variant_get_child_value(calls[1].params, 1);
+	EXPECT_STREQ("APP_DIR=/not/a/real/directory", g_variant_get_string(appexecenv, nullptr));
+	g_variant_unref(appexecenv);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 }
