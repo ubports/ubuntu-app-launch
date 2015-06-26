@@ -77,6 +77,14 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	int i;
+	for (i = 0; i < sizeof(readbuf); i++) {
+		if (readbuf[i] == '\n') {
+			readbuf[i] = '\0';
+			break;
+		}
+	}
+
 	char displaynumber[16] = {0};
 	snprintf(displaynumber, 16, ":%s", readbuf);
 
