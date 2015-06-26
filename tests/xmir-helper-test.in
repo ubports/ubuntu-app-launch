@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo -n "Testing XMir Helper… "
+
+export UBUNTU_APP_LAUNCH_XMIR_PATH="@CMAKE_CURRENT_SOURCE_DIR@/xmir-mock.sh"
+
+TESTVALUE=`@CMAKE_BINARY_DIR@/xmir-helper com.mir.test_mirtest_1.2.3 @CMAKE_CURRENT_SOURCE_DIR@/xmir-helper-exec.sh`
+
+if [ $TESTVALUE == ":42" ]; then
+	echo "PASSED"
+	exit 0
+else
+	echo "FAILED"
+	exit 1
+fi
