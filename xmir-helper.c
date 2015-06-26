@@ -17,14 +17,74 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#define _POSIX_C_SOURCE 200212L
+
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 int
 main (int argc, char * argv[])
 {
+	if (argc < 3) {
+		fprintf(stderr, "xmir-helper needs more arguments: xmir-helper $(appid) $(thing to exec)\n");
+		return 1;
+	}
+
+	/* Make nice variables for the things we need */
+	char * appid = argv[1];
+	char * xmir = getenv("UBUNTU_APP_LAUNCH_XMIR_PATH");
+	if (xmir == NULL) {
+		xmir = "/usr/bin/Xmir";
+	}
+
+	/* Build a socket pair to get the connection back from XMir */
+	int sockets[2];
+	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sockets) != 0) {
+		fprintf(stderr, "Unable to create socketpair for communicating with XMir\n");
+		return 1;
+	}
+
+	/* Give them nice names, the compiler will optimize out */
+	int xmirsocket = sockets[0];
+	int helpersocket = sockets[1];
+
+	/* Start XMir */
+	if (fork() == 0) {
+		/* XMir start here */
+		/* GOAL: XMir -displayfd ${xmirsocket} -mir ${appid} */
+		char socketbuf[16] = {0};
+		snprintf(socketbuf, 16, "%d", xmirsocket);
+
+		char * xmirexec[6] = {
+			xmir,
+			"-displayfd",
+			socketbuf,
+			"-mir",
+			appid,
+			NULL
+		};
+
+		return execv(xmir, xmirexec);
+	}
+
+	/* Wait to get the display number from XMir */
+	char readbuf[16] = {0};
+	if (read(helpersocket, readbuf, 16) == 0) {
+		fprintf(stderr, "Not reading anything from XMir\n");
+		return 1;
+	}
+
+	char displaynumber[16] = {0};
+	snprintf(displaynumber, 16, ":%s", readbuf);
+
+	/* Set up the display variable */
+	setenv("DISPLAY", displaynumber, 1);
+
+	/* Now that we have everything setup, we can execute */
 	char ** nargv = &argv[2];
-
 	int execret = execvp(nargv[0], nargv);
-
 	return execret;
 }
