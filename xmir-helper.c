@@ -24,6 +24,19 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <signal.h>
+
+void
+sigchild_handler (int signal)
+{
+	fprintf(stderr, "XMir has closed unexpectedly\n");
+	exit(1);
+}
+
+struct sigaction sigchild_action = {
+	.sa_handler = sigchild_handler,
+	.sa_flags = SA_NOCLDWAIT
+};
 
 int
 main (int argc, char * argv[])
@@ -50,6 +63,12 @@ main (int argc, char * argv[])
 	/* Give them nice names, the compiler will optimize out */
 	int xmirsocket = sockets[0];
 	int helpersocket = sockets[1];
+
+	/* Watch for the child dying */
+	if (sigaction(SIGCHLD, &sigchild_action, NULL) != 0) {
+		fprintf(stderr, "Unable to setup child signal handler\n");
+		return 1;
+	}
 
 	/* Start XMir */
 	if (fork() == 0) {

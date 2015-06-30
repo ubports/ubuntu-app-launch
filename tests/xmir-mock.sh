@@ -16,3 +16,7 @@ if [ $4 != "com.mir.test_mirtest_1.2.3" ]; then
 fi
 
 echo "42" >&$2
+
+# Ensure that our "XMir" runs longer than
+# the test, if it exits first that's a failure
+sleep 1
