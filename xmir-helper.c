@@ -77,8 +77,9 @@ main (int argc, char * argv[])
 		char socketbuf[16] = {0};
 		snprintf(socketbuf, 16, "%d", xmirsocket);
 
-		char * xmirexec[6] = {
+		char * xmirexec[7] = {
 			xmir,
+			"-rootless",
 			"-displayfd",
 			socketbuf,
 			"-mir",
