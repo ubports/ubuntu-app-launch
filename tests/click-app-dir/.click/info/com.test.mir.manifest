@@ -1,0 +1,11 @@
+{
+	"version": "1",
+	"hooks": {
+		"mir": {
+			"desktop": "xmir.desktop"
+		},
+		"nomir": {
+			"desktop": "noxmir.desktop"
+		}
+	}
+}

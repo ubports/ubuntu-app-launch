@@ -271,3 +271,187 @@ TEST_F(ExecUtil, DesktopExec)
 	EXPECT_TRUE(got_app_pid);
 	EXPECT_TRUE(got_instance_id);
 }
+
+TEST_F(ExecUtil, DesktopMir)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	ASSERT_TRUE(ubuntu_app_launch_start_application("xmir", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+
+	ASSERT_EQ(1, len);
+	ASSERT_NE(nullptr, calls);
+	ASSERT_STREQ("Start", calls[0].name);
+
+	unsigned int i;
+
+	bool got_mir = false;
+
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envarray);
+	gchar * envvar = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &envvar)) {
+		gchar * var = g_strdup(envvar);
+
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "APP_XMIR_ENABLE") == 0) {
+			EXPECT_STREQ("1", value);
+			got_mir = true;
+		}
+
+		g_free(var);
+	}
+
+	g_variant_unref(envarray);
+
+	EXPECT_TRUE(got_mir);
+}
+
+TEST_F(ExecUtil, DesktopNoMir)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	ASSERT_TRUE(ubuntu_app_launch_start_application("noxmir", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+
+	ASSERT_EQ(1, len);
+	ASSERT_NE(nullptr, calls);
+	ASSERT_STREQ("Start", calls[0].name);
+
+	unsigned int i;
+
+	bool got_mir = false;
+
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envarray);
+	gchar * envvar = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &envvar)) {
+		gchar * var = g_strdup(envvar);
+
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "APP_XMIR_ENABLE") == 0) {
+			EXPECT_STREQ("0", value);
+			got_mir = true;
+		}
+
+		g_free(var);
+	}
+
+	g_variant_unref(envarray);
+
+	EXPECT_TRUE(got_mir);
+}
+
+TEST_F(ExecUtil, ClickMir)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
+	g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", CMAKE_SOURCE_DIR "/link-farm", TRUE);
+
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.mir_mir_1", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+
+	ASSERT_EQ(1, len);
+	ASSERT_NE(nullptr, calls);
+	ASSERT_STREQ("Start", calls[0].name);
+
+	unsigned int i;
+
+	bool got_mir = false;
+
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envarray);
+	gchar * envvar = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &envvar)) {
+		gchar * var = g_strdup(envvar);
+
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "APP_XMIR_ENABLE") == 0) {
+			EXPECT_STREQ("1", value);
+			got_mir = true;
+		}
+
+		g_free(var);
+	}
+
+	g_variant_unref(envarray);
+
+	EXPECT_TRUE(got_mir);
+}
+
+TEST_F(ExecUtil, ClickNoMir)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
+	g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", CMAKE_SOURCE_DIR "/link-farm", TRUE);
+
+	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.mir_nomir_1", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+
+	ASSERT_EQ(1, len);
+	ASSERT_NE(nullptr, calls);
+	ASSERT_STREQ("Start", calls[0].name);
+
+	unsigned int i;
+
+	bool got_mir = false;
+
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envarray);
+	gchar * envvar = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &envvar)) {
+		gchar * var = g_strdup(envvar);
+
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "APP_XMIR_ENABLE") == 0) {
+			EXPECT_STREQ("0", value);
+			got_mir = true;
+		}
+
+		g_free(var);
+	}
+
+	g_variant_unref(envarray);
+
+	EXPECT_TRUE(got_mir);
+}

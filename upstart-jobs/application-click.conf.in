@@ -12,6 +12,9 @@ env APP_URIS
 env APP_DIR
 env APP_DESKTOP_FILE_PATH
 
+env APP_XMIR_ENABLE=0
+export APP_XMIR_ENABLE
+
 env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
 export UBUNTU_APP_LAUNCH_ARCH
 
