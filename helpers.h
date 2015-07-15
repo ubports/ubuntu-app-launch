@@ -54,3 +54,5 @@ GList *   pids_from_cgroup       (GDBusConnection * cgmanager,
                                   const gchar *   jobname,
                                   const gchar *   instancename);
 
+gboolean   verify_keyfile        (GKeyFile *    inkeyfile,
+                                  const gchar * desktop);

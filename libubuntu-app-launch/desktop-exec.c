@@ -27,6 +27,7 @@
 #include "ubuntu-app-launch-trace.h"
 #include "recoverable-problem.h"
 #include "ual-tracepoint.h"
+#include "ubuntu-app-launch.h"
 
 /* Reports an error on the caller of UAL so that we can track
    who is trying to launch bad AppIDs, and then fix their bug
@@ -70,6 +71,55 @@ report_error_on_caller (const gchar * app_id) {
 	}
 }
 
+GKeyFile *
+keyfile_for_libertine (const gchar * appid)
+{
+	/* Inital Tests, duplicating to be sure */
+	char * container = NULL;
+	char * app = NULL;
+
+	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
+		return NULL;
+	}
+
+	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, NULL);
+	g_free(container);
+
+	if (!g_file_test(containerdir, G_FILE_TEST_IS_DIR)) {
+		g_free(app);
+		g_free(containerdir);
+
+		return NULL;
+	}
+
+	gchar * appdesktop = g_strdup_printf("%s.desktop", app);
+	gchar * desktopfile = g_build_filename(containerdir, "usr", "share", "applications", appdesktop, NULL);
+
+	g_free(containerdir);
+	g_free(appdesktop);
+	g_free(app);
+
+	/* We now think we have a valid 'desktopfile' path */
+	GKeyFile * keyfile = g_key_file_new();
+	gboolean loaded = g_key_file_load_from_file(keyfile, desktopfile, G_KEY_FILE_NONE, NULL);
+
+	if (!loaded) {
+		g_free(desktopfile);
+		g_key_file_free(keyfile);
+		return NULL;
+	}
+
+	if (!verify_keyfile(keyfile, desktopfile)) {
+		g_free(desktopfile);
+		g_key_file_free(keyfile);
+		return NULL;
+	}
+
+	g_free(desktopfile);
+
+	return keyfile;
+}
+
 gboolean
 desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle, gboolean is_libertine)
 {
@@ -88,7 +138,13 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 	ual_tracepoint(desktop_starting_sent, app_id);
 
 	gchar * desktopfilename = NULL;
-	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
+	GKeyFile * keyfile = NULL;
+	if (!is_libertine) {
+		/* desktopfilename not set, not useful in this context */
+		keyfile = keyfile_for_libertine(app_id);
+	} else {
+		keyfile = keyfile_for_appid(app_id, &desktopfilename);
+	}
 
 	if (keyfile == NULL) {
 		report_error_on_caller(app_id);
