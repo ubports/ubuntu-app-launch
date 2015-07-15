@@ -213,7 +213,33 @@ is_click (const gchar * appid)
 static gboolean
 is_libertine (const gchar * appid)
 {
-	return FALSE;
+	char * container = NULL;
+	char * app = NULL;
+
+	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
+		return FALSE;
+	}
+
+	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, NULL);
+	g_free(container);
+
+	if (!g_file_test(containerdir, G_FILE_TEST_IS_DIR)) {
+		g_free(app);
+		g_free(containerdir);
+
+		return FALSE;
+	}
+
+	gchar * appdesktop = g_strdup_printf("%s.desktop", app);
+	gchar * desktopfile = g_build_filename(containerdir, "usr", "share", "applications", appdesktop, NULL);
+
+	g_free(containerdir);
+	g_free(appdesktop);
+	g_free(app);
+
+	gboolean islib = g_file_test(desktopfile, G_FILE_TEST_EXISTS);
+	g_free(desktopfile);
+	return islib;
 }
 
 static gboolean
