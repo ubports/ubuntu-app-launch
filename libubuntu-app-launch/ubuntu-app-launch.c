@@ -208,6 +208,14 @@ is_click (const gchar * appid)
 	return click;
 }
 
+/* Determine whether an AppId is realated to a Libertine container by
+   checking the container and program name. */
+static gboolean
+is_libertine (const gchar * appid)
+{
+	return FALSE;
+}
+
 static gboolean
 start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
 {
@@ -220,6 +228,14 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 
 	gboolean click = is_click(appid);
 	ual_tracepoint(libual_determine_type, appid, click ? "click" : "legacy");
+
+	/* Figure out if it is libertine */
+	gboolean libertine = FALSE;
+	if (!click) {
+		libertine = is_libertine(appid);
+	}
+
+	ual_tracepoint(libual_determine_libertine, appid, libertine ? "container" : "host");
 
 	/* Figure out the DBus path for the job */
 	const gchar * jobpath = NULL;
