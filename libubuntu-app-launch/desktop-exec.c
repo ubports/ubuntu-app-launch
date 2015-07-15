@@ -72,7 +72,7 @@ report_error_on_caller (const gchar * app_id) {
 }
 
 GKeyFile *
-keyfile_for_libertine (const gchar * appid)
+keyfile_for_libertine (const gchar * appid, gchar ** outcontainer)
 {
 	/* Inital Tests, duplicating to be sure */
 	char * container = NULL;
@@ -83,7 +83,11 @@ keyfile_for_libertine (const gchar * appid)
 	}
 
 	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, NULL);
-	g_free(container);
+	if (outcontainer != NULL) {
+		*outcontainer = container;
+	} else {
+		g_clear_pointer(&container, g_free);
+	}
 
 	if (!g_file_test(containerdir, G_FILE_TEST_IS_DIR)) {
 		g_free(app);
@@ -139,15 +143,17 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 
 	gchar * desktopfilename = NULL;
 	GKeyFile * keyfile = NULL;
+	gchar * libertinecontainer = NULL;
 	if (!is_libertine) {
 		/* desktopfilename not set, not useful in this context */
-		keyfile = keyfile_for_libertine(app_id);
+		keyfile = keyfile_for_libertine(app_id, &libertinecontainer);
 	} else {
 		keyfile = keyfile_for_appid(app_id, &desktopfilename);
 	}
 
 	if (keyfile == NULL) {
 		report_error_on_caller(app_id);
+		g_free(libertinecontainer);
 		return FALSE;
 	}
 
@@ -180,12 +186,23 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 		} else {
 			env_handle_add(handle, "APP_XMIR_ENABLE", "0");
 		}
+	} else if (is_libertine) {
+		/* Default to X for libertine stuff */
+		env_handle_add(handle, "APP_XMIR_ENABLE", "1");
 	}
 
 	/* This string is quoted using desktop file quoting:
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	gchar * execline = desktop_to_exec(keyfile, app_id);
 	g_return_val_if_fail(execline != NULL, 1);
+
+	if (is_libertine) {
+		gchar * libexec = g_strdup_printf("%s \"%s\" %s", "/usr/bin/libertine-launch", libertinecontainer, execline);
+		g_free(execline);
+		execline = libexec;
+	}
+	g_free(libertinecontainer); /* Handles NULL, let's be sure it goes away */
+
 	env_handle_add(handle, "APP_EXEC", execline);
 	g_free(execline);
 
