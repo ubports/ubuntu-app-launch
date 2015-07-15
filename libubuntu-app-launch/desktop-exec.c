@@ -71,7 +71,7 @@ report_error_on_caller (const gchar * app_id) {
 }
 
 gboolean
-desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle)
+desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle, gboolean is_libertine)
 {
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");

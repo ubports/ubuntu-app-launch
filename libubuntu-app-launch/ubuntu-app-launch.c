@@ -300,7 +300,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	}
 
 	if (!click) {
-		if (legacy_single_instance(appid)) {
+		if (!libertine && legacy_single_instance(appid)) {
 			g_variant_builder_add_value(&builder, g_variant_new_string("INSTANCE_ID="));
 		} else {
 			gchar * instanceid = g_strdup_printf("INSTANCE_ID=%" G_GUINT64_FORMAT, g_get_real_time());
@@ -316,7 +316,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	if (click) {
 		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
 	} else {
-		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder);
+		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder, libertine);
 	}
 
 	if (setup_complete) {
@@ -736,7 +736,7 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 		return path;
 	}
 
-	if (legacy_single_instance(appid)) {
+	if (!is_libertine(appid) && legacy_single_instance(appid)) {
 		gchar * appfile = g_strdup_printf("application-legacy-%s-.log", appid);
 		path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
 		g_free(appfile);
@@ -1532,7 +1532,7 @@ pids_for_appid (const gchar * appid)
 
 		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
-	} else if (legacy_single_instance(appid)) {
+	} else if (!is_libertine(appid) && legacy_single_instance(appid)) {
 		gchar * jobname = g_strdup_printf("%s-", appid);
 		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
 		g_free(jobname);

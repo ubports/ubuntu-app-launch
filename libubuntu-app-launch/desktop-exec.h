@@ -17,8 +17,10 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include <glib.h>
 #include "helpers.h"
 
-gboolean desktop_task_setup (GDBusConnection * bus, const gchar * appid, EnvHandle * envhandle);
+gboolean desktop_task_setup (GDBusConnection * bus, const gchar * appid, EnvHandle * envhandle, gboolean is_libertine);
 
