@@ -71,6 +71,10 @@ report_error_on_caller (const gchar * app_id) {
 	}
 }
 
+/* Get the keyfile object for a libertine container based application. Look into
+   the container's filesystem on disk and find it in /usr/share/applications in there.
+   Those are currently the only apps that we look at today. We're not ensuring anything
+   about the file other than it has basic sanity. */
 GKeyFile *
 keyfile_for_libertine (const gchar * appid, gchar ** outcontainer)
 {
@@ -197,7 +201,15 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 	g_return_val_if_fail(execline != NULL, 1);
 
 	if (is_libertine) {
-		gchar * libexec = g_strdup_printf("%s \"%s\" %s", LIBERTINE_LAUNCH, libertinecontainer, execline);
+		static const gchar * libertine_launch = NULL;
+		if (G_UNLIKELY(libertine_launch == NULL)) {
+			libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+			if (libertine_launch == NULL) {
+				libertine_launch = LIBERTINE_LAUNCH;
+			}
+		}
+
+		gchar * libexec = g_strdup_printf("%s \"%s\" %s", libertine_launch, libertinecontainer, execline);
 		g_free(execline);
 		execline = libexec;
 	}
