@@ -197,7 +197,7 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 	g_return_val_if_fail(execline != NULL, 1);
 
 	if (is_libertine) {
-		gchar * libexec = g_strdup_printf("%s \"%s\" %s", "/usr/bin/libertine-launch", libertinecontainer, execline);
+		gchar * libexec = g_strdup_printf("%s \"%s\" %s", LIBERTINE_LAUNCH, libertinecontainer, execline);
 		g_free(execline);
 		execline = libexec;
 	}
