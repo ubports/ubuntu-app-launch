@@ -239,6 +239,11 @@ is_libertine (const gchar * appid)
 
 	gboolean islib = g_file_test(desktopfile, G_FILE_TEST_EXISTS);
 	g_free(desktopfile);
+
+	if (islib) {
+		g_debug("Detected '%s' as a Libertine Application", appid);
+	}
+
 	return islib;
 }
 
@@ -300,7 +305,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	}
 
 	if (!click) {
-		if (!libertine && legacy_single_instance(appid)) {
+		if (libertine || legacy_single_instance(appid)) {
 			g_variant_builder_add_value(&builder, g_variant_new_string("INSTANCE_ID="));
 		} else {
 			gchar * instanceid = g_strdup_printf("INSTANCE_ID=%" G_GUINT64_FORMAT, g_get_real_time());

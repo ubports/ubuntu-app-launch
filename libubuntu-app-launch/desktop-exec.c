@@ -148,7 +148,7 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 	gchar * desktopfilename = NULL;
 	GKeyFile * keyfile = NULL;
 	gchar * libertinecontainer = NULL;
-	if (!is_libertine) {
+	if (is_libertine) {
 		/* desktopfilename not set, not useful in this context */
 		keyfile = keyfile_for_libertine(app_id, &libertinecontainer);
 	} else {
