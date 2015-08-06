@@ -37,6 +37,8 @@ class ExecUtil : public ::testing::Test
 		virtual void SetUp() {
 			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+			g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
+			g_setenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH", "libertine-launch", TRUE);
 
 			service = dbus_test_service_new(NULL);
 
@@ -453,5 +455,76 @@ TEST_F(ExecUtil, ClickNoMir)
 
 	g_variant_unref(envarray);
 
+	EXPECT_TRUE(got_mir);
+}
+
+TEST_F(ExecUtil, LibertineExec)
+{
+	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
+
+	ASSERT_TRUE(ubuntu_app_launch_start_application("container-name_test_0.0", NULL));
+
+	guint len = 0;
+	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+
+	ASSERT_EQ(1, len);
+	ASSERT_NE(nullptr, calls);
+	ASSERT_STREQ("Start", calls[0].name);
+
+	unsigned int i;
+
+	bool got_app_exec = false;
+	bool got_app_exec_policy = false;
+	bool got_app_id = false;
+	bool got_app_pid = false;
+	bool got_instance_id = false;
+	bool got_mir = false;
+
+	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
+	GVariantIter iter;
+	g_variant_iter_init(&iter, envarray);
+	gchar * envvar = NULL;
+
+	while (g_variant_iter_loop(&iter, "s", &envvar)) {
+		gchar * var = g_strdup(envvar);
+
+		gchar * equal = g_strstr_len(var, -1, "=");
+		ASSERT_NE(equal, nullptr);
+
+		equal[0] = '\0';
+		gchar * value = &(equal[1]);
+
+		if (g_strcmp0(var, "APP_EXEC") == 0) {
+			EXPECT_STREQ("libertine-launch \"container-name\" test", value);
+			got_app_exec = true;
+		} else if (g_strcmp0(var, "APP_EXEC_POLICY") == 0) {
+			EXPECT_STREQ("unconfined", value);
+			got_app_exec_policy = true;
+		} else if (g_strcmp0(var, "APP_ID") == 0) {
+			EXPECT_STREQ("container-name_test_0.0", value);
+			got_app_id = true;
+		} else if (g_strcmp0(var, "APP_LAUNCHER_PID") == 0) {
+			EXPECT_EQ(getpid(), atoi(value));
+			got_app_pid = true;
+		} else if (g_strcmp0(var, "INSTANCE_ID") == 0) {
+			got_instance_id = true;
+		} else if (g_strcmp0(var, "APP_XMIR_ENABLE") == 0) {
+			EXPECT_STREQ("1", value);
+			got_mir = true;
+		} else {
+			g_warning("Unknown variable! %s", var);
+			EXPECT_TRUE(false);
+		}
+
+		g_free(var);
+	}
+
+	g_variant_unref(envarray);
+
+	EXPECT_TRUE(got_app_exec);
+	EXPECT_TRUE(got_app_exec_policy);
+	EXPECT_TRUE(got_app_id);
+	EXPECT_TRUE(got_app_pid);
+	EXPECT_TRUE(got_instance_id);
 	EXPECT_TRUE(got_mir);
 }
