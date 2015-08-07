@@ -36,7 +36,8 @@ execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
 )
 set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -std=c99")
+# Deprecated needed for g_atexit() in libual
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -Wno-error=deprecated-declarations -std=c99")
 
 enable_testing()
 
@@ -46,7 +47,7 @@ include_directories(${GLIB2_INCLUDE_DIRS})
 pkg_check_modules(GOBJECT2 REQUIRED gobject-2.0)
 include_directories(${GOBJECT2_INCLUDE_DIRS})
 
-pkg_check_modules(GIO2 REQUIRED gio-2.0)
+pkg_check_modules(GIO2 REQUIRED gio-2.0 gio-unix-2.0)
 include_directories(${GIO2_INCLUDE_DIRS})
 
 pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
@@ -79,6 +80,8 @@ include_directories(${MIR_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
+
+add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 
 ####################
 # Helpers
@@ -135,6 +138,14 @@ target_link_libraries(application-failed ${GIO2_LIBRARIES})
 install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# xmir-helper
+####################
+
+add_executable(xmir-helper xmir-helper.c)
+set_target_properties(xmir-helper PROPERTIES OUTPUT_NAME "xmir-helper")
+install(TARGETS xmir-helper RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # untrusted-helper-type-end
 ####################
 
@@ -159,6 +170,15 @@ install(TARGETS cgroup-reap-all RUNTIME DESTINATION "${pkglibexecdir}")
 add_executable(oom-adjust-setuid-helper oom-adjust-setuid-helper.c)
 set_target_properties(oom-adjust-setuid-helper PROPERTIES OUTPUT_NAME "oom-adjust-setuid-helper")
 install(TARGETS oom-adjust-setuid-helper RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
+# socket-demangler
+####################
+
+add_executable(socket-demangler-helper socket-demangler.c)
+set_target_properties(socket-demangler-helper PROPERTIES OUTPUT_NAME "socket-demangler")
+target_link_libraries(socket-demangler-helper ${GIO2_LIBRARIES})
+install(TARGETS socket-demangler-helper RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # ubuntu-app-launch-desktop.click-hook

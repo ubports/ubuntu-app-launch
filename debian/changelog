@@ -1,3 +1,36 @@
+ubuntu-app-launch (0.5+15.10.20150605-0ubuntu1) wily; urgency=medium
+
+  [ Ted Gould ]
+  * Don't error on ZG failure (LP: #1452178)
+  * Fallback to looking for the AppID tag if the source is missing (LP:
+    #1461138)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 05 Jun 2015 19:49:48 +0000
+
+ubuntu-app-launch (0.5+15.10.20150604-0ubuntu1) wily; urgency=medium
+
+  [ Ted Gould ]
+  * Add an untrusted helper that works with Mir trusted prompt sessions.
+
+  [ CI Train Bot ]
+  * debian/libubuntu-app-launch2.symbols: update to released version.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 04 Jun 2015 20:35:57 +0000
+
+ubuntu-app-launch (0.4+15.04.20150410-0ubuntu1) vivid; urgency=medium
+
+  [ Ted Gould ]
+  * Have desktop hook verify source file still exists (LP: #1437355)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 10 Apr 2015 16:58:30 +0000
+
+ubuntu-app-launch (0.4+15.04.20150403-0ubuntu1) vivid; urgency=medium
+
+  [ Ted Gould ]
+  * When Mir isn't available just exec with X11
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 03 Apr 2015 17:30:48 +0000
+
 ubuntu-app-launch (0.4+15.04.20150313.2-0ubuntu1) vivid; urgency=medium
 
   [ CI Train Bot ]

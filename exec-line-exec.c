@@ -139,6 +139,20 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
+	ual_tracepoint(exec_parse_complete, app_id);
+
+	if (g_getenv("MIR_SOCKET") != NULL && g_strcmp0(g_getenv("APP_XMIR_ENABLE"), "1") == 0) {
+		g_debug("XMir Helper being used");
+
+		/* xmir-helper $(APP_ID) $(COMMAND) */
+		const gchar * appid = g_getenv("APP_ID");
+		g_array_prepend_val(newargv, appid);
+
+		/* Pulling into the heap instead of the code page */
+		char * xmir_helper = g_strdup(XMIR_HELPER);
+		g_array_prepend_val(newargv, xmir_helper);
+	}
+
 	/* Now exec */
 	gchar ** nargv = (gchar**)g_array_free(newargv, FALSE);
 

@@ -136,6 +136,14 @@ click_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handl
 		return FALSE;
 	}
 
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-XMir-Enable", NULL)) {
+		if (g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-XMir-Enable", NULL)) {
+			env_handle_add(handle, "APP_XMIR_ENABLE", "1");
+		} else {
+			env_handle_add(handle, "APP_XMIR_ENABLE", "0");
+		}
+	}
+
 	/* This string is quoted using desktop file quoting:
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	gchar * exec = desktop_to_exec(keyfile, desktopfile);

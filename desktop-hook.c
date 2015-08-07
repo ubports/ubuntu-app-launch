@@ -67,6 +67,7 @@ struct _app_state_t {
 #define EXEC_KEY           "Exec"
 #define ICON_KEY           "Icon"
 #define SYMBOLIC_ICON_KEY  "X-Ubuntu-SymbolicIcon"
+#define SOURCE_FILE_KEY    "X-Ubuntu-UAL-Source-Desktop"
 /* Other */
 #define OLD_KEY_PREFIX     "X-Ubuntu-Old-"
 
@@ -136,11 +137,52 @@ add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 	return;
 }
 
+/* Look at the desktop file and ensure that it was built by us, and if it
+   was that its source still exists */
+gboolean
+desktop_source_exists (const gchar * dir, const gchar * name)
+{
+	gchar * desktopfile = g_build_filename(dir, name, NULL);
+
+	GKeyFile * keyfile = g_key_file_new();
+	g_key_file_load_from_file(keyfile,
+		desktopfile,
+		G_KEY_FILE_NONE,
+		NULL); /* No error */
+
+	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, NULL)) {
+		gboolean hasappid = g_key_file_has_key(keyfile, DESKTOP_GROUP, APP_ID_KEY, NULL);
+		g_free(desktopfile);
+		g_key_file_free(keyfile);
+		return hasappid;
+	}
+
+	/* At this point we know the key exists, so if we can't find the source
+	   file we want to delete the file as well. We need to replace it. */
+	gchar * originalfile = g_key_file_get_string(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, NULL);
+	g_key_file_free(keyfile);
+	gboolean found = TRUE;
+
+	if (!g_file_test(originalfile, G_FILE_TEST_EXISTS)) {
+		g_remove(desktopfile);
+		found = FALSE;
+	}
+
+	g_free(originalfile);
+	g_free(desktopfile);
+
+	return found;
+}
+
 /* Look at an desktop file entry */
 void
 add_desktop_file (const gchar * dir, const gchar * name, GArray * app_array)
 {
 	if (!g_str_has_suffix(name, ".desktop")) {
+		return;
+	}
+
+	if (!desktop_source_exists(dir, name)) {
 		return;
 	}
 
@@ -392,6 +434,9 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	/* Adding an Application ID */
 	g_key_file_set_string(keyfile, DESKTOP_GROUP, APP_ID_KEY, app_id);
 
+	/* Adding the source file path */
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, from);
+
 	/* Output */
 	gsize datalen = 0;
 	gchar * data = g_key_file_to_data(keyfile, &datalen, &error);
@@ -426,14 +471,27 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 		return;
 	}
 
+	/* Read in the database */
+	ClickDB * db = click_db_new();
+	click_db_read(db, g_getenv("TEST_CLICK_DB"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		g_error_free(error);
+		g_free(package);
+		g_object_unref(db);
+		return;
+	}
+
 	/* Check click to find out where the files are */
-	ClickUser * user = click_user_new_for_user(NULL, NULL, &error);
+	ClickUser * user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
+	g_object_unref(db);
 	if (error != NULL) {
 		g_warning("Unable to read Click database: %s", error->message);
 		g_error_free(error);
 		g_free(package);
 		return;
 	}
+
 	gchar * pkgdir = click_user_get_path(user, package, &error);
 	if (error != NULL) {
 		g_warning("Unable to get the Click package directory for %s: %s", package, error->message);

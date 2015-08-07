@@ -27,6 +27,7 @@
 #include "ubuntu-app-launch-trace.h"
 #include "recoverable-problem.h"
 #include "ual-tracepoint.h"
+#include "ubuntu-app-launch.h"
 
 /* Reports an error on the caller of UAL so that we can track
    who is trying to launch bad AppIDs, and then fix their bug
@@ -70,8 +71,65 @@ report_error_on_caller (const gchar * app_id) {
 	}
 }
 
+/* Get the keyfile object for a libertine container based application. Look into
+   the container's filesystem on disk and find it in /usr/share/applications in there.
+   Those are currently the only apps that we look at today. We're not ensuring anything
+   about the file other than it has basic sanity. */
+GKeyFile *
+keyfile_for_libertine (const gchar * appid, gchar ** outcontainer)
+{
+	/* Inital Tests, duplicating to be sure */
+	char * container = NULL;
+	char * app = NULL;
+
+	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
+		return NULL;
+	}
+
+	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, NULL);
+	if (outcontainer != NULL) {
+		*outcontainer = container;
+	} else {
+		g_clear_pointer(&container, g_free);
+	}
+
+	if (!g_file_test(containerdir, G_FILE_TEST_IS_DIR)) {
+		g_free(app);
+		g_free(containerdir);
+
+		return NULL;
+	}
+
+	gchar * appdesktop = g_strdup_printf("%s.desktop", app);
+	gchar * desktopfile = g_build_filename(containerdir, "usr", "share", "applications", appdesktop, NULL);
+
+	g_free(containerdir);
+	g_free(appdesktop);
+	g_free(app);
+
+	/* We now think we have a valid 'desktopfile' path */
+	GKeyFile * keyfile = g_key_file_new();
+	gboolean loaded = g_key_file_load_from_file(keyfile, desktopfile, G_KEY_FILE_NONE, NULL);
+
+	if (!loaded) {
+		g_free(desktopfile);
+		g_key_file_free(keyfile);
+		return NULL;
+	}
+
+	if (!verify_keyfile(keyfile, desktopfile)) {
+		g_free(desktopfile);
+		g_key_file_free(keyfile);
+		return NULL;
+	}
+
+	g_free(desktopfile);
+
+	return keyfile;
+}
+
 gboolean
-desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle)
+desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle, gboolean is_libertine)
 {
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");
@@ -88,10 +146,18 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 	ual_tracepoint(desktop_starting_sent, app_id);
 
 	gchar * desktopfilename = NULL;
-	GKeyFile * keyfile = keyfile_for_appid(app_id, &desktopfilename);
+	GKeyFile * keyfile = NULL;
+	gchar * libertinecontainer = NULL;
+	if (is_libertine) {
+		/* desktopfilename not set, not useful in this context */
+		keyfile = keyfile_for_libertine(app_id, &libertinecontainer);
+	} else {
+		keyfile = keyfile_for_appid(app_id, &desktopfilename);
+	}
 
 	if (keyfile == NULL) {
 		report_error_on_caller(app_id);
+		g_free(libertinecontainer);
 		return FALSE;
 	}
 
@@ -118,10 +184,37 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 		env_handle_add(handle, "APP_EXEC_POLICY", "unconfined");
 	}
 
+	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-XMir-Enable", NULL)) {
+		if (g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-XMir-Enable", NULL)) {
+			env_handle_add(handle, "APP_XMIR_ENABLE", "1");
+		} else {
+			env_handle_add(handle, "APP_XMIR_ENABLE", "0");
+		}
+	} else if (is_libertine) {
+		/* Default to X for libertine stuff */
+		env_handle_add(handle, "APP_XMIR_ENABLE", "1");
+	}
+
 	/* This string is quoted using desktop file quoting:
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	gchar * execline = desktop_to_exec(keyfile, app_id);
 	g_return_val_if_fail(execline != NULL, 1);
+
+	if (is_libertine) {
+		static const gchar * libertine_launch = NULL;
+		if (G_UNLIKELY(libertine_launch == NULL)) {
+			libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+			if (libertine_launch == NULL) {
+				libertine_launch = LIBERTINE_LAUNCH;
+			}
+		}
+
+		gchar * libexec = g_strdup_printf("%s \"%s\" %s", libertine_launch, libertinecontainer, execline);
+		g_free(execline);
+		execline = libexec;
+	}
+	g_free(libertinecontainer); /* Handles NULL, let's be sure it goes away */
+
 	env_handle_add(handle, "APP_EXEC", execline);
 	g_free(execline);
 
