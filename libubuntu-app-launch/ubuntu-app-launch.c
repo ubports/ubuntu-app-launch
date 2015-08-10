@@ -820,6 +820,14 @@ app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 	return FALSE;
 }
 
+/* Handle the libertine case where we look in the container */
+static gboolean
+app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+
+	return FALSE;
+}
+
 /* Get the information on where the desktop file is from libclick */
 static gboolean
 app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
@@ -877,6 +885,8 @@ ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar 
 {
 	if (is_click(appid)) {
 		return app_info_click(appid, appdir, appdesktop);
+	} else if (is_libertine(appid)) {
+		return app_info_libertine(appid, appdir, appdesktop);
 	} else {
 		return app_info_legacy(appid, appdir, appdesktop);
 	}
