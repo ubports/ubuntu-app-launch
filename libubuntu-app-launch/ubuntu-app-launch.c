@@ -220,7 +220,7 @@ is_libertine (const gchar * appid)
 		return FALSE;
 	}
 
-	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, NULL);
+	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, "rootfs", NULL);
 	g_free(container);
 
 	if (!g_file_test(containerdir, G_FILE_TEST_IS_DIR)) {

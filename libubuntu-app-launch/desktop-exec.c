@@ -86,7 +86,7 @@ keyfile_for_libertine (const gchar * appid, gchar ** outcontainer)
 		return NULL;
 	}
 
-	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, NULL);
+	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, "rootfs", NULL);
 	if (outcontainer != NULL) {
 		*outcontainer = container;
 	} else {
