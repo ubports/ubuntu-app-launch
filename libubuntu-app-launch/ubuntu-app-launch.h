@@ -147,6 +147,9 @@ gchar *    ubuntu_app_launch_application_log_path     (const gchar *            
  * @appdir: (allow-none) (transfer full): Directory for the application
  * @appdesktop: (allow-none) (transfer full): Relative path to desktop file
  *
+ * Finds a location for information on an application and the relative
+ * directory that it was found in. So this should be used to find icons
+ * relating to that desktop file.
  *
  * Return value: Path to a log file or NULL if unavailable
  */
