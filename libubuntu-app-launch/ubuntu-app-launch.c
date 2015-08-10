@@ -824,8 +824,34 @@ app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 static gboolean
 app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 {
+	char * container = NULL;
+	char * app = NULL;
 
-	return FALSE;
+	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
+		return FALSE;
+	}
+
+	gchar * desktopdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, "usr", "share", NULL);
+	gchar * desktopname = g_strdup_printf("%s.desktop", app);
+	gchar * desktopfile = g_build_filename(desktopdir, "applications", desktopname, NULL);
+
+	g_free(container);
+	g_free(app);
+	g_free(desktopname);
+
+	if (appdir != NULL) {
+		*appdir = desktopdir;
+	} else {
+		g_free(desktopdir);
+	}
+
+	if (appdesktop != NULL) {
+		*appdesktop = desktopfile;
+	} else {
+		g_free(desktopfile);
+	}
+
+	return TRUE;
 }
 
 /* Get the information on where the desktop file is from libclick */
