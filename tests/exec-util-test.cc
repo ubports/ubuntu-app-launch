@@ -183,161 +183,57 @@ TEST_F(ExecUtil, ClickExec)
 
 TEST_F(ExecUtil, DesktopExec)
 {
-	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
-
-	ASSERT_TRUE(ubuntu_app_launch_start_application("foo", NULL));
-
-	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-
-	ASSERT_EQ(1, len);
-	ASSERT_NE(nullptr, calls);
-	ASSERT_STREQ("Start", calls[0].name);
-
-	unsigned int i;
-
-	bool got_app_exec = false;
-	bool got_app_desktop_path = false;
-	bool got_app_exec_policy = false;
-	bool got_app_id = false;
-	bool got_app_pid = false;
-	bool got_instance_id = false;
-
-	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
-	GVariantIter iter;
-	g_variant_iter_init(&iter, envarray);
-	gchar * envvar = NULL;
-
-	while (g_variant_iter_loop(&iter, "s", &envvar)) {
-		gchar * var = g_strdup(envvar);
-
-		gchar * equal = g_strstr_len(var, -1, "=");
-		ASSERT_NE(equal, nullptr);
-
-		equal[0] = '\0';
-		gchar * value = &(equal[1]);
-
-		if (g_strcmp0(var, "APP_EXEC") == 0) {
-			EXPECT_STREQ("foo", value);
-			got_app_exec = true;
-		} else if (g_strcmp0(var, "APP_DESKTOP_FILE_PATH") == 0) {
-			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/foo.desktop", value);
-			got_app_desktop_path = true;
-		} else if (g_strcmp0(var, "APP_EXEC_POLICY") == 0) {
-			EXPECT_STREQ("unconfined", value);
-			got_app_exec_policy = true;
-		} else if (g_strcmp0(var, "APP_ID") == 0) {
-			EXPECT_STREQ("foo", value);
-			got_app_id = true;
-		} else if (g_strcmp0(var, "APP_LAUNCHER_PID") == 0) {
-			EXPECT_EQ(getpid(), atoi(value));
-			got_app_pid = true;
-		} else if (g_strcmp0(var, "INSTANCE_ID") == 0) {
-			got_instance_id = true;
-		} else {
-			g_warning("Unknown variable! %s", var);
-			EXPECT_TRUE(false);
-		}
-
-		g_free(var);
-	}
-
-	g_variant_unref(envarray);
-
-	EXPECT_TRUE(got_app_exec);
-	EXPECT_TRUE(got_app_desktop_path);
-	EXPECT_TRUE(got_app_exec_policy);
-	EXPECT_TRUE(got_app_id);
-	EXPECT_TRUE(got_app_pid);
-	EXPECT_TRUE(got_instance_id);
+	StartCheckEnv("foo", {
+		{"APP_EXEC", [](const gchar * value) {
+			EXPECT_STREQ("foo", value); }},
+		{"APP_DESKTOP_FILE_PATH", [](const gchar * value) {
+			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/foo.desktop", value); }},
+		{"APP_EXEC_POLICY", [](const gchar * value) {
+			EXPECT_STREQ("unconfined", value); }},
+		{"APP_ID", [](const gchar * value) {
+			EXPECT_STREQ("foo", value); }},
+		{"INSTANCE_ID", nocheck},
+		{"APP_LAUNCHER_PID", [](const gchar * value) {
+			EXPECT_EQ(getpid(), atoi(value)); }},
+	});
 }
 
 TEST_F(ExecUtil, DesktopMir)
 {
-	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
-
-	ASSERT_TRUE(ubuntu_app_launch_start_application("xmir", NULL));
-
-	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-
-	ASSERT_EQ(1, len);
-	ASSERT_NE(nullptr, calls);
-	ASSERT_STREQ("Start", calls[0].name);
-
-	unsigned int i;
-
-	bool got_mir = false;
-
-	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
-	GVariantIter iter;
-	g_variant_iter_init(&iter, envarray);
-	gchar * envvar = NULL;
-
-	while (g_variant_iter_loop(&iter, "s", &envvar)) {
-		gchar * var = g_strdup(envvar);
-
-		gchar * equal = g_strstr_len(var, -1, "=");
-		ASSERT_NE(equal, nullptr);
-
-		equal[0] = '\0';
-		gchar * value = &(equal[1]);
-
-		if (g_strcmp0(var, "APP_XMIR_ENABLE") == 0) {
-			EXPECT_STREQ("1", value);
-			got_mir = true;
-		}
-
-		g_free(var);
-	}
-
-	g_variant_unref(envarray);
-
-	EXPECT_TRUE(got_mir);
+	StartCheckEnv("xmir", {
+		{"APP_EXEC", [](const gchar * value) {
+			EXPECT_STREQ("xfoo", value); }},
+		{"APP_DESKTOP_FILE_PATH", [](const gchar * value) {
+			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/xmir.desktop", value); }},
+		{"APP_EXEC_POLICY", [](const gchar * value) {
+			EXPECT_STREQ("unconfined", value); }},
+		{"APP_ID", [](const gchar * value) {
+			EXPECT_STREQ("xmir", value); }},
+		{"INSTANCE_ID", nocheck},
+		{"APP_LAUNCHER_PID", [](const gchar * value) {
+			EXPECT_EQ(getpid(), atoi(value)); }},
+		{"APP_XMIR_ENABLE", [](const gchar * value) {
+			EXPECT_STREQ("1", value); }},
+	});
 }
 
 TEST_F(ExecUtil, DesktopNoMir)
 {
-	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/job", "com.ubuntu.Upstart0_6.Job", NULL);
-
-	ASSERT_TRUE(ubuntu_app_launch_start_application("noxmir", NULL));
-
-	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-
-	ASSERT_EQ(1, len);
-	ASSERT_NE(nullptr, calls);
-	ASSERT_STREQ("Start", calls[0].name);
-
-	unsigned int i;
-
-	bool got_mir = false;
-
-	GVariant * envarray = g_variant_get_child_value(calls[0].params, 0);
-	GVariantIter iter;
-	g_variant_iter_init(&iter, envarray);
-	gchar * envvar = NULL;
-
-	while (g_variant_iter_loop(&iter, "s", &envvar)) {
-		gchar * var = g_strdup(envvar);
-
-		gchar * equal = g_strstr_len(var, -1, "=");
-		ASSERT_NE(equal, nullptr);
-
-		equal[0] = '\0';
-		gchar * value = &(equal[1]);
-
-		if (g_strcmp0(var, "APP_XMIR_ENABLE") == 0) {
-			EXPECT_STREQ("0", value);
-			got_mir = true;
-		}
-
-		g_free(var);
-	}
-
-	g_variant_unref(envarray);
-
-	EXPECT_TRUE(got_mir);
+	StartCheckEnv("noxmir", {
+		{"APP_EXEC", [](const gchar * value) {
+			EXPECT_STREQ("noxmir", value); }},
+		{"APP_DESKTOP_FILE_PATH", [](const gchar * value) {
+			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/noxmir.desktop", value); }},
+		{"APP_EXEC_POLICY", [](const gchar * value) {
+			EXPECT_STREQ("unconfined", value); }},
+		{"APP_ID", [](const gchar * value) {
+			EXPECT_STREQ("noxmir", value); }},
+		{"INSTANCE_ID", nocheck},
+		{"APP_LAUNCHER_PID", [](const gchar * value) {
+			EXPECT_EQ(getpid(), atoi(value)); }},
+		{"APP_XMIR_ENABLE", [](const gchar * value) {
+			EXPECT_STREQ("0", value); }},
+	});
 }
 
 TEST_F(ExecUtil, ClickMir)
