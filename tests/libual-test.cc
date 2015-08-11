@@ -85,6 +85,7 @@ class LibUAL : public ::testing::Test
 
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
 			g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
+			g_setenv("XDG_DATA_HOME",  CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
 			service = dbus_test_service_new(NULL);
 
@@ -533,6 +534,12 @@ TEST_F(LibUAL, ApplicationId)
 	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-json", NULL, NULL));
 	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-object", NULL, NULL));
 	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
+
+	/* Libertine tests */
+	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("container-name", NULL, NULL));
+	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("container-name", "not-exist", NULL));
+	EXPECT_STREQ("container-name_test_0.0", ubuntu_app_launch_triplet_to_app_id("container-name", "test", NULL));
+	EXPECT_STREQ("container-name_user-app_0.0", ubuntu_app_launch_triplet_to_app_id("container-name", "user-app", NULL));
 }
 
 TEST_F(LibUAL, AppIdParse)
