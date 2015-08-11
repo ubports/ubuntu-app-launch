@@ -36,13 +36,13 @@
 #include "desktop-exec.h"
 #include "recoverable-problem.h"
 #include "proxy-socket-demangler.h"
+#include "app-info.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 static GList * pids_for_appid (const gchar * appid);
 int kill (pid_t pid, int signal);
 static gchar * escape_dbus_string (const gchar * input);
-static gboolean app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
 
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path);
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd);
@@ -214,7 +214,12 @@ is_click (const gchar * appid)
 static gboolean
 is_libertine (const gchar * appid)
 {
-	return app_info_libertine(appid, NULL, NULL);
+	if (app_info_libertine(appid, NULL, NULL)) {
+		g_debug("Libertine application detected: %s", appid);
+		return TRUE;
+	} else {
+		return FALSE;
+	}
 }
 
 static gboolean
@@ -743,47 +748,6 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 	g_object_unref(con);
 
 	return path;
-}
-
-/* Handle the libertine case where we look in the container */
-static gboolean
-app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
-{
-	char * container = NULL;
-	char * app = NULL;
-
-	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
-		return FALSE;
-	}
-
-	gchar * desktopdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, "usr", "share", NULL);
-	gchar * desktopname = g_strdup_printf("%s.desktop", app);
-	gchar * desktopfile = g_build_filename(desktopdir, "applications", desktopname, NULL);
-
-	g_free(container);
-	g_free(app);
-	g_free(desktopname);
-
-	if (!g_file_test(desktopfile, G_FILE_TEST_EXISTS)) {
-		g_free(desktopdir);
-		g_free(desktopfile);
-
-		return FALSE;
-	}
-
-	if (appdir != NULL) {
-		*appdir = desktopdir;
-	} else {
-		g_free(desktopdir);
-	}
-
-	if (appdesktop != NULL) {
-		*appdesktop = desktopfile;
-	} else {
-		g_free(desktopfile);
-	}
-
-	return TRUE;
 }
 
 static GDBusConnection *

@@ -41,6 +41,7 @@ class ExecUtil : public ::testing::Test
 			g_setenv("UPSTART_JOB", "made-up-job", TRUE);
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
 			g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
+			g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 			g_setenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH", "libertine-launch", TRUE);
 
 			service = dbus_test_service_new(NULL);
@@ -291,6 +292,23 @@ TEST_F(ExecUtil, LibertineExec)
 			EXPECT_STREQ("unconfined", value); }},
 		{"APP_ID", [](const gchar * value) {
 			EXPECT_STREQ("container-name_test_0.0", value); }},
+		{"APP_LAUNCHER_PID", [](const gchar * value) {
+			EXPECT_EQ(getpid(), atoi(value)); }},
+		{"INSTANCE_ID", nocheck},
+		{"APP_XMIR_ENABLE", [](const gchar * value) {
+			EXPECT_STREQ("1", value); }},
+	});
+}
+
+TEST_F(ExecUtil, LibertineExecUser)
+{
+	StartCheckEnv("container-name_user-app_0.0", {
+		{"APP_EXEC", [](const gchar * value) {
+			EXPECT_STREQ("libertine-launch \"container-name\" user-app", value); }},
+		{"APP_EXEC_POLICY", [](const gchar * value) {
+			EXPECT_STREQ("unconfined", value); }},
+		{"APP_ID", [](const gchar * value) {
+			EXPECT_STREQ("container-name_user-app_0.0", value); }},
 		{"APP_LAUNCHER_PID", [](const gchar * value) {
 			EXPECT_EQ(getpid(), atoi(value)); }},
 		{"INSTANCE_ID", nocheck},

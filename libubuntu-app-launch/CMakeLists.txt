@@ -30,6 +30,7 @@ second-exec-core.c
 click-exec.c
 desktop-exec.c
 ubuntu-app-launch-trace.c
+app-info.c
 )
 
 set(LAUNCHER_GEN_SOURCES
