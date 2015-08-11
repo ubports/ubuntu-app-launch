@@ -42,6 +42,7 @@ static void free_helper (gpointer value);
 static GList * pids_for_appid (const gchar * appid);
 int kill (pid_t pid, int signal);
 static gchar * escape_dbus_string (const gchar * input);
+static gboolean app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
 
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path);
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd);
@@ -213,38 +214,7 @@ is_click (const gchar * appid)
 static gboolean
 is_libertine (const gchar * appid)
 {
-	char * container = NULL;
-	char * app = NULL;
-
-	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
-		return FALSE;
-	}
-
-	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, "rootfs", NULL);
-	g_free(container);
-
-	if (!g_file_test(containerdir, G_FILE_TEST_IS_DIR)) {
-		g_free(app);
-		g_free(containerdir);
-
-		return FALSE;
-	}
-
-	gchar * appdesktop = g_strdup_printf("%s.desktop", app);
-	gchar * desktopfile = g_build_filename(containerdir, "usr", "share", "applications", appdesktop, NULL);
-
-	g_free(containerdir);
-	g_free(appdesktop);
-	g_free(app);
-
-	gboolean islib = g_file_test(desktopfile, G_FILE_TEST_EXISTS);
-	g_free(desktopfile);
-
-	if (islib) {
-		g_debug("Detected '%s' as a Libertine Application", appid);
-	}
-
-	return islib;
+	return app_info_libertine(appid, NULL, NULL);
 }
 
 static gboolean
@@ -773,6 +743,47 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 	g_object_unref(con);
 
 	return path;
+}
+
+/* Handle the libertine case where we look in the container */
+static gboolean
+app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+	char * container = NULL;
+	char * app = NULL;
+
+	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
+		return FALSE;
+	}
+
+	gchar * desktopdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, "usr", "share", NULL);
+	gchar * desktopname = g_strdup_printf("%s.desktop", app);
+	gchar * desktopfile = g_build_filename(desktopdir, "applications", desktopname, NULL);
+
+	g_free(container);
+	g_free(app);
+	g_free(desktopname);
+
+	if (!g_file_test(desktopfile, G_FILE_TEST_EXISTS)) {
+		g_free(desktopdir);
+		g_free(desktopfile);
+
+		return FALSE;
+	}
+
+	if (appdir != NULL) {
+		*appdir = desktopdir;
+	} else {
+		g_free(desktopdir);
+	}
+
+	if (appdesktop != NULL) {
+		*appdesktop = desktopfile;
+	} else {
+		g_free(desktopfile);
+	}
+
+	return TRUE;
 }
 
 static GDBusConnection *
