@@ -1737,11 +1737,11 @@ manifest_version (JsonObject ** manifest, const gchar * pkg, const gchar * origi
 	return NULL;
 }
 
-gchar *
-ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
+/* A click triplet can require using the Click DB and getting a
+   manifest. This code does that to look up the versions */
+static gchar *
+click_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
 {
-	g_return_val_if_fail(pkg != NULL, NULL);
-
 	const gchar * version = NULL;
 	const gchar * application = NULL;
 	JsonObject * manifest = NULL;
@@ -1759,6 +1759,43 @@ ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const
 		json_object_unref(manifest);
 
 	return retval;
+}
+
+/* Build an appid how we think it should exist and then make sure
+   we can find it. Then pull it together. */
+static gchar *
+libertine_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
+{
+	if (app == NULL) {
+		return NULL;
+	}
+
+	gchar * synthappid = g_strdup_printf("%s_%s_0.0", pkg, app);
+	if (app_info_libertine(synthappid, NULL, NULL)) {
+		return synthappid;
+	} else {
+		g_free(synthappid);
+		return NULL;
+	}
+}
+
+/* Figure out whether we're a libertine container app or a click and then
+   choose which function to use */
+gchar *
+ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
+{
+	g_return_val_if_fail(pkg != NULL, NULL);
+
+	/* Check if is a libertine container */
+	gchar * libertinepath = g_build_filename(g_get_user_cache_dir(), "libertine-container", pkg, NULL);
+	gboolean libcontainer = g_file_test(libertinepath, G_FILE_TEST_EXISTS);
+	g_free(libertinepath);
+
+	if (libcontainer) {
+		return libertine_triplet_to_app_id(pkg, app, ver);
+	} else {
+		return click_triplet_to_app_id(pkg, app, ver);
+	}
 }
 
 /* Print an error if we couldn't start it */
