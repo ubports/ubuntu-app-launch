@@ -22,3 +22,6 @@
 #include <glib.h>
 
 gboolean app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
+
+gchar * click_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver);
+gchar * libertine_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver);
