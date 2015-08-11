@@ -41,7 +41,6 @@
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 static GList * pids_for_appid (const gchar * appid);
-static JsonObject * get_manifest (const gchar * pkg, gchar ** pkgpath);
 int kill (pid_t pid, int signal);
 static gchar * escape_dbus_string (const gchar * input);
 
@@ -749,136 +748,6 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 	g_object_unref(con);
 
 	return path;
-}
-
-/* Look to see if the app id results in a desktop file, if so, fill in the params */
-static gboolean
-evaluate_dir (const gchar * dir, const gchar * desktop, gchar ** appdir, gchar ** appdesktop)
-{
-	char * fulldir = g_build_filename(dir, "applications", desktop, NULL);
-
-	if (g_file_test(fulldir, G_FILE_TEST_EXISTS)) {
-		if (appdir != NULL) {
-			*appdir = g_strdup(dir);
-		}
-
-		if (appdesktop != NULL) {
-			*appdesktop = g_strdup_printf("applications/%s", desktop);
-		}
-	}
-
-	g_free(fulldir);
-	return FALSE;
-}
-
-/* Handle the legacy case where we look through the data directories */
-static gboolean
-app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
-{
-	gchar * desktop = g_strdup_printf("%s.desktop", appid);
-
-	/* Special case the user's dir */
-	if (evaluate_dir(g_get_user_data_dir(), desktop, appdir, appdesktop)) {
-		g_free(desktop);
-		return TRUE;
-	}
-
-	const char * const * data_dirs = g_get_system_data_dirs();
-	int i;
-	for (i = 0; data_dirs[i] != NULL; i++) {
-		if (evaluate_dir(data_dirs[i], desktop, appdir, appdesktop)) {
-			g_free(desktop);
-			return TRUE;
-		}
-	}
-
-	return FALSE;
-}
-
-/* Handle the libertine case where we look in the container */
-static gboolean
-app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
-{
-	char * container = NULL;
-	char * app = NULL;
-
-	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
-		return FALSE;
-	}
-
-	gchar * desktopdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, "usr", "share", NULL);
-	gchar * desktopname = g_strdup_printf("%s.desktop", app);
-	gchar * desktopfile = g_build_filename(desktopdir, "applications", desktopname, NULL);
-
-	g_free(container);
-	g_free(app);
-	g_free(desktopname);
-
-	if (appdir != NULL) {
-		*appdir = desktopdir;
-	} else {
-		g_free(desktopdir);
-	}
-
-	if (appdesktop != NULL) {
-		*appdesktop = desktopfile;
-	} else {
-		g_free(desktopfile);
-	}
-
-	return TRUE;
-}
-
-/* Get the information on where the desktop file is from libclick */
-static gboolean
-app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
-{
-	gchar * package = NULL;
-	gchar * application = NULL;
-
-	if (!ubuntu_app_launch_app_id_parse(appid, &package, &application, NULL)) {
-		return FALSE;
-	}
-
-	JsonObject * manifest = get_manifest(package, appdir);
-	if (manifest == NULL) {
-		g_free(package);
-		g_free(application);
-		return FALSE;
-	}
-
-	g_free(package);
-
-	if (appdesktop != NULL) {
-		JsonObject * hooks = json_object_get_object_member(manifest, "hooks");
-		if (hooks == NULL) {
-			json_object_unref(manifest);
-			g_free(application);
-			return FALSE;
-		}
-
-		JsonObject * appobj = json_object_get_object_member(hooks, application);
-		g_free(application);
-
-		if (appobj == NULL) {
-			json_object_unref(manifest);
-			return FALSE;
-		}
-
-		const gchar * desktop = json_object_get_string_member(appobj, "desktop");
-		if (desktop == NULL) {
-			json_object_unref(manifest);
-			return FALSE;
-		}
-
-		*appdesktop = g_strdup(desktop);
-	} else {
-		g_free(application);
-	}
-
-	json_object_unref(manifest);
-
-	return TRUE;
 }
 
 gboolean
@@ -1756,7 +1625,7 @@ ubuntu_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** 
 }
 
 /* Try and get a manifest and do a couple sanity checks on it */
-static JsonObject *
+JsonObject *
 get_manifest (const gchar * pkg, gchar ** pkgpath)
 {
 	/* Get the directory from click */

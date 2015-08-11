@@ -21,4 +21,6 @@
 
 #include <glib.h>
 
+gboolean app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
 gboolean app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
+gboolean app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
