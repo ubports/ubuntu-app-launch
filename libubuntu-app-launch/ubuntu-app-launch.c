@@ -36,6 +36,7 @@
 #include "desktop-exec.h"
 #include "recoverable-problem.h"
 #include "proxy-socket-demangler.h"
+#include "app-info.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -214,38 +215,12 @@ is_click (const gchar * appid)
 static gboolean
 is_libertine (const gchar * appid)
 {
-	char * container = NULL;
-	char * app = NULL;
-
-	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
+	if (app_info_libertine(appid, NULL, NULL)) {
+		g_debug("Libertine application detected: %s", appid);
+		return TRUE;
+	} else {
 		return FALSE;
 	}
-
-	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, NULL);
-	g_free(container);
-
-	if (!g_file_test(containerdir, G_FILE_TEST_IS_DIR)) {
-		g_free(app);
-		g_free(containerdir);
-
-		return FALSE;
-	}
-
-	gchar * appdesktop = g_strdup_printf("%s.desktop", app);
-	gchar * desktopfile = g_build_filename(containerdir, "usr", "share", "applications", appdesktop, NULL);
-
-	g_free(containerdir);
-	g_free(appdesktop);
-	g_free(app);
-
-	gboolean islib = g_file_test(desktopfile, G_FILE_TEST_EXISTS);
-	g_free(desktopfile);
-
-	if (islib) {
-		g_debug("Detected '%s' as a Libertine Application", appid);
-	}
-
-	return islib;
 }
 
 static gboolean

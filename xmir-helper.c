@@ -42,7 +42,7 @@ int
 main (int argc, char * argv[])
 {
 	if (argc < 3) {
-		fprintf(stderr, "xmir-helper needs more arguments: xmir-helper $(appid) $(thing to exec)\n");
+		fprintf(stderr, "xmir-helper needs more arguments: xmir-helper $(appid) $(thing to exec) ... \n");
 		return 1;
 	}
 

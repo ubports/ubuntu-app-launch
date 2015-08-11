@@ -28,6 +28,7 @@
 #include "recoverable-problem.h"
 #include "ual-tracepoint.h"
 #include "ubuntu-app-launch.h"
+#include "app-info.h"
 
 /* Reports an error on the caller of UAL so that we can track
    who is trying to launch bad AppIDs, and then fix their bug
@@ -78,34 +79,11 @@ report_error_on_caller (const gchar * app_id) {
 GKeyFile *
 keyfile_for_libertine (const gchar * appid, gchar ** outcontainer)
 {
-	/* Inital Tests, duplicating to be sure */
-	char * container = NULL;
-	char * app = NULL;
+	gchar * desktopfile = NULL;
 
-	if (!ubuntu_app_launch_app_id_parse(appid, &container, &app, NULL)) {
+	if (!app_info_libertine(appid, NULL, &desktopfile)) {
 		return NULL;
 	}
-
-	gchar * containerdir = g_build_filename(g_get_user_cache_dir(), "libertine-container", container, NULL);
-	if (outcontainer != NULL) {
-		*outcontainer = container;
-	} else {
-		g_clear_pointer(&container, g_free);
-	}
-
-	if (!g_file_test(containerdir, G_FILE_TEST_IS_DIR)) {
-		g_free(app);
-		g_free(containerdir);
-
-		return NULL;
-	}
-
-	gchar * appdesktop = g_strdup_printf("%s.desktop", app);
-	gchar * desktopfile = g_build_filename(containerdir, "usr", "share", "applications", appdesktop, NULL);
-
-	g_free(containerdir);
-	g_free(appdesktop);
-	g_free(app);
 
 	/* We now think we have a valid 'desktopfile' path */
 	GKeyFile * keyfile = g_key_file_new();
@@ -124,6 +102,10 @@ keyfile_for_libertine (const gchar * appid, gchar ** outcontainer)
 	}
 
 	g_free(desktopfile);
+
+	if (outcontainer != NULL) {
+		ubuntu_app_launch_app_id_parse(appid, outcontainer, NULL, NULL);
+	}
 
 	return keyfile;
 }
