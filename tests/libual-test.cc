@@ -85,6 +85,7 @@ class LibUAL : public ::testing::Test
 
 			g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
 			g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
+			g_setenv("XDG_DATA_HOME",  CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
 			service = dbus_test_service_new(NULL);
 
