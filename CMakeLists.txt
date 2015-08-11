@@ -79,7 +79,7 @@ include_directories(${MIR_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 
 add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 
