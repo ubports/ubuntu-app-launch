@@ -282,10 +282,6 @@ app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 		}
 	}
 
-	g_free(desktopname);
-	g_free(container);
-	g_free(app);
-
 	if (appdir != NULL) {
 		*appdir = desktopdir;
 	} else {
@@ -293,10 +289,13 @@ app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 	}
 
 	if (appdesktop != NULL) {
-		*appdesktop = desktopfile;
-	} else {
-		g_free(desktopfile);
+		*appdesktop = g_build_filename("applications", desktopname, NULL);
 	}
+
+	g_free(desktopfile);
+	g_free(desktopname);
+	g_free(container);
+	g_free(app);
 
 	return TRUE;
 }

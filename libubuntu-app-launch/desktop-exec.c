@@ -80,28 +80,34 @@ GKeyFile *
 keyfile_for_libertine (const gchar * appid, gchar ** outcontainer)
 {
 	gchar * desktopfile = NULL;
+	gchar * desktopdir = NULL;
 
-	if (!app_info_libertine(appid, NULL, &desktopfile)) {
+	if (!app_info_libertine(appid, &desktopdir, &desktopfile)) {
 		return NULL;
 	}
+
+	gchar * desktopfull = g_build_filename(desktopdir, desktopfile, NULL);
+	g_debug("Desktop full: %s", desktopfull);
+	g_free(desktopdir);
+	g_free(desktopfile);
 
 	/* We now think we have a valid 'desktopfile' path */
 	GKeyFile * keyfile = g_key_file_new();
-	gboolean loaded = g_key_file_load_from_file(keyfile, desktopfile, G_KEY_FILE_NONE, NULL);
+	gboolean loaded = g_key_file_load_from_file(keyfile, desktopfull, G_KEY_FILE_NONE, NULL);
 
 	if (!loaded) {
-		g_free(desktopfile);
+		g_free(desktopfull);
 		g_key_file_free(keyfile);
 		return NULL;
 	}
 
-	if (!verify_keyfile(keyfile, desktopfile)) {
-		g_free(desktopfile);
+	if (!verify_keyfile(keyfile, desktopfull)) {
+		g_free(desktopfull);
 		g_key_file_free(keyfile);
 		return NULL;
 	}
 
-	g_free(desktopfile);
+	g_free(desktopfull);
 
 	if (outcontainer != NULL) {
 		ubuntu_app_launch_app_id_parse(appid, outcontainer, NULL, NULL);
