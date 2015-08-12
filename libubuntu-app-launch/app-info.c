@@ -205,6 +205,7 @@ static gboolean
 evaluate_dir (const gchar * dir, const gchar * desktop, gchar ** appdir, gchar ** appdesktop)
 {
 	char * fulldir = g_build_filename(dir, "applications", desktop, NULL);
+	gboolean found = FALSE;
 
 	if (g_file_test(fulldir, G_FILE_TEST_EXISTS)) {
 		if (appdir != NULL) {
@@ -214,10 +215,12 @@ evaluate_dir (const gchar * dir, const gchar * desktop, gchar ** appdir, gchar *
 		if (appdesktop != NULL) {
 			*appdesktop = g_strdup_printf("applications/%s", desktop);
 		}
+
+		found = TRUE;
 	}
 
 	g_free(fulldir);
-	return FALSE;
+	return found;
 }
 
 /* Handle the legacy case where we look through the data directories */
