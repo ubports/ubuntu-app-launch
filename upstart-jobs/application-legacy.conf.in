@@ -11,6 +11,7 @@ env APP_EXEC
 env APP_EXEC_POLICY=""
 env APP_URIS
 env APP_DESKTOP_FILE_PATH
+env APP_XMIR_ENABLE
 
 # This will be set to "unconfined" by desktop-exec if there is no confinement defined
 apparmor switch $APP_EXEC_POLICY
