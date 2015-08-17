@@ -120,5 +120,9 @@ main (int argc, char * argv[])
 
 	g_free(mirsocketbuf);
 
+	/* Don't let people guess about these */
+	g_unsetenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
+	g_unsetenv("UBUNTU_APP_LAUNCH_DEMANGLE_PATH");
+
 	return execvp(argv[1], argv + 1);
 }
