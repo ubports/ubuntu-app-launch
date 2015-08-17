@@ -18,8 +18,6 @@
  */
 
 #include "ubuntu-app-launch.h"
-#include <json-glib/json-glib.h>
-#include <click.h>
 #include <upstart.h>
 #include <gio/gio.h>
 #include <gio/gunixfdlist.h>
@@ -36,6 +34,7 @@
 #include "desktop-exec.h"
 #include "recoverable-problem.h"
 #include "proxy-socket-demangler.h"
+#include "app-info.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -208,6 +207,19 @@ is_click (const gchar * appid)
 	return click;
 }
 
+/* Determine whether an AppId is realated to a Libertine container by
+   checking the container and program name. */
+static gboolean
+is_libertine (const gchar * appid)
+{
+	if (app_info_libertine(appid, NULL, NULL)) {
+		g_debug("Libertine application detected: %s", appid);
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
 static gboolean
 start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
 {
@@ -220,6 +232,14 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 
 	gboolean click = is_click(appid);
 	ual_tracepoint(libual_determine_type, appid, click ? "click" : "legacy");
+
+	/* Figure out if it is libertine */
+	gboolean libertine = FALSE;
+	if (!click) {
+		libertine = is_libertine(appid);
+	}
+
+	ual_tracepoint(libual_determine_libertine, appid, libertine ? "container" : "host");
 
 	/* Figure out the DBus path for the job */
 	const gchar * jobpath = NULL;
@@ -258,7 +278,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	}
 
 	if (!click) {
-		if (legacy_single_instance(appid)) {
+		if (libertine || legacy_single_instance(appid)) {
 			g_variant_builder_add_value(&builder, g_variant_new_string("INSTANCE_ID="));
 		} else {
 			gchar * instanceid = g_strdup_printf("INSTANCE_ID=%" G_GUINT64_FORMAT, g_get_real_time());
@@ -274,7 +294,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 	if (click) {
 		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
 	} else {
-		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder);
+		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder, libertine);
 	}
 
 	if (setup_complete) {
@@ -694,7 +714,7 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 		return path;
 	}
 
-	if (legacy_single_instance(appid)) {
+	if (!is_libertine(appid) && legacy_single_instance(appid)) {
 		gchar * appfile = g_strdup_printf("application-legacy-%s-.log", appid);
 		path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
 		g_free(appfile);
@@ -1490,7 +1510,7 @@ pids_for_appid (const gchar * appid)
 
 		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
-	} else if (legacy_single_instance(appid)) {
+	} else if (!is_libertine(appid) && legacy_single_instance(appid)) {
 		gchar * jobname = g_strdup_printf("%s-", appid);
 		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
 		g_free(jobname);
@@ -1590,153 +1610,23 @@ ubuntu_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** 
 	return TRUE;
 }
 
-/* Try and get a manifest and do a couple sanity checks on it */
-static JsonObject *
-get_manifest (const gchar * pkg)
-{
-	/* Get the directory from click */
-	GError * error = NULL;
-
-	ClickDB * db = click_db_new();
-	/* If TEST_CLICK_DB is unset, this reads the system database. */
-	click_db_read(db, g_getenv("TEST_CLICK_DB"), &error);
-	if (error != NULL) {
-		g_warning("Unable to read Click database: %s", error->message);
-		g_error_free(error);
-		g_object_unref(db);
-		return NULL;
-	}
-	/* If TEST_CLICK_USER is unset, this uses the current user name. */
-	ClickUser * user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
-	if (error != NULL) {
-		g_warning("Unable to read Click database: %s", error->message);
-		g_error_free(error);
-		g_object_unref(db);
-		return NULL;
-	}
-	g_object_unref(db);
-	JsonObject * manifest = click_user_get_manifest(user, pkg, &error);
-	if (error != NULL) {
-		g_warning("Unable to get manifest for '%s' package: %s", pkg, error->message);
-		g_error_free(error);
-		g_object_unref(user);
-		return NULL;
-	}
-	g_object_unref(user);
-
-	if (!json_object_has_member(manifest, "version")) {
-		g_warning("Manifest file for package '%s' does not have a version", pkg);
-		json_object_unref(manifest);
-		return NULL;
-	}
-
-	return manifest;
-}
-
-/* Types of search we can do for an app name */
-typedef enum _app_name_t app_name_t;
-enum _app_name_t {
-	APP_NAME_ONLY,
-	APP_NAME_FIRST,
-	APP_NAME_LAST
-};
-
-/* Figure out the app name if it's one of the keywords */
-static const gchar *
-manifest_app_name (JsonObject ** manifest, const gchar * pkg, const gchar * original_app)
-{
-	app_name_t app_type = APP_NAME_FIRST;
-
-	if (original_app == NULL) {
-		/* first */
-	} else if (g_strcmp0(original_app, "first-listed-app") == 0) {
-		/* first */
-	} else if (g_strcmp0(original_app, "last-listed-app") == 0) {
-		app_type = APP_NAME_LAST;
-	} else if (g_strcmp0(original_app, "only-listed-app") == 0) {
-		app_type = APP_NAME_ONLY;
-	} else {
-		return original_app;
-	}
-
-	if (*manifest == NULL) {
-		*manifest = get_manifest(pkg);
-	}
-
-	JsonObject * hooks = json_object_get_object_member(*manifest, "hooks");
-
-	if (hooks == NULL) {
-		return NULL;
-	}
-
-	GList * apps = json_object_get_members(hooks);
-	if (apps == NULL) {
-		return NULL;
-	}
-
-	const gchar * retapp = NULL;
-
-	switch (app_type) {
-	case APP_NAME_ONLY:
-		if (g_list_length(apps) == 1) {
-			retapp = (const gchar *)apps->data;
-		}
-		break;
-	case APP_NAME_FIRST:
-		retapp = (const gchar *)apps->data;
-		break;
-	case APP_NAME_LAST:
-		retapp = (const gchar *)(g_list_last(apps)->data);
-		break;
-	default:
-		break;
-	}
-
-	g_list_free(apps);
-
-	return retapp;
-}
-
-/* Figure out the app version using the manifest */
-static const gchar *
-manifest_version (JsonObject ** manifest, const gchar * pkg, const gchar * original_ver)
-{
-	if (original_ver != NULL && g_strcmp0(original_ver, "current-user-version") != 0) {
-		return original_ver;
-	} else  {
-		if (*manifest == NULL) {
-			*manifest = get_manifest(pkg);
-		}
-		g_return_val_if_fail(*manifest != NULL, NULL);
-
-		return g_strdup(json_object_get_string_member(*manifest, "version"));
-	}
-
-	return NULL;
-}
-
+/* Figure out whether we're a libertine container app or a click and then
+   choose which function to use */
 gchar *
 ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
 {
 	g_return_val_if_fail(pkg != NULL, NULL);
 
-	const gchar * version = NULL;
-	const gchar * application = NULL;
-	JsonObject * manifest = NULL;
+	/* Check if is a libertine container */
+	gchar * libertinepath = g_build_filename(g_get_user_cache_dir(), "libertine-container", pkg, NULL);
+	gboolean libcontainer = g_file_test(libertinepath, G_FILE_TEST_EXISTS);
+	g_free(libertinepath);
 
-	version = manifest_version(&manifest, pkg, ver);
-	g_return_val_if_fail(version != NULL, NULL);
-
-	application = manifest_app_name(&manifest, pkg, app);
-	g_return_val_if_fail(application != NULL, NULL);
-
-	gchar * retval = g_strdup_printf("%s_%s_%s", pkg, application, version);
-
-	/* The object may hold allocation for some of our strings used above */
-	if (manifest)
-		json_object_unref(manifest);
-
-	return retval;
+	if (libcontainer) {
+		return libertine_triplet_to_app_id(pkg, app, ver);
+	} else {
+		return click_triplet_to_app_id(pkg, app, ver);
+	}
 }
 
 /* Print an error if we couldn't start it */

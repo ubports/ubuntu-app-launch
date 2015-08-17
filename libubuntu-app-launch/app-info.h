@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Canonical Ltd.
+ * Copyright © 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -20,7 +20,8 @@
 #pragma once
 
 #include <glib.h>
-#include "helpers.h"
 
-gboolean desktop_task_setup (GDBusConnection * bus, const gchar * appid, EnvHandle * envhandle, gboolean is_libertine);
+gboolean app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
 
+gchar * click_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver);
+gchar * libertine_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver);

@@ -18,6 +18,13 @@ TRACEPOINT_EVENT(ubuntu_app_launch, libual_determine_type,
 		ctf_string(type, type)
 	)
 )
+TRACEPOINT_EVENT(ubuntu_app_launch, libual_determine_libertine,
+	TP_ARGS(const char *, appid, const char *, executionenv),
+	TP_FIELDS(
+		ctf_string(appid, appid)
+		ctf_string(executionenv, executionenv)
+	)
+)
 TRACEPOINT_EVENT(ubuntu_app_launch, libual_job_path_determined,
 	TP_ARGS(const char *, appid, const char *, job_path),
 	TP_FIELDS(

@@ -25,7 +25,7 @@
 #include "libubuntu-app-launch/recoverable-problem.h"
 
 /* Check to make sure we have the sections and keys we want */
-static gboolean
+gboolean
 verify_keyfile (GKeyFile * inkeyfile, const gchar * desktop)
 {
 	if (inkeyfile == NULL) return FALSE;
