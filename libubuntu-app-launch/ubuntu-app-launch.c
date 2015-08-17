@@ -748,6 +748,18 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 	return path;
 }
 
+gboolean
+ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+	if (is_click(appid)) {
+		return app_info_click(appid, appdir, appdesktop);
+	} else if (is_libertine(appid)) {
+		return app_info_libertine(appid, appdir, appdesktop);
+	} else {
+		return app_info_legacy(appid, appdir, appdesktop);
+	}
+}
+
 static GDBusConnection *
 gdbus_upstart_ref (void) {
 	static GDBusConnection * gdbus_upstart = NULL;

@@ -24,8 +24,8 @@
 #include "app-info.h"
 
 /* Try and get a manifest and do a couple sanity checks on it */
-static JsonObject *
-get_manifest (const gchar * pkg)
+JsonObject *
+get_manifest (const gchar * pkg, gchar ** pkgpath)
 {
 	/* Get the directory from click */
 	GError * error = NULL;
@@ -54,6 +54,16 @@ get_manifest (const gchar * pkg)
 		g_error_free(error);
 		g_object_unref(user);
 		return NULL;
+	}
+
+	if (pkgpath != NULL) {
+		*pkgpath = click_user_get_path(user, pkg, &error);
+		if (error != NULL) {
+			g_warning("Unable to get the Click package directory for %s: %s", pkg, error->message);
+			g_error_free(error);
+			g_object_unref(user);
+			return NULL;
+		}
 	}
 	g_object_unref(user);
 
@@ -93,7 +103,7 @@ manifest_app_name (JsonObject ** manifest, const gchar * pkg, const gchar * orig
 	}
 
 	if (*manifest == NULL) {
-		*manifest = get_manifest(pkg);
+		*manifest = get_manifest(pkg, NULL);
 	}
 
 	JsonObject * hooks = json_object_get_object_member(*manifest, "hooks");
@@ -138,7 +148,7 @@ manifest_version (JsonObject ** manifest, const gchar * pkg, const gchar * origi
 		return original_ver;
 	} else  {
 		if (*manifest == NULL) {
-			*manifest = get_manifest(pkg);
+			*manifest = get_manifest(pkg, NULL);
 		}
 		g_return_val_if_fail(*manifest != NULL, NULL);
 
@@ -190,6 +200,53 @@ libertine_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar *
 	}
 }
 
+/* Look to see if the app id results in a desktop file, if so, fill in the params */
+static gboolean
+evaluate_dir (const gchar * dir, const gchar * desktop, gchar ** appdir, gchar ** appdesktop)
+{
+	char * fulldir = g_build_filename(dir, "applications", desktop, NULL);
+	gboolean found = FALSE;
+
+	if (g_file_test(fulldir, G_FILE_TEST_EXISTS)) {
+		if (appdir != NULL) {
+			*appdir = g_strdup(dir);
+		}
+
+		if (appdesktop != NULL) {
+			*appdesktop = g_strdup_printf("applications/%s", desktop);
+		}
+
+		found = TRUE;
+	}
+
+	g_free(fulldir);
+	return found;
+}
+
+/* Handle the legacy case where we look through the data directories */
+gboolean
+app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+	gchar * desktop = g_strdup_printf("%s.desktop", appid);
+
+	/* Special case the user's dir */
+	if (evaluate_dir(g_get_user_data_dir(), desktop, appdir, appdesktop)) {
+		g_free(desktop);
+		return TRUE;
+	}
+
+	const char * const * data_dirs = g_get_system_data_dirs();
+	int i;
+	for (i = 0; data_dirs[i] != NULL; i++) {
+		if (evaluate_dir(data_dirs[i], desktop, appdir, appdesktop)) {
+			g_free(desktop);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 /* Handle the libertine case where we look in the container */
 gboolean
 app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
@@ -225,10 +282,6 @@ app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 		}
 	}
 
-	g_free(desktopname);
-	g_free(container);
-	g_free(app);
-
 	if (appdir != NULL) {
 		*appdir = desktopdir;
 	} else {
@@ -236,10 +289,66 @@ app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 	}
 
 	if (appdesktop != NULL) {
-		*appdesktop = desktopfile;
-	} else {
-		g_free(desktopfile);
+		*appdesktop = g_build_filename("applications", desktopname, NULL);
 	}
+
+	g_free(desktopfile);
+	g_free(desktopname);
+	g_free(container);
+	g_free(app);
 
 	return TRUE;
 }
+
+/* Get the information on where the desktop file is from libclick */
+gboolean
+app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+	gchar * package = NULL;
+	gchar * application = NULL;
+
+	if (!ubuntu_app_launch_app_id_parse(appid, &package, &application, NULL)) {
+		return FALSE;
+	}
+
+	JsonObject * manifest = get_manifest(package, appdir);
+	if (manifest == NULL) {
+		g_free(package);
+		g_free(application);
+		return FALSE;
+	}
+
+	g_free(package);
+
+	if (appdesktop != NULL) {
+		JsonObject * hooks = json_object_get_object_member(manifest, "hooks");
+		if (hooks == NULL) {
+			json_object_unref(manifest);
+			g_free(application);
+			return FALSE;
+		}
+
+		JsonObject * appobj = json_object_get_object_member(hooks, application);
+		g_free(application);
+
+		if (appobj == NULL) {
+			json_object_unref(manifest);
+			return FALSE;
+		}
+
+		const gchar * desktop = json_object_get_string_member(appobj, "desktop");
+		if (desktop == NULL) {
+			json_object_unref(manifest);
+			return FALSE;
+		}
+
+		*appdesktop = g_strdup(desktop);
+	} else {
+		g_free(application);
+	}
+
+	json_object_unref(manifest);
+
+	return TRUE;
+}
+

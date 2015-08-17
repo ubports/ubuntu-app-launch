@@ -1627,3 +1627,45 @@ TEST_F(LibUAL, SetExec)
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 }
+
+TEST_F(LibUAL, AppInfo)
+{
+	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
+
+	char * dir = nullptr;
+	char * file = nullptr;
+
+	/* Basics */
+	EXPECT_TRUE(ubuntu_app_launch_application_info("com.test.good_application_1.2.3", nullptr, nullptr));
+	EXPECT_FALSE(ubuntu_app_launch_application_info("com.test.bad_not-app_1.3.3.7", nullptr, nullptr));
+	EXPECT_FALSE(ubuntu_app_launch_application_info(nullptr, nullptr, nullptr));
+
+	/* Ensure false doesn't set the values */
+	EXPECT_FALSE(ubuntu_app_launch_application_info("com.test.bad_not-app_1.3.3.7", &dir, &file));
+	EXPECT_EQ(nullptr, dir);
+	EXPECT_EQ(nullptr, file);
+	g_clear_pointer(&dir, g_free);
+	g_clear_pointer(&file, g_free);
+
+	/* Correct values from a click */
+	EXPECT_TRUE(ubuntu_app_launch_application_info("com.test.good_application_1.2.3", &dir, &file));
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/click-root-dir/.click/users/test-user/com.test.good", dir);
+	EXPECT_STREQ("application.desktop", file);
+	g_clear_pointer(&dir, g_free);
+	g_clear_pointer(&file, g_free);
+
+	/* Correct values from a legacy */
+	EXPECT_TRUE(ubuntu_app_launch_application_info("bar", &dir, &file));
+	EXPECT_STREQ(CMAKE_SOURCE_DIR, dir);
+	EXPECT_STREQ("applications/bar.desktop", file);
+	g_clear_pointer(&dir, g_free);
+	g_clear_pointer(&file, g_free);
+
+	/* Correct values for libertine */
+	EXPECT_TRUE(ubuntu_app_launch_application_info("container-name_test_0.0", &dir, &file));
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/libertine-container/container-name/rootfs/usr/share", dir);
+	EXPECT_STREQ("applications/test.desktop", file);
+	g_clear_pointer(&dir, g_free);
+	g_clear_pointer(&file, g_free);
+}

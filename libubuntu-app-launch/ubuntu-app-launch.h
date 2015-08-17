@@ -142,6 +142,22 @@ gboolean   ubuntu_app_launch_resume_application         (const gchar *          
 gchar *    ubuntu_app_launch_application_log_path     (const gchar *                     appid);
 
 /**
+ * ubuntu_app_launch_application_info:
+ * @appid: ID of the application
+ * @appdir: (allow-none) (transfer full): Directory for the application
+ * @appdesktop: (allow-none) (transfer full): Relative path to desktop file
+ *
+ * Finds a location for information on an application and the relative
+ * directory that it was found in. So this should be used to find icons
+ * relating to that desktop file.
+ *
+ * Return value: Path to a log file or NULL if unavailable
+ */
+gboolean   ubuntu_app_launch_application_info         (const gchar *                     appid,
+                                                       gchar **                          appdir,
+                                                       gchar **                          appdesktop);
+
+/**
  * ubuntu_app_launch_observer_add_app_starting:
  * @observer: (scope notified): Callback when an application is about to start
  * @user_data: (closure) (allow-none): Data to pass to the observer
