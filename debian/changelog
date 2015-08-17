@@ -1,3 +1,21 @@
+ubuntu-app-launch (0.5+15.10.20150817-0ubuntu1) wily; urgency=medium
+
+  [ CI Train Bot ]
+  * debian/libubuntu-app-launch2.symbols: update to released version.
+
+  [ Robert Ancell ]
+  * Depend on upstart instead of upstart-bin which is a dummy
+    transitional package.
+
+  [ Ted Gould ]
+  * Detect applications that are in a libertine container
+  * Make demangler path more secure and unset internal environment
+    variables
+  * Provide an API to find the desktop file and directory of an AppID
+  * Start XMir for applications that enable it
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 17 Aug 2015 21:38:33 +0000
+
 ubuntu-app-launch (0.5+15.10.20150629-0ubuntu1) wily; urgency=medium
 
   [ Andreas Pokorny ]

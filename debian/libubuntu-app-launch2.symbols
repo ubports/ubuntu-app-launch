@@ -1,6 +1,6 @@
 libubuntu-app-launch.so.2 libubuntu-app-launch2 #MINVER#
  ubuntu_app_launch_app_id_parse@Base 0.4
- ubuntu_app_launch_application_info@Base 0replaceme
+ ubuntu_app_launch_application_info@Base 0.5+15.10.20150817
  ubuntu_app_launch_application_log_path@Base 0.4
  ubuntu_app_launch_get_primary_pid@Base 0.4
  ubuntu_app_launch_helper_set_exec@Base 0.5+15.10.20150604
