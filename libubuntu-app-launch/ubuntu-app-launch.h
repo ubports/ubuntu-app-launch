@@ -388,6 +388,18 @@ gchar **   ubuntu_app_launch_list_running_apps         (void);
 GPid       ubuntu_app_launch_get_primary_pid           (const gchar *                     appid);
 
 /**
+ * ubuntu_app_launch_get_pids:
+ * @appid: ID of the application to look for
+ *
+ * Checks to see if an application is running and returns
+ * the PIDs associated with it.
+ *
+ * Return Value: (transfer full) (element-type GLib.Pid) A list
+ *   of PIDs associated with @appid, empty if not running.
+ */
+GList *     ubuntu_app_launch_get_pids                 (const gchar *                     appid);
+
+/**
  * ubuntu_app_launch_pid_in_app_id:
  * @pid: Process ID to check on
  * @appid: ID of the application to look in
