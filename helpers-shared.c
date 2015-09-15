@@ -191,7 +191,7 @@ cgroup_manager_connection (void)
 	g_main_context_pop_thread_default(context);
 
 	if (!use_session_bus && connection.con != NULL) {
-		g_object_set_data(G_OBJECT(connection.con), "cgmanager-context", context);
+		g_object_set_data_full(G_OBJECT(connection.con), "cgmanager-context", context, g_main_context_unref);
 	} else {
 		g_main_context_unref(context);
 	}
