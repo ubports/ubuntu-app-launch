@@ -145,6 +145,8 @@ cgroup_manager_connection_addr_cb (GObject * obj, GAsyncResult * res, gpointer d
 	cgroup_manager_connection_core_cb(g_dbus_connection_new_for_address_finish, res, (cgm_connection_t *)data);
 }
 
+G_DEFINE_QUARK(CGMANAGER_CONTEXT, cgmanager_context);
+
 /* Get the connection to the cgroup manager */
 GDBusConnection *
 cgroup_manager_connection (void)
@@ -191,8 +193,8 @@ cgroup_manager_connection (void)
 	g_main_context_pop_thread_default(context);
 
 	if (!use_session_bus && connection.con != NULL) {
-		g_object_set_data(G_OBJECT(connection.con),
-		                  "cgmanager-context",
+		g_object_set_qdata(G_OBJECT(connection.con),
+		                   cgmanager_context_quark(),
 		                   context);
 	} else {
 		g_main_context_unref(context);
@@ -215,7 +217,7 @@ cgroup_manager_unref (GDBusConnection * cgmanager)
 	if (cgmanager == NULL)
 		return;
 
-	GMainContext * creationcontext = g_object_get_data(G_OBJECT(cgmanager), "cgmanager-context");
+	GMainContext * creationcontext = g_object_get_qdata(G_OBJECT(cgmanager), cgmanager_context_quark());
 	if (creationcontext == NULL) {
 		g_object_unref(cgmanager);
 		return;
