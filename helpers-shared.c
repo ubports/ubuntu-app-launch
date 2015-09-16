@@ -191,10 +191,9 @@ cgroup_manager_connection (void)
 	g_main_context_pop_thread_default(context);
 
 	if (!use_session_bus && connection.con != NULL) {
-		g_object_set_data_full(G_OBJECT(connection.con),
-		                       "cgmanager-context",
-		                       context,
-		                       (GDestroyNotify)g_main_context_unref);
+		g_object_set_data(G_OBJECT(connection.con),
+		                  "cgmanager-context",
+		                   context);
 	} else {
 		g_main_context_unref(context);
 	}
@@ -231,6 +230,11 @@ cgroup_manager_unref (GDBusConnection * cgmanager)
 	}
 
 	g_object_unref(cgmanager);
+
+	while (g_main_context_pending(creationcontext)) {
+		g_main_context_iteration(creationcontext, TRUE /* may block */);
+	}
+
 	g_main_context_unref(creationcontext);
 }
 
