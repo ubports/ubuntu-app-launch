@@ -394,7 +394,7 @@ GPid       ubuntu_app_launch_get_primary_pid           (const gchar *           
  * Checks to see if an application is running and returns
  * the PIDs associated with it.
  *
- * Return Value: (transfer full) (element-type GLib.Pid) A list
+ * Return Value: (transfer full) (element-type GLib.Pid): A list
  *   of PIDs associated with @appid, empty if not running.
  */
 GList *     ubuntu_app_launch_get_pids                 (const gchar *                     appid);
