@@ -2403,7 +2403,7 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directo
 	const gchar * job_name = g_getenv("UPSTART_JOB");
 	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
 	const gchar * demangler = g_getenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
-	g_return_if_fail(job_name != NULL);
+	g_return_val_if_fail(job_name != NULL, FALSE);
 
 	GError * error = NULL;
 	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
