@@ -26,14 +26,18 @@ if (EXISTS "/etc/debian_version")
 endif()
 
 set(pkglibexecdir "${CMAKE_INSTALL_FULL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_PKGLIBEXECDIR "${CMAKE_INSTALL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_FULL_PKGLIBEXECDIR "${CMAKE_INSTALL_FULL_LIBEXECDIR}/${CMAKE_PROJECT_NAME}")
+set(CMAKE_INSTALL_FULL_PKGDATADIR "${CMAKE_INSTALL_FULL_DATADIR}/${CMAKE_PROJECT_NAME}")
 
 execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
-	OUTPUT_VARIABLE UPSTART_APP_LAUNCH_ARCH
+	OUTPUT_VARIABLE UBUNTU_APP_LAUNCH_ARCH
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function")
+# Deprecated needed for g_atexit() in libual
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -Wno-error=deprecated-declarations -std=c99")
 
 enable_testing()
 
@@ -43,7 +47,7 @@ include_directories(${GLIB2_INCLUDE_DIRS})
 pkg_check_modules(GOBJECT2 REQUIRED gobject-2.0)
 include_directories(${GOBJECT2_INCLUDE_DIRS})
 
-pkg_check_modules(GIO2 REQUIRED gio-2.0)
+pkg_check_modules(GIO2 REQUIRED gio-2.0 gio-unix-2.0)
 include_directories(${GIO2_INCLUDE_DIRS})
 
 pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
@@ -67,36 +71,24 @@ include_directories(${DBUSTEST_INCLUDE_DIRS})
 pkg_check_modules(LTTNG REQUIRED lttng-ust)
 include_directories(${LTTNG_INCLUDE_DIRS})
 
+pkg_check_modules(CGMANAGER REQUIRED libcgmanager)
+include_directories(${CGMANAGER_INCLUDE_DIRS})
+
+pkg_check_modules(MIR mirclient)
+include_directories(${MIR_INCLUDE_DIRS})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -fPIC")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+
+add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 
 ####################
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c helpers-keyfile.c)
+add_library(helpers STATIC helpers.c helpers-shared.c libubuntu-app-launch/recoverable-problem.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
-
-####################
-# desktop-exec
-####################
-
-add_lttng_gen_tp(NAME desktop-exec-trace)
-add_executable(desktop-exec desktop-exec.c desktop-exec-trace.c recoverable-problem.c)
-set_target_properties(desktop-exec PROPERTIES OUTPUT_NAME "desktop-exec")
-target_link_libraries(desktop-exec helpers ${LTTNG_LIBRARIES})
-install(TARGETS desktop-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# click-exec
-####################
-
-add_lttng_gen_tp(NAME click-exec-trace)
-add_executable(click-exec click-exec.c click-exec-trace.c)
-set_target_properties(click-exec PROPERTIES OUTPUT_NAME "click-exec")
-target_link_libraries(click-exec helpers ${LTTNG_LIBRARIES} ${CLICK_LIBRARIES})
-install(TARGETS click-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # desktop-hook
@@ -124,7 +116,7 @@ install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
 
 add_executable(zg-report-app zg-report-app.c)
 set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
-target_link_libraries(zg-report-app ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
+target_link_libraries(zg-report-app ubuntu-launcher ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
 install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
@@ -146,6 +138,14 @@ target_link_libraries(application-failed ${GIO2_LIBRARIES})
 install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# xmir-helper
+####################
+
+add_executable(xmir-helper xmir-helper.c)
+set_target_properties(xmir-helper PROPERTIES OUTPUT_NAME "xmir-helper")
+install(TARGETS xmir-helper RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
 # untrusted-helper-type-end
 ####################
 
@@ -153,6 +153,32 @@ add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
 set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
 target_link_libraries(untrusted-helper-type-end ubuntu-launcher)
 install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
+# cgroup-reap-all
+####################
+
+add_executable(cgroup-reap-all cgroup-reap-all.c)
+set_target_properties(cgroup-reap-all PROPERTIES OUTPUT_NAME "cgroup-reap-all")
+target_link_libraries(cgroup-reap-all helpers)
+install(TARGETS cgroup-reap-all RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
+# oom-adjust-setuid-helper
+####################
+
+add_executable(oom-adjust-setuid-helper oom-adjust-setuid-helper.c)
+set_target_properties(oom-adjust-setuid-helper PROPERTIES OUTPUT_NAME "oom-adjust-setuid-helper")
+install(TARGETS oom-adjust-setuid-helper RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
+# socket-demangler
+####################
+
+add_executable(socket-demangler-helper socket-demangler.c)
+set_target_properties(socket-demangler-helper PROPERTIES OUTPUT_NAME "socket-demangler")
+target_link_libraries(socket-demangler-helper ${GIO2_LIBRARIES})
+install(TARGETS socket-demangler-helper RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # ubuntu-app-launch-desktop.click-hook
@@ -163,6 +189,7 @@ configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE
 add_subdirectory(libubuntu-app-launch)
 add_subdirectory(upstart-jobs)
 add_subdirectory(tools)
+add_subdirectory(ubuntu-app-test)
 
 # testing & coverage
 if (${enable_tests})

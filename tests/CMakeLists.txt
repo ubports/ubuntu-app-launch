@@ -31,10 +31,23 @@ add_test (helper-handshake-test helper-handshake-test)
 # libUAL Test
 
 include_directories("${CMAKE_SOURCE_DIR}/libubuntu-app-launch")
+add_definitions ( -DSPEW_UTILITY="${CMAKE_CURRENT_BINARY_DIR}/data-spew" )
+add_definitions ( -DSESSION_TEMP_FILE="${CMAKE_CURRENT_BINARY_DIR}/libual-test-session-start-temp" )
+add_definitions ( -DSOCKET_DEMANGLER="${CMAKE_BINARY_DIR}/socket-demangler" )
+add_definitions ( -DSOCKET_DEMANGLER_INSTALL="${pkglibexecdir}/socket-demangler" )
+add_definitions ( -DSOCKET_TOOL="${CMAKE_CURRENT_BINARY_DIR}/socket-tool" )
 
 add_executable (libual-test
-	libual-test.cc)
-target_link_libraries (libual-test helpers gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+	libual-test.cc
+	mir-mock.cpp)
+target_link_libraries (libual-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+
+add_executable (data-spew
+	data-spew.c)
+target_link_libraries (data-spew ${GLIB2_LIBRARIES})
+
+add_executable (socket-tool
+	socket-tool.c)
 
 add_test (NAME libual-test COMMAND libual-test)
 
@@ -63,11 +76,28 @@ add_test (exec-test "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh")
 
 # Exec Utils
 
-add_definitions ( -DCLICK_EXEC_TOOL="${CMAKE_BINARY_DIR}/click-exec" )
-add_definitions ( -DDESKTOP_EXEC_TOOL="${CMAKE_BINARY_DIR}/desktop-exec" )
-
 add_executable (exec-util-test
 	exec-util-test.cc)
 target_link_libraries (exec-util-test gtest ubuntu-launcher ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (exec-util-test exec-util-test)
+
+# CGroup Reap Test
+
+add_definitions ( -DCG_REAP_TOOL="${CMAKE_BINARY_DIR}/cgroup-reap-all" )
+
+add_executable (cgroup-reap-test
+	cgroup-reap-test.cc)
+target_link_libraries (cgroup-reap-test gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
+add_test (cgroup-reap-test cgroup-reap-test)
+
+# Desktop Hook Test
+
+configure_file ("click-desktop-hook-db/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-desktop-hook-db/test.conf" @ONLY)
+configure_file ("desktop-hook-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/desktop-hook-test.sh" @ONLY)
+add_test (desktop-hook-test desktop-hook-test.sh)
+
+# XMir helper Test
+
+configure_file ("xmir-helper-test.in" "${CMAKE_CURRENT_BINARY_DIR}/xmir-helper-test" @ONLY)
+add_test (xmir-helper-test xmir-helper-test)
 

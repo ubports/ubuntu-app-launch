@@ -29,15 +29,15 @@ https://click.readthedocs.org/en/latest/
 Probably the biggest thing to understand for how this code works is that you need to
 understand that this hook is run after one, or many packages are installed.  A set of
 symbolic links are made to the desktop files per-application (not per-package) in the
-directory specified in upstart-app-launcher-desktop.click-hook.in.  Those desktop files
+directory specified in ubuntu-app-launcher-desktop.click-hook.in.  Those desktop files
 give us the App ID of the packages that are installed and have applications needing
 desktop files in them.  We then operate on each of them ensuring that they are synchronized
 with the desktop files in ~/.local/share/applications/.
 
 The desktop files that we're creating there ARE NOT used for execution by the
-upstart-app-launch Upstart jobs.  They are there so that Unity can know which applications
+ubuntu-app-launch Upstart jobs.  They are there so that Unity can know which applications
 are installed for this user and they provide an Exec line to allow compatibility with
-desktop environments that are not using upstart-app-launch for launching applications.
+desktop environments that are not using ubuntu-app-launch for launching applications.
 You should not modify them and expect any executing under Unity to change.
 
 */
@@ -58,6 +58,18 @@ struct _app_state_t {
 	guint64 click_modified;
 	guint64 desktop_modified;
 };
+
+/* Desktop Group */
+#define DESKTOP_GROUP      "Desktop Entry"
+/* Desktop Keys */
+#define APP_ID_KEY         "X-Ubuntu-Application-ID"
+#define PATH_KEY           "Path"
+#define EXEC_KEY           "Exec"
+#define ICON_KEY           "Icon"
+#define SYMBOLIC_ICON_KEY  "X-Ubuntu-SymbolicIcon"
+#define SOURCE_FILE_KEY    "X-Ubuntu-UAL-Source-Desktop"
+/* Other */
+#define OLD_KEY_PREFIX     "X-Ubuntu-Old-"
 
 /* Find an entry in the app array */
 app_state_t *
@@ -125,11 +137,52 @@ add_click_package (const gchar * dir, const gchar * name, GArray * app_array)
 	return;
 }
 
+/* Look at the desktop file and ensure that it was built by us, and if it
+   was that its source still exists */
+gboolean
+desktop_source_exists (const gchar * dir, const gchar * name)
+{
+	gchar * desktopfile = g_build_filename(dir, name, NULL);
+
+	GKeyFile * keyfile = g_key_file_new();
+	g_key_file_load_from_file(keyfile,
+		desktopfile,
+		G_KEY_FILE_NONE,
+		NULL); /* No error */
+
+	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, NULL)) {
+		gboolean hasappid = g_key_file_has_key(keyfile, DESKTOP_GROUP, APP_ID_KEY, NULL);
+		g_free(desktopfile);
+		g_key_file_free(keyfile);
+		return hasappid;
+	}
+
+	/* At this point we know the key exists, so if we can't find the source
+	   file we want to delete the file as well. We need to replace it. */
+	gchar * originalfile = g_key_file_get_string(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, NULL);
+	g_key_file_free(keyfile);
+	gboolean found = TRUE;
+
+	if (!g_file_test(originalfile, G_FILE_TEST_EXISTS)) {
+		g_remove(desktopfile);
+		found = FALSE;
+	}
+
+	g_free(originalfile);
+	g_free(desktopfile);
+
+	return found;
+}
+
 /* Look at an desktop file entry */
 void
 add_desktop_file (const gchar * dir, const gchar * name, GArray * app_array)
 {
 	if (!g_str_has_suffix(name, ".desktop")) {
+		return;
+	}
+
+	if (!desktop_source_exists(dir, name)) {
 		return;
 	}
 
@@ -212,7 +265,7 @@ apport_child_timeout (gpointer user_data)
 
 /* Code to report an error, so we can start tracking how important this is */
 static void
-report_recoverable_error (const gchar * app_id, const gchar * originalicon, const gchar * iconpath)
+report_recoverable_error (const gchar * app_id, const gchar * iconfield, const gchar * originalicon, const gchar * iconpath)
 {
 	GError * error = NULL;
 	gint error_stdin = 0;
@@ -254,10 +307,14 @@ report_recoverable_error (const gchar * app_id, const gchar * originalicon, cons
 		write_string(error_stdin, iconpath);
 		write_null(error_stdin);
 
+		write_string(error_stdin, "IconField");
+		write_null(error_stdin);
+		write_string(error_stdin, iconfield);
+		write_null(error_stdin);
+
 		write_string(error_stdin, "DuplicateSignature");
 		write_null(error_stdin);
-		write_string(error_stdin, "icon-path-unhandled-");
-		write_string(error_stdin, app_id);
+		write_string(error_stdin, "icon-path-unhandled");
 		/* write_null(error_stdin); -- No final NULL */
 
 		close(error_stdin);
@@ -309,32 +366,53 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	/* Path Hanlding */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "Path", NULL)) {
-		gchar * oldpath = g_key_file_get_string(keyfile, "Desktop Entry", "Path", NULL);
-		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as X-Ubuntu-Old-Path.", from, oldpath);
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, PATH_KEY, NULL)) {
+		gchar * oldpath = g_key_file_get_string(keyfile, DESKTOP_GROUP, PATH_KEY, NULL);
+		g_debug("Desktop file '%s' has a Path set to '%s'.  Setting as " OLD_KEY_PREFIX PATH_KEY ".", from, oldpath);
 
-		g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Path", oldpath);
+		g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX PATH_KEY, oldpath);
 
 		g_free(oldpath);
 	}
 
-	g_key_file_set_string(keyfile, "Desktop Entry", "Path", appdir);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, PATH_KEY, appdir);
 
 	/* Icon Handling */
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "Icon", NULL)) {
-		gchar * originalicon = g_key_file_get_string(keyfile, "Desktop Entry", "Icon", NULL);
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, ICON_KEY, NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, DESKTOP_GROUP, ICON_KEY, NULL);
 		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
 
 		/* If the icon in the path exists, let's use that */
 		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
-			g_key_file_set_string(keyfile, "Desktop Entry", "Icon", iconpath);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, ICON_KEY, iconpath);
 			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Old-Icon", originalicon);
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX ICON_KEY, originalicon);
 		} else {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
 
-			report_recoverable_error(app_id, originalicon, iconpath);
+			report_recoverable_error(app_id, ICON_KEY, originalicon, iconpath);
+		}
+
+		g_free(iconpath);
+		g_free(originalicon);
+	}
+
+	/* SymbolicIcon Handling */
+	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, NULL)) {
+		gchar * originalicon = g_key_file_get_string(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, NULL);
+		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
+
+		/* If the icon in the path exists, let's use that */
+		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, SYMBOLIC_ICON_KEY, iconpath);
+			/* Save the old value, because, debugging */
+			g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX SYMBOLIC_ICON_KEY, originalicon);
+		} else {
+			/* So here we are, realizing all is lost.  Let's file a bug. */
+			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
+
+			report_recoverable_error(app_id, SYMBOLIC_ICON_KEY, originalicon, iconpath);
 		}
 
 		g_free(iconpath);
@@ -349,12 +427,15 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	}
 
 	gchar * newexec = g_strdup_printf("aa-exec-click -p %s -- %s", app_id, oldexec);
-	g_key_file_set_string(keyfile, "Desktop Entry", "Exec", newexec);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, EXEC_KEY, newexec);
 	g_free(newexec);
 	g_free(oldexec);
 
 	/* Adding an Application ID */
-	g_key_file_set_string(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", app_id);
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, APP_ID_KEY, app_id);
+
+	/* Adding the source file path */
+	g_key_file_set_string(keyfile, DESKTOP_GROUP, SOURCE_FILE_KEY, from);
 
 	/* Output */
 	gsize datalen = 0;
@@ -390,14 +471,27 @@ build_desktop_file (app_state_t * state, const gchar * symlinkdir, const gchar *
 		return;
 	}
 
+	/* Read in the database */
+	ClickDB * db = click_db_new();
+	click_db_read(db, g_getenv("TEST_CLICK_DB"), &error);
+	if (error != NULL) {
+		g_warning("Unable to read Click database: %s", error->message);
+		g_error_free(error);
+		g_free(package);
+		g_object_unref(db);
+		return;
+	}
+
 	/* Check click to find out where the files are */
-	ClickUser * user = click_user_new_for_user(NULL, NULL, &error);
+	ClickUser * user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
+	g_object_unref(db);
 	if (error != NULL) {
 		g_warning("Unable to read Click database: %s", error->message);
 		g_error_free(error);
 		g_free(package);
 		return;
 	}
+
 	gchar * pkgdir = click_user_get_path(user, package, &error);
 	if (error != NULL) {
 		g_warning("Unable to get the Click package directory for %s: %s", package, error->message);
@@ -448,7 +542,7 @@ remove_desktop_file (app_state_t * state, const gchar * desktopdir)
 		G_KEY_FILE_NONE,
 		NULL);
 
-	if (!g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Application-ID", NULL)) {
+	if (!g_key_file_has_key(keyfile, DESKTOP_GROUP, APP_ID_KEY, NULL)) {
 		g_debug("Desktop file '%s' is not one created by us.", desktoppath);
 		g_key_file_unref(keyfile);
 		g_free(desktoppath);
@@ -477,7 +571,7 @@ main (int argc, char * argv[])
 	GArray * apparray = g_array_new(FALSE, FALSE, sizeof(app_state_t));
 
 	/* Find all the symlinks of desktop files */
-	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "upstart-app-launch", "desktop", NULL);
+	gchar * symlinkdir = g_build_filename(g_get_user_cache_dir(), "ubuntu-app-launch", "desktop", NULL);
 	if (!g_file_test(symlinkdir, G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)) {
 		g_debug("No installed click packages");
 	} else {

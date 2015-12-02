@@ -32,6 +32,13 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf" DESTINATION 
 add_test(application-failed.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-failed.conf")
 
 ####################
+# application-logrotate.conf
+####################
+
+install(FILES "application-logrotate.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
+add_test(application-logrotate.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_SOURCE_DIR}/application-logrotate.conf")
+
+####################
 # untrusted-helper.conf
 ####################
 
@@ -46,4 +53,11 @@ add_test(untrusted-helper.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.s
 configure_file("untrusted-helper-type-end.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper-type-end.conf" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper-type-end.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
 add_test(untrusted-helper-type-end.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/untrusted-helper-type-end.conf")
+
+####################
+# untrusted-helper-logrotate.conf
+####################
+
+install(FILES "untrusted-helper-logrotate.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
+add_test(untrusted-helper-logrotate.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_SOURCE_DIR}/untrusted-helper-logrotate.conf")
 

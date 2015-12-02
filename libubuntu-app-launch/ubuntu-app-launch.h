@@ -18,6 +18,7 @@
  */
 
 #include <glib.h>
+#include <mir_toolkit/mir_prompt_session.h>
 
 #ifndef __UBUNTU_APP_LAUNCH_H__
 #define __UBUNTU_APP_LAUNCH_H__ 1
@@ -51,6 +52,15 @@ typedef void (*UbuntuAppLaunchAppObserver) (const gchar * appid, gpointer user_d
  * Function prototype for application failed observers.
  */
 typedef void (*UbuntuAppLaunchAppFailedObserver) (const gchar * appid, UbuntuAppLaunchAppFailed failure_type, gpointer user_data);
+
+/**
+ * UbuntuAppLaunchAppPausedResumedObserver:
+ * @appid: App ID of the application being paused
+ * @pids: Zero terminated array of PIDs
+ *
+ * Function prototype for application paused and resumed observers.
+ */
+typedef void (*UbuntuAppLaunchAppPausedResumedObserver) (const gchar * appid, GPid * pids, gpointer user_data);
 
 /**
  * UbuntuAppLaunchHelperObserver:
@@ -99,6 +109,26 @@ gboolean   ubuntu_app_launch_start_application_test    (const gchar *           
 gboolean   ubuntu_app_launch_stop_application         (const gchar *                     appid);
 
 /**
+ * ubuntu_app_launch_pause_application:
+ * @appid: ID of the application to pause
+ *
+ * Sends SIGSTOP to all processes related to the application
+ *
+ * Return value: Whether we were able to send SIGSTOP to all processes.
+ */
+gboolean   ubuntu_app_launch_pause_application         (const gchar *                     appid);
+
+/**
+ * ubuntu_app_launch_resume_application:
+ * @appid: ID of the application to pause
+ *
+ * Sends SIGCONT to all processes related to the application
+ *
+ * Return value: Whether we were able to send SIGCONT to all processes.
+ */
+gboolean   ubuntu_app_launch_resume_application         (const gchar *                     appid);
+
+/**
  * ubuntu_app_launch_application_log_path:
  * @appid: ID of the application
  *
@@ -110,6 +140,22 @@ gboolean   ubuntu_app_launch_stop_application         (const gchar *            
  * Return value: Path to a log file or NULL if unavailable
  */
 gchar *    ubuntu_app_launch_application_log_path     (const gchar *                     appid);
+
+/**
+ * ubuntu_app_launch_application_info:
+ * @appid: ID of the application
+ * @appdir: (allow-none) (transfer full): Directory for the application
+ * @appdesktop: (allow-none) (transfer full): Relative path to desktop file
+ *
+ * Finds a location for information on an application and the relative
+ * directory that it was found in. So this should be used to find icons
+ * relating to that desktop file.
+ *
+ * Return value: Path to a log file or NULL if unavailable
+ */
+gboolean   ubuntu_app_launch_application_info         (const gchar *                     appid,
+                                                       gchar **                          appdir,
+                                                       gchar **                          appdesktop);
 
 /**
  * ubuntu_app_launch_observer_add_app_starting:
@@ -190,6 +236,32 @@ gboolean   ubuntu_app_launch_observer_add_app_failed   (UbuntuAppLaunchAppFailed
                                                          gpointer                          user_data);
 
 /**
+ * ubuntu_app_launch_observer_add_app_paused:
+ * @observer: (scope notified): Callback when an application is paused
+ * @user_data: (allow-none) (closure): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * is paused.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_add_app_paused   (UbuntuAppLaunchAppPausedResumedObserver observer,
+                                                        gpointer                                user_data);
+
+/**
+ * ubuntu_app_launch_observer_add_app_resumed:
+ * @observer: (scope notified): Callback when an application is resumed
+ * @user_data: (allow-none) (closure): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * is resumed. Which is after the SIGCONT has been sent to the pids.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_add_app_resumed  (UbuntuAppLaunchAppPausedResumedObserver observer,
+                                                        gpointer                                user_data);
+
+/**
  * ubuntu_app_launch_observer_delete_app_starting:
  * @observer: (scope notified): Callback to remove
  * @user_data: (closure) (allow-none): Data that was passed to the observer
@@ -201,6 +273,7 @@ gboolean   ubuntu_app_launch_observer_add_app_failed   (UbuntuAppLaunchAppFailed
  */
 gboolean   ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver       observer,
                                                             gpointer                          user_data);
+
 /**
  * ubuntu_app_launch_observer_delete_app_started:
  * @observer: (scope notified): Callback to remove
@@ -264,6 +337,33 @@ gboolean   ubuntu_app_launch_observer_delete_app_resume   (UbuntuAppLaunchAppObs
  */
 gboolean   ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver        observer,
                                                           gpointer                                 user_data);
+
+/**
+ * ubuntu_app_launch_observer_delete_app_paused:
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data to pass to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer,
+                                                         gpointer                                user_data);
+
+/**
+ * ubuntu_app_launch_observer_delete_app_resumed:
+ * @observer: (scope notified): Callback to remove
+ * @user_data: (closure) (allow-none): Data to pass to the observer
+ *
+ * Removes a previously registered callback to ensure it no longer
+ * gets signaled.
+ *
+ * Return value: Whether deleting the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedObserver  observer,
+                                                          gpointer                                 user_data);
+
 /**
  * ubuntu_app_launch_list_running_apps:
  *
@@ -367,7 +467,7 @@ gboolean   ubuntu_app_launch_start_helper              (const gchar *           
  * @appid: App ID of the helper
  * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
  *
- * Start an untrusted helper for a specific @type on a given
+ * Start an untrusted helper for a specific @type of a given
  * @appid.  We don't know how that is done specifically, as Upstart
  * will call a helper for that type.  And then execute it under the
  * Apparmor profile for that helper type.  This function is different
@@ -380,6 +480,29 @@ gboolean   ubuntu_app_launch_start_helper              (const gchar *           
 gchar *    ubuntu_app_launch_start_multiple_helper     (const gchar *                     type,
                                                          const gchar *                     appid,
                                                          const gchar * const *             uris);
+
+/**
+ * ubuntu_app_launch_start_session_helper:
+ * @type: Type of helper
+ * @session: Mir Trusted Prompt Session to run the helper under
+ * @appid: App ID of the helper
+ * @uris: (allow-none) (array zero-terminated=1) (element-type utf8) (transfer none): A NULL terminated list of URIs to send to the helper
+ *
+ * Start an untrusted helper for a specific @type of a given
+ * @appid running under a Mir Trusted Prompt Session @session. The
+ * helper's MIR_SOCKET environment variable will be set appropriately
+ * so that the helper will draw on the correct surfaces. Otherwise this
+ * is the same as #ubuntu_app_launch_start_multiple_helper.
+ *
+ * It is important that all exec tools for @type call the function
+ * #ubuntu_app_launch_helper_set_exec to set the exec line.
+ *
+ * Return value: The generated instance ID or NULL on failure
+ */
+gchar *    ubuntu_app_launch_start_session_helper  (const gchar *            type,
+                                                    MirPromptSession *       session,
+                                                    const gchar *            appid,
+                                                    const gchar * const *    uris);
 
 /**
  * ubuntu_app_launch_stop_helper:
@@ -490,6 +613,24 @@ gboolean   ubuntu_app_launch_observer_delete_helper_started (UbuntuAppLaunchHelp
 gboolean   ubuntu_app_launch_observer_delete_helper_stop    (UbuntuAppLaunchHelperObserver    observer,
                                                               const gchar *                     helper_type,
                                                               gpointer                          user_data);
+
+/**
+ * ubuntu_app_launch_helper_set_exec:
+ * @execline: Exec line to be executed, in Desktop file format
+ * @directory: (allow-none): The directory that the exec line should
+ *     be executed in.
+ *
+ * A function to be called by an untrusted helper exec
+ * tool to set the exec line. The exec tool should determine
+ * what should be executed from some sort of configuration
+ * based on its type (usually a configuration file from a click
+ * package). Once it determines the exec line it can set it
+ * with this function and exit.
+ *
+ * Return Value: Whether we were able to set the exec line
+ */
+gboolean   ubuntu_app_launch_helper_set_exec       (const gchar *            execline,
+                                                    const gchar *            directory);
 
 #ifdef __cplusplus
 }

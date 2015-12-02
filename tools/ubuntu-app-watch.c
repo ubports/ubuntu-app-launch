@@ -41,9 +41,16 @@ stopped (const gchar * appid, gpointer user_data)
 }
 
 void
-resume (const gchar * appid, gpointer user_data)
+resumed (const gchar * appid, GPid * pids, gpointer user_data)
 {
-	g_print("Resume   %s\n", appid);
+	g_print("Resumed  %s\n", appid);
+	return;
+}
+
+void
+paused (const gchar * appid, GPid * pids, gpointer user_data)
+{
+	g_print("Paused   %s\n", appid);
 	return;
 }
 
@@ -79,7 +86,8 @@ main (int argc, gchar * argv[])
 	ubuntu_app_launch_observer_add_app_started(started, NULL);
 	ubuntu_app_launch_observer_add_app_stop(stopped, NULL);
 	ubuntu_app_launch_observer_add_app_focus(focus, NULL);
-	ubuntu_app_launch_observer_add_app_resume(resume, NULL);
+	ubuntu_app_launch_observer_add_app_resumed(resumed, NULL);
+	ubuntu_app_launch_observer_add_app_paused(paused, NULL);
 	ubuntu_app_launch_observer_add_app_failed(fail, NULL);
 
 	GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
@@ -89,7 +97,8 @@ main (int argc, gchar * argv[])
 	ubuntu_app_launch_observer_delete_app_started(started, NULL);
 	ubuntu_app_launch_observer_delete_app_stop(stopped, NULL);
 	ubuntu_app_launch_observer_delete_app_focus(focus, NULL);
-	ubuntu_app_launch_observer_delete_app_resume(resume, NULL);
+	ubuntu_app_launch_observer_delete_app_resumed(resumed, NULL);
+	ubuntu_app_launch_observer_delete_app_paused(paused, NULL);
 	ubuntu_app_launch_observer_delete_app_failed(fail, NULL);
 
 	g_main_loop_unref(mainloop);

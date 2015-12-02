@@ -8,28 +8,29 @@ if(NOT GDBUS_CODEGEN)
   message(FATAL_ERROR "Excutable gdbus-codegen not found")
 endif()
 
-function(add_gdbus_codegen)
-  set(_one_value OUTFILES NAME PREFIX NAMESPACE SERVICE_XML)
-  set(_multi_value DEPENDS)
-  cmake_parse_arguments (arg "" "${_one_value}" "${_multi_value}" ${ARGN})
-
-  if(arg_PREFIX)
-    set(PREFIX --interface-prefix ${arg_PREFIX})
-  endif()
-  
-  if(arg_NAMESPACE)
-    set(NAMESPACE --c-namespace ${arg_NAMESPACE})
-  endif()
-  
+macro(add_gdbus_codegen outfiles name prefix service_xml)
   add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${arg_NAME}.h" "${CMAKE_CURRENT_BINARY_DIR}/${arg_NAME}.c"
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${name}.h" "${CMAKE_CURRENT_BINARY_DIR}/${name}.c"
     COMMAND "${GDBUS_CODEGEN}"
-        --generate-c-code "${arg_NAME}"
-        ${PREFIX}
-        ${NAMESPACE}
-        "${arg_SERVICE_XML}"
+        --interface-prefix "${prefix}"
+        --generate-c-code "${name}"
+        "${service_xml}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS ${arg_DEPENDS} "${arg_SERVICE_XML}"
+    DEPENDS ${ARGN} "${service_xml}"
   )
-  set(${arg_OUTFILES} ${${arg_OUTFILES}} "${CMAKE_CURRENT_BINARY_DIR}/${arg_NAME}.c" PARENT_SCOPE)
-endfunction(add_gdbus_codegen)
+  list(APPEND ${outfiles} "${CMAKE_CURRENT_BINARY_DIR}/${name}.c")
+endmacro(add_gdbus_codegen)
+
+macro(add_gdbus_codegen_with_namespace outfiles name prefix namespace service_xml)
+  add_custom_command(
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${name}.h" "${CMAKE_CURRENT_BINARY_DIR}/${name}.c"
+    COMMAND "${GDBUS_CODEGEN}"
+        --interface-prefix "${prefix}"
+        --generate-c-code "${name}"
+        --c-namespace "${namespace}"
+        "${service_xml}"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${ARGN} "${service_xml}"
+  )
+  list(APPEND ${outfiles} "${CMAKE_CURRENT_BINARY_DIR}/${name}.c")
+endmacro(add_gdbus_codegen_with_namespace)

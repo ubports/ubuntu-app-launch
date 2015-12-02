@@ -1,0 +1,129 @@
+#!/bin/bash -e
+
+TEST_DIR=@CMAKE_CURRENT_BINARY_DIR@
+SRC_DIR=@CMAKE_CURRENT_SOURCE_DIR@
+
+CACHE_DIR=${TEST_DIR}/desktop-hook-test-click-dir
+CLICK_DIR=${CACHE_DIR}/ubuntu-app-launch/desktop/
+
+DATA_DIR=${TEST_DIR}/desktop-hook-test-apps-dir
+APPS_DIR=${DATA_DIR}/applications/
+
+# Remove the old directories
+rm -rf ${CACHE_DIR}
+rm -rf ${DATA_DIR}
+rm -f @CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook
+
+# Copy our source applications
+mkdir -p ${CLICK_DIR}
+cp ${SRC_DIR}/link-farm/* ${CLICK_DIR}
+
+# Build our root dir
+ln -s @CMAKE_CURRENT_SOURCE_DIR@/click-root-dir @CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook
+
+# Setup the environment
+export XDG_CACHE_HOME=${CACHE_DIR}
+export XDG_DATA_HOME=${DATA_DIR}
+export TEST_CLICK_DB=@CMAKE_CURRENT_BINARY_DIR@/click-desktop-hook-db
+export TEST_CLICK_USER=test-user
+
+# Run the tool
+@CMAKE_BINARY_DIR@/desktop-hook
+
+# Check that the files exist
+
+if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.3.desktop ] ; then
+	echo "Desktop file not created for: com.test.good_application_1.2.3"
+	exit 1
+fi
+
+if [ ! -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
+	echo "Desktop file not created for: com.test.multiple_first_1.2.3"
+	exit 1
+fi
+
+# Verify we're adding containment to them
+
+grep "^Exec=aa-exec-click -p com.test.good_application_1.2.3 --" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null
+grep "^Exec=aa-exec-click -p com.test.multiple_first_1.2.3 --" ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop > /dev/null
+
+# Make sure they have the AppID (people started using it) :-/
+
+grep "^X-Ubuntu-Application-ID=com.test.good_application_1.2.3" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null
+grep "^X-Ubuntu-Application-ID=com.test.multiple_first_1.2.3" ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop > /dev/null
+
+# Remove a file and ensure it gets recreated
+
+rm -f ${APPS_DIR}/com.test.good_application_1.2.3.desktop
+@CMAKE_BINARY_DIR@/desktop-hook
+
+if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.3.desktop ] ; then
+	echo "Desktop file not recreated for: com.test.good_application_1.2.3"
+	exit 1
+fi
+
+# Remove a source file and make sure it goes
+
+rm -f ${CLICK_DIR}/com.test.multiple_first_1.2.3.desktop
+@CMAKE_BINARY_DIR@/desktop-hook
+if [ -e ${APPS_DIR}/com.test.multiple_first_1.2.3.desktop ] ; then
+	echo "Not cleaning up deleted files"
+	exit 1
+fi
+
+# Verify the good file is in the desktop hook root
+grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null 
+
+# Remove our root
+rm -f @CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook
+
+# Point to the new db and run
+export TEST_CLICK_DB=@CMAKE_CURRENT_BINARY_DIR@/click-db-dir
+@CMAKE_BINARY_DIR@/desktop-hook
+
+# Verify that we have the file and it's in the new root
+if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.3.desktop ] ; then
+	echo "Desktop file not created for: com.test.good_application_1.2.3"
+	exit 1
+fi
+
+grep "^X-Ubuntu-UAL-Source-Desktop=@CMAKE_CURRENT_SOURCE_DIR@/click-root-dir" ${APPS_DIR}/com.test.good_application_1.2.3.desktop > /dev/null 
+
+# Upgrade the good application
+
+mv ${CLICK_DIR}/com.test.good_application_1.2.3.desktop ${CLICK_DIR}/com.test.good_application_1.2.4.desktop
+export TEST_CLICK_USER=test-user-4
+
+@CMAKE_BINARY_DIR@/desktop-hook
+
+if [ -e ${APPS_DIR}/com.test.good_application_1.2.3.desktop ] ; then
+	echo "Desktop file not removed for: com.test.good_application_1.2.3"
+	exit 1
+fi
+
+if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.4.desktop ] ; then
+	echo "Desktop file not created for: com.test.good_application_1.2.4"
+	exit 1
+fi
+
+# Upgrade the good application, but don't have a Source line like in an upgrade scenario
+
+mv ${CLICK_DIR}/com.test.good_application_1.2.4.desktop ${CLICK_DIR}/com.test.good_application_1.2.5.desktop
+cat ${APPS_DIR}/com.test.good_application_1.2.4.desktop | grep -v "^X-Ubuntu-UAL-Source-Desktop" > ${APPS_DIR}/com.test.good_application_1.2.4.desktop.tmp
+rm ${APPS_DIR}/com.test.good_application_1.2.4.desktop
+mv ${APPS_DIR}/com.test.good_application_1.2.4.desktop.tmp ${APPS_DIR}/com.test.good_application_1.2.4.desktop
+
+export TEST_CLICK_USER=test-user-5
+
+
+@CMAKE_BINARY_DIR@/desktop-hook
+
+if [ -e ${APPS_DIR}/com.test.good_application_1.2.4.desktop ] ; then
+	echo "Desktop file not removed for: com.test.good_application_1.2.4"
+	exit 1
+fi
+
+if [ ! -e ${APPS_DIR}/com.test.good_application_1.2.5.desktop ] ; then
+	echo "Desktop file not created for: com.test.good_application_1.2.5"
+	exit 1
+fi

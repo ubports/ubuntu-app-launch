@@ -1,8 +1,195 @@
-ubuntu-app-launch (0.4-0ubuntu1) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.5+15.10.20150817-0ubuntu1) wily; urgency=medium
 
+  [ CI Train Bot ]
+  * debian/libubuntu-app-launch2.symbols: update to released version.
+
+  [ Robert Ancell ]
+  * Depend on upstart instead of upstart-bin which is a dummy
+    transitional package.
+
+  [ Ted Gould ]
+  * Detect applications that are in a libertine container
+  * Make demangler path more secure and unset internal environment
+    variables
+  * Provide an API to find the desktop file and directory of an AppID
+  * Start XMir for applications that enable it
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 17 Aug 2015 21:38:33 +0000
+
+ubuntu-app-launch (0.5+15.10.20150629-0ubuntu1) wily; urgency=medium
+
+  [ Andreas Pokorny ]
+  * mir release 0.14.0
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Mon, 29 Jun 2015 06:10:46 +0000
+
+ubuntu-app-launch (0.5+15.10.20150605-0ubuntu1) wily; urgency=medium
+
+  [ Ted Gould ]
+  * Don't error on ZG failure (LP: #1452178)
+  * Fallback to looking for the AppID tag if the source is missing (LP:
+    #1461138)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 05 Jun 2015 19:49:48 +0000
+
+ubuntu-app-launch (0.5+15.10.20150604-0ubuntu1) wily; urgency=medium
+
+  [ Ted Gould ]
+  * Add an untrusted helper that works with Mir trusted prompt sessions.
+
+  [ CI Train Bot ]
+  * debian/libubuntu-app-launch2.symbols: update to released version.
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 04 Jun 2015 20:35:57 +0000
+
+ubuntu-app-launch (0.4+15.04.20150410-0ubuntu1) vivid; urgency=medium
+
+  [ Ted Gould ]
+  * Have desktop hook verify source file still exists (LP: #1437355)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 10 Apr 2015 16:58:30 +0000
+
+ubuntu-app-launch (0.4+15.04.20150403-0ubuntu1) vivid; urgency=medium
+
+  [ Ted Gould ]
+  * When Mir isn't available just exec with X11
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 03 Apr 2015 17:30:48 +0000
+
+ubuntu-app-launch (0.4+15.04.20150313.2-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * New rebuild forced.
+
+  [ Rodney Dawes ]
+  * Save status from waitpid and exit with it. (LP: #1431565)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Fri, 13 Mar 2015 16:05:56 +0000
+
+ubuntu-app-launch (0.4+15.04.20150305.1-0ubuntu1) vivid; urgency=medium
+
+  [ CI Train Bot ]
+  * debian/libubuntu-app-launch2.symbols: auto-update to released
+    version
+
+  [ Ted Gould ]
+  * Add a test tool to run an application from the command line (LP:
+    #1425286)
+  * Emit a signal when applications are paused or resumed (LP: #1425285)
+  * Remove application log on exit if not in developer mode (LP:
+    #1414039)
+
+ -- CI Train Bot <ci-train-bot@canonical.com>  Thu, 05 Mar 2015 14:36:35 +0000
+
+ubuntu-app-launch (0.4+15.04.20141121-0ubuntu1) vivid; urgency=low
+
+  [ Ted Gould ]
+  * Remove reporting a recoverable problem on cgmanager (LP: #1394919)
+  * Use a version script to ensure we're not leaking symbols
+  * Create a custom GMainContext when waiting on the CGManager DBus
+    connection. (LP: #1394622)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 21 Nov 2014 21:17:30 +0000
+
+ubuntu-app-launch (0.4+15.04.20141118-0ubuntu1) vivid; urgency=low
+
+  [ Ted Gould ]
+  * Attenting to connect to cgmanager for 1 second and then failing and
+    reporting a recoverable error. (LP: #1377332)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Tue, 18 Nov 2014 21:10:45 +0000
+
+ubuntu-app-launch (0.4+15.04.20141031-0ubuntu1) vivid; urgency=low
+
+  [ Chris Townsend ]
+  * Change GetTasks to GetTasksRecursive so it searches all pids related
+    to a cgroup instead of just the first pid. (LP: #1386357)
+
+  [ Leo Arias ]
+  * On the cgroup manual test, make it clear that the command must be
+    run on the app.
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 31 Oct 2014 15:02:48 +0000
+
+ubuntu-app-launch (0.4+14.10.20141006-0ubuntu1) utopic; urgency=low
+
+  [ Ted Gould ]
+  * Set OOM adjustment without using temporary files. (LP: #1374177)
+  * Use a setuid helper for OOM adjustment of Oxide renderers
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 06 Oct 2014 14:33:13 +0000
+
+ubuntu-app-launch (0.4+14.10.20140925-0ubuntu1) utopic; urgency=low
+
+  [ Martin Pitt ]
+  * Upstart dep updated to trunk
+
+  [ Ted Gould ]
+  * Upstart dep updated to trunk
+  * Add handling for X-Ubuntu-SymbolicIcon in desktop hook (LP:
+    #1365408)
+
+  [ CI bot ]
+  * Adjust upstart recommends to upstart-bin (LP: #1351306)
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 25 Sep 2014 14:43:28 +0000
+
+ubuntu-app-launch (0.4+14.10.20140915.3-0ubuntu1) utopic; urgency=medium
+
+  [ Ted Gould ]
+  * Unrevert cgroup support
+  * Adding a manual test to verify the job running the application
+  * CGroup test and clarification comments
+  * Tracepoint got dropped in refactoring
+  * Use the Upstart 1.13 feature of multiple set for environment
+    variables
+  * Cleanup UAL LTTng tracepoints
+  * Provide a pause and resume function for AppIDs
+  * Rotate application and untrusted helper logs faster than other
+    services
+  * Add a tool to show application usage
+  * Reshuffle the pre-start jobs to save precious milliseconds
+
+  [ Ubuntu daily release ]
+  * debian/libubuntu-app-launch2.symbols: auto-update to released
+    version
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Mon, 15 Sep 2014 19:40:21 +0000
+
+ubuntu-app-launch (0.4+14.10.20140808.3.is.0.4+14.10.20140605.3-0ubuntu1) utopic; urgency=medium
+
+  * Temporarily revert the cgroup support introduced in the last
+    version, as it was causing regressions in our test infrastructure
+
+ -- Lukasz 'sil2100' Zemczak <lukasz.zemczak@canonical.com>  Tue, 19 Aug 2014 09:52:33 +0200
+
+ubuntu-app-launch (0.4+14.10.20140808.2-0ubuntu1) utopic; urgency=low
+
+  [ Ted Gould ]
+  * Use Upstart cgroup support in 1.13 to properly track PIDs
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Fri, 08 Aug 2014 03:59:40 +0000
+
+ubuntu-app-launch (0.4+14.10.20140605.3-0ubuntu1) utopic; urgency=medium
+
+  [ Ted Gould ]
+  * Fixing click hook for name change
+
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 05 Jun 2014 03:40:55 +0000
+
+ubuntu-app-launch (0.4+14.10.20140601-0ubuntu2) utopic; urgency=low
+
+  * add Conflicts/Replaces/Provides to ubuntu-app-launch-tools since there are
+    still packages depending on upstart-app-launch-tools
+
+ -- Oliver Grawert <ogra@ubuntu.com>  Wed, 04 Jun 2014 10:06:24 +0200
+
+ubuntu-app-launch (0.4+14.10.20140601-0ubuntu1) utopic; urgency=medium
+
+  [ Ted Gould ]
   * Rename to "Ubuntu App Launch"
 
- -- Ted Gould <ted@ubuntu.com>  Wed, 30 Apr 2014 10:06:03 -0500
+ -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Sun, 01 Jun 2014 21:10:43 +0000
 
 upstart-app-launch (0.3+14.10.20140521-0ubuntu1) utopic; urgency=low
 
@@ -84,7 +271,6 @@ upstart-app-launch (0.3+14.04.20140213-0ubuntu1) trusty; urgency=low
 
 upstart-app-launch (0.3+14.04.20140210-0ubuntu1) trusty; urgency=low
 
-  * 
   * debian/*symbols: auto-update new symbols to released version
 
  -- Ubuntu daily release <ps-jenkins@lists.canonical.com>  Thu, 13 Feb 2014 13:14:48 +0000

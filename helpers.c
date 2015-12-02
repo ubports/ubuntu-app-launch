@@ -217,75 +217,6 @@ desktop_to_exec (GKeyFile * desktop_file, const gchar * from)
 	return exec;
 }
 
-/* Sets an upstart variable, currently using initctl */
-void
-set_upstart_variable (const gchar * variable, const gchar * value, gboolean sync)
-{
-	/* Check to see if we can get the job environment */
-	const gchar * job_name = g_getenv("UPSTART_JOB");
-	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
-	g_return_if_fail(job_name != NULL);
-
-	/* Get a bus, let's go! */
-	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_if_fail(bus != NULL);
-
-	GVariantBuilder builder; /* Target: (assb) */
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-
-	/* Setup the job properties */
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
-	if (instance_name != NULL)
-		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
-	g_variant_builder_close(&builder);
-
-	/* The value itself */
-	gchar * envstr = g_strdup_printf("%s=%s", variable, value);
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(envstr));
-
-	/* Do we want to replace?  Yes, we do! */
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-
-	if (sync) {
-		GError * error = NULL;
-		GVariant * reply = g_dbus_connection_call_sync(bus,
-			DBUS_SERVICE_UPSTART,
-			DBUS_PATH_UPSTART,
-			DBUS_INTERFACE_UPSTART,
-			"SetEnv",
-			g_variant_builder_end(&builder),
-			NULL, /* reply */
-			G_DBUS_CALL_FLAGS_NONE,
-			-1, /* timeout */
-			NULL, /* cancelable */
-			&error); /* error */
-
-		if (reply != NULL) {
-			g_variant_unref(reply);
-		}
-
-		if (error != NULL) {
-			g_warning("Unable to set environment variable '%s' to '%s': %s", variable, value, error->message);
-			g_error_free(error);
-		}
-	} else {
-		g_dbus_connection_call(bus,
-			DBUS_SERVICE_UPSTART,
-			DBUS_PATH_UPSTART,
-			DBUS_INTERFACE_UPSTART,
-			"SetEnv",
-			g_variant_builder_end(&builder),
-			NULL, /* reply */
-			G_DBUS_CALL_FLAGS_NONE,
-			-1, /* timeout */
-			NULL, /* cancelable */
-			NULL, NULL); /* callback */
-	}
-
-	g_object_unref(bus);
-}
-
 /* Convert a URI into a file */
 static gchar *
 uri2file (const gchar * uri)
@@ -495,13 +426,13 @@ desktop_exec_parse (const gchar * execline, const gchar * urilist)
  * https://wiki.ubuntu.com/SecurityTeam/Specifications/ApplicationConfinement
  */
 void
-set_confined_envvars (const gchar * package, const gchar * app_dir)
+set_confined_envvars (EnvHandle * handle, const gchar * package, const gchar * app_dir)
 {
 	g_return_if_fail(package != NULL);
 	g_return_if_fail(app_dir != NULL);
 
 	g_debug("Setting 'UBUNTU_APPLICATION_ISOLATION' to '1'");
-	set_upstart_variable("UBUNTU_APPLICATION_ISOLATION", "1", FALSE);
+	env_handle_add(handle, "UBUNTU_APPLICATION_ISOLATION", "1");
 
 	/* Make sure the XDG base dirs are set for the application using
 	 * the user's current values/system defaults. We could set these to
@@ -509,26 +440,26 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	 * brittle if someone uses different base dirs.
 	 */
 	g_debug("Setting 'XDG_CACHE_HOME' using g_get_user_cache_dir()");
-	set_upstart_variable("XDG_CACHE_HOME", g_get_user_cache_dir(), FALSE);
+	env_handle_add(handle, "XDG_CACHE_HOME", g_get_user_cache_dir());
 
 	g_debug("Setting 'XDG_CONFIG_HOME' using g_get_user_config_dir()");
-	set_upstart_variable("XDG_CONFIG_HOME", g_get_user_config_dir(), FALSE);
+	env_handle_add(handle, "XDG_CONFIG_HOME", g_get_user_config_dir());
 
 	g_debug("Setting 'XDG_DATA_HOME' using g_get_user_data_dir()");
-	set_upstart_variable("XDG_DATA_HOME", g_get_user_data_dir(), FALSE);
+	env_handle_add(handle, "XDG_DATA_HOME", g_get_user_data_dir());
 
 	g_debug("Setting 'XDG_RUNTIME_DIR' using g_get_user_runtime_dir()");
-	set_upstart_variable("XDG_RUNTIME_DIR", g_get_user_runtime_dir(), FALSE);
+	env_handle_add(handle, "XDG_RUNTIME_DIR", g_get_user_runtime_dir());
 
 	/* Add the application's dir to the list of sources for data */
 	gchar * datadirs = g_strjoin(":", app_dir, g_getenv("XDG_DATA_DIRS"), NULL);
-	set_upstart_variable("XDG_DATA_DIRS", datadirs, FALSE);
+	env_handle_add(handle, "XDG_DATA_DIRS", datadirs);
 	g_free(datadirs);
 
 	/* Set TMPDIR to something sane and application-specific */
 	gchar * tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package);
 	g_debug("Setting 'TMPDIR' to '%s'", tmpdir);
-	set_upstart_variable("TMPDIR", tmpdir, FALSE);
+	env_handle_add(handle, "TMPDIR", tmpdir);
 	g_debug("Creating '%s'", tmpdir);
 	g_mkdir_with_parents(tmpdir, 0700);
 	g_free(tmpdir);
@@ -536,7 +467,7 @@ set_confined_envvars (const gchar * package, const gchar * app_dir)
 	/* Do the same for nvidia */
 	gchar * nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package);
 	g_debug("Setting '__GL_SHADER_DISK_CACHE_PATH' to '%s'", nv_shader_cachedir);
-	set_upstart_variable("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir, FALSE);
+	env_handle_add(handle, "__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
 	g_free(nv_shader_cachedir);
 
 	return;
@@ -584,7 +515,7 @@ starting_handshake_start (const gchar *   app_id)
 	/* Set up listening for the unfrozen signal from Unity */
 	handshake->signal_subscribe = g_dbus_connection_signal_subscribe(handshake->con,
 		NULL, /* sender */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingSignal", /* signal */
 		"/", /* path */
 		app_id, /* arg0 */
@@ -596,7 +527,7 @@ starting_handshake_start (const gchar *   app_id)
 	g_dbus_connection_emit_signal(handshake->con,
 		NULL, /* destination */
 		"/", /* path */
-		"com.canonical.UpstartAppLaunch", /* interface */
+		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingBroadcast", /* signal */
 		g_variant_new("(s)", app_id),
 		&error);
@@ -622,4 +553,74 @@ starting_handshake_wait (handshake_t * handshake)
 	g_object_unref(handshake->con);
 
 	g_free(handshake);
+}
+
+EnvHandle *
+env_handle_start (void)
+{
+	GVariantBuilder * builder = g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
+	return (EnvHandle *)builder;
+}
+
+void
+env_handle_add (EnvHandle * handle, const gchar * variable, const gchar * value)
+{
+	g_return_if_fail(handle != NULL);
+	gchar * combinedstr = g_strdup_printf("%s=%s", variable, value);
+	GVariant * env = g_variant_new_take_string(combinedstr);
+	g_variant_builder_add_value((GVariantBuilder*)handle, env);
+}
+
+void
+env_handle_finish (EnvHandle * handle)
+{
+	g_return_if_fail(handle != NULL);
+	/* Check to see if we can get the job environment */
+	const gchar * job_name = g_getenv("UPSTART_JOB");
+	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
+	g_return_if_fail(job_name != NULL);
+
+	/* Get a bus, let's go! */
+	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_if_fail(bus != NULL);
+
+	GVariantBuilder builder; /* Target: (assb) */
+	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+	/* Setup the job properties */
+	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
+	if (instance_name != NULL)
+		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
+	g_variant_builder_close(&builder);
+
+	/* The value itself */
+	g_variant_builder_add_value(&builder, g_variant_builder_end((GVariantBuilder*)handle));
+
+	/* Do we want to replace?  Yes, we do! */
+	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+	GError * error = NULL;
+	GVariant * reply = g_dbus_connection_call_sync(bus,
+		DBUS_SERVICE_UPSTART,
+		DBUS_PATH_UPSTART,
+		DBUS_INTERFACE_UPSTART,
+		"SetEnvList",
+		g_variant_builder_end(&builder),
+		NULL, /* reply */
+		G_DBUS_CALL_FLAGS_NONE,
+		-1, /* timeout */
+		NULL, /* cancelable */
+		&error); /* error */
+
+	if (reply != NULL) {
+		g_variant_unref(reply);
+	}
+
+	if (error != NULL) {
+		g_warning("Unable to set environment variables: %s", error->message);
+		g_error_free(error);
+	}
+
+	g_object_unref(bus);
 }

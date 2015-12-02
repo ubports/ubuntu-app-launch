@@ -19,6 +19,7 @@
 
 
 #include <zeitgeist.h>
+#include "libubuntu-app-launch/ubuntu-app-launch.h"
 
 static gboolean
 watchdog_timeout (gpointer user_data)
@@ -38,7 +39,7 @@ insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
 	result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
 
 	if (error != NULL) {
-		g_error("Unable to submit Zeitgeist Event: %s", error->message);
+		g_warning("Unable to submit Zeitgeist Event: %s", error->message);
 		g_error_free(error);
 	}
 
@@ -60,12 +61,24 @@ main (int argc, char * argv[])
 		g_printerr("No App ID defined");
 		return 1;
 	}
-	gchar * uri = g_strdup_printf("application://%s.desktop", appid);
+
+	gchar * uri = NULL;
+	gchar * pkg = NULL;
+	gchar * app = NULL;
+
+	if (ubuntu_app_launch_app_id_parse(appid, &pkg, &app, NULL)) {
+		/* If it's parseable, use the short form */
+		uri = g_strdup_printf("application://%s_%s.desktop", pkg, app);
+		g_free(pkg);
+		g_free(app);
+	} else {
+		uri = g_strdup_printf("application://%s.desktop", appid);
+	}    
 
 	ZeitgeistLog * log = zeitgeist_log_get_default();
 
 	ZeitgeistEvent * event = zeitgeist_event_new();
-	zeitgeist_event_set_actor(event, "application://upstart-app-launch.desktop");
+	zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
 	if (g_strcmp0(argv[1], "open") == 0) {
 		zeitgeist_event_set_interpretation(event, ZEITGEIST_ZG_ACCESS_EVENT);
 	} else {
