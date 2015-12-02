@@ -18,7 +18,7 @@
  */
 
 #include <glib.h>
-#include <upstart-app-launch.h>
+#include <ubuntu-app-launch.h>
 
 #ifndef __UBUNTU_APP_OBJECT_H__
 #define __UBUNTU_APP_OBJECT_H__ 1
@@ -29,27 +29,38 @@
 extern "C" {
 #endif
 
-typedef struct _UbuntuAppObject UbuntuAppObject;
+/**
+ * UbuntuAppLaunchObject: (class) (ref-func ubuntu_app_object_ref) (unref-func ubuntu_app_object_unref)
+ * 
+ * Represents an application that is running or stopped in the system.
+ * At creation time the app id is built.
+ */
+typedef struct _UbuntuAppLaunchObject UbuntuAppLaunchObject;
 
-UbuntuAppObject * ubuntu_app_object_create       (const gchar * pkg,
+/**
+ * ubuntu_app_launch_object_create: (constructor)
+ *
+ */
+UbuntuAppLaunchObject * ubuntu_app_launch_object_create       (const gchar * pkg,
                                                   const gchar * app,
                                                   const gchar * version);
 
-void              ubuntu_app_object_free         (UbuntuAppObject * obj);
+void              ubuntu_app_object_ref          (UbuntuAppLaunchObject * obj);
+void              ubuntu_app_object_unref        (UbuntuAppLaunchObject * obj);
 
-gboolean          ubuntu_app_object_start        (UbuntuAppObject *      obj,
+gboolean          ubuntu_app_object_start        (UbuntuAppLaunchObject *      obj,
                                                   const gchar * const *  uris);
 
-gboolean          ubuntu_app_object_stop         (UbuntuAppObject * obj);
+gboolean          ubuntu_app_object_stop         (UbuntuAppLaunchObject * obj);
 
-gchar *           ubuntu_app_object_log_path     (UbuntuAppObject * obj);
+gchar *           ubuntu_app_object_log_path     (UbuntuAppLaunchObject * obj);
 
-GPid              ubuntu_app_object_primary_pid  (UbuntuAppObject * obj);
+GPid              ubuntu_app_object_primary_pid  (UbuntuAppLaunchObject * obj);
 
-gboolean          ubuntu_app_object_has_pid      (UbuntuAppObject * obj,
+gboolean          ubuntu_app_object_has_pid      (UbuntuAppLaunchObject * obj,
                                                   GPid              pid);
 
-const gchar *     ubuntu_app_object_app_id       (UbuntuAppObject * obj);
+const gchar *     ubuntu_app_object_app_id       (UbuntuAppLaunchObject * obj);
 
 #ifdef __cplusplus
 }
