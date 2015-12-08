@@ -27,9 +27,8 @@ class Connection {
 	};
 
 	typedef std::shared_ptr<Connection> Ptr;
-private:
-	class Impl;
-	std::static_ptr<Impl> impl;
+
+	static Ptr getDefault();
 };
 
 }; // namespace AppLaunch

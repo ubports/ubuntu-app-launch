@@ -22,7 +22,7 @@ class Application {
 	std::list<std::string> categories();
 
 	/* Query lifecycle */
-	const bool isRunning();
+	bool isRunning();
 	GPid primaryPid();
 	bool hasPid(GPid pid);
 
