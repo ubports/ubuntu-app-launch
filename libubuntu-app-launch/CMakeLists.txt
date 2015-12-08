@@ -17,22 +17,28 @@ set(ABI_VERSION 2)
 add_lttng_gen_tp(NAME ubuntu-app-launch-trace)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -std=c++11")
 add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" -DDEMANGLER_PATH="${pkglibexecdir}/socket-demangler" )
 add_definitions ( -DLIBERTINE_LAUNCH="${CMAKE_INSTALL_FULL_BINDIR}/libertine-launch" )
 
 set(LAUNCHER_HEADERS
 ubuntu-app-launch.h
-ubuntu-app-object.h
+)
+
+set(LAUNCHER_CPP_HEADERS
+application.h
+connection.h
 )
 
 set(LAUNCHER_SOURCES
 ubuntu-app-launch.c
-ubuntu-app-object.c
 second-exec-core.c
 click-exec.c
 desktop-exec.c
 ubuntu-app-launch-trace.c
 app-info.c
+application.cpp
+connection.cpp
 )
 
 set(LAUNCHER_GEN_SOURCES
@@ -66,7 +72,7 @@ target_link_libraries(ubuntu-launcher
 )
 
 install(
-	FILES ${LAUNCHER_HEADERS}
+	FILES ${LAUNCHER_HEADERS} ${LAUNCHER_CPP_HEADERS}
 	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libubuntu-app-launch-${API_VERSION}"
 )
 

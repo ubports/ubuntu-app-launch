@@ -1,13 +1,28 @@
 
+#include <list>
+#include <memory>
+#include <functional>
+
+#pragma once
+
 namespace Ubuntu {
 namespace AppLaunch {
 
+class Application;
+class ObserverHandle;
+
 class Connection {
+public:
+	enum FailureTypes {
+		CRASH,
+		START_FAILURE,
+	};
+
 	Connection();
 
 	/* Lots of application lists */
-	std::list<Application::Ptr> runningApps();
-	std::list<Application::Ptr> installedApps();
+	std::list<std::shared_ptr<Application>> runningApps();
+	std::list<std::shared_ptr<Application>> installedApps();
 
 	/* Observers, NOTE: All functions called on a different thread */
 	typedef std::function<void(const std::string& appid)> appObserver;
@@ -21,14 +36,7 @@ class Connection {
 	ObserverHandle observeAppResume (appObserver callback);
 	ObserverHandle observeAppResumed (appObserver callback);
 
-	enum FailureTypes {
-		CRASH,
-		START_FAILURE,
-	};
-
-	typedef std::shared_ptr<Connection> Ptr;
-
-	static Ptr getDefault();
+	static std::shared_ptr<Connection> getDefault();
 };
 
 }; // namespace AppLaunch

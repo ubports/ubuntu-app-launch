@@ -1,12 +1,19 @@
 
+#include <sys/types.h>
+
+#include "connection.h"
+
+#pragma once
+
 namespace Ubuntu {
 namespace AppLaunch {
 
 class Application {
-	Application (Connection::Ptr connection = std::make_shared<Connection>(),
-	             const std::string &package,
+public:
+	Application (const std::string &package,
 	             const std::string &appname,
-	             const std::string &version);
+	             const std::string &version,
+	             std::shared_ptr<Connection> connection = Connection::getDefault());
 
 	/* System level info */
 	const std::string &package();
@@ -23,18 +30,17 @@ class Application {
 
 	/* Query lifecycle */
 	bool isRunning();
-	GPid primaryPid();
-	bool hasPid(GPid pid);
+	pid_t primaryPid();
+	bool hasPid(pid_t pid);
 
 	/* Manage lifecycle */
 	void launch(std::list<std::string> urls = {});
 	void pause();
 	void resume();
 
-	typedef std::shared_ptr<Application> Ptr;
 private:
 	class Impl;
-	std::static_ptr<Impl> impl;
+	std::unique_ptr<Impl> impl;
 };
 
 }; // namespace AppLaunch
