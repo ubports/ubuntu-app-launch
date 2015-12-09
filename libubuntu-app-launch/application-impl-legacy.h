@@ -5,10 +5,11 @@
 
 namespace Ubuntu {
 namespace AppLaunch {
+namespace AppImpls {
 
-class ImplLegacy : public Application::Impl {
+class Legacy : public Application::Impl {
 public:
-	ImplLegacy (const std::string &package,
+	Legacy (const std::string &package,
 	      const std::string &appname,
 	      const std::string &version,
 	      std::shared_ptr<Connection> connection) :
@@ -23,5 +24,6 @@ public:
 	std::list<std::string> categories();
 };
 
+}; // namespace AppImpls
 }; // namespace AppLaunch
 }; // namespace Ubuntu
