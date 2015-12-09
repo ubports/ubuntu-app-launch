@@ -39,6 +39,10 @@ ubuntu-app-launch-trace.c
 app-info.c
 application.cpp
 connection.cpp
+application-impl.cpp
+application-impl-click.cpp
+application-impl-legacy.cpp
+application-impl-libertine.cpp
 )
 
 set(LAUNCHER_GEN_SOURCES
