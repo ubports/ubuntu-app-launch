@@ -38,8 +38,8 @@ public:
 	void pause();
 	void resume();
 
-private:
 	class Impl;
+private:
 	std::unique_ptr<Impl> impl;
 };
 
