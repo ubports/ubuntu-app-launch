@@ -9,9 +9,8 @@ namespace AppImpls {
 
 class Libertine : public Application::Impl {
 public:
-	Libertine (const std::string &package,
+	Libertine (const std::string &container,
 	      const std::string &appname,
-	      const std::string &version,
 	      std::shared_ptr<Connection> connection);
 
 	const std::string &name();

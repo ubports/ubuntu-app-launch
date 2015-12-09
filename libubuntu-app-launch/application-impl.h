@@ -30,7 +30,7 @@ public:
 		return _version;
 	}
 
-	std::string appId () {
+	virtual std::string appId () {
 		return _package + "_" + _appname + "_" + _version;
 	}
 

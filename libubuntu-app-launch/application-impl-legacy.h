@@ -9,15 +9,17 @@ namespace AppImpls {
 
 class Legacy : public Application::Impl {
 public:
-	Legacy (const std::string &package,
-	      const std::string &appname,
-	      const std::string &version,
-	      std::shared_ptr<Connection> connection);
+	Legacy (const std::string &appname,
+	        std::shared_ptr<Connection> connection);
 
 	const std::string &name();
 	const std::string &description();
 	const std::string &iconPath();
 	std::list<std::string> categories();
+
+	std::string appId () override {
+		return _package;
+	}
 
 private:
 	std::string _name;

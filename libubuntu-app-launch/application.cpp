@@ -19,11 +19,11 @@ Application::Application (const std::string &package,
 {
 	auto appid = package + "_" + appname + "_" + version;
 	if (app_info_legacy(appid.c_str(), NULL, NULL)) {
-		impl = std::unique_ptr<AppImpls::Legacy>(new AppImpls::Legacy(package, appname, version, connection));
+		impl = std::unique_ptr<AppImpls::Legacy>(new AppImpls::Legacy(package, connection));
 	} else if (app_info_click(appid.c_str(), NULL, NULL)) {
 		impl = std::unique_ptr<AppImpls::Click>(new AppImpls::Click(package, appname, version, connection));
 	} else if (app_info_libertine(appid.c_str(), NULL, NULL)) {
-		impl = std::unique_ptr<AppImpls::Libertine>(new AppImpls::Libertine(package, appname, version, connection));
+		impl = std::unique_ptr<AppImpls::Libertine>(new AppImpls::Libertine(package, appname, connection));
 	}
 }
 

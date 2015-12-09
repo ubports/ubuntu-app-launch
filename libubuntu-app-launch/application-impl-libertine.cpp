@@ -5,11 +5,10 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-Libertine::Libertine (const std::string &package,
+Libertine::Libertine (const std::string &container,
 	  const std::string &appname,
-	  const std::string &version,
 	  std::shared_ptr<Connection> connection) :
-	Impl(appname, version, package, connection)
+	Impl(container, appname, "0.0", connection)
 {
 }
 

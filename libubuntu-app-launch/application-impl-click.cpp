@@ -9,7 +9,7 @@ Click::Click (const std::string &package,
 	  const std::string &appname,
 	  const std::string &version,
 	  std::shared_ptr<Connection> connection) :
-	Impl(appname, version, package, connection)
+	Impl(package, appname, version, connection)
 {
 }
 

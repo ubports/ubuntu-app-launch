@@ -5,11 +5,9 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-Legacy::Legacy (const std::string &package,
-	  const std::string &appname,
-	  const std::string &version,
+Legacy::Legacy (const std::string &appname,
 	  std::shared_ptr<Connection> connection) :
-	Impl(appname, version, package, connection)
+	Impl(appname, "", "", connection)
 {
 }
 
