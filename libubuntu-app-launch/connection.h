@@ -13,7 +13,7 @@ class ObserverHandle;
 
 class Connection {
 public:
-	enum FailureTypes {
+	enum FailureType {
 		CRASH,
 		START_FAILURE,
 	};
@@ -26,7 +26,7 @@ public:
 
 	/* Observers, NOTE: All functions called on a different thread */
 	typedef std::function<void(const std::string& appid)> appObserver;
-	typedef std::function<void(const std::string& appid, FailureTypes reason)> appFailedObserver;
+	typedef std::function<void(const std::string& appid, FailureType reason)> appFailedObserver;
 
 	ObserverHandle observeAppStarting (appObserver callback);
 	ObserverHandle observeAppStarted (appObserver callback);

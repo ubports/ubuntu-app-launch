@@ -8,6 +8,11 @@
 namespace Ubuntu {
 namespace AppLaunch {
 
+Connection::Connection ()
+{
+
+}
+
 std::list<std::shared_ptr<Application>>
 Connection::runningApps(std::shared_ptr<Connection> connection)
 {
@@ -47,6 +52,18 @@ Connection::installedApps(std::shared_ptr<Connection> connection)
 	list.splice(list.begin(), AppImpls::Libertine::list(connection));
 
 	return list;
+}
+
+
+std::shared_ptr<Connection> defaultConnection;
+std::shared_ptr<Connection>
+getDefault()
+{
+	if (!defaultConnection) {
+		defaultConnection = std::make_shared<Connection>();
+	}
+
+	return defaultConnection;
 }
 
 }; // namespace AppLaunch
