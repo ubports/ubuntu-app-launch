@@ -1,4 +1,5 @@
 
+#include <json-glib/json-glib.h>
 #include "application-impl.h"
 
 #pragma once
@@ -13,6 +14,11 @@ public:
 	      const std::string &appname,
 	      const std::string &version,
 	      std::shared_ptr<Connection> connection);
+	Click (const std::string &package,
+	      const std::string &appname,
+	      const std::string &version,
+	      std::shared_ptr<JsonObject> manifest,
+	      std::shared_ptr<Connection> connection);
 
 	const std::string &name() override;
 	const std::string &description() override;
@@ -25,6 +31,10 @@ private:
 	std::string _name;
 	std::string _description;
 	std::string _iconPath;
+	std::shared_ptr<JsonObject> _manifest;
+
+	static std::string manifestVersion (std::shared_ptr<JsonObject> manifest);
+	static std::list<std::string> manifestApps (std::shared_ptr<JsonObject> manifest);
 };
 
 }; // namespace AppImpls
