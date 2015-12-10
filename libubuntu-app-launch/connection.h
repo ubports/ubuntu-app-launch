@@ -21,8 +21,8 @@ public:
 	Connection();
 
 	/* Lots of application lists */
-	std::list<std::shared_ptr<Application>> runningApps();
-	std::list<std::shared_ptr<Application>> installedApps();
+	static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Connection> connection = getDefault());
+	static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Connection> connection = getDefault());
 
 	/* Observers, NOTE: All functions called on a different thread */
 	typedef std::function<void(const std::string& appid)> appObserver;

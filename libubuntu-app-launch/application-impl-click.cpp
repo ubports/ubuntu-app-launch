@@ -33,6 +33,11 @@ Click::categories () {
 	return {};
 }
 
+std::list<std::shared_ptr<Application>>
+Click::list (std::shared_ptr<Connection> connection)
+{
+	return {};
+}
 
 }; // namespace AppImpls
 }; // namespace AppLaunch

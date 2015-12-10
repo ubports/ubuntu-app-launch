@@ -19,6 +19,8 @@ public:
 	const std::string &iconPath() override;
 	std::list<std::string> categories() override;
 
+	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Connection> connection);
+
 private:
 	std::string _name;
 	std::string _description;

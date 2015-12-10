@@ -32,6 +32,11 @@ Libertine::categories () {
 	return {};
 }
 
+std::list<std::shared_ptr<Application>>
+Libertine::list (std::shared_ptr<Connection> connection)
+{
+	return {};
+}
 
 }; // namespace AppImpls
 }; // namespace AppLaunch

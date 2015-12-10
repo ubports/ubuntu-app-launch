@@ -1,4 +1,6 @@
 
+#include <gio/gdesktopappinfo.h>
+
 #include "application-impl.h"
 
 #pragma once
@@ -21,7 +23,10 @@ public:
 		return _package;
 	}
 
+	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Connection> connection);
+
 private:
+	std::shared_ptr<GDesktopAppInfo> _appinfo;
 	std::string _name;
 	std::string _description;
 	std::string _iconPath;
