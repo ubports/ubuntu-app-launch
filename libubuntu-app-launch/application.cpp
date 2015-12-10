@@ -27,6 +27,11 @@ Application::Application (const std::string &package,
 	}
 }
 
+Application::Application (std::unique_ptr<Application::Impl> inimpl)
+{
+	impl = std::move(inimpl);
+}
+
 const std::string &
 Application::package()
 {

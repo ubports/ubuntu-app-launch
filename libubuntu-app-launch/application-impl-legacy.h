@@ -13,6 +13,9 @@ class Legacy : public Application::Impl {
 public:
 	Legacy (const std::string &appname,
 	        std::shared_ptr<Connection> connection);
+	Legacy (const std::string &appname,
+			std::shared_ptr<GDesktopAppInfo> appinfo,
+	        std::shared_ptr<Connection> connection);
 
 	const std::string &name();
 	const std::string &description();

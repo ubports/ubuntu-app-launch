@@ -10,10 +10,13 @@ namespace AppLaunch {
 
 class Application {
 public:
+	class Impl;
+
 	Application (const std::string &package,
 	             const std::string &appname,
 	             const std::string &version,
 	             std::shared_ptr<Connection> connection = Connection::getDefault());
+	Application (std::unique_ptr<Impl> impl);
 
 	/* System level info */
 	const std::string &package();
@@ -38,7 +41,6 @@ public:
 	void pause();
 	void resume();
 
-	class Impl;
 private:
 	std::unique_ptr<Impl> impl;
 };
