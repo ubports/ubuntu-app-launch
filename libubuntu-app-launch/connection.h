@@ -8,6 +8,7 @@
 namespace Ubuntu {
 namespace AppLaunch {
 
+/* Forward declarations */
 class Application;
 class ObserverHandle;
 
@@ -37,6 +38,9 @@ public:
 	ObserverHandle observeAppResumed (appObserver callback);
 
 	static std::shared_ptr<Connection> getDefault();
+
+	class Impl;
+	std::unique_ptr<Impl> impl;
 };
 
 }; // namespace AppLaunch

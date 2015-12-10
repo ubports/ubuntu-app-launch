@@ -1,5 +1,6 @@
 
 #include "connection.h"
+#include "connection-impl.h"
 
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
