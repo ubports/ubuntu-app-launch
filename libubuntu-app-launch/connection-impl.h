@@ -19,6 +19,7 @@ public:
 
 	std::shared_ptr<JsonObject> getClickManifest(const std::string& package);
 	std::list<std::string> getClickPackages();
+	std::string getClickDir(const std::string& package);
 
 private:
 	GLib::ContextThread thread;

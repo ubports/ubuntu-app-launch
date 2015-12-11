@@ -89,5 +89,25 @@ Connection::Impl::getClickPackages()
 	});
 }
 
+std::string
+Connection::Impl::getClickDir(const std::string& package)
+{
+	initClick();
+
+	return thread.executeOnThread<std::string>([this, package]() {
+		GError * error = nullptr;
+		auto dir = click_user_get_path(_clickUser.get(), package.c_str(), &error);
+
+		if (error != nullptr) {
+			auto perror = std::shared_ptr<GError>(error, [](GError * error){ g_error_free(error); });
+			throw std::runtime_error(error->message);
+		}
+
+		std::string cppdir(dir);
+		g_free(dir);
+		return cppdir;
+	});
+}
+
 }; // namespace AppLaunch
 }; // namespace Ubuntu

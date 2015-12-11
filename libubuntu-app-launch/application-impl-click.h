@@ -1,4 +1,5 @@
 
+#include <gio/gdesktopappinfo.h>
 #include <json-glib/json-glib.h>
 #include "application-impl.h"
 
@@ -33,8 +34,12 @@ private:
 	std::string _iconPath;
 	std::shared_ptr<JsonObject> _manifest;
 
+	std::string _clickDir;
+	std::shared_ptr<GDesktopAppInfo> _appinfo;
+
 	static std::string manifestVersion (std::shared_ptr<JsonObject> manifest);
 	static std::list<std::string> manifestApps (std::shared_ptr<JsonObject> manifest);
+	static std::shared_ptr<GDesktopAppInfo> manifestAppDesktop (std::shared_ptr<JsonObject> manifest, const std::string &app, const std::string &clickDir);
 };
 
 }; // namespace AppImpls
