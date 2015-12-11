@@ -69,11 +69,16 @@ Click::manifestApps (std::shared_ptr<JsonObject> manifest)
 	if (gapps == nullptr) {
 		return {};
 	}
-	
+
 	std::list<std::string> apps;
 
 	for (GList * item = gapps; item != nullptr; item = g_list_next(item)) {
-		apps.emplace_back(std::string((gchar *)item->data));
+		auto appname = (const gchar *)item->data;
+
+		auto hooklist = json_object_get_object_member(manifest.get(), appname);
+
+		if (json_object_has_member(hooklist, "desktop") == TRUE)
+			apps.emplace_back(std::string(appname));
 	}
 
 	g_list_free_full(gapps, g_free);
