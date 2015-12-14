@@ -73,6 +73,7 @@ target_link_libraries(ubuntu-launcher
 	${CLICK_LIBRARIES}
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
+	${LIBERTINE_LIBRARIES}
 	helpers
 	-Wl,--no-undefined
 )

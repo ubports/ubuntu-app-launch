@@ -1,5 +1,6 @@
 
 #include "application-impl-libertine.h"
+#include "libertine.h"
 
 namespace Ubuntu {
 namespace AppLaunch {
