@@ -12,18 +12,18 @@ namespace AppLaunch {
 class Application;
 class ObserverHandle;
 
-class Connection {
+class Registry {
 public:
 	enum FailureType {
 		CRASH,
 		START_FAILURE,
 	};
 
-	Connection();
+	Registry();
 
 	/* Lots of application lists */
-	static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Connection> connection = getDefault());
-	static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Connection> connection = getDefault());
+	static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Registry> registry = getDefault());
+	static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Registry> registry = getDefault());
 
 	/* Observers, NOTE: All functions called on a different thread */
 	typedef std::function<void(const std::string& appid)> appObserver;
@@ -37,7 +37,7 @@ public:
 	ObserverHandle observeAppResume (appObserver callback);
 	ObserverHandle observeAppResumed (appObserver callback);
 
-	static std::shared_ptr<Connection> getDefault();
+	static std::shared_ptr<Registry> getDefault();
 
 	class Impl;
 	std::unique_ptr<Impl> impl;

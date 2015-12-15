@@ -9,8 +9,8 @@ namespace AppImpls {
 
 Libertine::Libertine (const std::string &container,
 	  const std::string &appname,
-	  std::shared_ptr<Connection> connection) :
-	Base(connection),
+	  std::shared_ptr<Registry> registry) :
+	Base(registry),
 	_container(container),
 	_appname(appname)
 {
@@ -36,7 +36,7 @@ Libertine::version()
 }
 
 std::list<std::shared_ptr<Application>>
-Libertine::list (std::shared_ptr<Connection> connection)
+Libertine::list (std::shared_ptr<Registry> registry)
 {
 	return {};
 }

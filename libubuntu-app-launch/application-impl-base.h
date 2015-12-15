@@ -13,7 +13,7 @@ namespace AppImpls {
 
 class Base : public Ubuntu::AppLaunch::Application {
 public:
-	Base (std::shared_ptr<Connection> connection);
+	Base (std::shared_ptr<Registry> registry);
 
 	std::string appId () override;
 
@@ -22,7 +22,7 @@ public:
 
 	std::shared_ptr<Instance> launch(std::vector<std::string> urls = {}) override;
 protected:
-	std::shared_ptr<Connection> _connection;
+	std::shared_ptr<Registry> _registry;
 };
 
 }; // namespace AppImpls

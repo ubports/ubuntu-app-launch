@@ -14,14 +14,14 @@ public:
 	Click (const std::string &package,
 	      const std::string &appname,
 	      const std::string &version,
-	      std::shared_ptr<Connection> connection);
+	      std::shared_ptr<Registry> registry);
 	Click (const std::string &package,
 	      const std::string &appname,
 	      const std::string &version,
 	      std::shared_ptr<JsonObject> manifest,
-	      std::shared_ptr<Connection> connection);
+	      std::shared_ptr<Registry> registry);
 
-	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Connection> connection);
+	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Registry> registry);
 
 	const std::string &package() override;
 	const std::string &appname() override;

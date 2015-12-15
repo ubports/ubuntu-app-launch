@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-#include "connection.h"
+#include "registry.h"
 
 #pragma once
 
@@ -15,7 +15,7 @@ public:
 	static std::shared_ptr<Application> create (const std::string &package,
 	                                            const std::string &appname,
 	                                            const std::string &version,
-	                                            std::shared_ptr<Connection> connection = Connection::getDefault());
+	                                            std::shared_ptr<Registry> registry = Registry::getDefault());
 
 	/* System level info */
 	virtual const std::string &package() = 0;

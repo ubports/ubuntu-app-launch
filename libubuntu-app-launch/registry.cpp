@@ -1,6 +1,6 @@
 
-#include "connection.h"
-#include "connection-impl.h"
+#include "registry.h"
+#include "registry-impl.h"
 
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
@@ -9,13 +9,13 @@
 namespace Ubuntu {
 namespace AppLaunch {
 
-Connection::Connection ()
+Registry::Registry ()
 {
 
 }
 
 std::list<std::shared_ptr<Application>>
-Connection::runningApps(std::shared_ptr<Connection> connection)
+Registry::runningApps(std::shared_ptr<Registry> connection)
 {
 	auto strv = ubuntu_app_launch_list_running_apps();
 	if (strv == nullptr) {
@@ -44,7 +44,7 @@ Connection::runningApps(std::shared_ptr<Connection> connection)
 }
 
 std::list<std::shared_ptr<Application>>
-Connection::installedApps(std::shared_ptr<Connection> connection)
+Registry::installedApps(std::shared_ptr<Registry> connection)
 {
 	std::list<std::shared_ptr<Application>> list;
 
@@ -56,15 +56,15 @@ Connection::installedApps(std::shared_ptr<Connection> connection)
 }
 
 
-std::shared_ptr<Connection> defaultConnection;
-std::shared_ptr<Connection>
+std::shared_ptr<Registry> defaultRegistry;
+std::shared_ptr<Registry>
 getDefault()
 {
-	if (!defaultConnection) {
-		defaultConnection = std::make_shared<Connection>();
+	if (!defaultRegistry) {
+		defaultRegistry = std::make_shared<Registry>();
 	}
 
-	return defaultConnection;
+	return defaultRegistry;
 }
 
 }; // namespace AppLaunch

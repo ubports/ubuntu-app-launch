@@ -1,10 +1,10 @@
 
-#include "connection-impl.h"
+#include "registry-impl.h"
 
 namespace Ubuntu {
 namespace AppLaunch {
 
-Connection::Impl::Impl ():
+Registry::Impl::Impl ():
 	thread([](){}, [this]() {
 		_clickUser.reset();
 		_clickDB.reset();
@@ -14,7 +14,7 @@ Connection::Impl::Impl ():
 }
 
 void
-Connection::Impl::initClick ()
+Registry::Impl::initClick ()
 {
 	if (_clickDB && _clickUser) {
 		return;
@@ -46,7 +46,7 @@ Connection::Impl::initClick ()
 }
 
 std::shared_ptr<JsonObject>
-Connection::Impl::getClickManifest(const std::string& package)
+Registry::Impl::getClickManifest(const std::string& package)
 {
 	initClick();
 
@@ -66,7 +66,7 @@ Connection::Impl::getClickManifest(const std::string& package)
 }
 
 std::list<std::string>
-Connection::Impl::getClickPackages()
+Registry::Impl::getClickPackages()
 {
 	initClick();
 
@@ -90,7 +90,7 @@ Connection::Impl::getClickPackages()
 }
 
 std::string
-Connection::Impl::getClickDir(const std::string& package)
+Registry::Impl::getClickDir(const std::string& package)
 {
 	initClick();
 

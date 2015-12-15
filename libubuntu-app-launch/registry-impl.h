@@ -1,5 +1,5 @@
 
-#include "connection.h"
+#include "registry.h"
 #include "glib-thread.h"
 
 #include <json-glib/json-glib.h>
@@ -10,7 +10,7 @@
 namespace Ubuntu {
 namespace AppLaunch {
 
-class Connection::Impl {
+class Registry::Impl {
 public:
 	Impl();
 	virtual ~Impl() {

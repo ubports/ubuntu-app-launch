@@ -27,7 +27,7 @@ ubuntu-app-launch.h
 
 set(LAUNCHER_CPP_HEADERS
 application.h
-connection.h
+registry.h
 )
 
 set(LAUNCHER_SOURCES
@@ -38,8 +38,8 @@ desktop-exec.c
 ubuntu-app-launch-trace.c
 app-info.c
 application.cpp
-connection.cpp
-connection-impl.cpp
+registry.cpp
+registry-impl.cpp
 application-impl-base.cpp
 application-impl-click.cpp
 application-impl-legacy.cpp

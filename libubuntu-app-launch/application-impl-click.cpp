@@ -1,6 +1,6 @@
 
 #include "application-impl-click.h"
-#include "connection-impl.h"
+#include "registry-impl.h"
 #include "application-info-desktop.h"
 
 namespace Ubuntu {
@@ -10,8 +10,8 @@ namespace AppImpls {
 Click::Click (const std::string &package,
 	  const std::string &appname,
 	  const std::string &version,
-	  std::shared_ptr<Connection> connection) :
-	Click(package, appname, version, connection->impl->getClickManifest(package), connection)
+	  std::shared_ptr<Registry> registry) :
+	Click(package, appname, version, registry->impl->getClickManifest(package), registry)
 {
 }
 
@@ -19,13 +19,13 @@ Click::Click (const std::string &package,
 	  const std::string &appname,
 	  const std::string &version,
 	  std::shared_ptr<JsonObject> manifest,
-	  std::shared_ptr<Connection> connection) :
-	Base(connection),
+	  std::shared_ptr<Registry> registry) :
+	Base(registry),
 	_package(package),
 	_appname(appname),
 	_version(version),
 	_manifest(manifest),
-	_clickDir(connection->impl->getClickDir(package)),
+	_clickDir(registry->impl->getClickDir(package)),
 	_appinfo(manifestAppDesktop(manifest, appname, _clickDir))
 {
 
@@ -134,15 +134,15 @@ Click::manifestAppDesktop (std::shared_ptr<JsonObject> manifest, const std::stri
 }
 
 std::list<std::shared_ptr<Application>>
-Click::list (std::shared_ptr<Connection> connection)
+Click::list (std::shared_ptr<Registry> registry)
 {
 	std::list<std::shared_ptr<Application>> applist;
 
-	for (auto pkg : connection->impl->getClickPackages()) {
-		auto manifest = connection->impl->getClickManifest(pkg);
+	for (auto pkg : registry->impl->getClickPackages()) {
+		auto manifest = registry->impl->getClickManifest(pkg);
 
 		for (auto appname : manifestApps(manifest)) {
-			auto app = std::make_shared<Click>(pkg, appname, manifestVersion(manifest), manifest, connection);
+			auto app = std::make_shared<Click>(pkg, appname, manifestVersion(manifest), manifest, registry);
 			applist.push_back(app);
 		}
 	}

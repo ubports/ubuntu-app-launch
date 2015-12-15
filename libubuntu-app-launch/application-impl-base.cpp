@@ -5,8 +5,8 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-Base::Base (std::shared_ptr<Connection> connection) :
-	_connection(connection)
+Base::Base (std::shared_ptr<Registry> registry) :
+	_registry(registry)
 {
 }
 

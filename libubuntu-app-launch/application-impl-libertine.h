@@ -12,9 +12,9 @@ class Libertine : public Base {
 public:
 	Libertine (const std::string &container,
 	      const std::string &appname,
-	      std::shared_ptr<Connection> connection);
+	      std::shared_ptr<Registry> registry);
 
-	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Connection> connection);
+	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Registry> registry);
 
 	const std::string &package() override;
 	const std::string &appname() override;
