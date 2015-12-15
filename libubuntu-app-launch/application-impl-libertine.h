@@ -1,5 +1,6 @@
 
-#include "application-impl.h"
+#include "application-impl-base.h"
+#include <gio/gdesktopappinfo.h>
 
 #pragma once
 
@@ -7,23 +8,24 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-class Libertine : public Application::Impl {
+class Libertine : public Base {
 public:
 	Libertine (const std::string &container,
 	      const std::string &appname,
 	      std::shared_ptr<Connection> connection);
 
-	const std::string &name();
-	const std::string &description();
-	const std::string &iconPath();
-	std::list<std::string> categories();
-
 	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Connection> connection);
 
+	const std::string &package() override;
+	const std::string &appname() override;
+	const std::string &version() override;
+
+	std::shared_ptr<Info> info() override;
+
 private:
-	std::string _name;
-	std::string _description;
-	std::string _iconPath;
+	std::string _container;
+	std::string _appname;
+	std::shared_ptr<GDesktopAppInfo> _appinfo;
 };
 
 }; // namespace AppImpls

@@ -1,7 +1,7 @@
 
 #include <gio/gdesktopappinfo.h>
 #include <json-glib/json-glib.h>
-#include "application-impl.h"
+#include "application-impl-base.h"
 
 #pragma once
 
@@ -9,7 +9,7 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-class Click : public Application::Impl {
+class Click : public Base {
 public:
 	Click (const std::string &package,
 	      const std::string &appname,
@@ -21,17 +21,19 @@ public:
 	      std::shared_ptr<JsonObject> manifest,
 	      std::shared_ptr<Connection> connection);
 
-	const std::string &name() override;
-	const std::string &description() override;
-	const std::string &iconPath() override;
-	std::list<std::string> categories() override;
-
 	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Connection> connection);
 
+	const std::string &package() override;
+	const std::string &appname() override;
+	const std::string &version() override;
+
+	std::shared_ptr<Info> info() override;
+
 private:
-	std::string _name;
-	std::string _description;
-	std::string _iconPath;
+	std::string _package;
+	std::string _appname;
+	std::string _version;
+
 	std::shared_ptr<JsonObject> _manifest;
 
 	std::string _clickDir;

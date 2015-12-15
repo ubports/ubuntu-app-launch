@@ -1,5 +1,7 @@
 
 #include <sys/types.h>
+#include <vector>
+#include <memory>
 
 #include "connection.h"
 
@@ -10,39 +12,44 @@ namespace AppLaunch {
 
 class Application {
 public:
-	class Impl;
-
-	Application (const std::string &package,
-	             const std::string &appname,
-	             const std::string &version,
-	             std::shared_ptr<Connection> connection = Connection::getDefault());
-	Application (std::unique_ptr<Impl> impl);
+	static std::shared_ptr<Application> create (const std::string &package,
+	                                            const std::string &appname,
+	                                            const std::string &version,
+	                                            std::shared_ptr<Connection> connection = Connection::getDefault());
 
 	/* System level info */
-	const std::string &package();
-	const std::string &appname();
-	const std::string &version();
+	virtual const std::string &package() = 0;
+	virtual const std::string &appname() = 0;
+	virtual const std::string &version() = 0;
+	virtual std::string appId() = 0;
 
-	const std::string &logPath();
+	class Info {
+		/* Package provided user visible info */
+		virtual const std::string &name() = 0;
+		virtual const std::string &description() = 0;
+		virtual const std::string &iconPath() = 0;
+		virtual std::list<std::string> categories() = 0;
+	};
 
-	/* Package provided user visible info */
-	const std::string &name();
-	const std::string &description();
-	const std::string &iconPath();
-	std::list<std::string> categories();
+	virtual std::shared_ptr<Info> info() = 0;
 
-	/* Query lifecycle */
-	bool isRunning();
-	pid_t primaryPid();
-	bool hasPid(pid_t pid);
+	class Instance {
+		/* Query lifecycle */
+		virtual bool isRunning() = 0;
+		virtual pid_t primaryPid() = 0;
+		virtual bool hasPid(pid_t pid) = 0;
+		virtual const std::string &logPath() = 0;
 
-	/* Manage lifecycle */
-	void launch(std::list<std::string> urls = {});
-	void pause();
-	void resume();
+		/* Manage lifecycle */
+		virtual void pause() = 0;
+		virtual void resume() = 0;
+		virtual void stop() = 0;
+	};
 
-private:
-	std::unique_ptr<Impl> impl;
+	virtual bool hasInstances() = 0;
+	virtual std::vector<std::shared_ptr<Instance>> instances() = 0;
+
+	virtual std::shared_ptr<Instance> launch(std::vector<std::string> urls = {}) = 0;
 };
 
 }; // namespace AppLaunch

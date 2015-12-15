@@ -1,5 +1,6 @@
 
 #include "application-impl-legacy.h"
+#include "application-info-desktop.h"
 
 namespace Ubuntu {
 namespace AppLaunch {
@@ -14,13 +15,10 @@ clear_app_info (GDesktopAppInfo * appinfo)
 Legacy::Legacy (const std::string &appname,
 	  std::shared_ptr<GDesktopAppInfo> appinfo,
 	  std::shared_ptr<Connection> connection) :
-	Impl(appname, "", "", connection),
+	Base(connection),
+	_appname(appname),
 	_appinfo(appinfo)
 {
-	_name = g_app_info_get_display_name(G_APP_INFO(_appinfo.get()));
-	_description = g_app_info_get_description(G_APP_INFO(_appinfo.get()));
-
-	/* TODO: Icon */
 }
 
 Legacy::Legacy (const std::string &appname,
@@ -31,25 +29,10 @@ Legacy::Legacy (const std::string &appname,
 {
 }
 
-
-const std::string&
-Legacy::name () {
-	return _name;
-}
-
-const std::string&
-Legacy::description () {
-	return _description;
-}
-
-const std::string&
-Legacy::iconPath () {
-	return _iconPath;
-}
-
-std::list<std::string>
-Legacy::categories () {
-	return {};
+std::shared_ptr<Application::Info>
+Legacy::info (void)
+{
+	return std::make_shared<AppInfo::Desktop>(_appinfo, "/usr/share/icons/");
 }
 
 std::list<std::shared_ptr<Application>>
@@ -67,10 +50,9 @@ Legacy::list (std::shared_ptr<Connection> connection)
 			continue;
 
 		g_object_ref(appinfo);
-		auto nlegacy = new Legacy(g_app_info_get_id(G_APP_INFO(appinfo)),
+		auto app = std::make_shared<Legacy>(g_app_info_get_id(G_APP_INFO(appinfo)),
 								  std::shared_ptr<GDesktopAppInfo>(appinfo, clear_app_info),
 								  connection);
-		auto app = std::make_shared<Application>(std::unique_ptr<Application::Impl>(nlegacy));
 		list.push_back(app);
 	}
 

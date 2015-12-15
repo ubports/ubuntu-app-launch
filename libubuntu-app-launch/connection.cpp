@@ -32,7 +32,7 @@ Connection::runningApps(std::shared_ptr<Connection> connection)
 			continue;
 		}
 
-		auto app = std::make_shared<Application>(package, appname, version, connection);
+		auto app = Application::create(package, appname, version, connection);
 		list.push_back(app);
 
 		g_free(package);

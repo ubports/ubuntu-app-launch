@@ -40,10 +40,11 @@ app-info.c
 application.cpp
 connection.cpp
 connection-impl.cpp
-application-impl.cpp
+application-impl-base.cpp
 application-impl-click.cpp
 application-impl-legacy.cpp
 application-impl-libertine.cpp
+application-info-desktop.cpp
 glib-thread.cpp
 )
 

@@ -1,6 +1,7 @@
 
 #include "application-impl-click.h"
 #include "connection-impl.h"
+#include "application-info-desktop.h"
 
 namespace Ubuntu {
 namespace AppLaunch {
@@ -19,7 +20,10 @@ Click::Click (const std::string &package,
 	  const std::string &version,
 	  std::shared_ptr<JsonObject> manifest,
 	  std::shared_ptr<Connection> connection) :
-	Impl(package, appname, version, connection),
+	Base(connection),
+	_package(package),
+	_appname(appname),
+	_version(version),
 	_manifest(manifest),
 	_clickDir(connection->impl->getClickDir(package)),
 	_appinfo(manifestAppDesktop(manifest, appname, _clickDir))
@@ -27,35 +31,28 @@ Click::Click (const std::string &package,
 
 }
 
-const std::string&
-Click::name () {
-	if (_name.empty()) {
-		_name = g_app_info_get_display_name(G_APP_INFO(_appinfo.get()));
-	}
-	return _name;
+const std::string &
+Click::package()
+{
+	return _package;
 }
 
-const std::string&
-Click::description () {
-	if (_description.empty()) {
-		_description = g_app_info_get_description(G_APP_INFO(_appinfo.get()));
-	}
-	return _description;
+const std::string &
+Click::appname()
+{
+	return _appname;
 }
 
-const std::string&
-Click::iconPath () {
-	if (_iconPath.empty()) {
-		auto relative = std::shared_ptr<gchar>(g_desktop_app_info_get_string(_appinfo.get(), "Icon"), [](gchar * str) { g_clear_pointer(&str, g_free); }); 
-		auto cpath = std::shared_ptr<gchar>(g_build_filename(_clickDir.c_str(), relative.get(), nullptr), [](gchar * str) { g_clear_pointer(&str, g_free); });
-		_iconPath = cpath.get();
-	}
-	return _iconPath;
+const std::string &
+Click::version()
+{
+	return _version;
 }
 
-std::list<std::string>
-Click::categories () {
-	return {};
+std::shared_ptr<Application::Info>
+Click::info (void)
+{
+	return std::make_shared<AppInfo::Desktop>(_appinfo, _clickDir);
 }
 
 std::string
@@ -145,8 +142,7 @@ Click::list (std::shared_ptr<Connection> connection)
 		auto manifest = connection->impl->getClickManifest(pkg);
 
 		for (auto appname : manifestApps(manifest)) {
-			auto pclick = new Click(pkg, appname, manifestVersion(manifest), manifest, connection);
-			auto app = std::make_shared<Application>(std::unique_ptr<Application::Impl>(pclick));
+			auto app = std::make_shared<Click>(pkg, appname, manifestVersion(manifest), manifest, connection);
 			applist.push_back(app);
 		}
 	}
