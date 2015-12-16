@@ -2,20 +2,21 @@
 #include <sys/types.h>
 #include <vector>
 #include <memory>
-
-#include "registry.h"
+#include <list>
 
 #pragma once
 
 namespace Ubuntu {
 namespace AppLaunch {
 
+class Registry;
+
 class Application {
 public:
 	static std::shared_ptr<Application> create (const std::string &package,
 	                                            const std::string &appname,
 	                                            const std::string &version,
-	                                            std::shared_ptr<Registry> registry = Registry::getDefault());
+	                                            std::shared_ptr<Registry> registry);
 
 	/* System level info */
 	virtual const std::string &package() = 0;

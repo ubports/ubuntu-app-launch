@@ -2,15 +2,14 @@
 #include <list>
 #include <memory>
 #include <functional>
+#include <core/signal.h>
+
+#include "application.h"
 
 #pragma once
 
 namespace Ubuntu {
 namespace AppLaunch {
-
-/* Forward declarations */
-class Application;
-class ObserverHandle;
 
 class Registry {
 public:
@@ -25,20 +24,31 @@ public:
 	static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Registry> registry = getDefault());
 	static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Registry> registry = getDefault());
 
-	/* Observers, NOTE: All functions called on a different thread */
-	typedef std::function<void(const std::string& appid)> appObserver;
-	typedef std::function<void(const std::string& appid, FailureType reason)> appFailedObserver;
+	/* Signals to discover what is happening to apps */
+	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStarted;
+	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStopped;
+	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> appFailed;
+	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appPaused;
+	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appResumed;
 
-	ObserverHandle observeAppStarting (appObserver callback);
-	ObserverHandle observeAppStarted (appObserver callback);
-	ObserverHandle observeAppStopped (appObserver callback);
-	ObserverHandle observeAppFailed (appFailedObserver callback);
-	ObserverHandle observeAppFocus (appObserver callback);
-	ObserverHandle observeAppResume (appObserver callback);
-	ObserverHandle observeAppResumed (appObserver callback);
+	/* The Application Manager, almost always if you're not Unity8, don't
+	   use this API. Testing is a special case. */
+	class Manager {
+		virtual bool focusRequest (std::shared_ptr<Application> app, std::shared_ptr<Application::Instance> instance) = 0;
+		virtual bool startingRequest (std::shared_ptr<Application> app, std::shared_ptr<Application::Instance> instance) = 0;
+	
+	  protected:
+	    Manager() = default;
+	};
 
+	void setManager (Manager *manager);
+	void clearManager ();
+
+	/* Default Junk */
 	static std::shared_ptr<Registry> getDefault();
+	static void clearDefault();
 
+	/* Hide our implementation */
 	class Impl;
 	std::unique_ptr<Impl> impl;
 };

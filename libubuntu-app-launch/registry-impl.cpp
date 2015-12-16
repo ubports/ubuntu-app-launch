@@ -4,7 +4,9 @@
 namespace Ubuntu {
 namespace AppLaunch {
 
-Registry::Impl::Impl ():
+Registry::Impl::Impl (Registry* registry):
+	_registry(registry),
+	_manager(nullptr),
 	thread([](){}, [this]() {
 		_clickUser.reset();
 		_clickDB.reset();
@@ -107,6 +109,22 @@ Registry::Impl::getClickDir(const std::string& package)
 		g_free(dir);
 		return cppdir;
 	});
+}
+
+void
+Registry::Impl::setManager (Registry::Manager* manager)
+{
+	if (_manager != nullptr) {
+		throw std::runtime_error("Already have a manager and trying to set another");
+	}
+
+	_manager = manager;
+}
+
+void
+Registry::Impl::clearManager ()
+{
+	_manager = nullptr;
 }
 
 }; // namespace AppLaunch

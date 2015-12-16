@@ -12,7 +12,7 @@ namespace AppLaunch {
 
 class Registry::Impl {
 public:
-	Impl();
+	Impl(Registry* registry);
 	virtual ~Impl() {
 		thread.quit();
 	}
@@ -21,7 +21,13 @@ public:
 	std::list<std::string> getClickPackages();
 	std::string getClickDir(const std::string& package);
 
+	void setManager (Registry::Manager* manager);
+	void clearManager ();
+
 private:
+	Registry* _registry;
+	Registry::Manager* _manager;
+
 	GLib::ContextThread thread;
 
 	std::shared_ptr<ClickDB> _clickDB;
