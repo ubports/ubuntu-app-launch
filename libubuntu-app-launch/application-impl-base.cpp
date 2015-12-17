@@ -10,16 +10,16 @@ Base::Base (std::shared_ptr<Registry> registry) :
 {
 }
 
-std::string
+Application::AppID
 Base::appId (void)
 {
-	return package() + "_" + appname() + "_" + version();
+	return Application::AppID::from_raw(package().value() + "_" + appname().value() + "_" + version().value());
 }
 
 bool
 Base::hasInstances()
 {
-	return ubuntu_app_launch_get_primary_pid(appId().c_str()) != 0;
+	return ubuntu_app_launch_get_primary_pid(appId().value().c_str()) != 0;
 }
 
 class BaseInstance : public Application::Instance {
@@ -71,10 +71,10 @@ Base::instances()
 }
 
 std::shared_ptr<Application::Instance>
-Base::launch(std::vector<std::string> urls)
+Base::launch(std::vector<Application::URL> urls)
 {
 	// TODO URLs
-	ubuntu_app_launch_start_application(appId().c_str(), NULL);
+	ubuntu_app_launch_start_application(appId().value().c_str(), NULL);
 	return std::make_shared<BaseInstance>(appId());
 }
 

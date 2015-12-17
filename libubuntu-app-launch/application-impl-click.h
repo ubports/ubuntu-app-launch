@@ -11,36 +11,36 @@ namespace AppImpls {
 
 class Click : public Base {
 public:
-	Click (const std::string &package,
-	      const std::string &appname,
-	      const std::string &version,
+	Click (const Application::Package &package,
+	      const Application::AppName &appname,
+	      const Application::Version &version,
 	      std::shared_ptr<Registry> registry);
-	Click (const std::string &package,
-	      const std::string &appname,
-	      const std::string &version,
+	Click (const Application::Package &package,
+	      const Application::AppName &appname,
+	      const Application::Version &version,
 	      std::shared_ptr<JsonObject> manifest,
 	      std::shared_ptr<Registry> registry);
 
 	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Registry> registry);
 
-	const std::string &package() override;
-	const std::string &appname() override;
-	const std::string &version() override;
+	const Application::Package &package() override;
+	const Application::AppName &appname() override;
+	const Application::Version &version() override;
 
 	std::shared_ptr<Info> info() override;
 
 private:
-	std::string _package;
-	std::string _appname;
-	std::string _version;
+	Application::Package _package;
+	Application::AppName _appname;
+	Application::Version _version;
 
 	std::shared_ptr<JsonObject> _manifest;
 
 	std::string _clickDir;
 	std::shared_ptr<GDesktopAppInfo> _appinfo;
 
-	static std::string manifestVersion (std::shared_ptr<JsonObject> manifest);
-	static std::list<std::string> manifestApps (std::shared_ptr<JsonObject> manifest);
+	static Application::Version manifestVersion (std::shared_ptr<JsonObject> manifest);
+	static std::list<Application::AppName> manifestApps (std::shared_ptr<JsonObject> manifest);
 	static std::shared_ptr<GDesktopAppInfo> manifestAppDesktop (std::shared_ptr<JsonObject> manifest, const std::string &app, const std::string &clickDir);
 };
 

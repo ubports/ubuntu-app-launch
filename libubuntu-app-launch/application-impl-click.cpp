@@ -7,17 +7,17 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-Click::Click (const std::string &package,
-	  const std::string &appname,
-	  const std::string &version,
+Click::Click (const Application::Package &package,
+	  const Application::AppName &appname,
+	  const Application::Version &version,
 	  std::shared_ptr<Registry> registry) :
 	Click(package, appname, version, registry->impl->getClickManifest(package), registry)
 {
 }
 
-Click::Click (const std::string &package,
-	  const std::string &appname,
-	  const std::string &version,
+Click::Click (const Application::Package &package,
+	  const Application::AppName &appname,
+	  const Application::Version &version,
 	  std::shared_ptr<JsonObject> manifest,
 	  std::shared_ptr<Registry> registry) :
 	Base(registry),
@@ -31,19 +31,19 @@ Click::Click (const std::string &package,
 
 }
 
-const std::string &
+const Application::Package &
 Click::package()
 {
 	return _package;
 }
 
-const std::string &
+const Application::AppName &
 Click::appname()
 {
 	return _appname;
 }
 
-const std::string &
+const Application::Version &
 Click::version()
 {
 	return _version;
@@ -55,20 +55,20 @@ Click::info (void)
 	return std::make_shared<AppInfo::Desktop>(_appinfo, _clickDir);
 }
 
-std::string
+Application::Version
 Click::manifestVersion (std::shared_ptr<JsonObject> manifest)
 {
 	auto cstr = json_object_get_string_member(manifest.get(), "version");
 
 	if (cstr == nullptr) {
-		return {};
+		return Application::Version::from_raw({});
 	}
 
-	std::string cppstr((const gchar *)cstr);
+	auto cppstr = Application::Version::from_raw((const gchar *)cstr);
 	return cppstr;
 }
 
-std::list<std::string>
+std::list<Application::AppName>
 Click::manifestApps (std::shared_ptr<JsonObject> manifest)
 {
 	auto hooks = json_object_get_object_member(manifest.get(), "hooks");
@@ -81,7 +81,7 @@ Click::manifestApps (std::shared_ptr<JsonObject> manifest)
 		return {};
 	}
 
-	std::list<std::string> apps;
+	std::list<Application::AppName> apps;
 
 	for (GList * item = gapps; item != nullptr; item = g_list_next(item)) {
 		auto appname = (const gchar *)item->data;
@@ -89,7 +89,7 @@ Click::manifestApps (std::shared_ptr<JsonObject> manifest)
 		auto hooklist = json_object_get_object_member(manifest.get(), appname);
 
 		if (json_object_has_member(hooklist, "desktop") == TRUE)
-			apps.emplace_back(std::string(appname));
+			apps.emplace_back(Application::AppName::from_raw(appname));
 	}
 
 	g_list_free_full(gapps, g_free);

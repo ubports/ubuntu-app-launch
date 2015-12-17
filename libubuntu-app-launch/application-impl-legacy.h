@@ -11,29 +11,28 @@ namespace AppImpls {
 
 class Legacy : public Base {
 public:
-	Legacy (const std::string &appname,
+	Legacy (const Application::AppName &appname,
 	        std::shared_ptr<Registry> registry);
-	Legacy (const std::string &appname,
+	Legacy (const Application::AppName &appname,
 			std::shared_ptr<GDesktopAppInfo> appinfo,
 	        std::shared_ptr<Registry> registry);
 
+	const Application::Package &package() override {
+		static Application::Package nullpkg = Application::Package::from_raw("");
+		return nullpkg;
+	}
 
-	const std::string &package() override {
+	const Application::AppName &appname() override {
 		return _appname;
 	}
 
-	const std::string &appname() override {
-		static std::string nullstring;
-		return nullstring;
+	const Application::Version &version() override {
+		static Application::Version nullver = Application::Version::from_raw("");
+		return nullver;
 	}
 
-	const std::string &version() override {
-		static std::string nullstring;
-		return nullstring;
-	}
-
-	std::string appId () override {
-		return _appname;
+	Application::AppID appId () override {
+		return Application::AppID::from_raw(_appname);
 	}
 
 	std::shared_ptr<Info> info() override;
@@ -42,7 +41,7 @@ public:
 
 private:
 	std::shared_ptr<GDesktopAppInfo> _appinfo;
-	std::string _appname;
+	Application::AppName _appname;
 };
 
 }; // namespace AppImpls

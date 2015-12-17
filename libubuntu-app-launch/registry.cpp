@@ -24,20 +24,24 @@ Registry::runningApps(std::shared_ptr<Registry> connection)
 
 	std::list<std::shared_ptr<Application>> list;
 	for (int i = 0; strv[i] != nullptr; i++) {
-		gchar * package;
-		gchar * appname;
-		gchar * version;
+		gchar * cpackage;
+		gchar * cappname;
+		gchar * cversion;
 
-		if (!ubuntu_app_launch_app_id_parse(strv[i], &package, &appname, &version)) {
+		if (!ubuntu_app_launch_app_id_parse(strv[i], &cpackage, &cappname, &cversion)) {
 			continue;
 		}
+
+		auto package = Application::Package::from_raw(cpackage);
+		auto appname = Application::AppName::from_raw(cappname);
+		auto version = Application::Version::from_raw(cversion);
 
 		auto app = Application::create(package, appname, version, connection);
 		list.push_back(app);
 
-		g_free(package);
-		g_free(appname);
-		g_free(version);
+		g_free(cpackage);
+		g_free(cappname);
+		g_free(cversion);
 	}
 
 	return list;

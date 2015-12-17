@@ -18,7 +18,7 @@ public:
 	}
 
 	std::shared_ptr<JsonObject> getClickManifest(const std::string& package);
-	std::list<std::string> getClickPackages();
+	std::list<Application::Package> getClickPackages();
 	std::string getClickDir(const std::string& package);
 
 	void setManager (Registry::Manager* manager);

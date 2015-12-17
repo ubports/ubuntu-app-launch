@@ -14,15 +14,15 @@ public:
 	Desktop(std::shared_ptr<GDesktopAppInfo> appinfo,
 	        const std::string &basePath);
 
-	const std::string &name() override;
-	const std::string &description() override;
-	const std::string &iconPath() override;
-	std::list<std::string> categories() override;
+	const Application::Info::Name &name() override;
+	const Application::Info::Description &description() override;
+	const Application::Info::IconPath &iconPath() override;
+	std::list<Application::Info::Category> categories() override;
 
 private:
-	std::string _name;
-	std::string _description;
-	std::string _iconPath;
+	Application::Info::Name _name;
+	Application::Info::Description _description;
+	Application::Info::IconPath _iconPath;
 
 	std::once_flag _nameFlag;
 	std::once_flag _descriptionFlag;

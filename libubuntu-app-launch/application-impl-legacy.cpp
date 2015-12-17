@@ -12,7 +12,7 @@ clear_app_info (GDesktopAppInfo * appinfo)
 	g_clear_object(&appinfo);
 }
 
-Legacy::Legacy (const std::string &appname,
+Legacy::Legacy (const Application::AppName &appname,
 	  std::shared_ptr<GDesktopAppInfo> appinfo,
 	  std::shared_ptr<Registry> registry) :
 	Base(registry),
@@ -21,10 +21,10 @@ Legacy::Legacy (const std::string &appname,
 {
 }
 
-Legacy::Legacy (const std::string &appname,
+Legacy::Legacy (const Application::AppName &appname,
 	  std::shared_ptr<Registry> registry) :
 	Legacy(appname, std::shared_ptr<GDesktopAppInfo>(
-		g_desktop_app_info_new(appname.c_str()),
+		g_desktop_app_info_new(appname.value().c_str()),
 		clear_app_info), registry)
 {
 }
@@ -50,7 +50,7 @@ Legacy::list (std::shared_ptr<Registry> registry)
 			continue;
 
 		g_object_ref(appinfo);
-		auto app = std::make_shared<Legacy>(g_app_info_get_id(G_APP_INFO(appinfo)),
+		auto app = std::make_shared<Legacy>(Application::AppName::from_raw(g_app_info_get_id(G_APP_INFO(appinfo))),
 								  std::shared_ptr<GDesktopAppInfo>(appinfo, clear_app_info),
 								  registry);
 		list.push_back(app);

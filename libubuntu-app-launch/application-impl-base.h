@@ -15,12 +15,12 @@ class Base : public Ubuntu::AppLaunch::Application {
 public:
 	Base (std::shared_ptr<Registry> registry);
 
-	std::string appId () override;
+	Application::AppID appId () override;
 
 	bool hasInstances() override;
 	std::vector<std::shared_ptr<Instance>> instances() override;
 
-	std::shared_ptr<Instance> launch(std::vector<std::string> urls = {}) override;
+	std::shared_ptr<Instance> launch(std::vector<Application::URL> urls = {}) override;
 protected:
 	std::shared_ptr<Registry> _registry;
 };
