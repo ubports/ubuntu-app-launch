@@ -38,7 +38,24 @@ Libertine::version()
 std::list<std::shared_ptr<Application>>
 Libertine::list (std::shared_ptr<Registry> registry)
 {
-	return {};
+	std::list<std::shared_ptr<Application>> applist;
+
+	auto containers = libertine_list_containers();
+
+	for (int i = 0; containers[i] != nullptr; i++) {
+		auto container = containers[i];
+		auto apps = libertine_list_apps_for_container(container);
+
+		for (int i = 0; apps[i] !=  nullptr; i++) {
+			auto sapp = std::make_shared<Libertine>(Application::Package::from_raw(container), Application::AppName::from_raw(apps[i]), registry);
+			applist.push_back(sapp);
+		}
+
+		g_strfreev(apps);
+	}
+	g_strfreev(containers);
+
+	return applist;
 }
 
 std::shared_ptr<Application::Info>
