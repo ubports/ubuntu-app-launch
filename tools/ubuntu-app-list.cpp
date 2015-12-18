@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Canonical Ltd.
+ * Copyright 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,21 +17,16 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include <iostream>
+#include "libubuntu-app-launch/registry.h"
 
 int
 main (int argc, char * argv[])
 {
-	gchar ** apps;
-
-	apps = ubuntu_app_launch_list_running_apps();
-
-	int i;
-	for (i = 0; apps[i] != NULL; i++) {
-		g_print("%s\n", apps[i]);
+	auto apps = Ubuntu::AppLaunch::Registry::runningApps();
+	for (auto app : apps) {
+		std::cout << app->appId().value() << std::endl;
 	}
-
-	g_strfreev(apps);
 
 	return 0;
 }

@@ -281,8 +281,7 @@ class LibUAL : public ::testing::Test
 		}
 		
 		GVariant * find_env (GVariant * env_array, const gchar * var) {
-			int i;
-			gchar * envvar = NULL;
+			unsigned int i;
 			GVariant * retval = nullptr;
 
 			for (i = 0; i < g_variant_n_children(env_array); i++) {

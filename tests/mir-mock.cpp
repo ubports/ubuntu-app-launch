@@ -43,7 +43,7 @@ mir_prompt_session_new_fds_for_prompt_providers (MirPromptSession * session, uns
 	std::thread * thread = new std::thread([session, numfds, cb, data]() {
 		int fdlist[numfds];
 
-		for (int i = 0; i < numfds; i++) 
+		for (unsigned int i = 0; i < numfds; i++) 
 			fdlist[i] = trusted_fd;
 
 		cb(session, numfds, fdlist, data);

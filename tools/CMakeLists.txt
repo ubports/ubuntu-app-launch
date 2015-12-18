@@ -3,7 +3,7 @@
 # ubuntu-app-list
 ########################
 
-add_executable(ubuntu-app-list ubuntu-app-list.c)
+add_executable(ubuntu-app-list ubuntu-app-list.cpp)
 set_target_properties(ubuntu-app-list PROPERTIES OUTPUT_NAME "ubuntu-app-list")
 target_link_libraries(ubuntu-app-list ubuntu-launcher)
 install(TARGETS ubuntu-app-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")

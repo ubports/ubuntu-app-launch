@@ -25,6 +25,8 @@ Application::create (const Application::Package &package,
 		return std::make_shared<AppImpls::Click>(package, appname, version, registry);
 	} else if (app_info_libertine(appid.c_str(), NULL, NULL)) {
 		return std::make_shared<AppImpls::Libertine>(package, appname, registry);
+	} else {
+		throw std::runtime_error("Invalid app ID: " + appid);
 	}
 }
 

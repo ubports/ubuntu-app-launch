@@ -40,8 +40,8 @@ public:
 	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Registry> registry);
 
 private:
-	std::shared_ptr<GDesktopAppInfo> _appinfo;
 	Application::AppName _appname;
+	std::shared_ptr<GDesktopAppInfo> _appinfo;
 };
 
 }; // namespace AppImpls

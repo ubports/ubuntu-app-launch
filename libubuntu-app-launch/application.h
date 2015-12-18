@@ -7,6 +7,7 @@
 #include "type-tagger.h"
 
 #pragma once
+#pragma GCC visibility push(default)
 
 namespace Ubuntu {
 namespace AppLaunch {
@@ -81,3 +82,5 @@ public:
 
 }; // namespace AppLaunch
 }; // namespace Ubuntu
+
+#pragma GCC visibility pop

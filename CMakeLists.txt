@@ -38,6 +38,7 @@ set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 
 # Deprecated needed for g_atexit() in libual
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -Wno-error=deprecated-declarations -std=c99")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -std=c++11 -pthread")
 
 enable_testing()
 

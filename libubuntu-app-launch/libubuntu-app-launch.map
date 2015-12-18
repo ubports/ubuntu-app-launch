@@ -2,9 +2,9 @@
 global:
 	ubuntu_app_launch_*;
 	extern "C++" {
-		Ubuntu::AppLaunch::Connection::*;
-		typeinfo?for?Ubuntu::AppLaunch::Connection;
-		typeinfo?name?for?Ubuntu::AppLaunch::Connection;
+		Ubuntu::AppLaunch::Registry::*;
+		typeinfo?for?Ubuntu::AppLaunch::Registry;
+		typeinfo?name?for?Ubuntu::AppLaunch::Registry;
 		Ubuntu::AppLaunch::Application::*;
 		typeinfo?for?Ubuntu::AppLaunch::Application;
 		typeinfo?name?for?Ubuntu::AppLaunch::Application;
