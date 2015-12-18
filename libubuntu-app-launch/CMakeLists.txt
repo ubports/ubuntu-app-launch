@@ -28,6 +28,7 @@ ubuntu-app-launch.h
 set(LAUNCHER_CPP_HEADERS
 application.h
 registry.h
+type-tagger.h
 )
 
 set(LAUNCHER_SOURCES

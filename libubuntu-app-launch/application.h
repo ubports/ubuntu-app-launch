@@ -4,54 +4,28 @@
 #include <memory>
 #include <list>
 
+#include "type-tagger.h"
+
 #pragma once
 
 namespace Ubuntu {
 namespace AppLaunch {
 
-template <typename Tag, typename T>
-class ApplicationTagger {
-public:
-	static ApplicationTagger<Tag, T> from_raw(const T& value) {
-		return ApplicationTagger<Tag, T>(value);
-	}
-	const T& value() const {
-		return _value;
-	}
-	operator T() const {
-		return _value;
-	}
-private:
-	ApplicationTagger(const T& value) : _value(value) { }
-	T _value;
-};
-
-namespace Tags {
-	/* Base AppID */
-	struct Package;
-	struct AppName;
-	struct Version;
-	struct AppID;
-
-	/* App launch */
-	struct URL;
-
-	/* Info */
-	struct Name;
-	struct Description;
-	struct IconPath;
-	struct Category;
-}
-
 class Registry;
 
 class Application {
 public:
-	typedef ApplicationTagger<Tags::Package, std::string> Package;
-	typedef ApplicationTagger<Tags::AppName, std::string> AppName;
-	typedef ApplicationTagger<Tags::Version, std::string> Version;
-	typedef ApplicationTagger<Tags::AppID, std::string> AppID;
-	typedef ApplicationTagger<Tags::URL, std::string> URL;
+	struct PackageTag;
+	struct AppNameTag;
+	struct VersionTag;
+	struct AppIDTag;
+	struct URLTag;
+
+	typedef TypeTagger<PackageTag, std::string> Package;
+	typedef TypeTagger<AppNameTag, std::string> AppName;
+	typedef TypeTagger<VersionTag, std::string> Version;
+	typedef TypeTagger<AppIDTag, std::string> AppID;
+	typedef TypeTagger<URLTag, std::string> URL;
 
 	static std::shared_ptr<Application> create (const Package &package,
 	                                            const AppName &appname,
@@ -66,10 +40,15 @@ public:
 
 	class Info {
 	public:
-		typedef ApplicationTagger<Tags::Name, std::string> Name;
-		typedef ApplicationTagger<Tags::Description, std::string> Description;
-		typedef ApplicationTagger<Tags::IconPath, std::string> IconPath;
-		typedef ApplicationTagger<Tags::Category, std::string> Category;
+		struct NameTag;
+		struct DescriptionTag;
+		struct IconPathTag;
+		struct CategoryTag;
+
+		typedef TypeTagger<NameTag, std::string> Name;
+		typedef TypeTagger<DescriptionTag, std::string> Description;
+		typedef TypeTagger<IconPathTag, std::string> IconPath;
+		typedef TypeTagger<CategoryTag, std::string> Category;
 
 		/* Package provided user visible info */
 		virtual const Name &name() = 0;
