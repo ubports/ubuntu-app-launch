@@ -30,5 +30,26 @@ Application::create (const Application::Package &package,
 	}
 }
 
+std::tuple<Application::Package, Application::AppName, Application::Version>
+appIdParse (const Application::AppID &appid)
+{
+	gchar * cpackage;
+	gchar * cappname;
+	gchar * cversion;
+
+	if (ubuntu_app_launch_app_id_parse(appid.value().c_str(), &cpackage, &cappname, &cversion) == FALSE) {
+		throw std::runtime_error("Unable to parse: " + appid.value());
+	}
+
+	auto tuple = std::make_tuple(Application::Package::from_raw(cpackage), Application::AppName::from_raw(cappname), Application::Version::from_raw(cversion));
+
+	g_free(cpackage);
+	g_free(cappname);
+	g_free(cversion);
+
+	return tuple;
+}
+
+
 }; // namespace AppLaunch
 }; // namespace Ubuntu

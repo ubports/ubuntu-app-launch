@@ -39,6 +39,8 @@ public:
 	virtual const Version &version() = 0;
 	virtual AppID appId() = 0;
 
+	static std::tuple<Package, AppName, Version> appIdParse (const AppID &appid);
+
 	class Info {
 	public:
 		struct NameTag;
