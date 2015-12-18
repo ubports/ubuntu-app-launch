@@ -39,7 +39,7 @@ install(TARGETS ubuntu-app-watch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDI
 # ubuntu-app-pid
 ########################
 
-add_executable(ubuntu-app-pid ubuntu-app-pid.c)
+add_executable(ubuntu-app-pid ubuntu-app-pid.cpp)
 set_target_properties(ubuntu-app-pid PROPERTIES OUTPUT_NAME "ubuntu-app-pid")
 target_link_libraries(ubuntu-app-pid ubuntu-launcher)
 install(TARGETS ubuntu-app-pid RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")

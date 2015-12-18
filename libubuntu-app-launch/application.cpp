@@ -31,7 +31,7 @@ Application::create (const Application::Package &package,
 }
 
 std::tuple<Application::Package, Application::AppName, Application::Version>
-appIdParse (const Application::AppID &appid)
+Application::appIdParse (const Application::AppID &appid)
 {
 	gchar * cpackage;
 	gchar * cappname;
