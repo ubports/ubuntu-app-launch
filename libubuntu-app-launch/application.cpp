@@ -16,7 +16,7 @@ std::shared_ptr<Application>
 Application::create (const Application::AppID &appid,
 	             std::shared_ptr<Registry> registry)
 {
-	auto sappid = Application::appIdString(appid);
+	std::string sappid = appid;
 	if (app_info_legacy(appid.appname.value().c_str(), NULL, NULL)) {
 		return std::make_shared<AppImpls::Legacy>(appid.appname, registry);
 	} else if (app_info_click(sappid.c_str(), NULL, NULL)) {
@@ -52,10 +52,9 @@ Application::appIdParse (const std::string &sappid)
 	return appid;
 }
 
-std::string
-Application::appIdString (const Application::AppID &appid)
+Application::AppID::operator std::string() const
 {
-	return appid.package.value() + "_" + appid.appname.value() + "_" + appid.version.value();
+	return package.value() + "_" + appname.value() + "_" + version.value();
 }
 
 

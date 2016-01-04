@@ -57,7 +57,7 @@ install(TARGETS ubuntu-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR
 # ubuntu-app-triplet
 ########################
 
-add_executable(ubuntu-app-triplet ubuntu-app-triplet.c)
+add_executable(ubuntu-app-triplet ubuntu-app-triplet.cpp)
 set_target_properties(ubuntu-app-triplet PROPERTIES OUTPUT_NAME "ubuntu-app-triplet")
 target_link_libraries(ubuntu-app-triplet ubuntu-launcher)
 install(TARGETS ubuntu-app-triplet RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")

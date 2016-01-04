@@ -24,7 +24,8 @@ Base::appId ()
 bool
 Base::hasInstances()
 {
-	return ubuntu_app_launch_get_primary_pid(appIdString(appId()).c_str()) != 0;
+	std::string sappid = appId();
+	return ubuntu_app_launch_get_primary_pid(sappid.c_str()) != 0;
 }
 
 class BaseInstance : public Application::Instance {
@@ -83,7 +84,7 @@ std::vector<std::shared_ptr<Application::Instance>>
 Base::instances()
 {
 	std::vector<std::shared_ptr<Instance>> vect;
-	vect.emplace_back(std::make_shared<BaseInstance>(appIdString(appId())));
+	vect.emplace_back(std::make_shared<BaseInstance>(appId()));
 	return vect;
 }
 
@@ -91,7 +92,7 @@ std::shared_ptr<Application::Instance>
 Base::launch(std::vector<Application::URL> urls)
 {
 	// TODO URLs
-	auto appIdStr = appIdString(appId());
+	std::string appIdStr = appId();
 	ubuntu_app_launch_start_application(appIdStr.c_str(), NULL);
 	return std::make_shared<BaseInstance>(appIdStr);
 }

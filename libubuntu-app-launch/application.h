@@ -30,6 +30,8 @@ public:
 		Package package;
 		AppName appname;
 		Version version;
+
+		operator std::string() const;
 	};
 
 	static std::shared_ptr<Application> create (const AppID &appid,
@@ -42,7 +44,6 @@ public:
 	virtual AppID appId() = 0;
 
 	static AppID appIdParse (const std::string &appid);
-	static std::string appIdString (const AppID &appid);
 
 	class Info {
 	public:
