@@ -42,6 +42,11 @@ add_executable (libual-test
 	mir-mock.cpp)
 target_link_libraries (libual-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
 
+add_executable (libual-cpp-test
+	libual-cpp-test.cc
+	mir-mock.cpp)
+target_link_libraries (libual-cpp-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+
 add_executable (data-spew
 	data-spew.c)
 target_link_libraries (data-spew ${GLIB2_LIBRARIES})
@@ -50,6 +55,7 @@ add_executable (socket-tool
 	socket-tool.c)
 
 add_test (NAME libual-test COMMAND libual-test)
+add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
 # Failure Test
 
