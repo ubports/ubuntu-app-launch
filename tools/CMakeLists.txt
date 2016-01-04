@@ -48,7 +48,7 @@ install(TARGETS ubuntu-app-pid RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}
 # ubuntu-app-stop
 ########################
 
-add_executable(ubuntu-app-stop ubuntu-app-stop.c)
+add_executable(ubuntu-app-stop ubuntu-app-stop.cpp)
 set_target_properties(ubuntu-app-stop PROPERTIES OUTPUT_NAME "ubuntu-app-stop")
 target_link_libraries(ubuntu-app-stop ubuntu-launcher)
 install(TARGETS ubuntu-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
