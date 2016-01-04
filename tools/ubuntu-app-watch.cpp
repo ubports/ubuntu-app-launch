@@ -86,7 +86,7 @@ main (int argc, gchar * argv[])
 	Ubuntu::AppLaunch::Registry registry;
 
 	registry.appStarted.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app, std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance) {
-		std::cout << "Started: " << app->appId().value() << std::endl;
+		std::cout << "Started: " << Ubuntu::AppLaunch::Application::appIdString(app->appId()) << std::endl;
 	});
 
 	ubuntu_app_launch_observer_add_app_starting(starting, NULL);

@@ -29,8 +29,8 @@ main (int argc, char * argv[])
 		return 1;
 	}
 
-	auto appid = Ubuntu::AppLaunch::Application::appIdParse(Ubuntu::AppLaunch::Application::AppID::from_raw(argv[1]));
-	auto app = Ubuntu::AppLaunch::Application::create(std::get<0>(appid), std::get<1>(appid), std::get<2>(appid), Ubuntu::AppLaunch::Registry::getDefault());
+	auto appid = Ubuntu::AppLaunch::Application::appIdParse(argv[1]);
+	auto app = Ubuntu::AppLaunch::Application::create(appid, Ubuntu::AppLaunch::Registry::getDefault());
 
 	for (auto instance : app->instances()) {
 		instance->stop();

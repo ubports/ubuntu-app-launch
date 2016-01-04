@@ -11,13 +11,9 @@ namespace AppImpls {
 
 class Click : public Base {
 public:
-	Click (const Application::Package &package,
-	      const Application::AppName &appname,
-	      const Application::Version &version,
+	Click (const Application::AppID &appid,
 	      std::shared_ptr<Registry> registry);
-	Click (const Application::Package &package,
-	      const Application::AppName &appname,
-	      const Application::Version &version,
+	Click (const Application::AppID &appid,
 	      std::shared_ptr<JsonObject> manifest,
 	      std::shared_ptr<Registry> registry);
 

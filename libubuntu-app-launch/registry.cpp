@@ -41,7 +41,9 @@ Registry::runningApps(std::shared_ptr<Registry> connection)
 		auto appname = Application::AppName::from_raw(cappname);
 		auto version = Application::Version::from_raw(cversion);
 
-		auto app = Application::create(package, appname, version, connection);
+		auto appid = std::make_tuple(package, appname, version);
+
+		auto app = Application::create(appid, connection);
 		list.push_back(app);
 
 		g_free(cpackage);

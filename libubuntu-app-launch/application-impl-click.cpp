@@ -7,26 +7,22 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-Click::Click (const Application::Package &package,
-	  const Application::AppName &appname,
-	  const Application::Version &version,
+Click::Click (const Application::AppID &appid,
 	  std::shared_ptr<Registry> registry) :
-	Click(package, appname, version, registry->impl->getClickManifest(package), registry)
+	Click(appid, registry->impl->getClickManifest(std::get<0>(appid)), registry)
 {
 }
 
-Click::Click (const Application::Package &package,
-	  const Application::AppName &appname,
-	  const Application::Version &version,
+Click::Click (const Application::AppID &appid,
 	  std::shared_ptr<JsonObject> manifest,
 	  std::shared_ptr<Registry> registry) :
 	Base(registry),
-	_package(package),
-	_appname(appname),
-	_version(version),
+	_package(std::get<0>(appid)),
+	_appname(std::get<1>(appid)),
+	_version(std::get<2>(appid)),
 	_manifest(manifest),
-	_clickDir(registry->impl->getClickDir(package)),
-	_appinfo(manifestAppDesktop(manifest, appname, _clickDir))
+	_clickDir(registry->impl->getClickDir(std::get<0>(appid))),
+	_appinfo(manifestAppDesktop(manifest, std::get<1>(appid), _clickDir))
 {
 
 }
@@ -142,7 +138,8 @@ Click::list (std::shared_ptr<Registry> registry)
 		auto manifest = registry->impl->getClickManifest(pkg);
 
 		for (auto appname : manifestApps(manifest)) {
-			auto app = std::make_shared<Click>(pkg, appname, manifestVersion(manifest), manifest, registry);
+			auto appid = std::make_tuple(pkg, appname, manifestVersion(manifest));
+			auto app = std::make_shared<Click>(appid, manifest, registry);
 			applist.push_back(app);
 		}
 	}

@@ -25,7 +25,7 @@ main (int argc, char * argv[])
 {
 	auto apps = Ubuntu::AppLaunch::Registry::runningApps();
 	for (auto app : apps) {
-		std::cout << app->appId().value() << std::endl;
+		std::cout << Ubuntu::AppLaunch::Application::appIdString(app->appId()) << std::endl;
 	}
 
 	return 0;

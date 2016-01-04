@@ -31,10 +31,6 @@ public:
 		return nullver;
 	}
 
-	Application::AppID appId () override {
-		return Application::AppID::from_raw(_appname);
-	}
-
 	std::shared_ptr<Info> info() override;
 
 	static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Registry> registry);

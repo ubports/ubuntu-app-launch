@@ -25,12 +25,11 @@ public:
 	typedef TypeTagger<PackageTag, std::string> Package;
 	typedef TypeTagger<AppNameTag, std::string> AppName;
 	typedef TypeTagger<VersionTag, std::string> Version;
-	typedef TypeTagger<AppIDTag, std::string> AppID;
 	typedef TypeTagger<URLTag, std::string> URL;
 
-	static std::shared_ptr<Application> create (const Package &package,
-	                                            const AppName &appname,
-	                                            const Version &version,
+	typedef std::tuple<Package, AppName, Version> AppID;
+
+	static std::shared_ptr<Application> create (const AppID &appid,
 	                                            std::shared_ptr<Registry> registry);
 
 	/* System level info */
@@ -39,7 +38,8 @@ public:
 	virtual const Version &version() = 0;
 	virtual AppID appId() = 0;
 
-	static std::tuple<Package, AppName, Version> appIdParse (const AppID &appid);
+	static std::tuple<Package, AppName, Version> appIdParse (const std::string &appid);
+	static std::string appIdString (const AppID &appid);
 
 	class Info {
 	public:
