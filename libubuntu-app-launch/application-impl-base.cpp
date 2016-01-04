@@ -41,6 +41,18 @@ public:
 		static std::string nullstr("");
 		return nullstr;
 	}
+	std::vector<pid_t> pids () override {
+		std::vector<pid_t> vector;
+		GList * list = ubuntu_app_launch_get_pids(_appId.c_str());
+		
+		for (GList * pntr = list; pntr != nullptr; pntr = g_list_next(pntr)) {
+			vector.push_back(static_cast<pid_t>(GPOINTER_TO_INT(list->data)));
+		}
+
+		g_list_free(list);
+
+		return vector;
+	}
 
 	/* Manage lifecycle */
 	void pause() override {

@@ -66,9 +66,14 @@ public:
 	public:
 		/* Query lifecycle */
 		virtual bool isRunning() = 0;
+
+		/* Instance Info */
+		virtual const std::string &logPath() = 0;
+
+		/* PIDs */
 		virtual pid_t primaryPid() = 0;
 		virtual bool hasPid(pid_t pid) = 0;
-		virtual const std::string &logPath() = 0;
+		virtual std::vector<pid_t> pids() = 0;
 
 		/* Manage lifecycle */
 		virtual void pause() = 0;

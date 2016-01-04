@@ -1,5 +1,5 @@
 /*
- * Copyright © 2015 Canonical Ltd.
+ * Copyright © 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,29 +17,26 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include <iostream>
+#include <libubuntu-app-launch/application.h>
+#include <libubuntu-app-launch/registry.h>
 
 int
 main (int argc, char * argv[])
 {
-	GList * pids;
-	GList * iter;
-
 	if (argc != 2) {
-		g_printerr("Usage: %s <app id>\n", argv[0]);
+		std::cerr << "Usage: " << argv[0] << " <app id>" << std::endl;
 		return 1;
 	}
 
-	pids = ubuntu_app_launch_get_pids(argv[1]);
-	if (pids == NULL) {
-		return 1;
-	}
+	auto appid = Ubuntu::AppLaunch::Application::appIdParse(Ubuntu::AppLaunch::Application::AppID::from_raw(argv[1]));
+	auto app = Ubuntu::AppLaunch::Application::create(std::get<0>(appid), std::get<1>(appid), std::get<2>(appid), Ubuntu::AppLaunch::Registry::getDefault());
 
-	for (iter = pids; iter != NULL; iter = g_list_next(iter)) {
-		g_print("%d\n", (GPid)GPOINTER_TO_INT(iter->data));
+	for (auto instance : app->instances()) {
+		for (auto pid : instance->pids()) {
+			std::cout << pid << std::endl;
+		}
 	}
-
-	g_list_free(pids);
 
 	return 0;
 }

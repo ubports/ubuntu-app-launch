@@ -12,7 +12,7 @@ install(TARGETS ubuntu-app-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR
 # ubuntu-app-list-pids
 ########################
 
-add_executable(ubuntu-app-list-pids ubuntu-app-list-pids.c)
+add_executable(ubuntu-app-list-pids ubuntu-app-list-pids.cpp)
 set_target_properties(ubuntu-app-list-pids PROPERTIES OUTPUT_NAME "ubuntu-app-list-pids")
 target_link_libraries(ubuntu-app-list-pids ubuntu-launcher)
 install(TARGETS ubuntu-app-list-pids RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
