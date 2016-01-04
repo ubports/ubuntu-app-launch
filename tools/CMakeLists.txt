@@ -30,7 +30,7 @@ install(TARGETS ubuntu-app-launch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BIND
 # ubuntu-app-watch
 ########################
 
-add_executable(ubuntu-app-watch ubuntu-app-watch.c)
+add_executable(ubuntu-app-watch ubuntu-app-watch.cpp)
 set_target_properties(ubuntu-app-watch PROPERTIES OUTPUT_NAME "ubuntu-app-watch")
 target_link_libraries(ubuntu-app-watch ubuntu-launcher)
 install(TARGETS ubuntu-app-watch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")

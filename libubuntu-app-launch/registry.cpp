@@ -14,6 +14,11 @@ Registry::Registry ()
 	impl = std::unique_ptr<Impl>(new Impl(this));
 }
 
+Registry::~Registry ()
+{
+
+}
+
 std::list<std::shared_ptr<Application>>
 Registry::runningApps(std::shared_ptr<Registry> connection)
 {

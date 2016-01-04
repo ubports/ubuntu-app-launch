@@ -20,6 +20,7 @@ public:
 	};
 
 	Registry();
+	virtual ~Registry();
 
 	/* Lots of application lists */
 	static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Registry> registry = getDefault());

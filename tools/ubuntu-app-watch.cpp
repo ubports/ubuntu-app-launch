@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Canonical Ltd.
+ * Copyright © 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -18,6 +18,7 @@
  */
 
 #include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include "libubuntu-app-launch/registry.h"
 
 void
 starting (const gchar * appid, gpointer user_data)
@@ -82,6 +83,12 @@ fail (const gchar * appid, UbuntuAppLaunchAppFailed failhow, gpointer user_data)
 int
 main (int argc, gchar * argv[])
 {
+	Ubuntu::AppLaunch::Registry registry;
+
+	registry.appStarted.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app, std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance) {
+		std::cout << "Started: " << app->appId().value() << std::endl;
+	});
+
 	ubuntu_app_launch_observer_add_app_starting(starting, NULL);
 	ubuntu_app_launch_observer_add_app_started(started, NULL);
 	ubuntu_app_launch_observer_add_app_stop(stopped, NULL);
