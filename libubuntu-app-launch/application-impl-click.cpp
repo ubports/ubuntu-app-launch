@@ -9,7 +9,7 @@ namespace AppImpls {
 
 Click::Click (const Application::AppID &appid,
 	  std::shared_ptr<Registry> registry) :
-	Click(appid, registry->impl->getClickManifest(std::get<0>(appid)), registry)
+	Click(appid, registry->impl->getClickManifest(appid.package), registry)
 {
 }
 
@@ -17,12 +17,10 @@ Click::Click (const Application::AppID &appid,
 	  std::shared_ptr<JsonObject> manifest,
 	  std::shared_ptr<Registry> registry) :
 	Base(registry),
-	_package(std::get<0>(appid)),
-	_appname(std::get<1>(appid)),
-	_version(std::get<2>(appid)),
+	_appid(appid),
 	_manifest(manifest),
-	_clickDir(registry->impl->getClickDir(std::get<0>(appid))),
-	_appinfo(manifestAppDesktop(manifest, std::get<1>(appid), _clickDir))
+	_clickDir(registry->impl->getClickDir(appid.package)),
+	_appinfo(manifestAppDesktop(manifest, appid.appname, _clickDir))
 {
 
 }
@@ -30,19 +28,25 @@ Click::Click (const Application::AppID &appid,
 const Application::Package &
 Click::package()
 {
-	return _package;
+	return _appid.package;
 }
 
 const Application::AppName &
 Click::appname()
 {
-	return _appname;
+	return _appid.appname;
 }
 
 const Application::Version &
 Click::version()
 {
-	return _version;
+	return _appid.version;
+}
+
+Application::AppID
+Click::appId()
+{
+	return _appid;
 }
 
 std::shared_ptr<Application::Info>
@@ -138,7 +142,11 @@ Click::list (std::shared_ptr<Registry> registry)
 		auto manifest = registry->impl->getClickManifest(pkg);
 
 		for (auto appname : manifestApps(manifest)) {
-			auto appid = std::make_tuple(pkg, appname, manifestVersion(manifest));
+			Application::AppID appid {
+				package: pkg,
+				appname: appname,
+				version: manifestVersion(manifest)
+			};
 			auto app = std::make_shared<Click>(appid, manifest, registry);
 			applist.push_back(app);
 		}

@@ -29,26 +29,9 @@ Registry::runningApps(std::shared_ptr<Registry> connection)
 
 	std::list<std::shared_ptr<Application>> list;
 	for (int i = 0; strv[i] != nullptr; i++) {
-		gchar * cpackage;
-		gchar * cappname;
-		gchar * cversion;
-
-		if (!ubuntu_app_launch_app_id_parse(strv[i], &cpackage, &cappname, &cversion)) {
-			continue;
-		}
-
-		auto package = Application::Package::from_raw(cpackage);
-		auto appname = Application::AppName::from_raw(cappname);
-		auto version = Application::Version::from_raw(cversion);
-
-		auto appid = std::make_tuple(package, appname, version);
-
+		auto appid = Application::appIdParse(strv[i]);
 		auto app = Application::create(appid, connection);
 		list.push_back(app);
-
-		g_free(cpackage);
-		g_free(cappname);
-		g_free(cversion);
 	}
 
 	return list;

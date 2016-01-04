@@ -19,7 +19,6 @@ public:
 	struct PackageTag;
 	struct AppNameTag;
 	struct VersionTag;
-	struct AppIDTag;
 	struct URLTag;
 
 	typedef TypeTagger<PackageTag, std::string> Package;
@@ -27,7 +26,11 @@ public:
 	typedef TypeTagger<VersionTag, std::string> Version;
 	typedef TypeTagger<URLTag, std::string> URL;
 
-	typedef std::tuple<Package, AppName, Version> AppID;
+	struct AppID {
+		Package package;
+		AppName appname;
+		Version version;
+	};
 
 	static std::shared_ptr<Application> create (const AppID &appid,
 	                                            std::shared_ptr<Registry> registry);
@@ -38,7 +41,7 @@ public:
 	virtual const Version &version() = 0;
 	virtual AppID appId() = 0;
 
-	static std::tuple<Package, AppName, Version> appIdParse (const std::string &appid);
+	static AppID appIdParse (const std::string &appid);
 	static std::string appIdString (const AppID &appid);
 
 	class Info {

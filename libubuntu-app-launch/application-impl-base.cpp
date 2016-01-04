@@ -13,7 +13,12 @@ Base::Base (std::shared_ptr<Registry> registry) :
 Application::AppID
 Base::appId ()
 {
-	return std::make_tuple(package(), appname(), version());
+	Application::AppID retval {
+		package: package(),
+		appname: appname(),
+		version: version()
+	};
+	return retval;
 }
 
 bool

@@ -22,13 +22,12 @@ public:
 	const Application::Package &package() override;
 	const Application::AppName &appname() override;
 	const Application::Version &version() override;
+	Application::AppID appId() override;
 
 	std::shared_ptr<Info> info() override;
 
 private:
-	Application::Package _package;
-	Application::AppName _appname;
-	Application::Version _version;
+	Application::AppID _appid;
 
 	std::shared_ptr<JsonObject> _manifest;
 

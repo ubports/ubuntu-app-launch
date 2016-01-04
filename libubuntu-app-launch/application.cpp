@@ -17,41 +17,45 @@ Application::create (const Application::AppID &appid,
 	             std::shared_ptr<Registry> registry)
 {
 	auto sappid = Application::appIdString(appid);
-	if (app_info_legacy(std::get<1>(appid).value().c_str(), NULL, NULL)) {
-		return std::make_shared<AppImpls::Legacy>(std::get<1>(appid), registry);
+	if (app_info_legacy(appid.appname.value().c_str(), NULL, NULL)) {
+		return std::make_shared<AppImpls::Legacy>(appid.appname, registry);
 	} else if (app_info_click(sappid.c_str(), NULL, NULL)) {
 		return std::make_shared<AppImpls::Click>(appid, registry);
 	} else if (app_info_libertine(sappid.c_str(), NULL, NULL)) {
-		return std::make_shared<AppImpls::Libertine>(std::get<0>(appid), std::get<1>(appid), registry);
+		return std::make_shared<AppImpls::Libertine>(appid.package, appid.appname, registry);
 	} else {
 		throw std::runtime_error("Invalid app ID: " + sappid);
 	}
 }
 
-std::tuple<Application::Package, Application::AppName, Application::Version>
-Application::appIdParse (const std::string &appid)
+Application::AppID
+Application::appIdParse (const std::string &sappid)
 {
 	gchar * cpackage;
 	gchar * cappname;
 	gchar * cversion;
 
-	if (ubuntu_app_launch_app_id_parse(appid.c_str(), &cpackage, &cappname, &cversion) == FALSE) {
-		throw std::runtime_error("Unable to parse: " + appid);
+	if (ubuntu_app_launch_app_id_parse(sappid.c_str(), &cpackage, &cappname, &cversion) == FALSE) {
+		throw std::runtime_error("Unable to parse: " + sappid);
 	}
 
-	auto tuple = std::make_tuple(Application::Package::from_raw(cpackage), Application::AppName::from_raw(cappname), Application::Version::from_raw(cversion));
+	Application::AppID appid{
+		package: Application::Package::from_raw(cpackage),
+		appname: Application::AppName::from_raw(cappname),
+		version: Application::Version::from_raw(cversion)
+	};
 
 	g_free(cpackage);
 	g_free(cappname);
 	g_free(cversion);
 
-	return tuple;
+	return appid;
 }
 
 std::string
 Application::appIdString (const Application::AppID &appid)
 {
-	return std::get<0>(appid).value() + "_" + std::get<1>(appid).value() + "_" + std::get<2>(appid).value();
+	return appid.package.value() + "_" + appid.appname.value() + "_" + appid.version.value();
 }
 
 
