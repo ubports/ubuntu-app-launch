@@ -29,7 +29,7 @@ Application::create (const Application::AppID &appid,
 }
 
 Application::AppID
-Application::appIdParse (const std::string &sappid)
+Application::AppID::parse (const std::string &sappid)
 {
 	gchar * cpackage;
 	gchar * cappname;
@@ -57,6 +57,65 @@ Application::AppID::operator std::string() const
 	return package.value() + "_" + appname.value() + "_" + version.value();
 }
 
+std::string
+app_wildcard (Application::AppID::ApplicationWildcard card)
+{
+	switch (card) {
+	case Application::AppID::ApplicationWildcard::FIRST_LISTED:
+		return "first-listed";
+	case Application::AppID::ApplicationWildcard::LAST_LISTED:
+		return "last-listed";
+	}
+
+	return "";
+}
+
+std::string
+ver_wildcard (Application::AppID::VersionWildcard card)
+{
+	switch (card) {
+	case Application::AppID::VersionWildcard::CURRENT_USER_VERSION:
+		return "current-user-version";
+	}
+
+	return "";
+}
+
+Application::AppID
+Application::AppID::discover (const std::string &package)
+{
+	return discover(package, ApplicationWildcard::FIRST_LISTED, VersionWildcard::CURRENT_USER_VERSION);
+}
+
+Application::AppID
+Application::AppID::discover (const std::string &package, const std::string &appname)
+{
+	return discover(package, appname, VersionWildcard::CURRENT_USER_VERSION);
+}
+
+Application::AppID
+Application::AppID::discover (const std::string &package, const std::string &appname, const std::string &version)
+{
+	return Application::AppID::parse(ubuntu_app_launch_triplet_to_app_id(package.c_str(), appname.c_str(), version.c_str()));
+}
+
+Application::AppID
+Application::AppID::discover (const std::string &package, ApplicationWildcard appwildcard)
+{
+	return Application::AppID::discover(package, appwildcard, VersionWildcard::CURRENT_USER_VERSION);
+}
+
+Application::AppID
+Application::AppID::discover (const std::string &package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
+{
+	return discover(package, app_wildcard(appwildcard), ver_wildcard(versionwildcard));
+}
+
+Application::AppID
+Application::AppID::discover (const std::string &package, const std::string &appname, VersionWildcard versionwildcard)
+{
+	return discover(package, appname, ver_wildcard(versionwildcard));
+}
 
 
 }; // namespace AppLaunch

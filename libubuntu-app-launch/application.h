@@ -32,6 +32,31 @@ public:
 		Version version;
 
 		operator std::string() const;
+
+		static AppID parse (const std::string &appid);
+
+		enum ApplicationWildcard {
+			FIRST_LISTED,
+			LAST_LISTED
+		};
+		enum VersionWildcard {
+			CURRENT_USER_VERSION
+		};
+
+		static AppID discover (const std::string &package);
+		static AppID discover (const std::string &package,
+		                       const std::string &appname);
+		static AppID discover (const std::string &package,
+		                       const std::string &appname,
+		                       const std::string &version);
+		static AppID discover (const std::string &package,
+		                       ApplicationWildcard appwildcard);
+		static AppID discover (const std::string &package,
+		                       ApplicationWildcard appwildcard,
+		                       VersionWildcard versionwildcard);
+		static AppID discover (const std::string &package,
+		                       const std::string &appname,
+		                       VersionWildcard versionwildcard);
 	};
 
 	static std::shared_ptr<Application> create (const AppID &appid,
@@ -43,7 +68,6 @@ public:
 	virtual const Version &version() = 0;
 	virtual AppID appId() = 0;
 
-	static AppID appIdParse (const std::string &appid);
 
 	class Info {
 	public:
