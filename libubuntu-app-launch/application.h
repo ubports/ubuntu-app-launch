@@ -32,6 +32,12 @@ public:
 		Version version;
 
 		operator std::string() const;
+		int operator == (const AppID &other) const;
+		int operator != (const AppID &other) const;
+
+		AppID();
+		AppID(Package pkg, AppName app, Version ver);
+		bool empty () const;
 
 		static AppID parse (const std::string &appid);
 

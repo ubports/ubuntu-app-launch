@@ -28,6 +28,20 @@ Application::create (const Application::AppID &appid,
 	}
 }
 
+Application::AppID::AppID () :
+	package(Application::Package::from_raw({})),
+	appname(Application::AppName::from_raw({})),
+	version(Application::Version::from_raw({}))
+{
+}
+
+Application::AppID::AppID (Application::Package pkg, Application::AppName app, Application::Version ver) :
+	package(pkg),
+	appname(app),
+	version(ver)
+{
+}
+
 Application::AppID
 Application::AppID::parse (const std::string &sappid)
 {
@@ -39,11 +53,11 @@ Application::AppID::parse (const std::string &sappid)
 		throw std::runtime_error("Unable to parse: " + sappid);
 	}
 
-	Application::AppID appid{
-		package: Application::Package::from_raw(cpackage),
-		appname: Application::AppName::from_raw(cappname),
-		version: Application::Version::from_raw(cversion)
-	};
+	Application::AppID appid(
+		Application::Package::from_raw(cpackage),
+		Application::AppName::from_raw(cappname),
+		Application::Version::from_raw(cversion)
+	);
 
 	g_free(cpackage);
 	g_free(cappname);
@@ -55,6 +69,30 @@ Application::AppID::parse (const std::string &sappid)
 Application::AppID::operator std::string() const
 {
 	return package.value() + "_" + appname.value() + "_" + version.value();
+}
+
+int
+Application::AppID::operator == (const Application::AppID &other) const
+{
+	return package.value() == other.package.value() &&
+		appname.value() == other.appname.value() &&
+		version.value() == other.version.value();
+}
+
+int
+Application::AppID::operator != (const Application::AppID &other) const
+{
+	return package.value() != other.package.value() ||
+		appname.value() != other.appname.value() ||
+		version.value() != other.version.value();
+}
+
+bool
+Application::AppID::empty () const
+{
+	return package.value().empty() &&
+		appname.value().empty() &&
+		version.value().empty();
 }
 
 std::string

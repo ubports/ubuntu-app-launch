@@ -23,12 +23,7 @@
 int
 main (int argc, char * argv[])
 {
-	Ubuntu::AppLaunch::Application::AppID appid {
-		/* TODO: Figure out how to ditch this init */
-		package: Ubuntu::AppLaunch::Application::Package::from_raw(""),
-		appname: Ubuntu::AppLaunch::Application::AppName::from_raw(""),
-		version: Ubuntu::AppLaunch::Application::Version::from_raw("")
-	};
+	Ubuntu::AppLaunch::Application::AppID appid;
 
 	switch (argc) {
 	case 2:
