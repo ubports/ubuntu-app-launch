@@ -17,98 +17,45 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
 #include "libubuntu-app-launch/registry.h"
+#include <csignal>
+#include <future>
 
-void
-starting (const gchar * appid, gpointer user_data)
-{
-	g_print("Starting %s\n", appid);
-	return;
-}
-
-void
-started (const gchar * appid, gpointer user_data)
-{
-	g_print("Started  %s\n", appid);
-	return;
-}
-
-void
-stopped (const gchar * appid, gpointer user_data)
-{
-	g_print("Stop     %s\n", appid);
-	return;
-}
-
-void
-resumed (const gchar * appid, GPid * pids, gpointer user_data)
-{
-	g_print("Resumed  %s\n", appid);
-	return;
-}
-
-void
-paused (const gchar * appid, GPid * pids, gpointer user_data)
-{
-	g_print("Paused   %s\n", appid);
-	return;
-}
-
-void
-focus (const gchar * appid, gpointer user_data)
-{
-	g_print("Focus    %s\n", appid);
-	return;
-}
-
-void
-fail (const gchar * appid, UbuntuAppLaunchAppFailed failhow, gpointer user_data)
-{
-	const gchar * failstr = "unknown";
-	switch (failhow) {
-		case UBUNTU_APP_LAUNCH_APP_FAILED_CRASH:
-			failstr = "crashed";
-			break;
-		case UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE:
-			failstr = "startup";
-			break;
-	}
-
-	g_print("Fail     %s (%s)\n", appid, failstr);
-	return;
-}
-
+std::promise<int> retval;
 
 int
-main (int argc, gchar * argv[])
+main (int argc, char * argv[])
 {
 	Ubuntu::AppLaunch::Registry registry;
 
 	registry.appStarted.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app, std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance) {
 		std::cout << "Started: " << (std::string)app->appId() << std::endl;
 	});
+	registry.appStopped.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app, std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance) {
+		std::cout << "Stopped: " << (std::string)app->appId() << std::endl;
+	});
+	registry.appPaused.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app, std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance) {
+		std::cout << "Paused:  " << (std::string)app->appId() << std::endl;
+	});
+	registry.appResumed.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app, std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance) {
+		std::cout << "Resumed: " << (std::string)app->appId() << std::endl;
+	});
+	registry.appFailed.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app, std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance, Ubuntu::AppLaunch::Registry::FailureType type) {
+		std::cout << "Failed:  " << (std::string)app->appId();
+		switch (type) {
+		case Ubuntu::AppLaunch::Registry::FailureType::CRASH:
+			std::cout << " (crash)";
+			break;
+		case Ubuntu::AppLaunch::Registry::FailureType::START_FAILURE:
+			std::cout << " (start failure)";
+			break;
+		}
+		std::cout << std::endl;
+	});
 
-	ubuntu_app_launch_observer_add_app_starting(starting, NULL);
-	ubuntu_app_launch_observer_add_app_started(started, NULL);
-	ubuntu_app_launch_observer_add_app_stop(stopped, NULL);
-	ubuntu_app_launch_observer_add_app_focus(focus, NULL);
-	ubuntu_app_launch_observer_add_app_resumed(resumed, NULL);
-	ubuntu_app_launch_observer_add_app_paused(paused, NULL);
-	ubuntu_app_launch_observer_add_app_failed(fail, NULL);
 
-	GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
-	g_main_loop_run(mainloop);
-
-	ubuntu_app_launch_observer_delete_app_starting(starting, NULL);
-	ubuntu_app_launch_observer_delete_app_started(started, NULL);
-	ubuntu_app_launch_observer_delete_app_stop(stopped, NULL);
-	ubuntu_app_launch_observer_delete_app_focus(focus, NULL);
-	ubuntu_app_launch_observer_delete_app_resumed(resumed, NULL);
-	ubuntu_app_launch_observer_delete_app_paused(paused, NULL);
-	ubuntu_app_launch_observer_delete_app_failed(fail, NULL);
-
-	g_main_loop_unref(mainloop);
-
-	return 0;
+	std::signal(SIGTERM, [](int signal) -> void {
+		retval.set_value(0);
+	});
+	return retval.get_future().get();
 }
