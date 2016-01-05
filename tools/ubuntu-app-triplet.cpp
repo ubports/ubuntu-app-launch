@@ -23,17 +23,17 @@
 int
 main (int argc, char * argv[])
 {
-	Ubuntu::AppLaunch::Application::AppID appid;
+	Ubuntu::AppLaunch::AppID appid;
 
 	switch (argc) {
 	case 2:
-		appid = Ubuntu::AppLaunch::Application::AppID::discover(argv[1]);
+		appid = Ubuntu::AppLaunch::AppID::discover(argv[1]);
 		break;
 	case 3:
-		appid = Ubuntu::AppLaunch::Application::AppID::discover(argv[1], argv[2]);
+		appid = Ubuntu::AppLaunch::AppID::discover(argv[1], argv[2]);
 		break;
 	case 4:
-		appid = Ubuntu::AppLaunch::Application::AppID::discover(argv[1], argv[2], argv[3]);
+		appid = Ubuntu::AppLaunch::AppID::discover(argv[1], argv[2], argv[3]);
 		break;
 	default:
 		std::cerr << "Usage: " << argv[0] << " <package> [application] [version]" << std::endl;

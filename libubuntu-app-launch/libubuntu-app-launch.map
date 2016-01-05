@@ -8,6 +8,12 @@ global:
 		Ubuntu::AppLaunch::Application::*;
 		typeinfo?for?Ubuntu::AppLaunch::Application;
 		typeinfo?name?for?Ubuntu::AppLaunch::Application;
+		Ubuntu::AppLaunch::AppID::*;
+		typeinfo?for?Ubuntu::AppLaunch::AppID;
+		typeinfo?name?for?Ubuntu::AppLaunch::AppID;
+		Ubuntu::AppLaunch::Helper::*;
+		typeinfo?for?Ubuntu::AppLaunch::Helper;
+		typeinfo?name?for?Ubuntu::AppLaunch::Helper;
 	};
 local:
 	*;

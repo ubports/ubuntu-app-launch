@@ -5,6 +5,7 @@
 #include <core/signal.h>
 
 #include "application.h"
+#include "helper.h"
 
 #pragma once
 #pragma GCC visibility push(default)
@@ -45,6 +46,9 @@ public:
 
 	void setManager (Manager *manager);
 	void clearManager ();
+
+	/* Helper Lists */
+	std::vector<std::shared_ptr<Helper>> runningHelpers (Helper::Type type);
 
 	/* Default Junk */
 	static std::shared_ptr<Registry> getDefault();

@@ -15,8 +15,6 @@ class Base : public Ubuntu::AppLaunch::Application {
 public:
 	Base (std::shared_ptr<Registry> registry);
 
-	Application::AppID appId () override;
-
 	bool hasInstances() override;
 	std::vector<std::shared_ptr<Instance>> instances() override;
 

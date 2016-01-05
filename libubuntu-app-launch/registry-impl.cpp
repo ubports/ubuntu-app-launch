@@ -67,12 +67,12 @@ Registry::Impl::getClickManifest(const std::string& package)
 	});
 }
 
-std::list<Application::Package>
+std::list<AppID::Package>
 Registry::Impl::getClickPackages()
 {
 	initClick();
 
-	return thread.executeOnThread<std::list<Application::Package>>([this]() {
+	return thread.executeOnThread<std::list<AppID::Package>>([this]() {
 		GError * error = nullptr;
 		GList * pkgs = click_db_get_packages(_clickDB.get(), FALSE, &error);
 
@@ -81,9 +81,9 @@ Registry::Impl::getClickPackages()
 			throw std::runtime_error(error->message);
 		}
 
-		std::list<Application::Package> list;
+		std::list<AppID::Package> list;
 		for (GList * item = pkgs; item != NULL; item = g_list_next(item)) {
-			list.emplace_back(Application::Package::from_raw((gchar *)item->data));	
+			list.emplace_back(AppID::Package::from_raw((gchar *)item->data));	
 		}
 
 		g_list_free_full(pkgs, g_free);

@@ -7,32 +7,13 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-Libertine::Libertine (const Application::Package &container,
-	  const Application::AppName &appname,
+Libertine::Libertine (const AppID::Package &container,
+	  const AppID::AppName &appname,
 	  std::shared_ptr<Registry> registry) :
 	Base(registry),
 	_container(container),
 	_appname(appname)
 {
-}
-
-const Application::Package &
-Libertine::package()
-{
-	return _container;
-}
-
-const Application::AppName &
-Libertine::appname()
-{
-	return _appname;
-}
-
-const Application::Version &
-Libertine::version()
-{
-	static auto zero = Application::Version::from_raw("0.0");
-	return zero;
 }
 
 std::list<std::shared_ptr<Application>>
@@ -47,7 +28,7 @@ Libertine::list (std::shared_ptr<Registry> registry)
 		auto apps = libertine_list_apps_for_container(container);
 
 		for (int i = 0; apps[i] !=  nullptr; i++) {
-			auto sapp = std::make_shared<Libertine>(Application::Package::from_raw(container), Application::AppName::from_raw(apps[i]), registry);
+			auto sapp = std::make_shared<Libertine>(AppID::Package::from_raw(container), AppID::AppName::from_raw(apps[i]), registry);
 			applist.push_back(sapp);
 		}
 

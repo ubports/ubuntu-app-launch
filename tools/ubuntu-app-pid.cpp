@@ -29,7 +29,7 @@ main (int argc, char * argv[]) {
 		return 1;
 	}
 
-	auto appid = Ubuntu::AppLaunch::Application::AppID::parse(argv[1]);
+	auto appid = Ubuntu::AppLaunch::AppID::parse(argv[1]);
 	auto app = Ubuntu::AppLaunch::Application::create(appid, Ubuntu::AppLaunch::Registry::getDefault());
 	auto pid = app->instances()[0]->primaryPid();
 

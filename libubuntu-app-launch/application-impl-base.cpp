@@ -10,17 +10,6 @@ Base::Base (std::shared_ptr<Registry> registry) :
 {
 }
 
-Application::AppID
-Base::appId ()
-{
-	Application::AppID retval {
-		package: package(),
-		appname: appname(),
-		version: version()
-	};
-	return retval;
-}
-
 bool
 Base::hasInstances()
 {

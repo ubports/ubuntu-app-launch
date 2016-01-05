@@ -7,13 +7,13 @@ namespace Ubuntu {
 namespace AppLaunch {
 namespace AppImpls {
 
-Click::Click (const Application::AppID &appid,
+Click::Click (const AppID &appid,
 	  std::shared_ptr<Registry> registry) :
 	Click(appid, registry->impl->getClickManifest(appid.package), registry)
 {
 }
 
-Click::Click (const Application::AppID &appid,
+Click::Click (const AppID &appid,
 	  std::shared_ptr<JsonObject> manifest,
 	  std::shared_ptr<Registry> registry) :
 	Base(registry),
@@ -25,25 +25,7 @@ Click::Click (const Application::AppID &appid,
 
 }
 
-const Application::Package &
-Click::package()
-{
-	return _appid.package;
-}
-
-const Application::AppName &
-Click::appname()
-{
-	return _appid.appname;
-}
-
-const Application::Version &
-Click::version()
-{
-	return _appid.version;
-}
-
-Application::AppID
+AppID
 Click::appId()
 {
 	return _appid;
@@ -55,20 +37,20 @@ Click::info (void)
 	return std::make_shared<AppInfo::Desktop>(_appinfo, _clickDir);
 }
 
-Application::Version
+AppID::Version
 Click::manifestVersion (std::shared_ptr<JsonObject> manifest)
 {
 	auto cstr = json_object_get_string_member(manifest.get(), "version");
 
 	if (cstr == nullptr) {
-		return Application::Version::from_raw({});
+		return AppID::Version::from_raw({});
 	}
 
-	auto cppstr = Application::Version::from_raw((const gchar *)cstr);
+	auto cppstr = AppID::Version::from_raw((const gchar *)cstr);
 	return cppstr;
 }
 
-std::list<Application::AppName>
+std::list<AppID::AppName>
 Click::manifestApps (std::shared_ptr<JsonObject> manifest)
 {
 	auto hooks = json_object_get_object_member(manifest.get(), "hooks");
@@ -81,7 +63,7 @@ Click::manifestApps (std::shared_ptr<JsonObject> manifest)
 		return {};
 	}
 
-	std::list<Application::AppName> apps;
+	std::list<AppID::AppName> apps;
 
 	for (GList * item = gapps; item != nullptr; item = g_list_next(item)) {
 		auto appname = (const gchar *)item->data;
@@ -89,7 +71,7 @@ Click::manifestApps (std::shared_ptr<JsonObject> manifest)
 		auto hooklist = json_object_get_object_member(manifest.get(), appname);
 
 		if (json_object_has_member(hooklist, "desktop") == TRUE)
-			apps.emplace_back(Application::AppName::from_raw(appname));
+			apps.emplace_back(AppID::AppName::from_raw(appname));
 	}
 
 	g_list_free_full(gapps, g_free);
@@ -142,7 +124,7 @@ Click::list (std::shared_ptr<Registry> registry)
 		auto manifest = registry->impl->getClickManifest(pkg);
 
 		for (auto appname : manifestApps(manifest)) {
-			Application::AppID appid {
+			AppID appid {
 				package: pkg,
 				appname: appname,
 				version: manifestVersion(manifest)

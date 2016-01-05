@@ -23,7 +23,7 @@
 #include "libubuntu-app-launch/application.h"
 #include "libubuntu-app-launch/registry.h"
 
-Ubuntu::AppLaunch::Application::AppID global_appid;
+Ubuntu::AppLaunch::AppID global_appid;
 std::promise<int> retval;
 
 int
@@ -33,7 +33,7 @@ main (int argc, char * argv[]) {
 		return 1;
 	}
 
-	global_appid = Ubuntu::AppLaunch::Application::AppID::parse(argv[1]);
+	global_appid = Ubuntu::AppLaunch::AppID::parse(argv[1]);
 
 	std::vector<Ubuntu::AppLaunch::Application::URL> urls;
 	for (int i = 2; i < argc; i++) {

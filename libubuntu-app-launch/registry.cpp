@@ -29,7 +29,7 @@ Registry::runningApps(std::shared_ptr<Registry> connection)
 
 	std::list<std::shared_ptr<Application>> list;
 	for (int i = 0; strv[i] != nullptr; i++) {
-		auto appid = Application::AppID::parse(strv[i]);
+		auto appid = AppID::parse(strv[i]);
 		auto app = Application::create(appid, connection);
 		list.push_back(app);
 	}
