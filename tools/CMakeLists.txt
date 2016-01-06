@@ -66,7 +66,7 @@ install(TARGETS ubuntu-app-triplet RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BIN
 # ubuntu-helper-start
 ########################
 
-add_executable(ubuntu-helper-start ubuntu-helper-start.c)
+add_executable(ubuntu-helper-start ubuntu-helper-start.cpp)
 set_target_properties(ubuntu-helper-start PROPERTIES OUTPUT_NAME "ubuntu-helper-start")
 target_link_libraries(ubuntu-helper-start ubuntu-launcher)
 install(TARGETS ubuntu-helper-start RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
