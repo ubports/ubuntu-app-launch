@@ -5,9 +5,16 @@ namespace Ubuntu {
 namespace AppLaunch {
 
 Registry::Impl::Impl (Registry* registry):
-	thread([](){}, [this]() {
+	thread([this](){
+		_dbus = std::shared_ptr<GDBusConnection>(
+			g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr),
+			[] (GDBusConnection * bus) { g_clear_object(&bus); });
+	}, [this]() {
 		_clickUser.reset();
 		_clickDB.reset();
+
+		g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
+		_dbus.reset();
 	}),
 	_registry(registry),
 	_manager(nullptr)

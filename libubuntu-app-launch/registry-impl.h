@@ -4,6 +4,7 @@
 
 #include <json-glib/json-glib.h>
 #include <click.h>
+#include <gio/gio.h>
 
 #pragma once
 
@@ -31,6 +32,8 @@ private:
 
 	std::shared_ptr<ClickDB> _clickDB;
 	std::shared_ptr<ClickUser> _clickUser;
+
+	std::shared_ptr<GDBusConnection> _dbus;
 
 	void initClick ();
 };
