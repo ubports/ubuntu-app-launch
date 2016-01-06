@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Canonical Ltd.
+ * Copyright © 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,34 +17,21 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
-#include <gio/gio.h>
+#include <iostream>
+#include "libubuntu-app-launch/registry.h"
 
 int
-main (int argc, gchar * argv[]) {
+main (int argc, char * argv[]) {
 	if (argc != 2) {
-		g_printerr("Usage: %s <helper type>\n", argv[0]);
+		std::cerr << "Usage: " << argv[0] << " <helper type>" << std::endl;
 		return 1;
 	}
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, -1);
-
-	gchar ** appids = ubuntu_app_launch_list_helpers(argv[1]);
-	if (appids == NULL) {
-		g_warning("Error getting App IDs for helper type '%s'", argv[1]);
-		return -1;
+	auto type = Ubuntu::AppLaunch::Helper::Type::from_raw(argv[1]);
+	auto helpers = Ubuntu::AppLaunch::Registry::runningHelpers(type);
+	for (auto helper : helpers) {
+		std::cout << (std::string)helper->appId() << std::endl;
 	}
-
-	int i;
-	for (i = 0; appids[i] != NULL; i++) {
-		g_print("%s\n", appids[i]);
-	}
-
-	g_strfreev(appids);
-
-	g_dbus_connection_flush_sync(con, NULL, NULL);
-	g_object_unref(con);
 
 	return 0;
 }

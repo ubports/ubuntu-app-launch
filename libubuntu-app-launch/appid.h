@@ -1,4 +1,6 @@
 
+#include <string>
+
 #include "type-tagger.h"
 
 #pragma once

@@ -6,6 +6,8 @@
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
 
+#include "helper-impl-click.h"
+
 namespace Ubuntu {
 namespace AppLaunch {
 
@@ -49,6 +51,15 @@ Registry::installedApps(std::shared_ptr<Registry> connection)
 	return list;
 }
 
+std::list<std::shared_ptr<Helper>>
+Registry::runningHelpers (Helper::Type type, std::shared_ptr<Registry> connection)
+{
+	std::list<std::shared_ptr<Helper>> list;
+
+	list.splice(list.begin(), HelperImpls::Click::running(type, connection));
+
+	return list;
+}
 
 std::shared_ptr<Registry> defaultRegistry;
 std::shared_ptr<Registry>

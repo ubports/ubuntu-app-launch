@@ -26,7 +26,9 @@ ubuntu-app-launch.h
 )
 
 set(LAUNCHER_CPP_HEADERS
+appid.h
 application.h
+helper.h
 registry.h
 type-tagger.h
 )
@@ -39,6 +41,7 @@ desktop-exec.c
 ubuntu-app-launch-trace.c
 app-info.c
 application.cpp
+helper.cpp
 registry.cpp
 registry-impl.cpp
 application-impl-base.cpp
@@ -46,6 +49,7 @@ application-impl-click.cpp
 application-impl-legacy.cpp
 application-impl-libertine.cpp
 application-info-desktop.cpp
+helper-impl-click.cpp
 glib-thread.cpp
 )
 

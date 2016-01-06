@@ -84,7 +84,7 @@ install(TARGETS ubuntu-helper-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BIN
 # ubuntu-helper-list
 ########################
 
-add_executable(ubuntu-helper-list ubuntu-helper-list.c)
+add_executable(ubuntu-helper-list ubuntu-helper-list.cpp)
 set_target_properties(ubuntu-helper-list PROPERTIES OUTPUT_NAME "ubuntu-helper-list")
 target_link_libraries(ubuntu-helper-list ubuntu-launcher)
 install(TARGETS ubuntu-helper-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")

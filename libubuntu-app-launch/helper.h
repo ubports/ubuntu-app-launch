@@ -1,5 +1,6 @@
 
 #include <vector>
+#include <memory>
 
 #include <mir_toolkit/mir_prompt_session.h>
 
@@ -25,6 +26,8 @@ public:
 	static std::shared_ptr<Helper> create (Type type,
 	                                       AppID appid,
 	                                       std::shared_ptr<Registry> registry);
+
+	virtual AppID appId() = 0;
 
 	class Instance {
 	public:

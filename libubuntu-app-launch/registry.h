@@ -48,7 +48,8 @@ public:
 	void clearManager ();
 
 	/* Helper Lists */
-	std::vector<std::shared_ptr<Helper>> runningHelpers (Helper::Type type);
+	static std::list<std::shared_ptr<Helper>> runningHelpers (Helper::Type type,
+	                                                          std::shared_ptr<Registry> registry = getDefault());
 
 	/* Default Junk */
 	static std::shared_ptr<Registry> getDefault();
