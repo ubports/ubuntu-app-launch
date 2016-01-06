@@ -24,19 +24,21 @@ Registry::~Registry ()
 std::list<std::shared_ptr<Application>>
 Registry::runningApps(std::shared_ptr<Registry> connection)
 {
-	auto strv = ubuntu_app_launch_list_running_apps();
-	if (strv == nullptr) {
-		return {};
-	}
+	return connection->impl->thread.executeOnThread<std::list<std::shared_ptr<Application>>>([connection]() -> std::list<std::shared_ptr<Application>> {
+		auto strv = ubuntu_app_launch_list_running_apps();
+		if (strv == nullptr) {
+			return {};
+		}
 
-	std::list<std::shared_ptr<Application>> list;
-	for (int i = 0; strv[i] != nullptr; i++) {
-		auto appid = AppID::parse(strv[i]);
-		auto app = Application::create(appid, connection);
-		list.push_back(app);
-	}
+		std::list<std::shared_ptr<Application>> list;
+		for (int i = 0; strv[i] != nullptr; i++) {
+			auto appid = AppID::parse(strv[i]);
+			auto app = Application::create(appid, connection);
+			list.push_back(app);
+		}
 
-	return list;
+		return list;
+	});
 }
 
 std::list<std::shared_ptr<Application>>

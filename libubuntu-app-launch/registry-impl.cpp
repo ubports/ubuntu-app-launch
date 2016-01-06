@@ -5,12 +5,12 @@ namespace Ubuntu {
 namespace AppLaunch {
 
 Registry::Impl::Impl (Registry* registry):
-	_registry(registry),
-	_manager(nullptr),
 	thread([](){}, [this]() {
 		_clickUser.reset();
 		_clickDB.reset();
-	})
+	}),
+	_registry(registry),
+	_manager(nullptr)
 {
 
 }

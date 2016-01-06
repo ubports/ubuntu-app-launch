@@ -24,11 +24,10 @@ public:
 	void setManager (Registry::Manager* manager);
 	void clearManager ();
 
+	GLib::ContextThread thread;
 private:
 	Registry* _registry;
 	Registry::Manager* _manager;
-
-	GLib::ContextThread thread;
 
 	std::shared_ptr<ClickDB> _clickDB;
 	std::shared_ptr<ClickUser> _clickUser;
