@@ -75,7 +75,7 @@ install(TARGETS ubuntu-helper-start RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BI
 # ubuntu-helper-stop
 ########################
 
-add_executable(ubuntu-helper-stop ubuntu-helper-stop.c)
+add_executable(ubuntu-helper-stop ubuntu-helper-stop.cpp)
 set_target_properties(ubuntu-helper-stop PROPERTIES OUTPUT_NAME "ubuntu-helper-stop")
 target_link_libraries(ubuntu-helper-stop ubuntu-launcher)
 install(TARGETS ubuntu-helper-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
