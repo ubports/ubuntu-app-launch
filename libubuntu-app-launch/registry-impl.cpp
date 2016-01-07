@@ -13,7 +13,9 @@ Registry::Impl::Impl (Registry* registry):
 		_clickUser.reset();
 		_clickDB.reset();
 
-		g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
+		if (_dbus) {
+			g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
+		}
 		_dbus.reset();
 	}),
 	_registry(registry),
