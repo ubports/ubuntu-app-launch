@@ -79,12 +79,30 @@ Click::instances()
 	});
 }
 
+std::shared_ptr<gchar *>
+urlsToStrv (std::vector<Helper::URL> urls)
+{
+	if (urls.size() == 0) {
+		return {};
+	}
+
+	auto array = g_array_new(TRUE, FALSE, sizeof(gchar *));
+
+	for (auto url : urls) {
+		auto str = g_strdup(url.value().c_str());
+		g_array_append_val(array, str);
+	}
+
+	return std::shared_ptr<gchar *>((gchar **)g_array_free(array, FALSE), g_strfreev);
+}
+
 std::shared_ptr<Click::Instance>
 Click::launch (std::vector<Helper::URL> urls)
 {
-	return _registry->impl->thread.executeOnThread<std::shared_ptr<Click::Instance>>([this, urls] () {
-		/* TODO: URLS */
-		auto instanceid = ubuntu_app_launch_start_multiple_helper(_type.value().c_str(), ((std::string)_appid).c_str(), nullptr);
+	auto urlstrv = urlsToStrv(urls);
+
+	return _registry->impl->thread.executeOnThread<std::shared_ptr<Click::Instance>>([this, urlstrv] () {
+		auto instanceid = ubuntu_app_launch_start_multiple_helper(_type.value().c_str(), ((std::string)_appid).c_str(), urlstrv.get());
 
 		return std::make_shared<ClickInstance>(_appid, _type, instanceid, _registry);
 	});
@@ -93,9 +111,10 @@ Click::launch (std::vector<Helper::URL> urls)
 std::shared_ptr<Click::Instance>
 Click::launch (MirPromptSession * session, std::vector<Helper::URL> urls)
 {
-	return _registry->impl->thread.executeOnThread<std::shared_ptr<Click::Instance>>([this, session, urls] () {
-		/* TODO: URLS */
-		auto instanceid = ubuntu_app_launch_start_session_helper(_type.value().c_str(), session, ((std::string)_appid).c_str(), nullptr);
+	auto urlstrv = urlsToStrv(urls);
+
+	return _registry->impl->thread.executeOnThread<std::shared_ptr<Click::Instance>>([this, session, urlstrv] () {
+		auto instanceid = ubuntu_app_launch_start_session_helper(_type.value().c_str(), session, ((std::string)_appid).c_str(), urlstrv.get());
 
 		return std::make_shared<ClickInstance>(_appid, _type, instanceid, _registry);
 	});
@@ -118,12 +137,6 @@ Click::running(Helper::Type type, std::shared_ptr<Registry> registry)
 		return helpers;
 	});
 }
-
-
-
-
-
-
 
 
 }; // namespace HelperImpl
