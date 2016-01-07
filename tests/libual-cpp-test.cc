@@ -25,6 +25,10 @@
 #include <zeitgeist.h>
 #include "mir-mock.h"
 
+#include "registry.h"
+#include "application.h"
+#include "helper.h"
+
 extern "C" {
 #include "ubuntu-app-launch.h"
 #include "libdbustest/dbus-test.h"
@@ -41,6 +45,7 @@ class LibUAL : public ::testing::Test
 		std::string last_focus_appid;
 		std::string last_resume_appid;
 		guint resume_timeout = 0;
+		std::shared_ptr<Ubuntu::AppLaunch::Registry> registry;
 
 	private:
 		static void focus_cb (const gchar * appid, gpointer user_data) {
@@ -260,9 +265,13 @@ class LibUAL : public ::testing::Test
 
 			ASSERT_TRUE(ubuntu_app_launch_observer_add_app_focus(focus_cb, this));
 			ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resume(resume_cb, this));
+
+			registry = std::make_shared<Ubuntu::AppLaunch::Registry>();
 		}
 
 		virtual void TearDown() {
+			registry.reset();
+
 			ubuntu_app_launch_observer_delete_app_focus(focus_cb, this);
 			ubuntu_app_launch_observer_delete_app_resume(resume_cb, this);
 
@@ -353,13 +362,16 @@ TEST_F(LibUAL, StartApplication)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.multiple_first_1.2.3", NULL));
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.multiple_first_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+	app->launch();
+
 	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Now look at the details of the call */
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.multiple_first_1.2.3", NULL));
+	app->launch();
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -380,13 +392,13 @@ TEST_F(LibUAL, StartApplication)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Let's pass some URLs */
-	const gchar * urls[] = {
-		"http://ubuntu.com/",
-		"https://ubuntu.com/",
-		"file:///home/phablet/test.txt",
-		NULL
+	std::vector<Ubuntu::AppLaunch::Application::URL> urls {
+		Ubuntu::AppLaunch::Application::URL::from_raw("http://ubuntu.com/"),
+		Ubuntu::AppLaunch::Application::URL::from_raw("https://ubuntu.com/"),
+		Ubuntu::AppLaunch::Application::URL::from_raw("file:///home/phablet/test.txt")
 	};
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.multiple_first_1.2.3", urls));
+
+	app->launch(urls);
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);

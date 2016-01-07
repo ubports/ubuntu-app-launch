@@ -5,23 +5,22 @@ namespace Ubuntu {
 namespace AppLaunch {
 
 Registry::Impl::Impl (Registry* registry):
-	thread([this](){
-		_dbus = std::shared_ptr<GDBusConnection>(
-			g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr),
-			[] (GDBusConnection * bus) { g_clear_object(&bus); });
-	}, [this]() {
+	thread([](){}, [this]() {
 		_clickUser.reset();
 		_clickDB.reset();
 
-		if (_dbus) {
-			g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
-		}
+		g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
 		_dbus.reset();
 	}),
 	_registry(registry),
 	_manager(nullptr)
 {
-
+	auto cancel = thread.getCancellable();
+	_dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
+		return std::shared_ptr<GDBusConnection>(
+			g_bus_get_sync(G_BUS_TYPE_SESSION, cancel.get(), nullptr),
+			[] (GDBusConnection * bus) { g_clear_object(&bus); });
+	});
 }
 
 void
@@ -65,7 +64,7 @@ Registry::Impl::getClickManifest(const std::string& package)
 		GError * error = nullptr;
 		auto retval = std::shared_ptr<JsonObject>(
 			click_user_get_manifest(_clickUser.get(), package.c_str(), &error),
-			[](JsonObject * obj) { g_clear_object(&obj); });
+			[](JsonObject * obj) { if (obj != nullptr) json_object_unref(obj); });
 
 		if (error != nullptr) {
 			auto perror = std::shared_ptr<GError>(error, [](GError * error){ g_error_free(error); });

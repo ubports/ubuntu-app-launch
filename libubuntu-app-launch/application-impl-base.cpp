@@ -77,12 +77,31 @@ Base::instances()
 	return vect;
 }
 
+std::shared_ptr<gchar *>
+urlsToStrv (std::vector<Application::URL> urls)
+{
+	auto array = g_array_new(TRUE, FALSE, sizeof(gchar *));
+
+	for (auto url : urls) {
+		auto str = g_strdup(url.value().c_str());
+		g_array_append_val(array, str);
+	}
+
+	return std::shared_ptr<gchar *>((gchar **)g_array_free(array, FALSE), g_strfreev);
+}
+
 std::shared_ptr<Application::Instance>
 Base::launch(std::vector<Application::URL> urls)
 {
-	// TODO URLs
 	std::string appIdStr = appId();
-	ubuntu_app_launch_start_application(appIdStr.c_str(), NULL);
+	std::shared_ptr<gchar *> urlstrv;
+
+	if (urls.size() > 0) {
+		urlstrv = urlsToStrv(urls);
+	}
+
+	ubuntu_app_launch_start_application(appIdStr.c_str(), urlstrv.get());
+
 	return std::make_shared<BaseInstance>(appIdStr);
 }
 
