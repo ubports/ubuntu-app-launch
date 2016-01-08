@@ -50,7 +50,12 @@ AppID::parse (const std::string &sappid)
 	gchar * cversion;
 
 	if (ubuntu_app_launch_app_id_parse(sappid.c_str(), &cpackage, &cappname, &cversion) == FALSE) {
-		throw std::runtime_error("Unable to parse: " + sappid);
+		/* Assume we're a legacy appid */
+		return {
+			AppID::Package::from_raw({}),
+			AppID::AppName::from_raw(sappid),
+			AppID::Version::from_raw({})
+		};
 	}
 
 	AppID appid(
@@ -68,6 +73,10 @@ AppID::parse (const std::string &sappid)
 
 AppID::operator std::string() const
 {
+	if (package.value().empty() && version.value().empty() && !appname.value().empty()) {
+		return appname.value();
+	}
+
 	return package.value() + "_" + appname.value() + "_" + version.value();
 }
 

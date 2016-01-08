@@ -31,10 +31,11 @@ public:
 	bool hasPid(pid_t pid) override {
 		return ubuntu_app_launch_pid_in_app_id(pid, _appId.c_str()) == TRUE;
 	}
-	const std::string &logPath() override {
-		/* TODO: Log path */
-		static std::string nullstr("");
-		return nullstr;
+	std::string logPath() override {
+		auto cpath = ubuntu_app_launch_application_log_path(_appId.c_str());
+		std::string retval(cpath);
+		g_free(cpath);
+		return retval;
 	}
 	std::vector<pid_t> pids () override {
 		std::vector<pid_t> vector;
@@ -101,6 +102,21 @@ Base::launch(std::vector<Application::URL> urls)
 	}
 
 	ubuntu_app_launch_start_application(appIdStr.c_str(), urlstrv.get());
+
+	return std::make_shared<BaseInstance>(appIdStr);
+}
+
+std::shared_ptr<Application::Instance>
+Base::launchTest(std::vector<Application::URL> urls)
+{
+	std::string appIdStr = appId();
+	std::shared_ptr<gchar *> urlstrv;
+
+	if (urls.size() > 0) {
+		urlstrv = urlsToStrv(urls);
+	}
+
+	ubuntu_app_launch_start_application_test(appIdStr.c_str(), urlstrv.get());
 
 	return std::make_shared<BaseInstance>(appIdStr);
 }

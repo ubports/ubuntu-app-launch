@@ -417,7 +417,10 @@ TEST_F(LibUAL, StartApplicationTest)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application_test("com.test.multiple_first_1.2.3", NULL));
+	/* Basic make sure we can send the event */
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.multiple_first_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+	app->launchTest();
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -441,7 +444,13 @@ TEST_F(LibUAL, StopApplication)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	ASSERT_TRUE(ubuntu_app_launch_stop_application("com.test.good_application_1.2.3"));
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+
+	ASSERT_TRUE(app->hasInstances());
+	EXPECT_EQ(1, app->instances().size());
+
+	app->instances()[0]->stop();
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
@@ -453,17 +462,23 @@ TEST_F(LibUAL, StopApplication)
    what value is in the environment variable */
 TEST_F(LibUAL, ApplicationLog)
 {
-	gchar * click_log = ubuntu_app_launch_application_log_path("com.test.good_application_1.2.3");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log", click_log);
-	g_free(click_log);
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
 
-	gchar * legacy_single = ubuntu_app_launch_application_log_path("single");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log", legacy_single);
-	g_free(legacy_single);
+	EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log"),
+		app->instances()[0]->logPath());
 
-	gchar * legacy_multiple = ubuntu_app_launch_application_log_path("bar");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-bar-2342345.log", legacy_multiple);
-	g_free(legacy_multiple);
+	appid = Ubuntu::AppLaunch::AppID::parse("single");
+	app = Ubuntu::AppLaunch::Application::create(appid, registry);
+
+	EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
+		app->instances()[0]->logPath());
+
+	appid = Ubuntu::AppLaunch::AppID::parse("bar");
+	app = Ubuntu::AppLaunch::Application::create(appid, registry);
+
+	EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-bar-2342345.log"),
+		app->instances()[0]->logPath());
 }
 
 TEST_F(LibUAL, ApplicationPid)

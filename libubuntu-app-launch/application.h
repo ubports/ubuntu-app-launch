@@ -53,7 +53,7 @@ public:
 		virtual bool isRunning() = 0;
 
 		/* Instance Info */
-		virtual const std::string &logPath() = 0;
+		virtual std::string logPath() = 0;
 
 		/* PIDs */
 		virtual pid_t primaryPid() = 0;
@@ -70,6 +70,7 @@ public:
 	virtual std::vector<std::shared_ptr<Instance>> instances() = 0;
 
 	virtual std::shared_ptr<Instance> launch(std::vector<URL> urls = {}) = 0;
+	virtual std::shared_ptr<Instance> launchTest(std::vector<URL> urls = {}) = 0;
 };
 
 }; // namespace AppLaunch
