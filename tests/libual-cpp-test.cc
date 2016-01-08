@@ -484,13 +484,17 @@ TEST_F(LibUAL, ApplicationLog)
 TEST_F(LibUAL, ApplicationPid)
 {
 	/* Check bad params */
-	EXPECT_EQ(0, ubuntu_app_launch_get_primary_pid(NULL));
-	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(0, "com.test.good_application_1.2.3"));
-	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(100, NULL));
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+
+	EXPECT_FALSE(app->instances()[0]->hasPid(0));
 
 	/* Check primary pid, which comes from Upstart */
-	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("com.test.good_application_1.2.3"), getpid());
-	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("bar"), 5678);
+	EXPECT_EQ(getpid(), app->instances()[0]->primaryPid());
+
+	auto barappid = Ubuntu::AppLaunch::AppID::parse("bar");
+	auto barapp = Ubuntu::AppLaunch::Application::create(barappid, registry);
+	EXPECT_EQ(5678, barapp->instances()[0]->primaryPid());
 
 	/* Look at the full PID list from CG Manager */
 	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
@@ -498,7 +502,7 @@ TEST_F(LibUAL, ApplicationPid)
 	guint len = 0;
 
 	/* Click in the set */
-	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "com.test.good_application_1.2.3"));
+	EXPECT_TRUE(app->instances()[0]->hasPid(100));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
@@ -506,7 +510,7 @@ TEST_F(LibUAL, ApplicationPid)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Click out of the set */
-	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "com.test.good_application_1.2.3"));
+	EXPECT_FALSE(app->instances()[0]->hasPid(101));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
@@ -514,7 +518,11 @@ TEST_F(LibUAL, ApplicationPid)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Legacy Single Instance */
-	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "single"));
+	auto singleappid = Ubuntu::AppLaunch::AppID::parse("single");
+	auto singleapp = Ubuntu::AppLaunch::Application::create(singleappid, registry);
+
+	EXPECT_TRUE(singleapp->instances()[0]->hasPid(100));
+
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
@@ -522,13 +530,12 @@ TEST_F(LibUAL, ApplicationPid)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Legacy Multi Instance */
-	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "bar"));
+	EXPECT_TRUE(barapp->instances()[0]->hasPid(100));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-bar-2342345")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
-
 }
 
 TEST_F(LibUAL, ApplicationId)
