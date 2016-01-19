@@ -574,22 +574,15 @@ TEST_F(LibUAL, ApplicationId)
 
 TEST_F(LibUAL, AppIdParse)
 {
-	EXPECT_TRUE(ubuntu_app_launch_app_id_parse("com.ubuntu.test_test_123", NULL, NULL, NULL));
-	EXPECT_FALSE(ubuntu_app_launch_app_id_parse("inkscape", NULL, NULL, NULL));
-	EXPECT_FALSE(ubuntu_app_launch_app_id_parse("music-app", NULL, NULL, NULL));
+	EXPECT_FALSE(Ubuntu::AppLaunch::AppID::parse("com.ubuntu.test_test_123").empty());
+	EXPECT_FALSE(Ubuntu::AppLaunch::AppID::parse("inkscape").empty());
 
-	gchar * pkg;
-	gchar * app;
-	gchar * version;
+	auto id = Ubuntu::AppLaunch::AppID::parse("com.ubuntu.test_test_123");
 
-	ASSERT_TRUE(ubuntu_app_launch_app_id_parse("com.ubuntu.test_test_123", &pkg, &app, &version));
-	EXPECT_STREQ("com.ubuntu.test", pkg);
-	EXPECT_STREQ("test", app);
-	EXPECT_STREQ("123", version);
-
-	g_free(pkg);
-	g_free(app);
-	g_free(version);
+	ASSERT_FALSE(id.empty());
+	EXPECT_EQ("com.ubuntu.test", id.package.value());
+	EXPECT_EQ("test", id.appname.value());
+	EXPECT_EQ("123", id.version.value());
 
 	return;
 }
