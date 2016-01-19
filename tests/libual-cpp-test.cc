@@ -799,7 +799,10 @@ TEST_F(LibUAL, StartingResponses)
 
 TEST_F(LibUAL, AppIdTest)
 {
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", NULL));
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+	app->launch();
+
 	pause(50); /* Ensure all the events come through */
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
@@ -830,11 +833,14 @@ TEST_F(LibUAL, UrlSendTest)
 		(gpointer)"/com_2etest_2egood_5fapplication_5f1_2e2_2e3",
 		NULL);
 
-	const gchar * uris[] = {
-		"http://www.test.com",
-		NULL
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+	std::vector<Ubuntu::AppLaunch::Application::URL> uris = {
+		Ubuntu::AppLaunch::Application::URL::from_raw("http://www.test.com")
 	};
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
+
+	app->launch(uris);
+
 	pause(100); /* Ensure all the events come through */
 
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
@@ -863,12 +869,14 @@ TEST_F(LibUAL, UrlSendTest)
 
 TEST_F(LibUAL, UrlSendNoObjectTest)
 {
-	const gchar * uris[] = {
-		"http://www.test.com",
-		NULL
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+	std::vector<Ubuntu::AppLaunch::Application::URL> uris = {
+		Ubuntu::AppLaunch::Application::URL::from_raw("http://www.test.com")
 	};
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
+	app->launch(uris);
+
 	pause(100); /* Ensure all the events come through */
 
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
@@ -879,7 +887,11 @@ TEST_F(LibUAL, UnityTimeoutTest)
 {
 	this->resume_timeout = 100;
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", NULL));
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+
+	app->launch();
+
 	pause(1000); /* Ensure all the events come through */
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
@@ -889,12 +901,14 @@ TEST_F(LibUAL, UnityTimeoutUriTest)
 {
 	this->resume_timeout = 200;
 
-	const gchar * uris[] = {
-		"http://www.test.com",
-		NULL
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+	std::vector<Ubuntu::AppLaunch::Application::URL> uris = {
+		Ubuntu::AppLaunch::Application::URL::from_raw("http://www.test.com")
 	};
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
+	app->launch(uris);
+
 	pause(1000); /* Ensure all the events come through */
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
@@ -921,12 +935,13 @@ TEST_F(LibUAL, UnityLostTest)
 
 	guint start = g_get_monotonic_time();
 
-	const gchar * uris[] = {
-		"http://www.test.com",
-		NULL
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.3");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+	std::vector<Ubuntu::AppLaunch::Application::URL> uris = {
+		Ubuntu::AppLaunch::Application::URL::from_raw("http://www.test.com")
 	};
 
-	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
+	app->launch(uris);
 
 	guint end = g_get_monotonic_time();
 
@@ -948,7 +963,10 @@ TEST_F(LibUAL, LegacySingleInstance)
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
 
 	/* Check for a single-instance app */
-	ASSERT_TRUE(ubuntu_app_launch_start_application("single", NULL));
+	auto singleappid = Ubuntu::AppLaunch::AppID::parse("single");
+	auto singleapp = Ubuntu::AppLaunch::Application::create(singleappid, registry);
+
+	singleapp->launch();
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -970,7 +988,10 @@ TEST_F(LibUAL, LegacySingleInstance)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Check for a multi-instance app */
-	ASSERT_TRUE(ubuntu_app_launch_start_application("multiple", NULL));
+	auto multipleappid = Ubuntu::AppLaunch::AppID::parse("multiple");
+	auto multipleapp = Ubuntu::AppLaunch::Application::create(multipleappid, registry);
+
+	multipleapp->launch();
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
