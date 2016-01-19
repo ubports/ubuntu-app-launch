@@ -544,35 +544,32 @@ TEST_F(LibUAL, ApplicationId)
 	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
 	/* Test with current-user-version, should return the version in the manifest */
-	EXPECT_STREQ("com.test.good_application_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"));
+	EXPECT_EQ("com.test.good_application_1.2.3", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.good", "application"));
 
 	/* Test with version specified, shouldn't even read the manifest */
-	EXPECT_STREQ("com.test.good_application_1.2.4", ubuntu_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"));
+	EXPECT_EQ("com.test.good_application_1.2.4", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.good", "application", "1.2.4"));
 
 	/* Test with out a version or app, should return the version in the manifest */
-	EXPECT_STREQ("com.test.good_application_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.good", "first-listed-app", "current-user-version"));
-
-	/* Test with a version or but wildcard app, should return the version in the manifest */
-	EXPECT_STREQ("com.test.good_application_1.2.4", ubuntu_app_launch_triplet_to_app_id("com.test.good", "last-listed-app", "1.2.4"));
+	EXPECT_EQ("com.test.good_application_1.2.3", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.good", "first-listed-app", "current-user-version"));
 
 	/* Make sure we can select the app from a list correctly */
-	EXPECT_STREQ("com.test.multiple_first_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "first-listed-app", NULL));
-	EXPECT_STREQ("com.test.multiple_first_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.multiple", NULL, NULL));
-	EXPECT_STREQ("com.test.multiple_fifth_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "last-listed-app", NULL));
-	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "only-listed-app", NULL));
-	EXPECT_STREQ("com.test.good_application_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.good", "only-listed-app", NULL));
+	EXPECT_EQ("com.test.multiple_first_1.2.3", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.multiple", Ubuntu::AppLaunch::AppID::ApplicationWildcard::FIRST_LISTED));
+	EXPECT_EQ("com.test.multiple_first_1.2.3", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.multiple"));
+	EXPECT_EQ("com.test.multiple_fifth_1.2.3", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.multiple", Ubuntu::AppLaunch::AppID::ApplicationWildcard::LAST_LISTED));
+	EXPECT_EQ("", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.multiple", Ubuntu::AppLaunch::AppID::ApplicationWildcard::ONLY_LISTED));
+	EXPECT_EQ("com.test.good_application_1.2.3", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.good", Ubuntu::AppLaunch::AppID::ApplicationWildcard::ONLY_LISTED));
 
 	/* A bunch that should be NULL */
-	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-hooks", NULL, NULL));
-	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-json", NULL, NULL));
-	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-object", NULL, NULL));
-	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
+	EXPECT_EQ("", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.no-hooks"));
+	EXPECT_EQ("", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.no-json"));
+	EXPECT_EQ("", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.no-object"));
+	EXPECT_EQ("", (std::string)Ubuntu::AppLaunch::AppID::discover("com.test.no-version"));
 
 	/* Libertine tests */
-	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("container-name", NULL, NULL));
-	EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("container-name", "not-exist", NULL));
-	EXPECT_STREQ("container-name_test_0.0", ubuntu_app_launch_triplet_to_app_id("container-name", "test", NULL));
-	EXPECT_STREQ("container-name_user-app_0.0", ubuntu_app_launch_triplet_to_app_id("container-name", "user-app", NULL));
+	EXPECT_EQ("", (std::string)Ubuntu::AppLaunch::AppID::discover("container-name"));
+	EXPECT_EQ("", (std::string)Ubuntu::AppLaunch::AppID::discover("container-name", "not-exist"));
+	EXPECT_EQ("container-name_test_0.0", (std::string)Ubuntu::AppLaunch::AppID::discover("container-name", "test"));
+	EXPECT_EQ("container-name_user-app_0.0", (std::string)Ubuntu::AppLaunch::AppID::discover("container-name", "user-app"));
 }
 
 TEST_F(LibUAL, AppIdParse)

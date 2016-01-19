@@ -34,7 +34,8 @@ struct AppID {
 
 	enum ApplicationWildcard {
 		FIRST_LISTED,
-		LAST_LISTED
+		LAST_LISTED,
+		ONLY_LISTED
 	};
 	enum VersionWildcard {
 		CURRENT_USER_VERSION

@@ -45,6 +45,15 @@ AppID::AppID (Package pkg, AppName app, Version ver) :
 AppID
 AppID::parse (const std::string &sappid)
 {
+	/* Allow returning an empty AppID with empty internal */
+	if (sappid.empty()) {
+		return {
+			AppID::Package::from_raw({}),
+			AppID::AppName::from_raw({}),
+			AppID::Version::from_raw({})
+		};
+	}
+
 	gchar * cpackage;
 	gchar * cappname;
 	gchar * cversion;
@@ -73,8 +82,12 @@ AppID::parse (const std::string &sappid)
 
 AppID::operator std::string() const
 {
-	if (package.value().empty() && version.value().empty() && !appname.value().empty()) {
-		return appname.value();
+	if (package.value().empty() && version.value().empty()) {
+		if (appname.value().empty()) {
+			return {};
+		} else {
+			return appname.value();
+		}
 	}
 
 	return package.value() + "_" + appname.value() + "_" + version.value();
@@ -109,9 +122,11 @@ app_wildcard (AppID::ApplicationWildcard card)
 {
 	switch (card) {
 	case AppID::ApplicationWildcard::FIRST_LISTED:
-		return "first-listed";
+		return "first-listed-app";
 	case AppID::ApplicationWildcard::LAST_LISTED:
-		return "last-listed";
+		return "last-listed-app";
+	case AppID::ApplicationWildcard::ONLY_LISTED:
+		return "only-listed-app";
 	}
 
 	return "";
@@ -143,7 +158,14 @@ AppID::discover (const std::string &package, const std::string &appname)
 AppID
 AppID::discover (const std::string &package, const std::string &appname, const std::string &version)
 {
-	return AppID::parse(ubuntu_app_launch_triplet_to_app_id(package.c_str(), appname.c_str(), version.c_str()));
+	auto cappid = ubuntu_app_launch_triplet_to_app_id(package.c_str(), appname.c_str(), version.c_str());
+
+	auto appid = cappid != nullptr ?
+		AppID::parse(cappid) :
+		AppID::parse("");
+
+	g_free(cappid);
+	return appid;
 }
 
 AppID
