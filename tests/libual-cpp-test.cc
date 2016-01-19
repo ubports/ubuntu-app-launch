@@ -589,22 +589,19 @@ TEST_F(LibUAL, AppIdParse)
 
 TEST_F(LibUAL, ApplicationList)
 {
-	gchar ** apps = ubuntu_app_launch_list_running_apps();
+	auto apps = Ubuntu::AppLaunch::Registry::runningApps(registry);
 
-	ASSERT_NE(apps, nullptr);
-	ASSERT_EQ(g_strv_length(apps), 2);
+	ASSERT_EQ(2, apps.size());
 
-	/* Not enforcing order, but wanting to use the GTest functions
-	   for "actually testing" so the errors look right. */
-	if (g_strcmp0(apps[0], "com.test.good_application_1.2.3") == 0) {
-		ASSERT_STREQ("com.test.good_application_1.2.3", apps[0]);
-		ASSERT_STREQ("bar", apps[1]);
-	} else {
-		ASSERT_STREQ("bar", apps[0]);
-		ASSERT_STREQ("com.test.good_application_1.2.3", apps[1]);
-	}
+	apps.sort([](const std::shared_ptr<Ubuntu::AppLaunch::Application> &a, const std::shared_ptr<Ubuntu::AppLaunch::Application> &b) {
+		std::string sa = a->appId();
+		std::string sb = b->appId();
 
-	g_strfreev(apps);
+		return sa < sb;
+	});
+
+	EXPECT_EQ("bar", (std::string)apps.front()->appId());
+	EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.back()->appId());
 }
 
 typedef struct {

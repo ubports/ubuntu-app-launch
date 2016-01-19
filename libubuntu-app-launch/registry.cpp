@@ -37,6 +37,8 @@ Registry::runningApps(std::shared_ptr<Registry> connection)
 			list.push_back(app);
 		}
 
+		g_strfreev(strv);
+
 		return list;
 	});
 }

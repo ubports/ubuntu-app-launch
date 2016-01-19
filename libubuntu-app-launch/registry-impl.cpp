@@ -30,7 +30,7 @@ Registry::Impl::initClick ()
 		return;
 	}
 
-	thread.executeOnThread([this]() {
+	auto init = thread.executeOnThread<bool>([this]() {
 		GError * error = nullptr;
 
 		if (!_clickDB) {
@@ -52,7 +52,13 @@ Registry::Impl::initClick ()
 				throw std::runtime_error(error->message);
 			}
 		}
+
+		return true;
 	});
+
+	if (!init) {
+		throw std::runtime_error("Unable to initialize the Click Database");
+	}
 }
 
 std::shared_ptr<JsonObject>
