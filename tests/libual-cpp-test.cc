@@ -1491,8 +1491,11 @@ TEST_F(LibUAL, StartSessionHelper)
 	mir_mock_set_trusted_fd(mirfd);
 
 	/* Basic make sure we can send the event */
-	gchar * instance_id = ubuntu_app_launch_start_session_helper("untrusted-type", msession, "com.test.multiple_first_1.2.3", NULL);
-	ASSERT_NE(nullptr, instance_id);
+	auto untrusted = Ubuntu::AppLaunch::Helper::Type::from_raw("untrusted-type");
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.multiple_first_1.2.3");
+	auto helper = Ubuntu::AppLaunch::Helper::create(untrusted, appid, registry);
+
+	helper->launch(msession);
 
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -1510,7 +1513,6 @@ TEST_F(LibUAL, StartSessionHelper)
 	GVariant * env = g_variant_get_child_value(calls->params, 0);
 	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
-	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
 
 	GVariant * mnamev = find_env(env, "UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
 	ASSERT_NE(nullptr, mnamev); /* Have to assert because, eh, GVariant */
