@@ -1,4 +1,6 @@
 [Desktop Entry]
+Version=1.0
 Name=Application
 Type=Application
-Exec=foo
+Exec=grep
+Icon=foo

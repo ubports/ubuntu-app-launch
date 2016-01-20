@@ -1629,39 +1629,25 @@ TEST_F(LibUAL, AppInfo)
 	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
 	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
-	char * dir = nullptr;
-	char * file = nullptr;
-
-	/* Basics */
-	EXPECT_TRUE(ubuntu_app_launch_application_info("com.test.good_application_1.2.3", nullptr, nullptr));
-	EXPECT_FALSE(ubuntu_app_launch_application_info("com.test.bad_not-app_1.3.3.7", nullptr, nullptr));
-	EXPECT_FALSE(ubuntu_app_launch_application_info(nullptr, nullptr, nullptr));
-
-	/* Ensure false doesn't set the values */
-	EXPECT_FALSE(ubuntu_app_launch_application_info("com.test.bad_not-app_1.3.3.7", &dir, &file));
-	EXPECT_EQ(nullptr, dir);
-	EXPECT_EQ(nullptr, file);
-	g_clear_pointer(&dir, g_free);
-	g_clear_pointer(&file, g_free);
-
 	/* Correct values from a click */
-	EXPECT_TRUE(ubuntu_app_launch_application_info("com.test.good_application_1.2.3", &dir, &file));
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/click-root-dir/.click/users/test-user/com.test.good", dir);
-	EXPECT_STREQ("application.desktop", file);
-	g_clear_pointer(&dir, g_free);
-	g_clear_pointer(&file, g_free);
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.good_application_1.2.4");
+	auto app = Ubuntu::AppLaunch::Application::create(appid, registry);
+
+	EXPECT_TRUE((bool)app->info());
+	EXPECT_EQ("Application", app->info()->name().value());
 
 	/* Correct values from a legacy */
-	EXPECT_TRUE(ubuntu_app_launch_application_info("bar", &dir, &file));
-	EXPECT_STREQ(CMAKE_SOURCE_DIR, dir);
-	EXPECT_STREQ("applications/bar.desktop", file);
-	g_clear_pointer(&dir, g_free);
-	g_clear_pointer(&file, g_free);
+	auto barid = Ubuntu::AppLaunch::AppID::parse("bar");
+	auto bar = Ubuntu::AppLaunch::Application::create(barid, registry);
+
+	EXPECT_FALSE((bool)bar->info());
 
 	/* Correct values for libertine */
-	EXPECT_TRUE(ubuntu_app_launch_application_info("container-name_test_0.0", &dir, &file));
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/libertine-container/container-name/rootfs/usr/share", dir);
-	EXPECT_STREQ("applications/test.desktop", file);
-	g_clear_pointer(&dir, g_free);
-	g_clear_pointer(&file, g_free);
+	auto libertineid = Ubuntu::AppLaunch::AppID::parse("container-name_test_0.0");
+	auto libertine = Ubuntu::AppLaunch::Application::create(libertineid, registry);
+
+	auto info = libertine->info();
+	EXPECT_TRUE((bool)info);
+
+	EXPECT_EQ("Test", info->name().value());
 }

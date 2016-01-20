@@ -32,7 +32,11 @@ Legacy::Legacy (const AppID::AppName &appname,
 std::shared_ptr<Application::Info>
 Legacy::info (void)
 {
-	return std::make_shared<AppInfo::Desktop>(_appinfo, "/usr/share/icons/");
+	if (_appinfo) {
+		return std::make_shared<AppInfo::Desktop>(_appinfo, "/usr/share/icons/");
+	} else {
+		return {};
+	}
 }
 
 std::list<std::shared_ptr<Application>>

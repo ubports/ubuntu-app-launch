@@ -9,6 +9,8 @@ extern "C" {
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
 
+#include <iostream>
+
 namespace Ubuntu {
 namespace AppLaunch {
 
