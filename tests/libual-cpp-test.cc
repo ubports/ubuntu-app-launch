@@ -1077,69 +1077,47 @@ TEST_F(LibUAL, StartHelper)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
 
+	auto untrusted = Ubuntu::AppLaunch::Helper::Type::from_raw("untrusted-type");
+
 	/* Basic make sure we can send the event */
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL));
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.test.multiple_first_1.2.3");
+	auto helper = Ubuntu::AppLaunch::Helper::create(untrusted, appid, registry);
+
+	helper->launch();
+
 	EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
-	/* Now look at the details of the call */
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL));
+	/* Now check a multi out */ 
+	helper->launch();
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+	auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls);
 	EXPECT_EQ(1, len);
 
 	EXPECT_STREQ("Start", calls->name);
 	EXPECT_EQ(2, g_variant_n_children(calls->params));
 
-	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	auto block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
 	g_variant_unref(block);
 
-	GVariant * env = g_variant_get_child_value(calls->params, 0);
+	auto env = g_variant_get_child_value(calls->params, 0);
 	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
-	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
 	g_variant_unref(env);
-
-	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
-
-	/* Now check a multi out */ 
-	gchar * instance_id = ubuntu_app_launch_start_multiple_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL);
-	ASSERT_NE(nullptr, instance_id);
-	g_debug("Multi-instance ID: %s", instance_id);
-
-	len = 0;
-	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
-
-	EXPECT_STREQ("Start", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
-
-	block = g_variant_get_child_value(calls->params, 1);
-	EXPECT_TRUE(g_variant_get_boolean(block));
-	g_variant_unref(block);
-
-	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
-	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
-	EXPECT_TRUE(check_env(env, "INSTANCE_ID", instance_id));
-	g_variant_unref(env);
-	g_free(instance_id);
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
 	/* Let's pass some URLs */
-	const gchar * urls[] = {
-		"http://ubuntu.com/",
-		"https://ubuntu.com/",
-		"file:///home/phablet/test.txt",
-		NULL
+	std::vector<Ubuntu::AppLaunch::Helper::URL> urls = {
+		Ubuntu::AppLaunch::Helper::URL::from_raw("http://ubuntu.com/"),
+		Ubuntu::AppLaunch::Helper::URL::from_raw("https://ubuntu.com/"),
+		Ubuntu::AppLaunch::Helper::URL::from_raw("file:///home/phablet/test.txt")
 	};
-	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.multiple_first_1.2.3", urls));
+	helper->launch(urls);
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
@@ -1160,52 +1138,38 @@ TEST_F(LibUAL, StopHelper)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
 
-	/* Basic helper */
-	ASSERT_TRUE(ubuntu_app_launch_stop_helper("untrusted-type", "com.test.good_application_1.2.3"));
+	/* Multi helper */
+	auto untrusted = Ubuntu::AppLaunch::Helper::Type::from_raw("untrusted-type");
+
+	auto appid = Ubuntu::AppLaunch::AppID::parse("com.bar_foo_8432.13.1");
+	auto helper = Ubuntu::AppLaunch::Helper::create(untrusted, appid, registry);
+
+	ASSERT_TRUE(helper->hasInstances());
+
+	auto instances = helper->instances();
+
+	EXPECT_EQ(1, instances.size());
+
+	instances[0]->stop();
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
+	auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
 	EXPECT_NE(nullptr, calls);
 	EXPECT_EQ(1, len);
 
 	EXPECT_STREQ("Stop", calls->name);
 	EXPECT_EQ(2, g_variant_n_children(calls->params));
 
-	GVariant * block = g_variant_get_child_value(calls->params, 1);
+	auto block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
 	g_variant_unref(block);
 
-	GVariant * env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_application_1.2.3"));
+	auto env = g_variant_get_child_value(calls->params, 0);
+	EXPECT_TRUE(check_env(env, "APP_ID", "com.bar_foo_8432.13.1"));
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
-	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
-	g_variant_unref(env);
-
-	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
-
-	/* Multi helper */
-	ASSERT_TRUE(ubuntu_app_launch_stop_multiple_helper("untrusted-type", "com.test.good_application_1.2.3", "instance-me"));
-
-	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
-
-	len = 0;
-	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
-	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
-
-	EXPECT_STREQ("Stop", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
-
-	block = g_variant_get_child_value(calls->params, 1);
-	EXPECT_TRUE(g_variant_get_boolean(block));
-	g_variant_unref(block);
-
-	env = g_variant_get_child_value(calls->params, 0);
-	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.good_application_1.2.3"));
-	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
-	EXPECT_TRUE(check_env(env, "INSTANCE_ID", "instance-me"));
+	EXPECT_TRUE(check_env(env, "INSTANCE_ID", "24034582324132"));
 	g_variant_unref(env);
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
@@ -1215,45 +1179,34 @@ TEST_F(LibUAL, StopHelper)
 
 TEST_F(LibUAL, HelperList)
 {
-	gchar ** blanktype = ubuntu_app_launch_list_helpers("not-a-type");
+	auto nothelper = Ubuntu::AppLaunch::Helper::Type::from_raw("not-a-type");
+	auto notlist = Ubuntu::AppLaunch::Registry::runningHelpers(nothelper, registry);
 
-	EXPECT_NE(nullptr, blanktype);
-	EXPECT_EQ(0, g_strv_length(blanktype));
+	EXPECT_EQ(0, notlist.size());
 
-	g_strfreev(blanktype);
+	auto goodhelper = Ubuntu::AppLaunch::Helper::Type::from_raw("untrusted-type");
+	auto goodlist = Ubuntu::AppLaunch::Registry::runningHelpers(goodhelper, registry);
 
-	gchar ** goodtype = ubuntu_app_launch_list_helpers("untrusted-type");
+	EXPECT_EQ(2, goodlist.size());
 
-	EXPECT_NE(nullptr, goodtype);
-	EXPECT_EQ(2, g_strv_length(goodtype));
+	goodlist.sort([](const std::shared_ptr<Ubuntu::AppLaunch::Helper> &a, const std::shared_ptr<Ubuntu::AppLaunch::Helper> &b) {
+		std::string sa = a->appId();
+		std::string sb = b->appId();
 
-	if (g_strcmp0(goodtype[0], "com.foo_bar_43.23.12") == 0) {
-		EXPECT_STREQ("com.foo_bar_43.23.12", goodtype[0]);
-		EXPECT_STREQ("com.bar_foo_8432.13.1", goodtype[1]);
-	} else {
-		EXPECT_STREQ("com.foo_bar_43.23.12", goodtype[1]);
-		EXPECT_STREQ("com.bar_foo_8432.13.1", goodtype[0]);
-	}
+		return sa < sb;
+	});
 
-	g_strfreev(goodtype);
-}
+	EXPECT_EQ("com.bar_foo_8432.13.1", (std::string)goodlist.front()->appId());
+	EXPECT_EQ("com.foo_bar_43.23.12", (std::string)goodlist.back()->appId());
 
-TEST_F(LibUAL, HelperInstanceList)
-{
-	gchar ** blanktype = ubuntu_app_launch_list_helper_instances("not-a-type", "com.bar_foo_8432.13.1");
+	EXPECT_TRUE(goodlist.front()->hasInstances());
+	EXPECT_TRUE(goodlist.back()->hasInstances());
 
-	EXPECT_NE(nullptr, blanktype);
-	EXPECT_EQ(0, g_strv_length(blanktype));
+	EXPECT_EQ(1, goodlist.front()->instances().size());
+	EXPECT_EQ(1, goodlist.back()->instances().size());
 
-	g_strfreev(blanktype);
-
-	gchar ** goodtype = ubuntu_app_launch_list_helper_instances("untrusted-type", "com.bar_foo_8432.13.1");
-
-	EXPECT_NE(nullptr, goodtype);
-	EXPECT_EQ(1, g_strv_length(goodtype));
-	EXPECT_STREQ("24034582324132", goodtype[0]);
-
-	g_strfreev(goodtype);
+	EXPECT_TRUE(goodlist.front()->instances()[0]->isRunning());
+	EXPECT_TRUE(goodlist.back()->instances()[0]->isRunning());
 }
 
 
