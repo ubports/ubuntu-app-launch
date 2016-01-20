@@ -21,25 +21,26 @@
 #include "libubuntu-app-launch/application.h"
 
 int
-main (int argc, char * argv[])
+main (int argc, char* argv[])
 {
-	Ubuntu::AppLaunch::AppID appid;
+    Ubuntu::AppLaunch::AppID appid;
 
-	switch (argc) {
-	case 2:
-		appid = Ubuntu::AppLaunch::AppID::discover(argv[1]);
-		break;
-	case 3:
-		appid = Ubuntu::AppLaunch::AppID::discover(argv[1], argv[2]);
-		break;
-	case 4:
-		appid = Ubuntu::AppLaunch::AppID::discover(argv[1], argv[2], argv[3]);
-		break;
-	default:
-		std::cerr << "Usage: " << argv[0] << " <package> [application] [version]" << std::endl;
-		return 1;
-	}
+    switch (argc)
+    {
+        case 2:
+            appid = Ubuntu::AppLaunch::AppID::discover(argv[1]);
+            break;
+        case 3:
+            appid = Ubuntu::AppLaunch::AppID::discover(argv[1], argv[2]);
+            break;
+        case 4:
+            appid = Ubuntu::AppLaunch::AppID::discover(argv[1], argv[2], argv[3]);
+            break;
+        default:
+            std::cerr << "Usage: " << argv[0] << " <package> [application] [version]" << std::endl;
+            return 1;
+    }
 
-	std::cout << (std::string)appid << std::endl;
-	return 0;
+    std::cout << (std::string)appid << std::endl;
+    return 0;
 }

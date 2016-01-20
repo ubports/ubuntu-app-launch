@@ -22,21 +22,24 @@
 #include <libubuntu-app-launch/application.h>
 
 int
-main (int argc, char * argv[]) {
+main (int argc, char* argv[])
+{
 
-	if (argc != 2) {
-		std::cerr << "Usage: " << argv[0] << " <app id>" << std::endl;
-		return 1;
-	}
+    if (argc != 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <app id>" << std::endl;
+        return 1;
+    }
 
-	auto appid = Ubuntu::AppLaunch::AppID::parse(argv[1]);
-	auto app = Ubuntu::AppLaunch::Application::create(appid, Ubuntu::AppLaunch::Registry::getDefault());
-	auto pid = app->instances()[0]->primaryPid();
+    auto appid = Ubuntu::AppLaunch::AppID::parse(argv[1]);
+    auto app = Ubuntu::AppLaunch::Application::create(appid, Ubuntu::AppLaunch::Registry::getDefault());
+    auto pid = app->instances()[0]->primaryPid();
 
-	if (pid == 0) {
-		return 1;
-	}
+    if (pid == 0)
+    {
+        return 1;
+    }
 
-	std::cout << pid << std::endl;
-	return 0;
+    std::cout << pid << std::endl;
+    return 0;
 }

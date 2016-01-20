@@ -28,54 +28,59 @@
 #pragma once
 #pragma GCC visibility push(default)
 
-namespace Ubuntu {
-namespace AppLaunch {
+namespace Ubuntu
+{
+namespace AppLaunch
+{
 
-class Registry {
+class Registry
+{
 public:
-	enum FailureType {
-		CRASH,
-		START_FAILURE,
-	};
+    enum FailureType
+    {
+        CRASH,
+        START_FAILURE,
+    };
 
-	Registry();
-	virtual ~Registry();
+    Registry();
+    virtual ~Registry();
 
-	/* Lots of application lists */
-	static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Registry> registry = getDefault());
-	static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Registry> registry = getDefault());
+    /* Lots of application lists */
+    static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Registry> registry = getDefault());
+    static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Registry> registry = getDefault());
 
-	/* Signals to discover what is happening to apps */
-	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStarted;
-	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStopped;
-	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> appFailed;
-	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appPaused;
-	core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appResumed;
+    /* Signals to discover what is happening to apps */
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStarted;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStopped;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> appFailed;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appPaused;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appResumed;
 
-	/* The Application Manager, almost always if you're not Unity8, don't
-	   use this API. Testing is a special case. */
-	class Manager {
-		virtual bool focusRequest (std::shared_ptr<Application> app, std::shared_ptr<Application::Instance> instance) = 0;
-		virtual bool startingRequest (std::shared_ptr<Application> app, std::shared_ptr<Application::Instance> instance) = 0;
-	
-	  protected:
-	    Manager() = default;
-	};
+    /* The Application Manager, almost always if you're not Unity8, don't
+       use this API. Testing is a special case. */
+    class Manager
+    {
+        virtual bool focusRequest (std::shared_ptr<Application> app, std::shared_ptr<Application::Instance> instance) = 0;
+        virtual bool startingRequest (std::shared_ptr<Application> app, std::shared_ptr<Application::Instance> instance) = 0;
 
-	void setManager (Manager *manager);
-	void clearManager ();
+    protected:
+        Manager() = default;
+    };
 
-	/* Helper Lists */
-	static std::list<std::shared_ptr<Helper>> runningHelpers (Helper::Type type,
-	                                                          std::shared_ptr<Registry> registry = getDefault());
+    void setManager (Manager* manager);
+    void clearManager ();
 
-	/* Default Junk */
-	static std::shared_ptr<Registry> getDefault();
-	static void clearDefault();
+    /* Helper Lists */
+    static std::list<std::shared_ptr<Helper>> runningHelpers (Helper::Type type,
+                                                              std::shared_ptr<Registry> registry = getDefault());
 
-	/* Hide our implementation */
-	class Impl;
-	std::unique_ptr<Impl> impl;
+    /* Default Junk */
+    static std::shared_ptr<Registry> getDefault();
+    static void clearDefault();
+
+    /* Hide our implementation */
+    class Impl;
+    std::unique_ptr<Impl> impl;
 };
 
 }; // namespace AppLaunch

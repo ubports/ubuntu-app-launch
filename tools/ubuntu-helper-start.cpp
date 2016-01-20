@@ -22,19 +22,20 @@
 #include "libubuntu-app-launch/registry.h"
 
 int
-main (int argc, char * argv[])
+main (int argc, char* argv[])
 {
-	if (argc != 3) {
-		std::cerr << "Usage: " << argv[0] << " <helper type> <app id>" << std::endl;
-		return 1;
-	}
+    if (argc != 3)
+    {
+        std::cerr << "Usage: " << argv[0] << " <helper type> <app id>" << std::endl;
+        return 1;
+    }
 
-	auto type = Ubuntu::AppLaunch::Helper::Type::from_raw(argv[1]);
-	auto appid = Ubuntu::AppLaunch::AppID::parse(argv[2]);
+    auto type = Ubuntu::AppLaunch::Helper::Type::from_raw(argv[1]);
+    auto appid = Ubuntu::AppLaunch::AppID::parse(argv[2]);
 
-	auto registry = std::make_shared<Ubuntu::AppLaunch::Registry>();
-	auto helper = Ubuntu::AppLaunch::Helper::create(type, appid, registry);
+    auto registry = std::make_shared<Ubuntu::AppLaunch::Registry>();
+    auto helper = Ubuntu::AppLaunch::Helper::create(type, appid, registry);
 
-	helper->launch();
-	return 0; 
+    helper->launch();
+    return 0;
 }

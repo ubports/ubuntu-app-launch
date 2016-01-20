@@ -28,67 +28,72 @@
 #pragma once
 #pragma GCC visibility push(default)
 
-namespace Ubuntu {
-namespace AppLaunch {
+namespace Ubuntu
+{
+namespace AppLaunch
+{
 
 class Registry;
 
-class Application {
+class Application
+{
 public:
-	struct URLTag;
-	typedef TypeTagger<URLTag, std::string> URL;
+    struct URLTag;
+    typedef TypeTagger<URLTag, std::string> URL;
 
-	static std::shared_ptr<Application> create (const AppID &appid,
-	                                            std::shared_ptr<Registry> registry);
+    static std::shared_ptr<Application> create (const AppID& appid,
+                                                std::shared_ptr<Registry> registry);
 
-	/* System level info */
-	virtual AppID appId() = 0;
+    /* System level info */
+    virtual AppID appId() = 0;
 
-	class Info {
-	public:
-		struct NameTag;
-		struct DescriptionTag;
-		struct IconPathTag;
-		struct CategoryTag;
+    class Info
+    {
+    public:
+        struct NameTag;
+        struct DescriptionTag;
+        struct IconPathTag;
+        struct CategoryTag;
 
-		typedef TypeTagger<NameTag, std::string> Name;
-		typedef TypeTagger<DescriptionTag, std::string> Description;
-		typedef TypeTagger<IconPathTag, std::string> IconPath;
-		typedef TypeTagger<CategoryTag, std::string> Category;
+        typedef TypeTagger<NameTag, std::string> Name;
+        typedef TypeTagger<DescriptionTag, std::string> Description;
+        typedef TypeTagger<IconPathTag, std::string> IconPath;
+        typedef TypeTagger<CategoryTag, std::string> Category;
 
-		/* Package provided user visible info */
-		virtual const Name &name() = 0;
-		virtual const Description &description() = 0;
-		virtual const IconPath &iconPath() = 0;
-		virtual std::list<Category> categories() = 0;
-	};
+        /* Package provided user visible info */
+        virtual const Name& name() = 0;
+        virtual const Description& description() = 0;
+        virtual const IconPath& iconPath() = 0;
+        virtual std::list<Category> categories() = 0;
+    };
 
-	virtual std::shared_ptr<Info> info() = 0;
+    virtual std::shared_ptr<Info> info() = 0;
 
-	class Instance {
-	public:
-		/* Query lifecycle */
-		virtual bool isRunning() = 0;
+    class Instance
+    {
+    public:
+        /* Query lifecycle */
+        virtual bool isRunning() = 0;
 
-		/* Instance Info */
-		virtual std::string logPath() = 0;
+        /* Instance Info */
+        virtual std::string logPath() = 0;
 
-		/* PIDs */
-		virtual pid_t primaryPid() = 0;
-		virtual bool hasPid(pid_t pid) = 0;
-		virtual std::vector<pid_t> pids() = 0;
+        /* PIDs */
+        virtual pid_t primaryPid() = 0;
+        virtual bool hasPid(pid_t pid) = 0;
+        virtual std::vector<pid_t> pids() = 0;
 
-		/* Manage lifecycle */
-		virtual void pause() = 0;
-		virtual void resume() = 0;
-		virtual void stop() = 0;
-	};
+        /* Manage lifecycle */
+        virtual void pause() = 0;
+        virtual void resume() = 0;
+        virtual void stop() = 0;
+    };
 
-	virtual bool hasInstances() = 0;
-	virtual std::vector<std::shared_ptr<Instance>> instances() = 0;
+    virtual bool hasInstances() = 0;
+    virtual std::vector<std::shared_ptr<Instance>> instances() = 0;
 
-	virtual std::shared_ptr<Instance> launch(std::vector<URL> urls = {}) = 0;
-	virtual std::shared_ptr<Instance> launchTest(std::vector<URL> urls = {}) = 0;
+    virtual std::shared_ptr<Instance> launch(std::vector<URL> urls = {}) = 0;
+    virtual std::shared_ptr<Instance> launchTest(std::vector<URL> urls = {}) = 0;
 };
 
 }; // namespace AppLaunch

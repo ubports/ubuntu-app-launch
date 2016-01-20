@@ -29,181 +29,200 @@ extern "C" {
 
 #include <iostream>
 
-namespace Ubuntu {
-namespace AppLaunch {
+namespace Ubuntu
+{
+namespace AppLaunch
+{
 
 std::shared_ptr<Application>
-Application::create (const AppID &appid,
-	             std::shared_ptr<Registry> registry)
+Application::create (const AppID& appid,
+                     std::shared_ptr<Registry> registry)
 {
-	std::string sappid = appid;
-	if (app_info_legacy(appid.appname.value().c_str(), NULL, NULL)) {
-		return std::make_shared<AppImpls::Legacy>(appid.appname, registry);
-	} else if (app_info_click(sappid.c_str(), NULL, NULL)) {
-		return std::make_shared<AppImpls::Click>(appid, registry);
-	} else if (app_info_libertine(sappid.c_str(), NULL, NULL)) {
-		return std::make_shared<AppImpls::Libertine>(appid.package, appid.appname, registry);
-	} else {
-		throw std::runtime_error("Invalid app ID: " + sappid);
-	}
+    std::string sappid = appid;
+    if (app_info_legacy(appid.appname.value().c_str(), NULL, NULL))
+    {
+        return std::make_shared<AppImpls::Legacy>(appid.appname, registry);
+    }
+    else if (app_info_click(sappid.c_str(), NULL, NULL))
+    {
+        return std::make_shared<AppImpls::Click>(appid, registry);
+    }
+    else if (app_info_libertine(sappid.c_str(), NULL, NULL))
+    {
+        return std::make_shared<AppImpls::Libertine>(appid.package, appid.appname, registry);
+    }
+    else
+    {
+        throw std::runtime_error("Invalid app ID: " + sappid);
+    }
 }
 
 AppID::AppID () :
-	package(Package::from_raw({})),
-	appname(AppName::from_raw({})),
-	version(Version::from_raw({}))
+    package(Package::from_raw({})),
+        appname(AppName::from_raw({})),
+        version(Version::from_raw({}))
 {
 }
 
 AppID::AppID (Package pkg, AppName app, Version ver) :
-	package(pkg),
-	appname(app),
-	version(ver)
+    package(pkg),
+    appname(app),
+    version(ver)
 {
 }
 
 AppID
-AppID::parse (const std::string &sappid)
+AppID::parse (const std::string& sappid)
 {
-	/* Allow returning an empty AppID with empty internal */
-	if (sappid.empty()) {
-		return {
-			AppID::Package::from_raw({}),
-			AppID::AppName::from_raw({}),
-			AppID::Version::from_raw({})
-		};
-	}
+    /* Allow returning an empty AppID with empty internal */
+    if (sappid.empty())
+    {
+        return
+        {
+            AppID::Package::from_raw({}),
+            AppID::AppName::from_raw({}),
+            AppID::Version::from_raw({})
+        };
+    }
 
-	gchar * cpackage;
-	gchar * cappname;
-	gchar * cversion;
+    gchar* cpackage;
+    gchar* cappname;
+    gchar* cversion;
 
-	if (ubuntu_app_launch_app_id_parse(sappid.c_str(), &cpackage, &cappname, &cversion) == FALSE) {
-		/* Assume we're a legacy appid */
-		return {
-			AppID::Package::from_raw({}),
-			AppID::AppName::from_raw(sappid),
-			AppID::Version::from_raw({})
-		};
-	}
+    if (ubuntu_app_launch_app_id_parse(sappid.c_str(), &cpackage, &cappname, &cversion) == FALSE)
+    {
+        /* Assume we're a legacy appid */
+        return
+        {
+            AppID::Package::from_raw({}),
+            AppID::AppName::from_raw(sappid),
+            AppID::Version::from_raw({})
+        };
+    }
 
-	AppID appid(
-		AppID::Package::from_raw(cpackage),
-		AppID::AppName::from_raw(cappname),
-		AppID::Version::from_raw(cversion)
-	);
+    AppID appid(
+        AppID::Package::from_raw(cpackage),
+        AppID::AppName::from_raw(cappname),
+        AppID::Version::from_raw(cversion)
+    );
 
-	g_free(cpackage);
-	g_free(cappname);
-	g_free(cversion);
+    g_free(cpackage);
+    g_free(cappname);
+    g_free(cversion);
 
-	return appid;
+    return appid;
 }
 
 AppID::operator std::string() const
 {
-	if (package.value().empty() && version.value().empty()) {
-		if (appname.value().empty()) {
-			return {};
-		} else {
-			return appname.value();
-		}
-	}
+    if (package.value().empty() && version.value().empty())
+    {
+        if (appname.value().empty())
+        {
+            return {};
+        }
+        else
+        {
+            return appname.value();
+        }
+    }
 
-	return package.value() + "_" + appname.value() + "_" + version.value();
+    return package.value() + "_" + appname.value() + "_" + version.value();
 }
 
 int
-AppID::operator == (const AppID &other) const
+AppID::operator == (const AppID& other) const
 {
-	return package.value() == other.package.value() &&
-		appname.value() == other.appname.value() &&
-		version.value() == other.version.value();
+    return package.value() == other.package.value() &&
+           appname.value() == other.appname.value() &&
+           version.value() == other.version.value();
 }
 
 int
-AppID::operator != (const AppID &other) const
+AppID::operator != (const AppID& other) const
 {
-	return package.value() != other.package.value() ||
-		appname.value() != other.appname.value() ||
-		version.value() != other.version.value();
+    return package.value() != other.package.value() ||
+           appname.value() != other.appname.value() ||
+           version.value() != other.version.value();
 }
 
 bool
 AppID::empty () const
 {
-	return package.value().empty() &&
-		appname.value().empty() &&
-		version.value().empty();
+    return package.value().empty() &&
+           appname.value().empty() &&
+           version.value().empty();
 }
 
 std::string
 app_wildcard (AppID::ApplicationWildcard card)
 {
-	switch (card) {
-	case AppID::ApplicationWildcard::FIRST_LISTED:
-		return "first-listed-app";
-	case AppID::ApplicationWildcard::LAST_LISTED:
-		return "last-listed-app";
-	case AppID::ApplicationWildcard::ONLY_LISTED:
-		return "only-listed-app";
-	}
+    switch (card)
+    {
+        case AppID::ApplicationWildcard::FIRST_LISTED:
+            return "first-listed-app";
+        case AppID::ApplicationWildcard::LAST_LISTED:
+            return "last-listed-app";
+        case AppID::ApplicationWildcard::ONLY_LISTED:
+            return "only-listed-app";
+    }
 
-	return "";
+    return "";
 }
 
 std::string
 ver_wildcard (AppID::VersionWildcard card)
 {
-	switch (card) {
-	case AppID::VersionWildcard::CURRENT_USER_VERSION:
-		return "current-user-version";
-	}
+    switch (card)
+    {
+        case AppID::VersionWildcard::CURRENT_USER_VERSION:
+            return "current-user-version";
+    }
 
-	return "";
+    return "";
 }
 
 AppID
-AppID::discover (const std::string &package)
+AppID::discover (const std::string& package)
 {
-	return discover(package, ApplicationWildcard::FIRST_LISTED, VersionWildcard::CURRENT_USER_VERSION);
+    return discover(package, ApplicationWildcard::FIRST_LISTED, VersionWildcard::CURRENT_USER_VERSION);
 }
 
 AppID
-AppID::discover (const std::string &package, const std::string &appname)
+AppID::discover (const std::string& package, const std::string& appname)
 {
-	return discover(package, appname, VersionWildcard::CURRENT_USER_VERSION);
+    return discover(package, appname, VersionWildcard::CURRENT_USER_VERSION);
 }
 
 AppID
-AppID::discover (const std::string &package, const std::string &appname, const std::string &version)
+AppID::discover (const std::string& package, const std::string& appname, const std::string& version)
 {
-	auto cappid = ubuntu_app_launch_triplet_to_app_id(package.c_str(), appname.c_str(), version.c_str());
+    auto cappid = ubuntu_app_launch_triplet_to_app_id(package.c_str(), appname.c_str(), version.c_str());
 
-	auto appid = cappid != nullptr ?
-		AppID::parse(cappid) :
-		AppID::parse("");
+    auto appid = cappid != nullptr ?
+                 AppID::parse(cappid) :
+                 AppID::parse("");
 
-	g_free(cappid);
-	return appid;
+    g_free(cappid);
+    return appid;
 }
 
 AppID
-AppID::discover (const std::string &package, ApplicationWildcard appwildcard)
+AppID::discover (const std::string& package, ApplicationWildcard appwildcard)
 {
-	return AppID::discover(package, appwildcard, VersionWildcard::CURRENT_USER_VERSION);
+    return AppID::discover(package, appwildcard, VersionWildcard::CURRENT_USER_VERSION);
 }
 
 AppID
-AppID::discover (const std::string &package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
+AppID::discover (const std::string& package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
 {
-	return discover(package, app_wildcard(appwildcard), ver_wildcard(versionwildcard));
+    return discover(package, app_wildcard(appwildcard), ver_wildcard(versionwildcard));
 }
 
 AppID
-AppID::discover (const std::string &package, const std::string &appname, VersionWildcard versionwildcard)
+AppID::discover (const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
 {
-	return discover(package, appname, ver_wildcard(versionwildcard));
+    return discover(package, appname, ver_wildcard(versionwildcard));
 }
 
 

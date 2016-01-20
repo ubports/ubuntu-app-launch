@@ -21,17 +21,20 @@
 #include "libubuntu-app-launch/registry.h"
 
 int
-main (int argc, char * argv[]) {
-	if (argc != 2) {
-		std::cerr << "Usage: " << argv[0] << " <helper type>" << std::endl;
-		return 1;
-	}
+main (int argc, char* argv[])
+{
+    if (argc != 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <helper type>" << std::endl;
+        return 1;
+    }
 
-	auto type = Ubuntu::AppLaunch::Helper::Type::from_raw(argv[1]);
-	auto helpers = Ubuntu::AppLaunch::Registry::runningHelpers(type);
-	for (auto helper : helpers) {
-		std::cout << (std::string)helper->appId() << std::endl;
-	}
+    auto type = Ubuntu::AppLaunch::Helper::Type::from_raw(argv[1]);
+    auto helpers = Ubuntu::AppLaunch::Registry::runningHelpers(type);
+    for (auto helper : helpers)
+    {
+        std::cout << (std::string)helper->appId() << std::endl;
+    }
 
-	return 0;
+    return 0;
 }

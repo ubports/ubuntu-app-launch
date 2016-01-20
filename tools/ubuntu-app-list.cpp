@@ -21,13 +21,14 @@
 #include "libubuntu-app-launch/registry.h"
 
 int
-main (int argc, char * argv[])
+main (int argc, char* argv[])
 {
-	auto apps = Ubuntu::AppLaunch::Registry::runningApps();
-	for (auto app : apps) {
-		std::cout << (std::string)app->appId() << std::endl;
-	}
+    auto apps = Ubuntu::AppLaunch::Registry::runningApps();
+    for (auto app : apps)
+    {
+        std::cout << (std::string)app->appId() << std::endl;
+    }
 
-	return 0;
+    return 0;
 }
 
