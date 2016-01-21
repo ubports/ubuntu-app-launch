@@ -41,6 +41,12 @@ public:
     const Application::Info::IconPath& iconPath() override;
     std::list<Application::Info::Category> categories() override;
 
+    Application::Info::SplashInfo splash() override;
+
+    std::vector<Application::Info::Orientations> supportedOrientations() override;
+
+    Application::Info::UbuntuLifecycle ubuntuLifecycle() override;
+
 private:
     Application::Info::Name _name;
     Application::Info::Description _description;

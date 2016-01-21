@@ -82,6 +82,37 @@ Desktop::categories()
     return {};
 }
 
+Application::Info::SplashInfo Desktop::splash()
+{
+    return
+    {
+title:
+        Application::Info::SplashTitle::from_raw("test"),
+image:
+        Application::Info::SplashImage::from_raw("test"),
+backgroundColor:
+        Application::Info::SplashColor::from_raw("test"),
+headerColor:
+        Application::Info::SplashColor::from_raw("test"),
+footerColor:
+        Application::Info::SplashColor::from_raw("test")
+    };
+}
+
+std::vector<Application::Info::Orientations> Desktop::supportedOrientations()
+{
+
+
+    return
+    {
+    };
+}
+
+Application::Info::UbuntuLifecycle Desktop::ubuntuLifecycle()
+{
+
+    return Application::Info::UbuntuLifecycle::from_raw(false);
+}
 }; // namespace AppInfo
 }; // namespace AppLaunch
 }; // namespace Ubuntu

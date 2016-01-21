@@ -50,6 +50,7 @@ public:
     class Info
     {
     public:
+        /* Basic information */
         struct NameTag;
         struct DescriptionTag;
         struct IconPathTag;
@@ -60,11 +61,49 @@ public:
         typedef TypeTagger<IconPathTag, std::string> IconPath;
         typedef TypeTagger<CategoryTag, std::string> Category;
 
-        /* Package provided user visible info */
         virtual const Name& name() = 0;
         virtual const Description& description() = 0;
         virtual const IconPath& iconPath() = 0;
         virtual std::list<Category> categories() = 0;
+
+        /* Splash information */
+        struct SplashTitleTag;
+        struct SplashImageTag;
+        struct SplashColorTag;
+
+        typedef TypeTagger<SplashTitleTag, std::string> SplashTitle;
+        typedef TypeTagger<SplashImageTag, std::string> SplashImage;
+        typedef TypeTagger<SplashColorTag, std::string> SplashColor;
+
+        struct SplashInfo
+        {
+            SplashTitle title;
+            SplashImage image;
+            SplashColor backgroundColor;
+            SplashColor headerColor;
+            SplashColor footerColor;
+        };
+
+        virtual SplashInfo splash() = 0;
+
+        /* Orientation and placement */
+        enum Orientations
+        {
+            PRIMARY,
+            PORTRAIT,
+            LANDSCAPE,
+            INVERTED_PORTRAIT,
+            INVERTED_LANDSCAPE
+        };
+
+        virtual std::vector<Orientations> supportedOrientations() = 0;
+
+        /* Lifecycle */
+        struct UbuntuLifecycleTag;
+
+        typedef TypeTagger<UbuntuLifecycleTag, bool> UbuntuLifecycle;
+
+        virtual UbuntuLifecycle ubuntuLifecycle() = 0;
     };
 
     virtual std::shared_ptr<Info> info() = 0;
