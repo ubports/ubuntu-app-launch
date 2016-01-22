@@ -26,93 +26,158 @@ namespace AppLaunch
 namespace AppInfo
 {
 
-Desktop::Desktop(std::shared_ptr<GDesktopAppInfo> appinfo, const std::string& basePath) :
-    _name(Application::Info::Name::from_raw({})),
-      _description(Application::Info::Description::from_raw({})),
-      _iconPath(Application::Info::IconPath::from_raw({})),
-      _appinfo(appinfo),
-      _basePath(basePath)
-{
-}
+const char* DESKTOP_GROUP = "Desktop";
 
-const Application::Info::Name&
-Desktop::name()
+template <typename T> auto stringFromKeyfile (std::shared_ptr<GKeyFile> keyfile, const std::string& key,
+const std::string& exceptionText = {}) -> T
 {
-    std::call_once(_nameFlag, [this]()
+    GError* error = nullptr;
+    auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
+
+    if (error != nullptr)
     {
-        _name = Application::Info::Name::from_raw(g_app_info_get_display_name(G_APP_INFO(_appinfo.get())));
-    });
-
-    return _name;
-}
-
-const Application::Info::Description&
-Desktop::description()
-{
-    std::call_once(_descriptionFlag, [this]()
-    {
-        _description = Application::Info::Description::from_raw(g_app_info_get_description(G_APP_INFO(_appinfo.get())));
-    });
-
-    return _description;
-}
-
-const Application::Info::IconPath&
-Desktop::iconPath()
-{
-    std::call_once(_iconPathFlag, [this]()
-    {
-        auto relative = std::shared_ptr<gchar>(g_desktop_app_info_get_string(_appinfo.get(), "Icon"), [](gchar * str)
+        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        if (!exceptionText.empty())
         {
-            g_clear_pointer(&str, g_free);
-        });
-        auto cpath = std::shared_ptr<gchar>(g_build_filename(_basePath.c_str(), relative.get(), nullptr), [](gchar * str)
+            throw std::runtime_error(exceptionText + perror.get()->message);
+        }
+
+        return T::from_raw({});
+    }
+
+    T retval = T::from_raw(keyval);
+    g_free(keyval);
+    return retval;
+}
+
+template <typename T> auto fileFromKeyfile (std::shared_ptr<GKeyFile> keyfile, const std::string basePath,
+const std::string& key, const std::string& exceptionText = {}) -> T
+{
+    GError* error = nullptr;
+    auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
+
+    if (error != nullptr)
+    {
+        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        if (!exceptionText.empty())
         {
-            g_clear_pointer(&str, g_free);
-        });
-        _iconPath = Application::Info::IconPath::from_raw(cpath.get());
-    });
+            throw std::runtime_error(exceptionText + perror.get()->message);
+        }
 
-    return _iconPath;
+        return T::from_raw({});
+    }
+
+    auto cpath = g_build_filename(basePath.c_str(), keyval, nullptr);
+
+    T retval = T::from_raw(cpath);
+
+    g_free(keyval);
+    g_free(cpath);
+
+    return retval;
 }
 
-std::list<Application::Info::Category>
-Desktop::categories()
+Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath) :
+    _keyfile(keyfile),
+    _basePath(basePath),
+    _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile")),
+    _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment")),
+    _iconPath(fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file")),
+    _splashInfo(
 {
-    return {};
-}
-
-Application::Info::SplashInfo Desktop::splash()
+title: stringFromKeyfile<Application::Info::SplashTitle>(keyfile, "X-Ubuntu-Splash-Title"),
+image: fileFromKeyfile<Application::Info::SplashImage>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
+backgroundColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color"),
+headerColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Header"),
+footerColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
+}),
+_supportedOrientations([keyfile]()
 {
-    return
+    Orientations all =
     {
-title:
-        Application::Info::SplashTitle::from_raw("test"),
-image:
-        Application::Info::SplashImage::from_raw("test"),
-backgroundColor:
-        Application::Info::SplashColor::from_raw("test"),
-headerColor:
-        Application::Info::SplashColor::from_raw("test"),
-footerColor:
-        Application::Info::SplashColor::from_raw("test")
+portrait:
+        true,
+landscape:
+        true,
+invertedPortrait:
+        true,
+invertedLandscape:
+        true
     };
-}
 
-std::vector<Application::Info::Orientations> Desktop::supportedOrientations()
-{
+    GError* error = nullptr;
+    auto orientationStrv = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, "X-Ubuntu-Supported-Orientations",
+                                                      nullptr, &error);
 
-
-    return
+    if (error != nullptr)
     {
+        g_error_free(error);
+        return all;
+    }
+
+    Orientations retval =
+    {
+portrait:
+        false,
+landscape:
+        false,
+invertedPortrait:
+        false,
+invertedLandscape:
+        false
     };
-}
 
-Application::Info::UbuntuLifecycle Desktop::ubuntuLifecycle()
+    try
+    {
+        for (auto i = 0; orientationStrv[i] != nullptr; i++)
+        {
+            if (g_ascii_strcasecmp("portrait", orientationStrv[i]) == 0)
+            {
+                retval.portrait = true;
+            }
+            else if (g_ascii_strcasecmp("landscape", orientationStrv[i]) == 0)
+            {
+                retval.landscape = true;
+            }
+            else if (g_ascii_strcasecmp("invertedPortrait", orientationStrv[i]) == 0)
+            {
+                retval.invertedPortrait = true;
+            }
+            else if (g_ascii_strcasecmp("invertedLandscape", orientationStrv[i]) == 0)
+            {
+                retval.invertedLandscape = true;
+            }
+            else
+            {
+                throw std::runtime_error("Invalid orientation string '" + std::string(orientationStrv[i]) + "'");
+            }
+        }
+    }
+    catch (...)
+    {
+        retval = all;
+    }
+
+    g_strfreev(orientationStrv);
+    return retval;
+}()),
+_ubuntuLifecycle([keyfile]()
 {
+    GError* error = nullptr;
+    auto keyval = g_key_file_get_boolean(keyfile.get(), DESKTOP_GROUP, "X-Ubuntu-Touch", &error);
 
-    return Application::Info::UbuntuLifecycle::from_raw(false);
+    if (error != nullptr)
+    {
+        g_error_free(error);
+        return Ubuntu::AppLaunch::Application::Info::UbuntuLifecycle::from_raw(false);
+    }
+
+    return Ubuntu::AppLaunch::Application::Info::UbuntuLifecycle::from_raw(keyval == TRUE);
+}())
+{
 }
+
+
 }; // namespace AppInfo
 }; // namespace AppLaunch
 }; // namespace Ubuntu

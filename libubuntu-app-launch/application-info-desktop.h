@@ -18,7 +18,7 @@
  */
 
 #include "application.h"
-#include <gio/gdesktopappinfo.h>
+#include <glib.h>
 #include <mutex>
 
 #pragma once
@@ -33,31 +33,48 @@ namespace AppInfo
 class Desktop : public Application::Info
 {
 public:
-    Desktop(std::shared_ptr<GDesktopAppInfo> appinfo,
+    Desktop(std::shared_ptr<GKeyFile> keyfile,
             const std::string& basePath);
 
-    const Application::Info::Name& name() override;
-    const Application::Info::Description& description() override;
-    const Application::Info::IconPath& iconPath() override;
-    std::list<Application::Info::Category> categories() override;
+    const Application::Info::Name& name() override
+    {
+        return _name;
+    }
+    const Application::Info::Description& description() override
+    {
+        return _description;
+    }
+    const Application::Info::IconPath& iconPath() override
+    {
+        return _iconPath;
+    }
 
-    Application::Info::SplashInfo splash() override;
+    Application::Info::SplashInfo splash() override
+    {
+        return _splashInfo;
+    }
 
-    std::vector<Application::Info::Orientations> supportedOrientations() override;
+    Application::Info::Orientations supportedOrientations() override
+    {
+        return _supportedOrientations;
+    }
 
-    Application::Info::UbuntuLifecycle ubuntuLifecycle() override;
+    Application::Info::UbuntuLifecycle ubuntuLifecycle() override
+    {
+        return _ubuntuLifecycle;
+    }
 
 private:
+    std::shared_ptr<GKeyFile> _keyfile;
+    std::string _basePath;
+
     Application::Info::Name _name;
     Application::Info::Description _description;
     Application::Info::IconPath _iconPath;
 
-    std::once_flag _nameFlag;
-    std::once_flag _descriptionFlag;
-    std::once_flag _iconPathFlag;
-
-    std::shared_ptr<GDesktopAppInfo> _appinfo;
-    std::string _basePath;
+    Application::Info::SplashInfo _splashInfo;
+    Application::Info::Orientations _supportedOrientations;
+    Application::Info::UbuntuLifecycle _ubuntuLifecycle;
 };
 
 

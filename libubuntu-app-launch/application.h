@@ -54,17 +54,14 @@ public:
         struct NameTag;
         struct DescriptionTag;
         struct IconPathTag;
-        struct CategoryTag;
 
         typedef TypeTagger<NameTag, std::string> Name;
         typedef TypeTagger<DescriptionTag, std::string> Description;
         typedef TypeTagger<IconPathTag, std::string> IconPath;
-        typedef TypeTagger<CategoryTag, std::string> Category;
 
         virtual const Name& name() = 0;
         virtual const Description& description() = 0;
         virtual const IconPath& iconPath() = 0;
-        virtual std::list<Category> categories() = 0;
 
         /* Splash information */
         struct SplashTitleTag;
@@ -87,16 +84,15 @@ public:
         virtual SplashInfo splash() = 0;
 
         /* Orientation and placement */
-        enum Orientations
+        struct Orientations
         {
-            PRIMARY,
-            PORTRAIT,
-            LANDSCAPE,
-            INVERTED_PORTRAIT,
-            INVERTED_LANDSCAPE
+            bool portrait;
+            bool landscape;
+            bool invertedPortrait;
+            bool invertedLandscape;
         };
 
-        virtual std::vector<Orientations> supportedOrientations() = 0;
+        virtual Orientations supportedOrientations() = 0;
 
         /* Lifecycle */
         struct UbuntuLifecycleTag;

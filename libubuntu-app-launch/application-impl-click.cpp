@@ -41,7 +41,7 @@ Click::Click (const AppID& appid,
     _appid(appid),
     _manifest(manifest),
     _clickDir(registry->impl->getClickDir(appid.package)),
-    _appinfo(manifestAppDesktop(manifest, appid.appname, _clickDir))
+    _keyfile(manifestAppDesktop(manifest, appid.appname, _clickDir))
 {
 }
 
@@ -54,9 +54,9 @@ Click::appId()
 std::shared_ptr<Application::Info>
 Click::info (void)
 {
-    if (_appinfo)
+    if (_keyfile)
     {
-        return std::make_shared<AppInfo::Desktop>(_appinfo, _clickDir);
+        return std::make_shared<AppInfo::Desktop>(_keyfile, _clickDir);
     }
     else
     {
@@ -116,7 +116,7 @@ Click::manifestApps (std::shared_ptr<JsonObject> manifest)
     return apps;
 }
 
-std::shared_ptr<GDesktopAppInfo>
+std::shared_ptr<GKeyFile>
 Click::manifestAppDesktop (std::shared_ptr<JsonObject> manifest, const std::string& app, const std::string& clickDir)
 {
     if (!manifest)
@@ -159,17 +159,7 @@ Click::manifestAppDesktop (std::shared_ptr<JsonObject> manifest, const std::stri
         throw std::runtime_error(perror.get()->message);
     }
 
-    auto desktop = g_desktop_app_info_new_from_keyfile(keyfile.get());
-    if (desktop == nullptr)
-    {
-        throw std::runtime_error("Unable to get desktop app info from keyfile for app '" + app + "'");
-    }
-
-    std::shared_ptr<GDesktopAppInfo> appinfo(desktop, [](GDesktopAppInfo * appinfo)
-    {
-        g_clear_object(&appinfo);
-    });
-    return appinfo;
+    return keyfile;
 }
 
 std::list<std::shared_ptr<Application>>

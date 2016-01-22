@@ -51,12 +51,12 @@ private:
     std::shared_ptr<JsonObject> _manifest;
 
     std::string _clickDir;
-    std::shared_ptr<GDesktopAppInfo> _appinfo;
+    std::shared_ptr<GKeyFile> _keyfile;
 
     static AppID::Version manifestVersion (std::shared_ptr<JsonObject> manifest);
     static std::list<AppID::AppName> manifestApps (std::shared_ptr<JsonObject> manifest);
-    static std::shared_ptr<GDesktopAppInfo> manifestAppDesktop (std::shared_ptr<JsonObject> manifest,
-                                                                const std::string& app, const std::string& clickDir);
+    static std::shared_ptr<GKeyFile> manifestAppDesktop (std::shared_ptr<JsonObject> manifest,
+                                                         const std::string& app, const std::string& clickDir);
 };
 
 }; // namespace AppImpls

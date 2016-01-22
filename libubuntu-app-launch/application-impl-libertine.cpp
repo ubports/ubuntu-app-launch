@@ -35,39 +35,58 @@ Libertine::Libertine (const AppID::Package& container,
     _container(container),
     _appname(appname)
 {
-    auto container_path = libertine_container_path(container.value().c_str());
-    auto container_app_path = g_build_filename(container_path, "usr", "share", "applications",
-                                               (appname.value() + ".desktop").c_str(), NULL);
-
-    if (g_file_test(container_app_path, G_FILE_TEST_EXISTS))
+    if (!_keyfile)
     {
-        _appinfo = std::shared_ptr<GDesktopAppInfo>(g_desktop_app_info_new_from_filename(container_app_path), [](
-                                                        GDesktopAppInfo * info)
-        {
-            g_clear_object(&info);
-        });
+        auto container_path = libertine_container_path(container.value().c_str());
+        auto container_app_path = g_build_filename(container_path, "usr", "share", "applications",
+                                                   (appname.value() + ".desktop").c_str(), NULL);
+
+        _keyfile = keyfileFromPath(container_app_path);
+
+        g_free(container_app_path);
+        g_free(container_path);
     }
-    else
+
+    if (!_keyfile)
     {
         auto home_path = libertine_container_home_path(container.value().c_str());
         auto home_app_path = g_build_filename(home_path, ".local", "share", "applications",
                                               (appname.value() + ".desktop").c_str(), NULL);
 
-        if (g_file_test(home_app_path, G_FILE_TEST_EXISTS))
-        {
-            _appinfo = std::shared_ptr<GDesktopAppInfo>(g_desktop_app_info_new_from_filename(home_app_path), [](
-                                                            GDesktopAppInfo * info)
-            {
-                g_clear_object(&info);
-            });
-        }
+        _keyfile = keyfileFromPath(home_app_path);
 
         g_free(home_app_path);
         g_free(home_path);
     }
 
-    g_free(container_app_path);
-    g_free(container_path);
+}
+
+std::shared_ptr<GKeyFile>
+Libertine::keyfileFromPath (const gchar* pathname)
+{
+    if (!g_file_test(pathname, G_FILE_TEST_EXISTS))
+    {
+        return {};
+    }
+
+    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile * keyfile)
+    {
+        if (keyfile != nullptr)
+        {
+            g_key_file_free(keyfile);
+        }
+    });
+    GError* error = nullptr;
+
+    g_key_file_load_from_file(keyfile.get(), pathname, G_KEY_FILE_NONE, &error);
+
+    if (error != nullptr)
+    {
+        g_error_free(error);
+        return {};
+    }
+
+    return keyfile;
 }
 
 std::list<std::shared_ptr<Application>>
@@ -99,9 +118,9 @@ std::list<std::shared_ptr<Application>>
 std::shared_ptr<Application::Info>
 Libertine::info (void)
 {
-    if (_appinfo)
+    if (_keyfile)
     {
-        return std::make_shared<AppInfo::Desktop>(_appinfo, libertine_container_path(_container.value().c_str()));
+        return std::make_shared<AppInfo::Desktop>(_keyfile, libertine_container_path(_container.value().c_str()));
     }
     else
     {

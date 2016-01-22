@@ -56,7 +56,9 @@ version:
 private:
     AppID::Package _container;
     AppID::AppName _appname;
-    std::shared_ptr<GDesktopAppInfo> _appinfo;
+    std::shared_ptr<GKeyFile> _keyfile;
+
+    static std::shared_ptr<GKeyFile> keyfileFromPath (const gchar* pathname);
 };
 
 }; // namespace AppImpls

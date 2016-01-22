@@ -28,34 +28,74 @@ namespace AppImpls
 {
 
 void
-clear_app_info (GDesktopAppInfo* appinfo)
+clear_keyfile (GKeyFile* keyfile)
 {
-    g_clear_object(&appinfo);
+    if (keyfile != nullptr)
+    {
+        g_key_file_free(keyfile);
+    }
 }
 
 Legacy::Legacy (const AppID::AppName& appname,
-                std::shared_ptr<GDesktopAppInfo> appinfo,
+                std::shared_ptr<GKeyFile> keyfile,
                 std::shared_ptr<Registry> registry) :
     Base(registry),
     _appname(appname),
-    _appinfo(appinfo)
+    _keyfile(keyfile)
 {
 }
 
 Legacy::Legacy (const AppID::AppName& appname,
                 std::shared_ptr<Registry> registry) :
-    Legacy(appname, std::shared_ptr<GDesktopAppInfo>(
-               g_desktop_app_info_new(appname.value().c_str()),
-               clear_app_info), registry)
+    Legacy(appname, keyfileForApp(appname), registry)
 {
+}
+
+std::shared_ptr<GKeyFile>
+Legacy::keyfileForApp(const AppID::AppName& name)
+{
+    std::string desktopName = name.value() + ".desktop";
+    auto keyfilecheck = [desktopName](const gchar * dir) -> std::shared_ptr<GKeyFile>
+    {
+        auto fullname = g_build_filename(dir, desktopName.c_str(), nullptr);
+        if (g_file_test(fullname, G_FILE_TEST_EXISTS))
+        {
+            g_free(fullname);
+            return {};
+        }
+
+        auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), clear_keyfile);
+
+        GError* error = nullptr;
+        g_key_file_load_from_file(keyfile.get(), fullname, G_KEY_FILE_NONE, &error);
+        g_free(fullname);
+
+        if (error != nullptr)
+        {
+            g_error_free(error);
+            return {};
+        }
+
+        return keyfile;
+    };
+
+    auto retval = keyfilecheck(g_get_user_data_dir());
+
+    auto systemDirs = g_get_system_data_dirs();
+    for (auto i = 0; !retval && systemDirs[i] != nullptr; i++)
+    {
+        retval = keyfilecheck(systemDirs[i]);
+    }
+
+    return retval;
 }
 
 std::shared_ptr<Application::Info>
 Legacy::info (void)
 {
-    if (_appinfo)
+    if (_keyfile)
     {
-        return std::make_shared<AppInfo::Desktop>(_appinfo, "/usr/share/icons/");
+        return std::make_shared<AppInfo::Desktop>(_keyfile, "/usr/share/icons/");
     }
     else
     {
@@ -82,9 +122,7 @@ std::list<std::shared_ptr<Application>>
             continue;
         }
 
-        g_object_ref(appinfo);
         auto app = std::make_shared<Legacy>(AppID::AppName::from_raw(g_app_info_get_id(G_APP_INFO(appinfo))),
-                                            std::shared_ptr<GDesktopAppInfo>(appinfo, clear_app_info),
                                             registry);
         list.push_back(app);
     }

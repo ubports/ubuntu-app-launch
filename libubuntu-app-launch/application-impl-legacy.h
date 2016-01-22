@@ -36,7 +36,7 @@ public:
     Legacy (const AppID::AppName& appname,
             std::shared_ptr<Registry> registry);
     Legacy (const AppID::AppName& appname,
-            std::shared_ptr<GDesktopAppInfo> appinfo,
+            std::shared_ptr<GKeyFile> keyfile,
             std::shared_ptr<Registry> registry);
 
     AppID appId() override
@@ -44,11 +44,11 @@ public:
         return
         {
 package:
-            AppID::Package::from_raw(""),
+            AppID::Package::from_raw({}),
 appname:
             _appname,
 version:
-            AppID::Version::from_raw("")
+            AppID::Version::from_raw({})
         };
     }
 
@@ -58,7 +58,9 @@ version:
 
 private:
     AppID::AppName _appname;
-    std::shared_ptr<GDesktopAppInfo> _appinfo;
+    std::shared_ptr<GKeyFile> _keyfile;
+
+    static std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name);
 };
 
 }; // namespace AppImpls
