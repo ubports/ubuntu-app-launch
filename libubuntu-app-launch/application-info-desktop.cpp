@@ -77,6 +77,29 @@ const std::string& key, const std::string& exceptionText = {}) -> T
     return retval;
 }
 
+template <typename T> auto boolFromKeyfile (std::shared_ptr<GKeyFile> keyfile, const std::string& key,
+                                            bool defaultReturn,
+const std::string& exceptionText = {}) -> T
+{
+    GError* error = nullptr;
+    auto keyval = g_key_file_get_boolean(keyfile.get(), DESKTOP_GROUP, key.c_str(), &error);
+
+    if (error != nullptr)
+    {
+        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        if (!exceptionText.empty())
+        {
+            throw std::runtime_error(exceptionText + perror.get()->message);
+        }
+
+        return T::from_raw(defaultReturn);
+    }
+
+    T retval = T::from_raw(keyval == TRUE);
+    return retval;
+}
+
+
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath) :
     _keyfile(keyfile),
     _basePath(basePath),
@@ -90,6 +113,7 @@ image: fileFromKeyfile<Application::Info::SplashImage>(keyfile, basePath, "X-Ubu
 backgroundColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color"),
 headerColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Header"),
 footerColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
+showHeader: boolFromKeyfile<Application::Info::SplashShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)
 }),
 _supportedOrientations([keyfile]()
 {
@@ -161,19 +185,8 @@ invertedLandscape:
     g_strfreev(orientationStrv);
     return retval;
 }()),
-_ubuntuLifecycle([keyfile]()
-{
-    GError* error = nullptr;
-    auto keyval = g_key_file_get_boolean(keyfile.get(), DESKTOP_GROUP, "X-Ubuntu-Touch", &error);
-
-    if (error != nullptr)
-    {
-        g_error_free(error);
-        return Ubuntu::AppLaunch::Application::Info::UbuntuLifecycle::from_raw(false);
-    }
-
-    return Ubuntu::AppLaunch::Application::Info::UbuntuLifecycle::from_raw(keyval == TRUE);
-}())
+_rotatesWindow(boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Content", true)),
+_ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
 {
 }
 

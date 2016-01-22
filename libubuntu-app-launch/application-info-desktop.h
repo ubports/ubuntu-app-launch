@@ -59,6 +59,11 @@ public:
         return _supportedOrientations;
     }
 
+    Application::Info::RotatesWindow rotatesWindowContents() override
+    {
+        return _rotatesWindow;
+    }
+
     Application::Info::UbuntuLifecycle ubuntuLifecycle() override
     {
         return _ubuntuLifecycle;
@@ -74,6 +79,7 @@ private:
 
     Application::Info::SplashInfo _splashInfo;
     Application::Info::Orientations _supportedOrientations;
+    Application::Info::RotatesWindow _rotatesWindow;
     Application::Info::UbuntuLifecycle _ubuntuLifecycle;
 };
 

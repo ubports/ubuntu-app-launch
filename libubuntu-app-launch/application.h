@@ -67,10 +67,12 @@ public:
         struct SplashTitleTag;
         struct SplashImageTag;
         struct SplashColorTag;
+        struct SplashShowHeaderTag;
 
         typedef TypeTagger<SplashTitleTag, std::string> SplashTitle;
         typedef TypeTagger<SplashImageTag, std::string> SplashImage;
         typedef TypeTagger<SplashColorTag, std::string> SplashColor;
+        typedef TypeTagger<SplashShowHeaderTag, bool> SplashShowHeader;
 
         struct SplashInfo
         {
@@ -79,6 +81,7 @@ public:
             SplashColor backgroundColor;
             SplashColor headerColor;
             SplashColor footerColor;
+            SplashShowHeader showHeader;
         };
 
         virtual SplashInfo splash() = 0;
@@ -92,7 +95,12 @@ public:
             bool invertedLandscape;
         };
 
+        struct RotatesWindowTag;
+
+        typedef TypeTagger<RotatesWindowTag, bool> RotatesWindow;
+
         virtual Orientations supportedOrientations() = 0;
+        virtual RotatesWindow rotatesWindowContents() = 0;
 
         /* Lifecycle */
         struct UbuntuLifecycleTag;
