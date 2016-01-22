@@ -85,8 +85,13 @@ target_link_libraries(ubuntu-launcher
 )
 
 install(
-	FILES ${LAUNCHER_HEADERS} ${LAUNCHER_CPP_HEADERS}
+	FILES ${LAUNCHER_HEADERS}
 	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libubuntu-app-launch-${API_VERSION}"
+)
+
+install(
+	FILES ${LAUNCHER_CPP_HEADERS}
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libubuntu-app-launch-${API_VERSION}/ubuntu-app-launch"
 )
 
 install(
