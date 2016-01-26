@@ -67,6 +67,14 @@ const std::string& key, const std::string& exceptionText = {}) -> T
         return T::from_raw({});
     }
 
+    /* If we're already an absolute path, don't prepend the base path */
+    if (keyval[0] == '/')
+    {
+        T retval = T::from_raw(keyval);
+        g_free(keyval);
+        return retval;
+    }
+
     auto cpath = g_build_filename(basePath.c_str(), keyval, nullptr);
 
     T retval = T::from_raw(cpath);
