@@ -78,6 +78,9 @@ struct AppID
     static AppID discover (const std::string& package,
                            const std::string& appname,
                            VersionWildcard versionwildcard);
+
+    static AppID find (const std::string& sappid);
+    static bool valid (const std::string& sappid);
 };
 
 }; // namespace AppLaunch

@@ -56,7 +56,7 @@ std::list<std::shared_ptr<Application>>
         std::list<std::shared_ptr<Application>> list;
         for (int i = 0; strv[i] != nullptr; i++)
         {
-            auto appid = AppID::parse(strv[i]);
+            auto appid = AppID::find(strv[i]);
             auto app = Application::create(appid, connection);
             list.push_back(app);
         }

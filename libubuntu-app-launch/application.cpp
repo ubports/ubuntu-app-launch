@@ -28,6 +28,7 @@ extern "C" {
 #include "application-impl-libertine.h"
 
 #include <iostream>
+#include <regex>
 
 namespace Ubuntu
 {
@@ -38,6 +39,11 @@ std::shared_ptr<Application>
 Application::create (const AppID& appid,
                      std::shared_ptr<Registry> registry)
 {
+    if (appid.empty())
+    {
+        throw std::runtime_error("AppID is empty");
+    }
+
     std::string sappid = appid;
     if (app_info_legacy(appid.appname.value().c_str(), NULL, NULL))
     {
@@ -71,12 +77,33 @@ AppID::AppID (Package pkg, AppName app, Version ver) :
 {
 }
 
+/* These are the Regex's taken from the Click Reviewer Tools
+   on Jan 16, 2016 revision 566 */
+#define REGEX_PKGNAME "([a-z0-9][a-z0-9+.-]+)"
+#define REGEX_APPNAME "([A-Za-z0-9+-.:~-]+)"
+#define REGEX_VERSION "([\\d+:]?[A-Za-z0-9.+:~-]+?[-[A-Za-z0-9+.~]+]?)"
+
+const std::regex full_appid_regex("^" REGEX_PKGNAME "_" REGEX_APPNAME "_" REGEX_VERSION "$");
+const std::regex short_appid_regex("^" REGEX_PKGNAME "_" REGEX_APPNAME "$");
+const std::regex legacy_appid_regex("^" REGEX_APPNAME "$");
+
 AppID
 AppID::parse (const std::string& sappid)
 {
-    /* Allow returning an empty AppID with empty internal */
-    if (sappid.empty())
+    std::smatch match;
+
+    if (std::regex_match(sappid, match, full_appid_regex))
     {
+        return
+        {
+            AppID::Package::from_raw(match[1].str()),
+            AppID::AppName::from_raw(match[2].str()),
+            AppID::Version::from_raw(match[3].str())
+        };
+    }
+    else
+    {
+        /* Allow returning an empty AppID with empty internal */
         return
         {
             AppID::Package::from_raw({}),
@@ -84,14 +111,38 @@ AppID::parse (const std::string& sappid)
             AppID::Version::from_raw({})
         };
     }
+}
 
-    gchar* cpackage;
-    gchar* cappname;
-    gchar* cversion;
+bool
+AppID::valid (const std::string& sappid)
+{
+    return std::regex_match(sappid, full_appid_regex);
+}
 
-    if (ubuntu_app_launch_app_id_parse(sappid.c_str(), &cpackage, &cappname, &cversion) == FALSE)
+AppID
+AppID::find (const std::string& sappid)
+{
+    std::smatch match;
+
+    if (std::regex_match(sappid, match, full_appid_regex))
     {
-        /* Assume we're a legacy appid */
+        return
+        {
+            AppID::Package::from_raw(match[1].str()),
+            AppID::AppName::from_raw(match[2].str()),
+            AppID::Version::from_raw(match[3].str())
+        };
+
+    }
+    else if (std::regex_match(sappid, match, short_appid_regex))
+    {
+        return discover(
+                   match[1].str(),
+                   match[2].str()
+               );
+    }
+    else if (std::regex_match(sappid, match, legacy_appid_regex))
+    {
         return
         {
             AppID::Package::from_raw({}),
@@ -99,18 +150,18 @@ AppID::parse (const std::string& sappid)
             AppID::Version::from_raw({})
         };
     }
+    else
+    {
+        return
+        {
+            AppID::Package::from_raw({}),
+            AppID::AppName::from_raw({}),
+            AppID::Version::from_raw({})
+        };
 
-    AppID appid(
-        AppID::Package::from_raw(cpackage),
-        AppID::AppName::from_raw(cappname),
-        AppID::Version::from_raw(cversion)
-    );
+    }
 
-    g_free(cpackage);
-    g_free(cappname);
-    g_free(cversion);
 
-    return appid;
 }
 
 AppID::operator std::string() const

@@ -506,13 +506,13 @@ TEST_F(LibUAL, ApplicationLog)
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log"),
               app->instances()[0]->logPath());
 
-    appid = Ubuntu::AppLaunch::AppID::parse("single");
+    appid = Ubuntu::AppLaunch::AppID::find("single");
     app = Ubuntu::AppLaunch::Application::create(appid, registry);
 
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
               app->instances()[0]->logPath());
 
-    appid = Ubuntu::AppLaunch::AppID::parse("bar");
+    appid = Ubuntu::AppLaunch::AppID::find("bar");
     app = Ubuntu::AppLaunch::Application::create(appid, registry);
 
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-bar-2342345.log"),
@@ -530,7 +530,7 @@ TEST_F(LibUAL, ApplicationPid)
     /* Check primary pid, which comes from Upstart */
     EXPECT_EQ(getpid(), app->instances()[0]->primaryPid());
 
-    auto barappid = Ubuntu::AppLaunch::AppID::parse("bar");
+    auto barappid = Ubuntu::AppLaunch::AppID::find("bar");
     auto barapp = Ubuntu::AppLaunch::Application::create(barappid, registry);
     EXPECT_EQ(5678, barapp->instances()[0]->primaryPid());
 
@@ -559,7 +559,7 @@ TEST_F(LibUAL, ApplicationPid)
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
     /* Legacy Single Instance */
-    auto singleappid = Ubuntu::AppLaunch::AppID::parse("single");
+    auto singleappid = Ubuntu::AppLaunch::AppID::find("single");
     auto singleapp = Ubuntu::AppLaunch::Application::create(singleappid, registry);
 
     EXPECT_TRUE(singleapp->instances()[0]->hasPid(100));
@@ -623,7 +623,7 @@ TEST_F(LibUAL, ApplicationId)
 TEST_F(LibUAL, AppIdParse)
 {
     EXPECT_FALSE(Ubuntu::AppLaunch::AppID::parse("com.ubuntu.test_test_123").empty());
-    EXPECT_FALSE(Ubuntu::AppLaunch::AppID::parse("inkscape").empty());
+    EXPECT_FALSE(Ubuntu::AppLaunch::AppID::find("inkscape").empty());
 
     auto id = Ubuntu::AppLaunch::AppID::parse("com.ubuntu.test_test_123");
 
@@ -1040,7 +1040,7 @@ TEST_F(LibUAL, LegacySingleInstance)
                                                                  "com.ubuntu.Upstart0_6.Job", NULL);
 
     /* Check for a single-instance app */
-    auto singleappid = Ubuntu::AppLaunch::AppID::parse("single");
+    auto singleappid = Ubuntu::AppLaunch::AppID::find("single");
     auto singleapp = Ubuntu::AppLaunch::Application::create(singleappid, registry);
 
     singleapp->launch();
@@ -1065,7 +1065,7 @@ TEST_F(LibUAL, LegacySingleInstance)
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
     /* Check for a multi-instance app */
-    auto multipleappid = Ubuntu::AppLaunch::AppID::parse("multiple");
+    auto multipleappid = Ubuntu::AppLaunch::AppID::find("multiple");
     auto multipleapp = Ubuntu::AppLaunch::Application::create(multipleappid, registry);
 
     multipleapp->launch();
@@ -1744,7 +1744,7 @@ TEST_F(LibUAL, AppInfo)
     EXPECT_EQ("Application", app->info()->name().value());
 
     /* Correct values from a legacy */
-    auto barid = Ubuntu::AppLaunch::AppID::parse("bar");
+    auto barid = Ubuntu::AppLaunch::AppID::find("bar");
     auto bar = Ubuntu::AppLaunch::Application::create(barid, registry);
 
     EXPECT_FALSE((bool)bar->info());
