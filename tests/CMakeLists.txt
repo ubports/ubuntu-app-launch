@@ -57,6 +57,15 @@ add_executable (socket-tool
 add_test (NAME libual-test COMMAND libual-test)
 add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
+# Application Info Desktop
+
+add_executable (application-info-desktop-test
+	application-info-desktop.cpp
+	${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-info-desktop.cpp)
+target_link_libraries (application-info-desktop-test gtest ${GTEST_LIBS} ubuntu-launcher)
+
+add_test (NAME application-info-desktop-test COMMAND application-info-desktop-test)
+
 # Failure Test
 
 add_definitions ( -DAPP_FAILED_TOOL="${CMAKE_BINARY_DIR}/application-failed" )

@@ -109,12 +109,20 @@ const std::string& exceptionText = {}) -> T
 
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath) :
-    _keyfile(keyfile),
-    _basePath(basePath),
-    _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile")),
-    _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment")),
-    _iconPath(fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file")),
-    _splashInfo(
+    _keyfile([keyfile]()
+{
+    if (!keyfile)
+    {
+        throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
+    }
+    return keyfile;
+}()
+        ),
+        _basePath(basePath),
+        _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile")),
+        _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment")),
+        _iconPath(fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file")),
+        _splashInfo(
 {
 title: stringFromKeyfile<Application::Info::SplashTitle>(keyfile, "X-Ubuntu-Splash-Title"),
 image: fileFromKeyfile<Application::Info::SplashImage>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
