@@ -1,3 +1,11 @@
+ubuntu-app-launch (0.9) UNRELEASED; urgency=medium
+
+  * Add new C++ API that has a retained object for maintaining
+    connections through multiple calls. Also provides for getting
+    consistent application metadata.
+
+ -- Ted Gould <ted@ubuntu.com>  Tue, 26 Jan 2016 15:22:06 -0600
+
 ubuntu-app-launch (0.5+15.10.20150817-0ubuntu1) wily; urgency=medium
 
   [ CI Train Bot ]
