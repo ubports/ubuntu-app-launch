@@ -32,9 +32,53 @@ class ApplicationInfoDesktop : public ::testing::Test
     }
 };
 
-TEST_F(ApplicationInfoDesktop, NullKeyfile)
+#define DESKTOP "Desktop Entry"
+
+TEST_F(ApplicationInfoDesktop, DefaultState)
+{
+    auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
+    g_key_file_set_string(keyfile.get(), DESKTOP, "Name", "Foo App");
+    g_key_file_set_string(keyfile.get(), DESKTOP, "Exec", "foo");
+    g_key_file_set_string(keyfile.get(), DESKTOP, "Icon", "foo.png");
+
+    auto appinfo = Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/");
+
+    EXPECT_EQ("Foo App", appinfo.name().value());
+    EXPECT_EQ("", appinfo.description().value());
+    EXPECT_EQ("/foo.png", appinfo.iconPath().value());
+
+    EXPECT_EQ("", appinfo.splash().title.value());
+    EXPECT_EQ("", appinfo.splash().image.value());
+    EXPECT_EQ("", appinfo.splash().backgroundColor.value());
+    EXPECT_EQ("", appinfo.splash().headerColor.value());
+    EXPECT_EQ("", appinfo.splash().footerColor.value());
+    EXPECT_FALSE( appinfo.splash().showHeader.value());
+
+    EXPECT_TRUE(appinfo.supportedOrientations().portrait);
+    EXPECT_TRUE(appinfo.supportedOrientations().landscape);
+    EXPECT_TRUE(appinfo.supportedOrientations().invertedPortrait);
+    EXPECT_TRUE(appinfo.supportedOrientations().invertedLandscape);
+
+    EXPECT_TRUE(appinfo.rotatesWindowContents().value());
+
+    EXPECT_FALSE(appinfo.ubuntuLifecycle().value());
+}
+
+TEST_F(ApplicationInfoDesktop, KeyfileErrors)
 {
     EXPECT_THROW(Ubuntu::AppLaunch::AppInfo::Desktop({}, "/"), std::runtime_error);
 
+    auto noname = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
+    g_key_file_set_string(noname.get(), DESKTOP, "Comment", "This is a comment");
+    g_key_file_set_string(noname.get(), DESKTOP, "Exec", "foo");
+    g_key_file_set_string(noname.get(), DESKTOP, "Icon", "foo.png");
 
+    EXPECT_THROW(Ubuntu::AppLaunch::AppInfo::Desktop(noname, "/"), std::runtime_error);
+
+    auto noicon = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
+    g_key_file_set_string(noicon.get(), DESKTOP, "Name", "Foo App");
+    g_key_file_set_string(noicon.get(), DESKTOP, "Comment", "This is a comment");
+    g_key_file_set_string(noicon.get(), DESKTOP, "Exec", "foo");
+
+    EXPECT_THROW(Ubuntu::AppLaunch::AppInfo::Desktop(noicon, "/"), std::runtime_error);
 }
