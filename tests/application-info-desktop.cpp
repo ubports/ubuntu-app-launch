@@ -118,6 +118,10 @@ invertedLandscape:
     EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: false, invertedLandscape: false}),
               Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
 
+    g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "landscape  ;  portrait;	invertedPortrait");
+    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: true, invertedLandscape: false}),
+              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "portrait;landscape;");
     EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: false, invertedLandscape: false}),
               Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
@@ -134,4 +138,11 @@ invertedLandscape:
     EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: true, invertedLandscape: true}),
               Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
 
+    g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "primary;");
+    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: false, landscape: false, invertedPortrait: false, invertedLandscape: false}),
+              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+
+    g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "foobar;primary;");
+    EXPECT_EQ(defaultOrientations,
+              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
 }

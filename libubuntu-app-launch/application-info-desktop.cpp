@@ -171,6 +171,8 @@ invertedLandscape:
     {
         for (auto i = 0; orientationStrv[i] != nullptr; i++)
         {
+            g_strstrip(orientationStrv[i]); /* remove whitespace */
+
             if (g_ascii_strcasecmp("portrait", orientationStrv[i]) == 0)
             {
                 retval.portrait = true;
@@ -186,6 +188,10 @@ invertedLandscape:
             else if (g_ascii_strcasecmp("invertedLandscape", orientationStrv[i]) == 0)
             {
                 retval.invertedLandscape = true;
+            }
+            else if (g_ascii_strcasecmp("primary", orientationStrv[i]) == 0 && i == 0)
+            {
+                /* Pass, we'll let primary be the first entry, it should be the only. */
             }
             else
             {
