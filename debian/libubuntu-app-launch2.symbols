@@ -1,6 +1,8 @@
 libubuntu-app-launch.so.2 libubuntu-app-launch2 #MINVER#
  (c++)"Ubuntu::AppLaunch::Application::create(Ubuntu::AppLaunch::AppID const&, std::shared_ptr<Ubuntu::AppLaunch::Registry>)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::parse(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
+ (c++)"Ubuntu::AppLaunch::AppID::valid(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
+ (c++)"Ubuntu::AppLaunch::AppID::find(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Ubuntu::AppLaunch::AppID::ApplicationWildcard)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Ubuntu::AppLaunch::AppID::ApplicationWildcard, Ubuntu::AppLaunch::AppID::VersionWildcard)@Base" 0replaceme
