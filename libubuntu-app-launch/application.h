@@ -93,6 +93,12 @@ public:
             bool landscape;
             bool invertedPortrait;
             bool invertedLandscape;
+
+            bool operator== (const Orientations& b) const
+            {
+                return portrait == b.portrait && landscape == b.landscape && invertedPortrait == b.invertedPortrait
+                       && invertedLandscape == b.invertedLandscape;
+            }
         };
 
         struct RotatesWindowTag;
