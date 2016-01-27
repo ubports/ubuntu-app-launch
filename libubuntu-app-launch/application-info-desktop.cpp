@@ -207,7 +207,7 @@ invertedLandscape:
     g_strfreev(orientationStrv);
     return retval;
 }()),
-_rotatesWindow(boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Content", true)),
+_rotatesWindow(boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Content", false)),
 _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
 {
 }

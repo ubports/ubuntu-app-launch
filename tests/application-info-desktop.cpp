@@ -59,7 +59,7 @@ TEST_F(ApplicationInfoDesktop, DefaultState)
     EXPECT_TRUE(appinfo.supportedOrientations().invertedPortrait);
     EXPECT_TRUE(appinfo.supportedOrientations().invertedLandscape);
 
-    EXPECT_TRUE(appinfo.rotatesWindowContents().value());
+    EXPECT_FALSE(appinfo.rotatesWindowContents().value());
 
     EXPECT_FALSE(appinfo.ubuntuLifecycle().value());
 }
