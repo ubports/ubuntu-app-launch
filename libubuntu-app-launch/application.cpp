@@ -45,7 +45,7 @@ Application::create (const AppID& appid,
     }
 
     std::string sappid = appid;
-    if (app_info_legacy(appid.appname.value().c_str(), NULL, NULL))
+    if (app_info_legacy(sappid.c_str(), NULL, NULL))
     {
         return std::make_shared<AppImpls::Legacy>(appid.appname, registry);
     }
@@ -255,6 +255,7 @@ AppID::discover (const std::string& package, const std::string& appname, const s
                  AppID::parse("");
 
     g_free(cappid);
+
     return appid;
 }
 
@@ -273,7 +274,16 @@ AppID::discover (const std::string& package, ApplicationWildcard appwildcard, Ve
 AppID
 AppID::discover (const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
 {
-    return discover(package, appname, ver_wildcard(versionwildcard));
+    auto appid = discover(package, appname, ver_wildcard(versionwildcard));
+
+	if (appid.empty()) {
+		/* If we weren't able to go that route, we can see if it's libertine */
+		if (app_info_libertine((package + "_" + appname + "_0.0").c_str(), nullptr, nullptr)) {
+			appid = AppID(Package::from_raw(package), AppName::from_raw(appname), Version::from_raw("0.0"));
+		}
+	}
+
+	return appid;
 }
 
 

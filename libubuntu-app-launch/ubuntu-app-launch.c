@@ -1522,7 +1522,7 @@ ubuntu_app_launch_get_pids (const gchar * appid)
 
 		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
-	} else if (!is_libertine(appid) && legacy_single_instance(appid)) {
+	} else if (is_libertine(appid) || legacy_single_instance(appid)) {
 		gchar * jobname = g_strdup_printf("%s-", appid);
 		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
 		g_free(jobname);
