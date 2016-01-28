@@ -64,20 +64,15 @@ struct AppID
         CURRENT_USER_VERSION
     };
 
-    static AppID discover (const std::string& package);
     static AppID discover (const std::string& package,
-                           const std::string& appname);
+                           ApplicationWildcard appwildcard = ApplicationWildcard::FIRST_LISTED,
+                           VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
+    static AppID discover (const std::string& package,
+                           const std::string& appname,
+                           VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
     static AppID discover (const std::string& package,
                            const std::string& appname,
                            const std::string& version);
-    static AppID discover (const std::string& package,
-                           ApplicationWildcard appwildcard);
-    static AppID discover (const std::string& package,
-                           ApplicationWildcard appwildcard,
-                           VersionWildcard versionwildcard);
-    static AppID discover (const std::string& package,
-                           const std::string& appname,
-                           VersionWildcard versionwildcard);
 
     static AppID find (const std::string& sappid);
     static bool valid (const std::string& sappid);

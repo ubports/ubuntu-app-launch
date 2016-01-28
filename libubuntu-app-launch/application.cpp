@@ -234,18 +234,6 @@ ver_wildcard (AppID::VersionWildcard card)
 }
 
 AppID
-AppID::discover (const std::string& package)
-{
-    return discover(package, ApplicationWildcard::FIRST_LISTED, VersionWildcard::CURRENT_USER_VERSION);
-}
-
-AppID
-AppID::discover (const std::string& package, const std::string& appname)
-{
-    return discover(package, appname, VersionWildcard::CURRENT_USER_VERSION);
-}
-
-AppID
 AppID::discover (const std::string& package, const std::string& appname, const std::string& version)
 {
     auto cappid = ubuntu_app_launch_triplet_to_app_id(package.c_str(), appname.c_str(), version.c_str());
@@ -257,12 +245,6 @@ AppID::discover (const std::string& package, const std::string& appname, const s
     g_free(cappid);
 
     return appid;
-}
-
-AppID
-AppID::discover (const std::string& package, ApplicationWildcard appwildcard)
-{
-    return AppID::discover(package, appwildcard, VersionWildcard::CURRENT_USER_VERSION);
 }
 
 AppID
