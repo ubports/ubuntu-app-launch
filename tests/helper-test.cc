@@ -266,6 +266,8 @@ TEST_F(HelperTest, KeyfileForAppid)
 
 TEST_F(HelperTest, SetConfinedEnvvars)
 {
+	g_unsetenv("XDG_DATA_DIRS");
+
 	DbusTestService * service = dbus_test_service_new(NULL);
 	DbusTestDbusMock * mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
 
@@ -335,6 +337,7 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 			got_runtime_dir = true;
 		} else if (g_strcmp0(var, "XDG_DATA_DIRS") == 0) {
 			ASSERT_TRUE(g_str_has_prefix(value, "/foo/bar:"));
+			ASSERT_TRUE(g_strstr_len(value, -1, "/usr/share") != NULL);
 			got_data_dirs = true;
 		} else if (g_strcmp0(var, "TMPDIR") == 0) {
 			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
