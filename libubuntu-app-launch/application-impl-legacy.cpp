@@ -27,8 +27,7 @@ namespace AppLaunch
 namespace AppImpls
 {
 
-void
-clear_keyfile (GKeyFile* keyfile)
+void clear_keyfile(GKeyFile* keyfile)
 {
     if (keyfile != nullptr)
     {
@@ -36,26 +35,22 @@ clear_keyfile (GKeyFile* keyfile)
     }
 }
 
-Legacy::Legacy (const AppID::AppName& appname,
-                std::shared_ptr<GKeyFile> keyfile,
-                std::shared_ptr<Registry> registry) :
-    Base(registry),
-    _appname(appname),
-    _keyfile(keyfile)
+Legacy::Legacy(const AppID::AppName& appname, std::shared_ptr<GKeyFile> keyfile, std::shared_ptr<Registry> registry)
+    : Base(registry)
+    , _appname(appname)
+    , _keyfile(keyfile)
 {
 }
 
-Legacy::Legacy (const AppID::AppName& appname,
-                std::shared_ptr<Registry> registry) :
-    Legacy(appname, keyfileForApp(appname), registry)
+Legacy::Legacy(const AppID::AppName& appname, std::shared_ptr<Registry> registry)
+    : Legacy(appname, keyfileForApp(appname), registry)
 {
 }
 
-std::shared_ptr<GKeyFile>
-Legacy::keyfileForApp(const AppID::AppName& name)
+std::shared_ptr<GKeyFile> Legacy::keyfileForApp(const AppID::AppName& name)
 {
     std::string desktopName = name.value() + ".desktop";
-    auto keyfilecheck = [desktopName](const gchar * dir) -> std::shared_ptr<GKeyFile>
+    auto keyfilecheck = [desktopName](const gchar* dir) -> std::shared_ptr<GKeyFile>
     {
         auto fullname = g_build_filename(dir, "applications", desktopName.c_str(), nullptr);
         if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
@@ -90,8 +85,7 @@ Legacy::keyfileForApp(const AppID::AppName& name)
     return retval;
 }
 
-std::shared_ptr<Application::Info>
-Legacy::info (void)
+std::shared_ptr<Application::Info> Legacy::info(void)
 {
     if (_keyfile)
     {
@@ -103,8 +97,7 @@ Legacy::info (void)
     }
 }
 
-std::list<std::shared_ptr<Application>>
-                                     Legacy::list (std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Legacy::list(std::shared_ptr<Registry> registry)
 {
     std::list<std::shared_ptr<Application>> list;
     GList* head = g_app_info_get_all();
@@ -122,8 +115,7 @@ std::list<std::shared_ptr<Application>>
             continue;
         }
 
-        auto app = std::make_shared<Legacy>(AppID::AppName::from_raw(g_app_info_get_id(G_APP_INFO(appinfo))),
-                                            registry);
+        auto app = std::make_shared<Legacy>(AppID::AppName::from_raw(g_app_info_get_id(G_APP_INFO(appinfo))), registry);
         list.push_back(app);
     }
 
@@ -132,6 +124,6 @@ std::list<std::shared_ptr<Application>>
     return list;
 }
 
-}; // namespace AppImpls
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppImpls
+};  // namespace AppLaunch
+};  // namespace Ubuntu

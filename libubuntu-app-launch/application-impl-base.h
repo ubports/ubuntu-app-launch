@@ -35,17 +35,18 @@ namespace AppImpls
 class Base : public Ubuntu::AppLaunch::Application
 {
 public:
-    Base (std::shared_ptr<Registry> registry);
+    Base(std::shared_ptr<Registry> registry);
 
     bool hasInstances() override;
     std::vector<std::shared_ptr<Instance>> instances() override;
 
     std::shared_ptr<Instance> launch(std::vector<Application::URL> urls = {}) override;
     std::shared_ptr<Instance> launchTest(std::vector<Application::URL> urls = {}) override;
+
 protected:
     std::shared_ptr<Registry> _registry;
 };
 
-}; // namespace AppImpls
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppImpls
+};  // namespace AppLaunch
+};  // namespace Ubuntu

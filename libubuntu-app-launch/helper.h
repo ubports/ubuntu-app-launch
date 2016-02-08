@@ -44,9 +44,7 @@ public:
     typedef TypeTagger<TypeTag, std::string> Type;
     typedef TypeTagger<URLTag, std::string> URL;
 
-    static std::shared_ptr<Helper> create (Type type,
-                                           AppID appid,
-                                           std::shared_ptr<Registry> registry);
+    static std::shared_ptr<Helper> create(Type type, AppID appid, std::shared_ptr<Registry> registry);
 
     virtual AppID appId() = 0;
 
@@ -67,7 +65,7 @@ public:
     virtual std::shared_ptr<Instance> launch(MirPromptSession* session, std::vector<URL> urls = {}) = 0;
 };
 
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppLaunch
+};  // namespace Ubuntu
 
 #pragma GCC visibility pop

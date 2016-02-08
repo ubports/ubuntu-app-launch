@@ -28,31 +28,26 @@ namespace AppLaunch
 namespace AppImpls
 {
 
-Click::Click (const AppID& appid,
-              std::shared_ptr<Registry> registry) :
-    Click(appid, registry->impl->getClickManifest(appid.package), registry)
+Click::Click(const AppID& appid, std::shared_ptr<Registry> registry)
+    : Click(appid, registry->impl->getClickManifest(appid.package), registry)
 {
 }
 
-Click::Click (const AppID& appid,
-              std::shared_ptr<JsonObject> manifest,
-              std::shared_ptr<Registry> registry) :
-    Base(registry),
-    _appid(appid),
-    _manifest(manifest),
-    _clickDir(registry->impl->getClickDir(appid.package)),
-    _keyfile(manifestAppDesktop(manifest, appid.appname, _clickDir))
+Click::Click(const AppID& appid, std::shared_ptr<JsonObject> manifest, std::shared_ptr<Registry> registry)
+    : Base(registry)
+    , _appid(appid)
+    , _manifest(manifest)
+    , _clickDir(registry->impl->getClickDir(appid.package))
+    , _keyfile(manifestAppDesktop(manifest, appid.appname, _clickDir))
 {
 }
 
-AppID
-Click::appId()
+AppID Click::appId()
 {
     return _appid;
 }
 
-std::shared_ptr<Application::Info>
-Click::info (void)
+std::shared_ptr<Application::Info> Click::info(void)
 {
     if (_keyfile)
     {
@@ -64,8 +59,7 @@ Click::info (void)
     }
 }
 
-AppID::Version
-Click::manifestVersion (std::shared_ptr<JsonObject> manifest)
+AppID::Version Click::manifestVersion(std::shared_ptr<JsonObject> manifest)
 {
     auto cstr = json_object_get_string_member(manifest.get(), "version");
 
@@ -78,8 +72,7 @@ Click::manifestVersion (std::shared_ptr<JsonObject> manifest)
     return cppstr;
 }
 
-std::list<AppID::AppName>
-Click::manifestApps (std::shared_ptr<JsonObject> manifest)
+std::list<AppID::AppName> Click::manifestApps(std::shared_ptr<JsonObject> manifest)
 {
     if (!manifest)
     {
@@ -116,8 +109,9 @@ Click::manifestApps (std::shared_ptr<JsonObject> manifest)
     return apps;
 }
 
-std::shared_ptr<GKeyFile>
-Click::manifestAppDesktop (std::shared_ptr<JsonObject> manifest, const std::string& app, const std::string& clickDir)
+std::shared_ptr<GKeyFile> Click::manifestAppDesktop(std::shared_ptr<JsonObject> manifest,
+                                                    const std::string& app,
+                                                    const std::string& clickDir)
 {
     if (!manifest)
     {
@@ -162,8 +156,7 @@ Click::manifestAppDesktop (std::shared_ptr<JsonObject> manifest, const std::stri
     return keyfile;
 }
 
-std::list<std::shared_ptr<Application>>
-                                     Click::list (std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Click::list(std::shared_ptr<Registry> registry)
 {
     std::list<std::shared_ptr<Application>> applist;
 
@@ -173,15 +166,7 @@ std::list<std::shared_ptr<Application>>
 
         for (auto appname : manifestApps(manifest))
         {
-            AppID appid
-            {
-package:
-                pkg,
-appname:
-                appname,
-version:
-                manifestVersion(manifest)
-            };
+            AppID appid{package : pkg, appname : appname, version : manifestVersion(manifest)};
             auto app = std::make_shared<Click>(appid, manifest, registry);
             applist.push_back(app);
         }
@@ -190,6 +175,6 @@ version:
     return applist;
 }
 
-}; // namespace AppImpls
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppImpls
+};  // namespace AppLaunch
+};  // namespace Ubuntu

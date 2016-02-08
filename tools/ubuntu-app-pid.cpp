@@ -21,8 +21,7 @@
 #include <libubuntu-app-launch/registry.h>
 #include <libubuntu-app-launch/application.h>
 
-int
-main (int argc, char* argv[])
+int main(int argc, char* argv[])
 {
 
     if (argc != 2)

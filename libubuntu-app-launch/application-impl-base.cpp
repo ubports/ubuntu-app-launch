@@ -26,13 +26,12 @@ namespace AppLaunch
 namespace AppImpls
 {
 
-Base::Base (std::shared_ptr<Registry> registry) :
-    _registry(registry)
+Base::Base(std::shared_ptr<Registry> registry)
+    : _registry(registry)
 {
 }
 
-bool
-Base::hasInstances()
+bool Base::hasInstances()
 {
     std::string sappid = appId();
     return ubuntu_app_launch_get_primary_pid(sappid.c_str()) != 0;
@@ -63,7 +62,7 @@ public:
         g_free(cpath);
         return retval;
     }
-    std::vector<pid_t> pids () override
+    std::vector<pid_t> pids() override
     {
         std::vector<pid_t> vector;
         GList* list = ubuntu_app_launch_get_pids(_appId.c_str());
@@ -96,21 +95,19 @@ private:
     std::string _appId;
 };
 
-BaseInstance::BaseInstance (const std::string& appId) :
-    _appId(appId)
+BaseInstance::BaseInstance(const std::string& appId)
+    : _appId(appId)
 {
 }
 
-std::vector<std::shared_ptr<Application::Instance>>
-                                                 Base::instances()
+std::vector<std::shared_ptr<Application::Instance>> Base::instances()
 {
     std::vector<std::shared_ptr<Instance>> vect;
     vect.emplace_back(std::make_shared<BaseInstance>(appId()));
     return vect;
 }
 
-std::shared_ptr<gchar*>
-urlsToStrv (std::vector<Application::URL> urls)
+std::shared_ptr<gchar*> urlsToStrv(std::vector<Application::URL> urls)
 {
     auto array = g_array_new(TRUE, FALSE, sizeof(gchar*));
 
@@ -123,8 +120,7 @@ urlsToStrv (std::vector<Application::URL> urls)
     return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
-std::shared_ptr<Application::Instance>
-Base::launch(std::vector<Application::URL> urls)
+std::shared_ptr<Application::Instance> Base::launch(std::vector<Application::URL> urls)
 {
     std::string appIdStr = appId();
     std::shared_ptr<gchar*> urlstrv;
@@ -139,8 +135,7 @@ Base::launch(std::vector<Application::URL> urls)
     return std::make_shared<BaseInstance>(appIdStr);
 }
 
-std::shared_ptr<Application::Instance>
-Base::launchTest(std::vector<Application::URL> urls)
+std::shared_ptr<Application::Instance> Base::launchTest(std::vector<Application::URL> urls)
 {
     std::string appIdStr = appId();
     std::shared_ptr<gchar*> urlstrv;
@@ -155,7 +150,6 @@ Base::launchTest(std::vector<Application::URL> urls)
     return std::make_shared<BaseInstance>(appIdStr);
 }
 
-
-}; // namespace AppImpls
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppImpls
+};  // namespace AppLaunch
+};  // namespace Ubuntu

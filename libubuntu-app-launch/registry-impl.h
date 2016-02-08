@@ -50,6 +50,7 @@ public:
 #endif
 
     GLib::ContextThread thread;
+
 private:
     Registry* _registry;
 #if 0
@@ -61,8 +62,8 @@ private:
 
     std::shared_ptr<GDBusConnection> _dbus;
 
-    void initClick ();
+    void initClick();
 };
 
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppLaunch
+};  // namespace Ubuntu

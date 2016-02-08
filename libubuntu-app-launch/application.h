@@ -41,8 +41,7 @@ public:
     struct URLTag;
     typedef TypeTagger<URLTag, std::string> URL;
 
-    static std::shared_ptr<Application> create (const AppID& appid,
-                                                std::shared_ptr<Registry> registry);
+    static std::shared_ptr<Application> create(const AppID& appid, std::shared_ptr<Registry> registry);
 
     /* System level info */
     virtual AppID appId() = 0;
@@ -94,10 +93,10 @@ public:
             bool invertedPortrait;
             bool invertedLandscape;
 
-            bool operator== (const Orientations& b) const
+            bool operator==(const Orientations& b) const
             {
-                return portrait == b.portrait && landscape == b.landscape && invertedPortrait == b.invertedPortrait
-                       && invertedLandscape == b.invertedLandscape;
+                return portrait == b.portrait && landscape == b.landscape && invertedPortrait == b.invertedPortrait &&
+                       invertedLandscape == b.invertedLandscape;
             }
         };
 
@@ -145,7 +144,7 @@ public:
     virtual std::shared_ptr<Instance> launchTest(std::vector<URL> urls = {}) = 0;
 };
 
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppLaunch
+};  // namespace Ubuntu
 
 #pragma GCC visibility pop

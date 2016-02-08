@@ -28,12 +28,10 @@ namespace AppLaunch
 namespace AppImpls
 {
 
-Libertine::Libertine (const AppID::Package& container,
-                      const AppID::AppName& appname,
-                      std::shared_ptr<Registry> registry) :
-    Base(registry),
-    _container(container),
-    _appname(appname)
+Libertine::Libertine(const AppID::Package& container, const AppID::AppName& appname, std::shared_ptr<Registry> registry)
+    : Base(registry)
+    , _container(container)
+    , _appname(appname)
 {
     if (!_keyfile)
     {
@@ -58,24 +56,22 @@ Libertine::Libertine (const AppID::Package& container,
         g_free(home_app_path);
         g_free(home_path);
     }
-
 }
 
-std::shared_ptr<GKeyFile>
-Libertine::keyfileFromPath (const gchar* pathname)
+std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const gchar* pathname)
 {
     if (!g_file_test(pathname, G_FILE_TEST_EXISTS))
     {
         return {};
     }
 
-    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile * keyfile)
-    {
-        if (keyfile != nullptr)
-        {
-            g_key_file_free(keyfile);
-        }
-    });
+    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile* keyfile)
+                                      {
+                                          if (keyfile != nullptr)
+                                          {
+                                              g_key_file_free(keyfile);
+                                          }
+                                      });
     GError* error = nullptr;
 
     g_key_file_load_from_file(keyfile.get(), pathname, G_KEY_FILE_NONE, &error);
@@ -89,8 +85,7 @@ Libertine::keyfileFromPath (const gchar* pathname)
     return keyfile;
 }
 
-std::list<std::shared_ptr<Application>>
-                                     Libertine::list (std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Libertine::list(std::shared_ptr<Registry> registry)
 {
     std::list<std::shared_ptr<Application>> applist;
 
@@ -101,10 +96,10 @@ std::list<std::shared_ptr<Application>>
         auto container = containers[i];
         auto apps = libertine_list_apps_for_container(container);
 
-        for (int i = 0; apps[i] !=  nullptr; i++)
+        for (int i = 0; apps[i] != nullptr; i++)
         {
-            auto sapp = std::make_shared<Libertine>(AppID::Package::from_raw(container), AppID::AppName::from_raw(apps[i]),
-                                                    registry);
+            auto sapp = std::make_shared<Libertine>(AppID::Package::from_raw(container),
+                                                    AppID::AppName::from_raw(apps[i]), registry);
             applist.push_back(sapp);
         }
 
@@ -115,8 +110,7 @@ std::list<std::shared_ptr<Application>>
     return applist;
 }
 
-std::shared_ptr<Application::Info>
-Libertine::info (void)
+std::shared_ptr<Application::Info> Libertine::info(void)
 {
     if (_keyfile)
     {
@@ -128,6 +122,6 @@ Libertine::info (void)
     }
 }
 
-}; // namespace AppImpls
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppImpls
+};  // namespace AppLaunch
+};  // namespace Ubuntu
