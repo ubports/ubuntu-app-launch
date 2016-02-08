@@ -20,8 +20,7 @@
 #include <iostream>
 #include "libubuntu-app-launch/registry.h"
 
-int
-main (int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     auto apps = Ubuntu::AppLaunch::Registry::runningApps();
     for (auto app : apps)
@@ -31,4 +30,3 @@ main (int argc, char* argv[])
 
     return 0;
 }
-

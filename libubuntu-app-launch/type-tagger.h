@@ -15,6 +15,7 @@ public:
 	operator T() const {
 		return _value;
 	}
+	~TypeTagger (void) { }
 private:
 	TypeTagger(const T& value) : _value(value) { }
 	T _value;

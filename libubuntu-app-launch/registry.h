@@ -71,8 +71,8 @@ public:
     void clearManager ();
 
     /* Helper Lists */
-    static std::list<std::shared_ptr<Helper>> runningHelpers (Helper::Type type,
-                                                              std::shared_ptr<Registry> registry = getDefault());
+    static std::list<std::shared_ptr<Helper>> runningHelpers(Helper::Type type,
+                                                             std::shared_ptr<Registry> registry = getDefault());
 
     /* Default Junk */
     static std::shared_ptr<Registry> getDefault();
@@ -83,7 +83,7 @@ public:
     std::unique_ptr<Impl> impl;
 };
 
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppLaunch
+};  // namespace Ubuntu
 
 #pragma GCC visibility pop

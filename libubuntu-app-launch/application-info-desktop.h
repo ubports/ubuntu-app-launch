@@ -33,8 +33,7 @@ namespace AppInfo
 class Desktop : public Application::Info
 {
 public:
-    Desktop(std::shared_ptr<GKeyFile> keyfile,
-            const std::string& basePath);
+    Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath);
 
     const Application::Info::Name& name() override
     {
@@ -83,7 +82,6 @@ private:
     Application::Info::UbuntuLifecycle _ubuntuLifecycle;
 };
 
-
-}; // namespace AppInfo
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppInfo
+};  // namespace AppLaunch
+};  // namespace Ubuntu

@@ -44,14 +44,14 @@ struct AppID
     Version version;
 
     operator std::string() const;
-    int operator == (const AppID& other) const;
-    int operator != (const AppID& other) const;
+    int operator==(const AppID& other) const;
+    int operator!=(const AppID& other) const;
 
     AppID();
     AppID(Package pkg, AppName app, Version ver);
-    bool empty () const;
+    bool empty() const;
 
-    static AppID parse (const std::string& appid);
+    static AppID parse(const std::string& appid);
 
     enum ApplicationWildcard
     {
@@ -64,21 +64,19 @@ struct AppID
         CURRENT_USER_VERSION
     };
 
-    static AppID discover (const std::string& package,
-                           ApplicationWildcard appwildcard = ApplicationWildcard::FIRST_LISTED,
-                           VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
-    static AppID discover (const std::string& package,
-                           const std::string& appname,
-                           VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
-    static AppID discover (const std::string& package,
-                           const std::string& appname,
-                           const std::string& version);
+    static AppID discover(const std::string& package,
+                          ApplicationWildcard appwildcard = ApplicationWildcard::FIRST_LISTED,
+                          VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
+    static AppID discover(const std::string& package,
+                          const std::string& appname,
+                          VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
+    static AppID discover(const std::string& package, const std::string& appname, const std::string& version);
 
-    static AppID find (const std::string& sappid);
-    static bool valid (const std::string& sappid);
+    static AppID find(const std::string& sappid);
+    static bool valid(const std::string& sappid);
 };
 
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppLaunch
+};  // namespace Ubuntu
 
 #pragma GCC visibility pop

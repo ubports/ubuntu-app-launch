@@ -31,8 +31,10 @@ namespace HelperImpls
 class Click : public Helper
 {
 public:
-    Click (Helper::Type type, AppID appid, std::shared_ptr<Registry> registry) :
-        _type(type), _appid(appid), _registry(registry)
+    Click(Helper::Type type, AppID appid, std::shared_ptr<Registry> registry)
+        : _type(type)
+        , _appid(appid)
+        , _registry(registry)
     {
     }
 
@@ -55,7 +57,6 @@ private:
     std::shared_ptr<Registry> _registry;
 };
 
-}; // namespace HelperImpl
-}; // namespace AppLaunch
-}; // namespace Ubuntu
-
+};  // namespace HelperImpl
+};  // namespace AppLaunch
+};  // namespace Ubuntu

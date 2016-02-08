@@ -31,44 +31,41 @@ namespace Ubuntu
 namespace AppLaunch
 {
 
-Registry::Registry ()
+Registry::Registry()
 {
     impl = std::unique_ptr<Impl>(new Impl(this));
 }
 
-Registry::~Registry ()
+Registry::~Registry()
 {
-
 }
 
-std::list<std::shared_ptr<Application>>
-                                     Registry::runningApps(std::shared_ptr<Registry> connection)
+std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> connection)
 {
-    return connection->impl->thread.executeOnThread<std::list<std::shared_ptr<Application>>>([connection]() ->
-                                                                                             std::list<std::shared_ptr<Application>>
-    {
-        auto strv = ubuntu_app_launch_list_running_apps();
-        if (strv == nullptr)
+    return connection->impl->thread.executeOnThread<std::list<std::shared_ptr<Application>>>(
+        [connection]() -> std::list<std::shared_ptr<Application>>
         {
-            return {};
-        }
+            auto strv = ubuntu_app_launch_list_running_apps();
+            if (strv == nullptr)
+            {
+                return {};
+            }
 
-        std::list<std::shared_ptr<Application>> list;
-        for (int i = 0; strv[i] != nullptr; i++)
-        {
-            auto appid = AppID::find(strv[i]);
-            auto app = Application::create(appid, connection);
-            list.push_back(app);
-        }
+            std::list<std::shared_ptr<Application>> list;
+            for (int i = 0; strv[i] != nullptr; i++)
+            {
+                auto appid = AppID::find(strv[i]);
+                auto app = Application::create(appid, connection);
+                list.push_back(app);
+            }
 
-        g_strfreev(strv);
+            g_strfreev(strv);
 
-        return list;
-    });
+            return list;
+        });
 }
 
-std::list<std::shared_ptr<Application>>
-                                     Registry::installedApps(std::shared_ptr<Registry> connection)
+std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<Registry> connection)
 {
     std::list<std::shared_ptr<Application>> list;
 
@@ -79,8 +76,7 @@ std::list<std::shared_ptr<Application>>
     return list;
 }
 
-std::list<std::shared_ptr<Helper>>
-                                Registry::runningHelpers (Helper::Type type, std::shared_ptr<Registry> connection)
+std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, std::shared_ptr<Registry> connection)
 {
     std::list<std::shared_ptr<Helper>> list;
 
@@ -90,8 +86,7 @@ std::list<std::shared_ptr<Helper>>
 }
 
 std::shared_ptr<Registry> defaultRegistry;
-std::shared_ptr<Registry>
-Registry::getDefault()
+std::shared_ptr<Registry> Registry::getDefault()
 {
     if (!defaultRegistry)
     {
@@ -101,5 +96,5 @@ Registry::getDefault()
     return defaultRegistry;
 }
 
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppLaunch
+};  // namespace Ubuntu

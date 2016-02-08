@@ -32,23 +32,13 @@ namespace AppImpls
 class Libertine : public Base
 {
 public:
-    Libertine (const AppID::Package& container,
-               const AppID::AppName& appname,
-               std::shared_ptr<Registry> registry);
+    Libertine(const AppID::Package& container, const AppID::AppName& appname, std::shared_ptr<Registry> registry);
 
-    static std::list<std::shared_ptr<Application>> list (std::shared_ptr<Registry> registry);
+    static std::list<std::shared_ptr<Application>> list(std::shared_ptr<Registry> registry);
 
     AppID appId() override
     {
-        return
-        {
-package:
-            _container,
-appname:
-            _appname,
-version:
-            AppID::Version::from_raw("0.0")
-        };
+        return {package : _container, appname : _appname, version : AppID::Version::from_raw("0.0")};
     }
 
     std::shared_ptr<Info> info() override;
@@ -58,9 +48,9 @@ private:
     AppID::AppName _appname;
     std::shared_ptr<GKeyFile> _keyfile;
 
-    static std::shared_ptr<GKeyFile> keyfileFromPath (const gchar* pathname);
+    static std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname);
 };
 
-}; // namespace AppImpls
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppImpls
+};  // namespace AppLaunch
+};  // namespace Ubuntu

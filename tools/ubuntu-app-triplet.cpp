@@ -20,8 +20,7 @@
 #include <iostream>
 #include "libubuntu-app-launch/application.h"
 
-int
-main (int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     Ubuntu::AppLaunch::AppID appid;
 

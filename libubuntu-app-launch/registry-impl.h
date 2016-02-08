@@ -48,6 +48,7 @@ public:
     void clearManager ();
 
     GLib::ContextThread thread;
+
 private:
     Registry* _registry;
     Registry::Manager* _manager;
@@ -57,8 +58,8 @@ private:
 
     std::shared_ptr<GDBusConnection> _dbus;
 
-    void initClick ();
+    void initClick();
 };
 
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppLaunch
+};  // namespace Ubuntu

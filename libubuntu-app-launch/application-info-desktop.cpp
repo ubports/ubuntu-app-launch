@@ -28,8 +28,9 @@ namespace AppInfo
 
 const char* DESKTOP_GROUP = "Desktop Entry";
 
-template <typename T> auto stringFromKeyfile (std::shared_ptr<GKeyFile> keyfile, const std::string& key,
-const std::string& exceptionText = {}) -> T
+template <typename T>
+auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, const std::string& exceptionText = {})
+    -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
@@ -50,8 +51,11 @@ const std::string& exceptionText = {}) -> T
     return retval;
 }
 
-template <typename T> auto fileFromKeyfile (std::shared_ptr<GKeyFile> keyfile, const std::string basePath,
-const std::string& key, const std::string& exceptionText = {}) -> T
+template <typename T>
+auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
+                     const std::string basePath,
+                     const std::string& key,
+                     const std::string& exceptionText = {}) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
@@ -85,9 +89,11 @@ const std::string& key, const std::string& exceptionText = {}) -> T
     return retval;
 }
 
-template <typename T> auto boolFromKeyfile (std::shared_ptr<GKeyFile> keyfile, const std::string& key,
-                                            bool defaultReturn,
-const std::string& exceptionText = {}) -> T
+template <typename T>
+auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
+                     const std::string& key,
+                     bool defaultReturn,
+                     const std::string& exceptionText = {}) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_boolean(keyfile.get(), DESKTOP_GROUP, key.c_str(), &error);
@@ -107,112 +113,93 @@ const std::string& exceptionText = {}) -> T
     return retval;
 }
 
+Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
+    : _keyfile([keyfile]()
+               {
+                   if (!keyfile)
+                   {
+                       throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
+                   }
+                   return keyfile;
+               }())
+    , _basePath(basePath)
+    , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
+    , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
+    , _iconPath(
+          fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file"))
+    , _splashInfo({
+        title : stringFromKeyfile<Application::Info::SplashTitle>(keyfile, "X-Ubuntu-Splash-Title"),
+        image : fileFromKeyfile<Application::Info::SplashImage>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
+        backgroundColor : stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color"),
+        headerColor : stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Header"),
+        footerColor : stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
+        showHeader : boolFromKeyfile<Application::Info::SplashShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)
+    })
+    , _supportedOrientations(
+          [keyfile]()
+          {
+              Orientations all = {portrait : true, landscape : true, invertedPortrait : true, invertedLandscape : true};
 
-Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath) :
-    _keyfile([keyfile]()
-{
-    if (!keyfile)
-    {
-        throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
-    }
-    return keyfile;
-}()
-        ),
-        _basePath(basePath),
-        _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile")),
-        _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment")),
-        _iconPath(fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file")),
-        _splashInfo(
-{
-title: stringFromKeyfile<Application::Info::SplashTitle>(keyfile, "X-Ubuntu-Splash-Title"),
-image: fileFromKeyfile<Application::Info::SplashImage>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
-backgroundColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color"),
-headerColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Header"),
-footerColor: stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
-showHeader: boolFromKeyfile<Application::Info::SplashShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)
-}),
-_supportedOrientations([keyfile]()
-{
-    Orientations all =
-    {
-portrait:
-        true,
-landscape:
-        true,
-invertedPortrait:
-        true,
-invertedLandscape:
-        true
-    };
+              GError* error = nullptr;
+              auto orientationStrv = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP,
+                                                                "X-Ubuntu-Supported-Orientations", nullptr, &error);
 
-    GError* error = nullptr;
-    auto orientationStrv = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, "X-Ubuntu-Supported-Orientations",
-                                                      nullptr, &error);
+              if (error != nullptr)
+              {
+                  g_error_free(error);
+                  return all;
+              }
 
-    if (error != nullptr)
-    {
-        g_error_free(error);
-        return all;
-    }
+              Orientations retval =
+                  {portrait : false, landscape : false, invertedPortrait : false, invertedLandscape : false};
 
-    Orientations retval =
-    {
-portrait:
-        false,
-landscape:
-        false,
-invertedPortrait:
-        false,
-invertedLandscape:
-        false
-    };
+              try
+              {
+                  for (auto i = 0; orientationStrv[i] != nullptr; i++)
+                  {
+                      g_strstrip(orientationStrv[i]); /* remove whitespace */
 
-    try
-    {
-        for (auto i = 0; orientationStrv[i] != nullptr; i++)
-        {
-            g_strstrip(orientationStrv[i]); /* remove whitespace */
+                      if (g_ascii_strcasecmp("portrait", orientationStrv[i]) == 0)
+                      {
+                          retval.portrait = true;
+                      }
+                      else if (g_ascii_strcasecmp("landscape", orientationStrv[i]) == 0)
+                      {
+                          retval.landscape = true;
+                      }
+                      else if (g_ascii_strcasecmp("invertedPortrait", orientationStrv[i]) == 0)
+                      {
+                          retval.invertedPortrait = true;
+                      }
+                      else if (g_ascii_strcasecmp("invertedLandscape", orientationStrv[i]) == 0)
+                      {
+                          retval.invertedLandscape = true;
+                      }
+                      else if (g_ascii_strcasecmp("primary", orientationStrv[i]) == 0 && i == 0)
+                      {
+                          /* Pass, we'll let primary be the first entry, it should be the only. */
+                      }
+                      else
+                      {
+                          throw std::runtime_error("Invalid orientation string '" + std::string(orientationStrv[i]) +
+                                                   "'");
+                      }
+                  }
+              }
+              catch (...)
+              {
+                  retval = all;
+              }
 
-            if (g_ascii_strcasecmp("portrait", orientationStrv[i]) == 0)
-            {
-                retval.portrait = true;
-            }
-            else if (g_ascii_strcasecmp("landscape", orientationStrv[i]) == 0)
-            {
-                retval.landscape = true;
-            }
-            else if (g_ascii_strcasecmp("invertedPortrait", orientationStrv[i]) == 0)
-            {
-                retval.invertedPortrait = true;
-            }
-            else if (g_ascii_strcasecmp("invertedLandscape", orientationStrv[i]) == 0)
-            {
-                retval.invertedLandscape = true;
-            }
-            else if (g_ascii_strcasecmp("primary", orientationStrv[i]) == 0 && i == 0)
-            {
-                /* Pass, we'll let primary be the first entry, it should be the only. */
-            }
-            else
-            {
-                throw std::runtime_error("Invalid orientation string '" + std::string(orientationStrv[i]) + "'");
-            }
-        }
-    }
-    catch (...)
-    {
-        retval = all;
-    }
-
-    g_strfreev(orientationStrv);
-    return retval;
-}()),
-_rotatesWindow(boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Content", false)),
-_ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
+              g_strfreev(orientationStrv);
+              return retval;
+          }())
+    , _rotatesWindow(
+          boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Content", false))
+    , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
 {
 }
 
-
-}; // namespace AppInfo
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+};  // namespace AppInfo
+};  // namespace AppLaunch
+};  // namespace Ubuntu
