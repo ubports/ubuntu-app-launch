@@ -44,13 +44,17 @@ public:
     std::list<AppID::Package> getClickPackages();
     std::string getClickDir(const std::string& package);
 
+#if 0
     void setManager (Registry::Manager* manager);
     void clearManager ();
+#endif
 
     GLib::ContextThread thread;
 private:
     Registry* _registry;
+#if 0
     Registry::Manager* _manager;
+#endif
 
     std::shared_ptr<ClickDB> _clickDB;
     std::shared_ptr<ClickUser> _clickUser;

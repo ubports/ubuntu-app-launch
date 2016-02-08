@@ -49,6 +49,7 @@ public:
     static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Registry> registry = getDefault());
     static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Registry> registry = getDefault());
 
+#if 0 /* TODO -- In next MR */
     /* Signals to discover what is happening to apps */
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStarted;
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStopped;
@@ -69,6 +70,7 @@ public:
 
     void setManager (Manager* manager);
     void clearManager ();
+#endif
 
     /* Helper Lists */
     static std::list<std::shared_ptr<Helper>> runningHelpers (Helper::Type type,

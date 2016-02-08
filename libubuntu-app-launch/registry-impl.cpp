@@ -33,8 +33,8 @@ Registry::Impl::Impl (Registry* registry):
     g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
     _dbus.reset();
 }),
-_registry(registry),
-_manager(nullptr)
+_registry(registry)
+// _manager(nullptr)
 {
     auto cancel = thread.getCancellable();
     _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]()
@@ -192,6 +192,7 @@ Registry::Impl::getClickDir(const std::string& package)
     });
 }
 
+#if 0
 void
 Registry::Impl::setManager (Registry::Manager* manager)
 {
@@ -208,6 +209,7 @@ Registry::Impl::clearManager ()
 {
     _manager = nullptr;
 }
+#endif
 
 }; // namespace AppLaunch
 }; // namespace Ubuntu
