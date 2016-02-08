@@ -26,8 +26,7 @@
 Ubuntu::AppLaunch::AppID global_appid;
 std::promise<int> retval;
 
-int
-main (int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     if (argc < 2)
     {
@@ -47,34 +46,35 @@ main (int argc, char* argv[])
 
     registry->appStarted.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
                                     std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance)
-    {
-        if (app->appId() != global_appid)
-        {
-            return;
-        }
+                                 {
+                                     if (app->appId() != global_appid)
+                                     {
+                                         return;
+                                     }
 
-        std::cout << "Started: " << (std::string)app->appId() << std::endl;
-        retval.set_value(0);
-    });
+                                     std::cout << "Started: " << (std::string)app->appId() << std::endl;
+                                     retval.set_value(0);
+                                 });
 
     registry->appFailed.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
-                                   std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance, Ubuntu::AppLaunch::Registry::FailureType type)
-    {
-        if (app->appId() != global_appid)
-        {
-            return;
-        }
+                                   std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance,
+                                   Ubuntu::AppLaunch::Registry::FailureType type)
+                                {
+                                    if (app->appId() != global_appid)
+                                    {
+                                        return;
+                                    }
 
-        std::cout << "Failed:  " << (std::string)app->appId() << std::endl;
-        retval.set_value(-1);
-    });
+                                    std::cout << "Failed:  " << (std::string)app->appId() << std::endl;
+                                    retval.set_value(-1);
+                                });
 
     auto app = Ubuntu::AppLaunch::Application::create(global_appid, registry);
     app->launch(urls);
 
     std::signal(SIGTERM, [](int signal) -> void
-    {
-        retval.set_value(0);
-    });
+                         {
+                             retval.set_value(0);
+                         });
     return retval.get_future().get();
 }
