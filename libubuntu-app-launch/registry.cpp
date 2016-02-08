@@ -101,17 +101,5 @@ Registry::getDefault()
     return defaultRegistry;
 }
 
-void
-Registry::setManager (Manager* manager)
-{
-    impl->setManager(manager);
-}
-
-void
-Registry::clearManager ()
-{
-    impl->clearManager();
-}
-
 }; // namespace AppLaunch
 }; // namespace Ubuntu
