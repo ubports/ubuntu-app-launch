@@ -1,9 +1,6 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-# Error on symbol errors
-export DPKG_GENSYMBOLS_CHECK_LEVEL=4
-
 # Get full logs in tests
 export G_MESSAGES_DEBUG=all
 
