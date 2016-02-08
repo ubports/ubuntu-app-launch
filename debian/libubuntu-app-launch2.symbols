@@ -3,21 +3,15 @@ libubuntu-app-launch.so.2 libubuntu-app-launch2 #MINVER#
  (c++)"Ubuntu::AppLaunch::AppID::parse(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::valid(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::find(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
- (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
- (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Ubuntu::AppLaunch::AppID::ApplicationWildcard)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Ubuntu::AppLaunch::AppID::ApplicationWildcard, Ubuntu::AppLaunch::AppID::VersionWildcard)@Base" 0replaceme
- (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, Ubuntu::AppLaunch::AppID::VersionWildcard)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::discover(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)@Base" 0replaceme
- (c++)"Ubuntu::AppLaunch::AppID::AppID(Ubuntu::AppLaunch::TypeTagger<Ubuntu::AppLaunch::AppID::PackageTag, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, Ubuntu::AppLaunch::TypeTagger<Ubuntu::AppLaunch::AppID::AppNameTag, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, Ubuntu::AppLaunch::TypeTagger<Ubuntu::AppLaunch::AppID::VersionTag, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::AppID(Ubuntu::AppLaunch::TypeTagger<Ubuntu::AppLaunch::AppID::PackageTag, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, Ubuntu::AppLaunch::TypeTagger<Ubuntu::AppLaunch::AppID::AppNameTag, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, Ubuntu::AppLaunch::TypeTagger<Ubuntu::AppLaunch::AppID::VersionTag, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::AppID()@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::AppID::~AppID()@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::Helper::create(Ubuntu::AppLaunch::TypeTagger<Ubuntu::AppLaunch::Helper::TypeTag, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, Ubuntu::AppLaunch::AppID, std::shared_ptr<Ubuntu::AppLaunch::Registry>)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::Registry::getDefault()@Base" 0replaceme
- (c++)"Ubuntu::AppLaunch::Registry::setManager(Ubuntu::AppLaunch::Registry::Manager*)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::Registry::runningApps[abi:cxx11](std::shared_ptr<Ubuntu::AppLaunch::Registry>)@Base" 0replaceme
- (c++)"Ubuntu::AppLaunch::Registry::clearManager()@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::Registry::installedApps[abi:cxx11](std::shared_ptr<Ubuntu::AppLaunch::Registry>)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::Registry::runningHelpers(Ubuntu::AppLaunch::TypeTagger<Ubuntu::AppLaunch::Helper::TypeTag, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::shared_ptr<Ubuntu::AppLaunch::Registry>)@Base" 0replaceme
  (c++)"Ubuntu::AppLaunch::Registry::Registry()@Base" 0replaceme
