@@ -21,11 +21,11 @@
 #include "registry-impl.h"
 #include "application-info-desktop.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
 Click::Click(const AppID& appid, std::shared_ptr<Registry> registry)
@@ -51,7 +51,7 @@ std::shared_ptr<Application::Info> Click::info(void)
 {
     if (_keyfile)
     {
-        return std::make_shared<AppInfo::Desktop>(_keyfile, _clickDir);
+        return std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
     }
     else
     {
@@ -175,6 +175,6 @@ std::list<std::shared_ptr<Application>> Click::list(std::shared_ptr<Registry> re
     return applist;
 }
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

@@ -19,9 +19,9 @@
 
 #include "registry-impl.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 Registry::Impl::Impl(Registry* registry)
@@ -214,5 +214,5 @@ Registry::Impl::clearManager ()
 }
 #endif
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu

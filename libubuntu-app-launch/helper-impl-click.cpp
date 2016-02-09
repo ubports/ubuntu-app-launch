@@ -22,11 +22,11 @@
 
 #include "ubuntu-app-launch.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace HelperImpls
+namespace helper_impls
 {
 
 bool Click::hasInstances()
@@ -183,6 +183,6 @@ std::list<std::shared_ptr<Helper>> Click::running(Helper::Type type, std::shared
         });
 }
 
-};  // namespace HelperImpl
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace helper_impl
+};  // namespace app_launch
+};  // namespace ubuntu

@@ -21,11 +21,11 @@
 
 #include "helper.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace HelperImpls
+namespace helper_impls
 {
 
 class Click : public Helper
@@ -57,6 +57,6 @@ private:
     std::shared_ptr<Registry> _registry;
 };
 
-};  // namespace HelperImpl
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace helper_impl
+};  // namespace app_launch
+};  // namespace ubuntu

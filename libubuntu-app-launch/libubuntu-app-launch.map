@@ -2,18 +2,18 @@
 global:
 	ubuntu_app_launch_*;
 	extern "C++" {
-		Ubuntu::AppLaunch::Registry::[!I]*;
-		typeinfo?for?Ubuntu::AppLaunch::Registry;
-		typeinfo?name?for?Ubuntu::AppLaunch::Registry;
-		Ubuntu::AppLaunch::Application::*;
-		typeinfo?for?Ubuntu::AppLaunch::Application;
-		typeinfo?name?for?Ubuntu::AppLaunch::Application;
-		Ubuntu::AppLaunch::AppID::*;
-		typeinfo?for?Ubuntu::AppLaunch::AppID;
-		typeinfo?name?for?Ubuntu::AppLaunch::AppID;
-		Ubuntu::AppLaunch::Helper::*;
-		typeinfo?for?Ubuntu::AppLaunch::Helper;
-		typeinfo?name?for?Ubuntu::AppLaunch::Helper;
+		ubuntu::app_launch::Registry::[!I]*;
+		typeinfo?for?ubuntu::app_launch::Registry;
+		typeinfo?name?for?ubuntu::app_launch::Registry;
+		ubuntu::app_launch::Application::*;
+		typeinfo?for?ubuntu::app_launch::Application;
+		typeinfo?name?for?ubuntu::app_launch::Application;
+		ubuntu::app_launch::AppID::*;
+		typeinfo?for?ubuntu::app_launch::AppID;
+		typeinfo?name?for?ubuntu::app_launch::AppID;
+		ubuntu::app_launch::Helper::*;
+		typeinfo?for?ubuntu::app_launch::Helper;
+		typeinfo?name?for?ubuntu::app_launch::Helper;
 	};
 local:
 	*;

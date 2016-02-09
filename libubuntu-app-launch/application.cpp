@@ -30,9 +30,9 @@ extern "C" {
 #include <iostream>
 #include <regex>
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 std::shared_ptr<Application> Application::create(const AppID& appid, std::shared_ptr<Registry> registry)
@@ -45,15 +45,15 @@ std::shared_ptr<Application> Application::create(const AppID& appid, std::shared
     std::string sappid = appid;
     if (app_info_legacy(sappid.c_str(), NULL, NULL))
     {
-        return std::make_shared<AppImpls::Legacy>(appid.appname, registry);
+        return std::make_shared<app_impls::Legacy>(appid.appname, registry);
     }
     else if (app_info_click(sappid.c_str(), NULL, NULL))
     {
-        return std::make_shared<AppImpls::Click>(appid, registry);
+        return std::make_shared<app_impls::Click>(appid, registry);
     }
     else if (app_info_libertine(sappid.c_str(), NULL, NULL))
     {
-        return std::make_shared<AppImpls::Libertine>(appid.package, appid.appname, registry);
+        return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
     }
     else
     {
@@ -223,5 +223,5 @@ AppID AppID::discover(const std::string& package, const std::string& appname, Ve
     return appid;
 }
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu

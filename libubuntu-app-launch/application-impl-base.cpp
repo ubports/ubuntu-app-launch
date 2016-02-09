@@ -19,11 +19,11 @@
 
 #include "application-impl-base.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
 Base::Base(std::shared_ptr<Registry> registry)
@@ -150,6 +150,6 @@ std::shared_ptr<Application::Instance> Base::launchTest(std::vector<Application:
     return std::make_shared<BaseInstance>(appIdStr);
 }
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

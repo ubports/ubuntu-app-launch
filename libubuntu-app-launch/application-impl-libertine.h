@@ -22,11 +22,11 @@
 
 #pragma once
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
 class Libertine : public Base
@@ -51,6 +51,6 @@ private:
     static std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname);
 };
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

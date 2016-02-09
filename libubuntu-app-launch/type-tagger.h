@@ -1,7 +1,7 @@
 #pragma once
 
-namespace Ubuntu {
-namespace AppLaunch {
+namespace ubuntu {
+namespace app_launch {
 
 template <typename Tag, typename T>
 class TypeTagger {
@@ -21,5 +21,5 @@ private:
 	T _value;
 };
 
-}; // namespace AppLaunch
-}; // namespace Ubuntu
+}; // namespace app_launch
+}; // namespace ubuntu

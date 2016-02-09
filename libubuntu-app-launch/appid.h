@@ -24,9 +24,9 @@
 #pragma once
 #pragma GCC visibility push(default)
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 struct AppID
@@ -76,7 +76,7 @@ struct AppID
     static bool valid(const std::string& sappid);
 };
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu
 
 #pragma GCC visibility pop

@@ -28,8 +28,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    auto type = Ubuntu::AppLaunch::Helper::Type::from_raw(argv[1]);
-    auto helpers = Ubuntu::AppLaunch::Registry::runningHelpers(type);
+    auto type = ubuntu::app_launch::Helper::Type::from_raw(argv[1]);
+    auto helpers = ubuntu::app_launch::Registry::runningHelpers(type);
     for (auto helper : helpers)
     {
         std::cout << (std::string)helper->appId() << std::endl;

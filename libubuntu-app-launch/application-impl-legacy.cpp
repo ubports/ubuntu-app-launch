@@ -20,11 +20,11 @@
 #include "application-impl-legacy.h"
 #include "application-info-desktop.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
 void clear_keyfile(GKeyFile* keyfile)
@@ -89,7 +89,7 @@ std::shared_ptr<Application::Info> Legacy::info(void)
 {
     if (_keyfile)
     {
-        return std::make_shared<AppInfo::Desktop>(_keyfile, "/usr/share/icons/");
+        return std::make_shared<app_info::Desktop>(_keyfile, "/usr/share/icons/");
     }
     else
     {
@@ -124,6 +124,6 @@ std::list<std::shared_ptr<Application>> Legacy::list(std::shared_ptr<Registry> r
     return list;
 }
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

@@ -28,9 +28,9 @@
 #pragma once
 #pragma GCC visibility push(default)
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 class Registry;
@@ -144,7 +144,7 @@ public:
     virtual std::shared_ptr<Instance> launchTest(std::vector<URL> urls = {}) = 0;
 };
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu
 
 #pragma GCC visibility pop

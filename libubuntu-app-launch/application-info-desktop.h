@@ -23,11 +23,11 @@
 
 #pragma once
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppInfo
+namespace app_info
 {
 
 class Desktop : public Application::Info

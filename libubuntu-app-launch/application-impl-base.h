@@ -25,14 +25,14 @@ extern "C" {
 
 #pragma once
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
-class Base : public Ubuntu::AppLaunch::Application
+class Base : public ubuntu::app_launch::Application
 {
 public:
     Base(std::shared_ptr<Registry> registry);
@@ -47,6 +47,6 @@ protected:
     std::shared_ptr<Registry> _registry;
 };
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

@@ -19,11 +19,11 @@
 
 #include "application-info-desktop.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppInfo
+namespace app_info
 {
 
 const char* DESKTOP_GROUP = "Desktop Entry";
@@ -200,6 +200,6 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
 {
 }
 
-};  // namespace AppInfo
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_info
+};  // namespace app_launch
+};  // namespace ubuntu

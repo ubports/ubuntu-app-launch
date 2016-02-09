@@ -21,15 +21,15 @@
 
 #include "helper-impl-click.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 std::shared_ptr<Helper> Helper::create(Type type, AppID appid, std::shared_ptr<Registry> registry)
 {
     /* Only one type today */
-    return std::make_shared<HelperImpls::Click>(type, appid, registry);
+    return std::make_shared<helper_impls::Click>(type, appid, registry);
 }
 
 };  // namespace AppLaunch

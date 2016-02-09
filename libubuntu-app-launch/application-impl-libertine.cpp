@@ -21,11 +21,11 @@
 #include "application-info-desktop.h"
 #include "libertine.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
 Libertine::Libertine(const AppID::Package& container, const AppID::AppName& appname, std::shared_ptr<Registry> registry)
@@ -114,7 +114,7 @@ std::shared_ptr<Application::Info> Libertine::info(void)
 {
     if (_keyfile)
     {
-        return std::make_shared<AppInfo::Desktop>(_keyfile, libertine_container_path(_container.value().c_str()));
+        return std::make_shared<app_info::Desktop>(_keyfile, libertine_container_path(_container.value().c_str()));
     }
     else
     {
@@ -122,6 +122,6 @@ std::shared_ptr<Application::Info> Libertine::info(void)
     }
 }
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu
