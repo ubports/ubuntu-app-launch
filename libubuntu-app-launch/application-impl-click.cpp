@@ -40,6 +40,8 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
     , _clickDir(registry->impl->getClickDir(appid.package))
     , _keyfile(manifestAppDesktop(manifest, appid.appname, _clickDir))
 {
+    if (!_keyfile)
+        throw std::runtime_error{"No keyfile found for click application: " + (std::string)appid};
 }
 
 AppID Click::appId()
@@ -49,14 +51,7 @@ AppID Click::appId()
 
 std::shared_ptr<Application::Info> Click::info(void)
 {
-    if (_keyfile)
-    {
-        return std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
-    }
-    else
-    {
-        return {};
-    }
+    return std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
 }
 
 AppID::Version Click::manifestVersion(std::shared_ptr<JsonObject> manifest)
