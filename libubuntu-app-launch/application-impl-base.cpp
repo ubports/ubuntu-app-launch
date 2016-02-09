@@ -58,9 +58,16 @@ public:
     std::string logPath() override
     {
         auto cpath = ubuntu_app_launch_application_log_path(_appId.c_str());
-        std::string retval(cpath);
-        g_free(cpath);
-        return retval;
+        if (cpath != nullptr)
+        {
+            std::string retval(cpath);
+            g_free(cpath);
+            return retval;
+        }
+        else
+        {
+            return {};
+        }
     }
     std::vector<pid_t> pids() override
     {
