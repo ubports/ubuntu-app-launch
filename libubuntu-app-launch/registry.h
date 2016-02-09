@@ -36,7 +36,7 @@ namespace app_launch
 class Registry
 {
 public:
-    enum FailureType
+    enum class FailureType
     {
         CRASH,
         START_FAILURE,

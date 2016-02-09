@@ -51,13 +51,13 @@ struct AppID
 
     static AppID parse(const std::string& appid);
 
-    enum ApplicationWildcard
+    enum class ApplicationWildcard
     {
         FIRST_LISTED,
         LAST_LISTED,
         ONLY_LISTED
     };
-    enum VersionWildcard
+    enum class VersionWildcard
     {
         CURRENT_USER_VERSION
     };
