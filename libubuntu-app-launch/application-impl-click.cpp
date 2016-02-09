@@ -54,7 +54,7 @@ std::shared_ptr<Application::Info> Click::info(void)
     return std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
 }
 
-AppID::Version Click::manifestVersion(std::shared_ptr<JsonObject> manifest)
+AppID::Version Click::manifestVersion(const std::shared_ptr<JsonObject>& manifest)
 {
     auto cstr = json_object_get_string_member(manifest.get(), "version");
 
@@ -67,7 +67,7 @@ AppID::Version Click::manifestVersion(std::shared_ptr<JsonObject> manifest)
     return cppstr;
 }
 
-std::list<AppID::AppName> Click::manifestApps(std::shared_ptr<JsonObject> manifest)
+std::list<AppID::AppName> Click::manifestApps(const std::shared_ptr<JsonObject>& manifest)
 {
     if (!manifest)
     {
@@ -104,7 +104,7 @@ std::list<AppID::AppName> Click::manifestApps(std::shared_ptr<JsonObject> manife
     return apps;
 }
 
-std::shared_ptr<GKeyFile> Click::manifestAppDesktop(std::shared_ptr<JsonObject> manifest,
+std::shared_ptr<GKeyFile> Click::manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
                                                     const std::string& app,
                                                     const std::string& clickDir)
 {
