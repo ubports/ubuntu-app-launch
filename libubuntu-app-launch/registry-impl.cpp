@@ -79,7 +79,7 @@ void Registry::Impl::initClick()
                                                           {
                                                               g_error_free(error);
                                                           });
-                    throw std::runtime_error(error->message);
+                    throw std::runtime_error(perror->message);
                 }
             }
 
@@ -97,7 +97,7 @@ void Registry::Impl::initClick()
                                                           {
                                                               g_error_free(error);
                                                           });
-                    throw std::runtime_error(error->message);
+                    throw std::runtime_error(perror->message);
                 }
             }
 
@@ -114,7 +114,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 {
     initClick();
 
-    return thread.executeOnThread<std::shared_ptr<JsonObject>>(
+    auto retval = thread.executeOnThread<std::shared_ptr<JsonObject>>(
         [this, package]()
         {
             GError* error = nullptr;
@@ -133,11 +133,16 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
                                                       {
                                                           g_error_free(error);
                                                       });
-                throw std::runtime_error(error->message);
+                throw std::runtime_error(perror->message);
             }
 
             return retval;
         });
+
+    if (!retval)
+        throw std::runtime_error("Unable to get Click manifest for package: " + package);
+
+    return retval;
 }
 
 std::list<AppID::Package> Registry::Impl::getClickPackages()
@@ -156,7 +161,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
                                                       {
                                                           g_error_free(error);
                                                       });
-                throw std::runtime_error(error->message);
+                throw std::runtime_error(perror->message);
             }
 
             std::list<AppID::Package> list;
@@ -186,7 +191,7 @@ std::string Registry::Impl::getClickDir(const std::string& package)
                                                                                              {
                                                                                                  g_error_free(error);
                                                                                              });
-                                                       throw std::runtime_error(error->message);
+                                                       throw std::runtime_error(perror->message);
                                                    }
 
                                                    std::string cppdir(dir);

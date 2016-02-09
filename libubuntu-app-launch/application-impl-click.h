@@ -49,12 +49,6 @@ private:
 
     std::string _clickDir;
     std::shared_ptr<GKeyFile> _keyfile;
-
-    static AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest);
-    static std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest);
-    static std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
-                                                        const std::string& app,
-                                                        const std::string& clickDir);
 };
 
 };  // namespace app_impls
