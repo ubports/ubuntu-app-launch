@@ -127,7 +127,7 @@ std::shared_ptr<gchar*> urlsToStrv(std::vector<Application::URL> urls)
     return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
-std::shared_ptr<Application::Instance> Base::launch(std::vector<Application::URL> urls)
+std::shared_ptr<Application::Instance> Base::launch(const std::vector<Application::URL>& urls)
 {
     std::string appIdStr = appId();
     std::shared_ptr<gchar*> urlstrv;
@@ -142,7 +142,7 @@ std::shared_ptr<Application::Instance> Base::launch(std::vector<Application::URL
     return std::make_shared<BaseInstance>(appIdStr);
 }
 
-std::shared_ptr<Application::Instance> Base::launchTest(std::vector<Application::URL> urls)
+std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Application::URL>& urls)
 {
     std::string appIdStr = appId();
     std::shared_ptr<gchar*> urlstrv;

@@ -140,8 +140,8 @@ public:
     virtual bool hasInstances() = 0;
     virtual std::vector<std::shared_ptr<Instance>> instances() = 0;
 
-    virtual std::shared_ptr<Instance> launch(std::vector<URL> urls = {}) = 0;
-    virtual std::shared_ptr<Instance> launchTest(std::vector<URL> urls = {}) = 0;
+    virtual std::shared_ptr<Instance> launch(const std::vector<URL>& urls = {}) = 0;
+    virtual std::shared_ptr<Instance> launchTest(const std::vector<URL>& urls = {}) = 0;
 };
 
 };  // namespace app_launch
