@@ -40,7 +40,7 @@ bool Base::hasInstances()
 class BaseInstance : public Application::Instance
 {
 public:
-    BaseInstance(const std::string& appId);
+    explicit BaseInstance(const std::string& appId);
 
     /* Query lifecycle */
     bool isRunning() override
