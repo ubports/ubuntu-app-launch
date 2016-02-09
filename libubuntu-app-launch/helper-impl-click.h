@@ -31,7 +31,7 @@ namespace helper_impls
 class Click : public Helper
 {
 public:
-    Click(Helper::Type type, AppID appid, std::shared_ptr<Registry> registry)
+    Click(const Helper::Type& type, const AppID& appid, const std::shared_ptr<Registry>& registry)
         : _type(type)
         , _appid(appid)
         , _registry(registry)

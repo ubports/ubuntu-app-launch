@@ -28,7 +28,9 @@ namespace app_launch
 namespace app_impls
 {
 
-Libertine::Libertine(const AppID::Package& container, const AppID::AppName& appname, std::shared_ptr<Registry> registry)
+Libertine::Libertine(const AppID::Package& container,
+                     const AppID::AppName& appname,
+                     const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _container(container)
     , _appname(appname)

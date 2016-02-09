@@ -35,7 +35,7 @@ namespace app_impls
 class Base : public ubuntu::app_launch::Application
 {
 public:
-    Base(std::shared_ptr<Registry> registry);
+    Base(const std::shared_ptr<Registry>& registry);
 
     bool hasInstances() override;
     std::vector<std::shared_ptr<Instance>> instances() override;

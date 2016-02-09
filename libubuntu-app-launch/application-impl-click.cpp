@@ -28,12 +28,12 @@ namespace app_launch
 namespace app_impls
 {
 
-Click::Click(const AppID& appid, std::shared_ptr<Registry> registry)
+Click::Click(const AppID& appid, const std::shared_ptr<Registry>& registry)
     : Click(appid, registry->impl->getClickManifest(appid.package), registry)
 {
 }
 
-Click::Click(const AppID& appid, std::shared_ptr<JsonObject> manifest, std::shared_ptr<Registry> registry)
+Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _appid(appid)
     , _manifest(manifest)

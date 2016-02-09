@@ -35,14 +35,16 @@ void clear_keyfile(GKeyFile* keyfile)
     }
 }
 
-Legacy::Legacy(const AppID::AppName& appname, std::shared_ptr<GKeyFile> keyfile, std::shared_ptr<Registry> registry)
+Legacy::Legacy(const AppID::AppName& appname,
+               const std::shared_ptr<GKeyFile>& keyfile,
+               const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _appname(appname)
     , _keyfile(keyfile)
 {
 }
 
-Legacy::Legacy(const AppID::AppName& appname, std::shared_ptr<Registry> registry)
+Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
     : Legacy(appname, keyfileForApp(appname), registry)
 {
 }

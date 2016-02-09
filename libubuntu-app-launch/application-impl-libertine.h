@@ -32,7 +32,9 @@ namespace app_impls
 class Libertine : public Base
 {
 public:
-    Libertine(const AppID::Package& container, const AppID::AppName& appname, std::shared_ptr<Registry> registry);
+    Libertine(const AppID::Package& container,
+              const AppID::AppName& appname,
+              const std::shared_ptr<Registry>& registry);
 
     static std::list<std::shared_ptr<Application>> list(std::shared_ptr<Registry> registry);
 

@@ -26,7 +26,7 @@ namespace app_launch
 namespace app_impls
 {
 
-Base::Base(std::shared_ptr<Registry> registry)
+Base::Base(const std::shared_ptr<Registry>& registry)
     : _registry(registry)
 {
 }

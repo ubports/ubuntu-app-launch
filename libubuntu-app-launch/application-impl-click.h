@@ -33,8 +33,8 @@ namespace app_impls
 class Click : public Base
 {
 public:
-    Click(const AppID& appid, std::shared_ptr<Registry> registry);
-    Click(const AppID& appid, std::shared_ptr<JsonObject> manifest, std::shared_ptr<Registry> registry);
+    Click(const AppID& appid, const std::shared_ptr<Registry>& registry);
+    Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, const std::shared_ptr<Registry>& registry);
 
     static std::list<std::shared_ptr<Application>> list(std::shared_ptr<Registry> registry);
 
