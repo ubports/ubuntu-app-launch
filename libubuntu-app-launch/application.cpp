@@ -148,16 +148,16 @@ AppID::operator std::string() const
     return package.value() + "_" + appname.value() + "_" + version.value();
 }
 
-int AppID::operator==(const AppID& other) const
+bool operator==(const AppID& a, const AppID& b)
 {
-    return package.value() == other.package.value() && appname.value() == other.appname.value() &&
-           version.value() == other.version.value();
+    return a.package.value() == b.package.value() && a.appname.value() == b.appname.value() &&
+           a.version.value() == b.version.value();
 }
 
-int AppID::operator!=(const AppID& other) const
+bool operator!=(const AppID& a, const AppID& b)
 {
-    return package.value() != other.package.value() || appname.value() != other.appname.value() ||
-           version.value() != other.version.value();
+    return a.package.value() != b.package.value() || a.appname.value() != b.appname.value() ||
+           a.version.value() != b.version.value();
 }
 
 bool AppID::empty() const

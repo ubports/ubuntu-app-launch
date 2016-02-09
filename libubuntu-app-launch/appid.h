@@ -44,8 +44,6 @@ struct AppID
     Version version;
 
     operator std::string() const;
-    int operator==(const AppID& other) const;
-    int operator!=(const AppID& other) const;
 
     AppID();
     AppID(Package pkg, AppName app, Version ver);
@@ -75,6 +73,9 @@ struct AppID
     static AppID find(const std::string& sappid);
     static bool valid(const std::string& sappid);
 };
+
+bool operator==(const AppID& a, const AppID& b);
+bool operator!=(const AppID& a, const AppID& b);
 
 };  // namespace app_launch
 };  // namespace ubuntu
