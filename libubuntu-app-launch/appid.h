@@ -55,11 +55,11 @@ struct AppID
     {
         FIRST_LISTED,
         LAST_LISTED,
-        ONLY_LISTED
+        ONLY_LISTED,
     };
     enum class VersionWildcard
     {
-        CURRENT_USER_VERSION
+        CURRENT_USER_VERSION,
     };
 
     static AppID discover(const std::string& package,
