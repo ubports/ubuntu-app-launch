@@ -45,7 +45,7 @@ public:
 
     std::shared_ptr<Info> info() override;
 
-    static std::list<std::shared_ptr<Application>> list(std::shared_ptr<Registry> registry);
+    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry> &registry);
 
 private:
     AppID::AppName _appname;

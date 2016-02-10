@@ -36,7 +36,7 @@ public:
     Click(const AppID& appid, const std::shared_ptr<Registry>& registry);
     Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, const std::shared_ptr<Registry>& registry);
 
-    static std::list<std::shared_ptr<Application>> list(std::shared_ptr<Registry> registry);
+    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
 
     AppID appId() override;
 

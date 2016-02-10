@@ -41,7 +41,7 @@ public:
     struct URLTag;
     typedef TypeTagger<URLTag, std::string> URL;
 
-    static std::shared_ptr<Application> create(const AppID& appid, std::shared_ptr<Registry> registry);
+    static std::shared_ptr<Application> create(const AppID& appid, const std::shared_ptr<Registry>& registry);
 
     /* System level info */
     virtual AppID appId() = 0;

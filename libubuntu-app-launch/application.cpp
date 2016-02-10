@@ -35,7 +35,7 @@ namespace ubuntu
 namespace app_launch
 {
 
-std::shared_ptr<Application> Application::create(const AppID& appid, std::shared_ptr<Registry> registry)
+std::shared_ptr<Application> Application::create(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     if (appid.empty())
     {

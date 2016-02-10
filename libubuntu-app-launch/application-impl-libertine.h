@@ -36,7 +36,7 @@ public:
               const AppID::AppName& appname,
               const std::shared_ptr<Registry>& registry);
 
-    static std::list<std::shared_ptr<Application>> list(std::shared_ptr<Registry> registry);
+    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry> &registry);
 
     AppID appId() override
     {

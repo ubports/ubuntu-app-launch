@@ -133,7 +133,7 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
     return keyfile;
 }
 
-std::list<std::shared_ptr<Application>> Click::list(std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> applist;
 

@@ -99,7 +99,7 @@ std::shared_ptr<Application::Info> Legacy::info(void)
     }
 }
 
-std::list<std::shared_ptr<Application>> Legacy::list(std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> list;
     GList* head = g_app_info_get_all();

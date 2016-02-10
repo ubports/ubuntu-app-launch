@@ -87,7 +87,7 @@ std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const gchar* pathname)
     return keyfile;
 }
 
-std::list<std::shared_ptr<Application>> Libertine::list(std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> applist;
 
