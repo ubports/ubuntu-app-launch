@@ -42,6 +42,8 @@ Legacy::Legacy(const AppID::AppName& appname,
     , _appname(appname)
     , _keyfile(keyfile)
 {
+    if (!_keyfile)
+        throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
 }
 
 Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
@@ -89,14 +91,7 @@ std::shared_ptr<GKeyFile> Legacy::keyfileForApp(const AppID::AppName& name)
 
 std::shared_ptr<Application::Info> Legacy::info(void)
 {
-    if (_keyfile)
-    {
-        return std::make_shared<app_info::Desktop>(_keyfile, "/usr/share/icons/");
-    }
-    else
-    {
-        return {};
-    }
+    return std::make_shared<app_info::Desktop>(_keyfile, "/usr/share/icons/");
 }
 
 std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
