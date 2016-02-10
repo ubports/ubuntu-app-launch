@@ -28,6 +28,8 @@ namespace app_launch
 namespace app_impls
 {
 
+std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname);
+
 Libertine::Libertine(const AppID::Package& container,
                      const AppID::AppName& appname,
                      const std::shared_ptr<Registry>& registry)
@@ -64,7 +66,7 @@ Libertine::Libertine(const AppID::Package& container,
                                  container.value() + "'"};
 }
 
-std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const gchar* pathname)
+std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname)
 {
     if (!g_file_test(pathname, G_FILE_TEST_EXISTS))
     {
