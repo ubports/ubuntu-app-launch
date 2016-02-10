@@ -63,7 +63,7 @@ public:
         return _rotatesWindow;
     }
 
-    Application::Info::UbuntuLifecycle ubuntuLifecycle() override
+    Application::Info::UbuntuLifecycle supportsUbuntuLifecycle() override
     {
         return _ubuntuLifecycle;
     }

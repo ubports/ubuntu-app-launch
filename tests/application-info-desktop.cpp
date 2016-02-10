@@ -61,7 +61,7 @@ TEST_F(ApplicationInfoDesktop, DefaultState)
 
     EXPECT_FALSE(appinfo.rotatesWindowContents().value());
 
-    EXPECT_FALSE(appinfo.ubuntuLifecycle().value());
+    EXPECT_FALSE(appinfo.supportsUbuntuLifecycle().value());
 }
 
 TEST_F(ApplicationInfoDesktop, KeyfileErrors)

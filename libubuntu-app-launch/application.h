@@ -112,7 +112,7 @@ public:
 
         typedef TypeTagger<UbuntuLifecycleTag, bool> UbuntuLifecycle;
 
-        virtual UbuntuLifecycle ubuntuLifecycle() = 0;
+        virtual UbuntuLifecycle supportsUbuntuLifecycle() = 0;
     };
 
     virtual std::shared_ptr<Info> info() = 0;
