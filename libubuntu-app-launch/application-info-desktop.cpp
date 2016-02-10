@@ -26,7 +26,7 @@ namespace app_launch
 namespace app_info
 {
 
-const char* DESKTOP_GROUP = "Desktop Entry";
+constexpr const char* DESKTOP_GROUP = "Desktop Entry";
 
 template <typename T>
 auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, const std::string& exceptionText = {})
