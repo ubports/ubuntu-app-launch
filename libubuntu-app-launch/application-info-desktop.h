@@ -48,7 +48,7 @@ public:
         return _iconPath;
     }
 
-    Application::Info::SplashInfo splash() override
+    Application::Info::Splash splash() override
     {
         return _splashInfo;
     }
@@ -76,7 +76,7 @@ private:
     Application::Info::Description _description;
     Application::Info::IconPath _iconPath;
 
-    Application::Info::SplashInfo _splashInfo;
+    Application::Info::Splash _splashInfo;
     Application::Info::Orientations _supportedOrientations;
     Application::Info::RotatesWindow _rotatesWindow;
     Application::Info::UbuntuLifecycle _ubuntuLifecycle;

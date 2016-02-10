@@ -63,27 +63,27 @@ public:
         virtual const IconPath& iconPath() = 0;
 
         /* Splash information */
-        struct SplashTitleTag;
-        struct SplashImageTag;
-        struct SplashColorTag;
-        struct SplashShowHeaderTag;
-
-        typedef TypeTagger<SplashTitleTag, std::string> SplashTitle;
-        typedef TypeTagger<SplashImageTag, std::string> SplashImage;
-        typedef TypeTagger<SplashColorTag, std::string> SplashColor;
-        typedef TypeTagger<SplashShowHeaderTag, bool> SplashShowHeader;
-
-        struct SplashInfo
+        struct Splash
         {
-            SplashTitle title;
-            SplashImage image;
-            SplashColor backgroundColor;
-            SplashColor headerColor;
-            SplashColor footerColor;
-            SplashShowHeader showHeader;
+            struct TitleTag;
+            struct ImageTag;
+            struct ColorTag;
+            struct ShowHeaderTag;
+
+            typedef TypeTagger<TitleTag, std::string> Title;
+            typedef TypeTagger<ImageTag, std::string> Image;
+            typedef TypeTagger<ColorTag, std::string> Color;
+            typedef TypeTagger<ShowHeaderTag, bool> ShowHeader;
+
+            Title title;
+            Image image;
+            Color backgroundColor;
+            Color headerColor;
+            Color footerColor;
+            ShowHeader showHeader;
         };
 
-        virtual SplashInfo splash() = 0;
+        virtual Splash splash() = 0;
 
         /* Orientation and placement */
         struct Orientations

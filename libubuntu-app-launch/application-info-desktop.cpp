@@ -128,12 +128,13 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
     , _iconPath(
           fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file"))
     , _splashInfo({
-        title : stringFromKeyfile<Application::Info::SplashTitle>(keyfile, "X-Ubuntu-Splash-Title"),
-        image : fileFromKeyfile<Application::Info::SplashImage>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
-        backgroundColor : stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color"),
-        headerColor : stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Header"),
-        footerColor : stringFromKeyfile<Application::Info::SplashColor>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
-        showHeader : boolFromKeyfile<Application::Info::SplashShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)
+        title : stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
+        image : fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
+        backgroundColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color"),
+        headerColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Header"),
+        footerColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
+        showHeader :
+            boolFromKeyfile<Application::Info::Splash::ShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)
     })
     , _supportedOrientations(
           [keyfile]()
