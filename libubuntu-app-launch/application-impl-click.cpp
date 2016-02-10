@@ -55,7 +55,7 @@ AppID Click::appId()
     return _appid;
 }
 
-std::shared_ptr<Application::Info> Click::info(void)
+std::shared_ptr<Application::Info> Click::info()
 {
     return std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
 }

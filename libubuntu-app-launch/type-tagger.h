@@ -21,7 +21,7 @@ public:
     {
         return _value;
     }
-    ~TypeTagger(void)
+    ~TypeTagger()
     {
     }
 
