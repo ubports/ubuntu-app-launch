@@ -50,8 +50,6 @@ public:
 private:
     AppID::AppName _appname;
     std::shared_ptr<GKeyFile> _keyfile;
-
-    static std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name);
 };
 
 };  // namespace app_impls

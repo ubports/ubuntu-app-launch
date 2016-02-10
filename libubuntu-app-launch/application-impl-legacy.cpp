@@ -27,6 +27,8 @@ namespace app_launch
 namespace app_impls
 {
 
+std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name);
+
 void clear_keyfile(GKeyFile* keyfile)
 {
     if (keyfile != nullptr)
@@ -51,7 +53,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 {
 }
 
-std::shared_ptr<GKeyFile> Legacy::keyfileForApp(const AppID::AppName& name)
+std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
 {
     std::string desktopName = name.value() + ".desktop";
     auto keyfilecheck = [desktopName](const gchar* dir) -> std::shared_ptr<GKeyFile>
