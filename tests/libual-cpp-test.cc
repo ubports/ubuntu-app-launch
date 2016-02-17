@@ -160,7 +160,7 @@ protected:
         DbusTestDbusMockObject* linstobj = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance",
                                                                           "com.ubuntu.Upstart0_6.Instance", NULL);
         dbus_test_dbus_mock_object_add_property(mock, linstobj, "name", G_VARIANT_TYPE_STRING,
-                                                g_variant_new_string("bar-2342345"), NULL);
+                                                g_variant_new_string("multiple-2342345"), NULL);
         dbus_test_dbus_mock_object_add_property(mock, linstobj, "processes", G_VARIANT_TYPE("a(si)"),
                                                 g_variant_new_parsed("[('main', 5678)]"), NULL);
 
@@ -442,10 +442,10 @@ TEST_F(LibUAL, ApplicationLog)
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
               app->instances()[0]->logPath());
 
-    appid = ubuntu::app_launch::AppID::find("bar");
+    appid = ubuntu::app_launch::AppID::find("multiple");
     app = ubuntu::app_launch::Application::create(appid, registry);
 
-    EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-bar-2342345.log"),
+    EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log"),
               app->instances()[0]->logPath());
 }
 
@@ -460,9 +460,9 @@ TEST_F(LibUAL, ApplicationPid)
     /* Check primary pid, which comes from Upstart */
     EXPECT_EQ(getpid(), app->instances()[0]->primaryPid());
 
-    auto barappid = ubuntu::app_launch::AppID::find("bar");
-    auto barapp = ubuntu::app_launch::Application::create(barappid, registry);
-    EXPECT_EQ(5678, barapp->instances()[0]->primaryPid());
+    auto multiappid = ubuntu::app_launch::AppID::find("multiple");
+    auto multiapp = ubuntu::app_launch::Application::create(multiappid, registry);
+    EXPECT_EQ(5678, multiapp->instances()[0]->primaryPid());
 
     /* Look at the full PID list from CG Manager */
     DbusTestDbusMockObject* cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager",
@@ -501,12 +501,12 @@ TEST_F(LibUAL, ApplicationPid)
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
     /* Legacy Multi Instance */
-    EXPECT_TRUE(barapp->instances()[0]->hasPid(100));
+    EXPECT_TRUE(multiapp->instances()[0]->hasPid(100));
     calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
     EXPECT_EQ(1, len);
     EXPECT_STREQ("GetTasksRecursive", calls->name);
-    EXPECT_TRUE(
-        g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-bar-2342345")));
+    EXPECT_TRUE(g_variant_equal(calls->params,
+                                g_variant_new("(ss)", "freezer", "upstart/application-legacy-multiple-2342345")));
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 }
 
@@ -585,8 +585,8 @@ TEST_F(LibUAL, ApplicationList)
                   return sa < sb;
               });
 
-    EXPECT_EQ("bar", (std::string)apps.front()->appId());
-    EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.back()->appId());
+    EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.front()->appId());
+    EXPECT_EQ("multiple", (std::string)apps.back()->appId());
 }
 
 typedef struct
@@ -650,11 +650,11 @@ TEST_F(LibUAL, StartStopObserver)
 
     /* Start legacy */
     start_data.count = 0;
-    start_data.name = "bar";
+    start_data.name = "multiple";
 
     dbus_test_dbus_mock_object_emit_signal(
         mock, obj, "EventEmitted", G_VARIANT_TYPE("(sas)"),
-        g_variant_new_parsed("('started', ['JOB=application-legacy', 'INSTANCE=bar-234235'])"), NULL);
+        g_variant_new_parsed("('started', ['JOB=application-legacy', 'INSTANCE=multiple-234235'])"), NULL);
 
     g_usleep(100000);
     while (g_main_pending())
@@ -1586,9 +1586,7 @@ TEST_F(LibUAL, AppInfo)
 
     /* Correct values from a legacy */
     auto barid = ubuntu::app_launch::AppID::find("bar");
-    auto bar = ubuntu::app_launch::Application::create(barid, registry);
-
-    EXPECT_FALSE((bool)bar->info());
+    EXPECT_THROW(ubuntu::app_launch::Application::create(barid, registry), std::runtime_error);
 
     /* Correct values for libertine */
     auto libertineid = ubuntu::app_launch::AppID::parse("container-name_test_0.0");

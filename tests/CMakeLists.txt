@@ -116,3 +116,8 @@ add_test (desktop-hook-test desktop-hook-test.sh)
 configure_file ("xmir-helper-test.in" "${CMAKE_CURRENT_BINARY_DIR}/xmir-helper-test" @ONLY)
 add_test (xmir-helper-test xmir-helper-test)
 
+# Formatted code
+
+add_custom_target(format-tests
+	COMMAND clang-format -i -style=file libual-cpp-test.cc
+)

@@ -73,6 +73,7 @@ std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
 
         if (error != nullptr)
         {
+            g_debug("Unable to load keyfile '%s' becuase: %s", desktopName.c_str(), error->message);
             g_error_free(error);
             return {};
         }
