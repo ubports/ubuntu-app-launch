@@ -18,28 +18,36 @@
  */
 
 #include "application-impl-click.h"
-#include "registry-impl.h"
 #include "application-info-desktop.h"
+#include "registry-impl.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
-Click::Click(const AppID& appid, std::shared_ptr<Registry> registry)
+AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest);
+std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest);
+std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
+                                             const std::string& app,
+                                             const std::string& clickDir);
+
+Click::Click(const AppID& appid, const std::shared_ptr<Registry>& registry)
     : Click(appid, registry->impl->getClickManifest(appid.package), registry)
 {
 }
 
-Click::Click(const AppID& appid, std::shared_ptr<JsonObject> manifest, std::shared_ptr<Registry> registry)
+Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _appid(appid)
     , _manifest(manifest)
     , _clickDir(registry->impl->getClickDir(appid.package))
     , _keyfile(manifestAppDesktop(manifest, appid.appname, _clickDir))
 {
+    if (!_keyfile)
+        throw std::runtime_error{"No keyfile found for click application: " + (std::string)appid};
 }
 
 AppID Click::appId()
@@ -47,49 +55,31 @@ AppID Click::appId()
     return _appid;
 }
 
-std::shared_ptr<Application::Info> Click::info(void)
+std::shared_ptr<Application::Info> Click::info()
 {
-    if (_keyfile)
-    {
-        return std::make_shared<AppInfo::Desktop>(_keyfile, _clickDir);
-    }
-    else
-    {
-        return {};
-    }
+    return std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
 }
 
-AppID::Version Click::manifestVersion(std::shared_ptr<JsonObject> manifest)
+AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
 {
     auto cstr = json_object_get_string_member(manifest.get(), "version");
 
     if (cstr == nullptr)
-    {
         throw std::runtime_error("Unable to find version number in manifest");
-    }
 
     auto cppstr = AppID::Version::from_raw((const gchar*)cstr);
     return cppstr;
 }
 
-std::list<AppID::AppName> Click::manifestApps(std::shared_ptr<JsonObject> manifest)
+std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest)
 {
-    if (!manifest)
-    {
-        return {};
-    }
-
     auto hooks = json_object_get_object_member(manifest.get(), "hooks");
     if (hooks == nullptr)
-    {
-        return {};
-    }
+        throw std::runtime_error("Manifest for application does not have a 'hooks' field");
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
-    {
-        return {};
-    }
+        throw std::runtime_error("GLib JSON confusion, please talk to your library vendor");
 
     std::list<AppID::AppName> apps;
 
@@ -109,38 +99,25 @@ std::list<AppID::AppName> Click::manifestApps(std::shared_ptr<JsonObject> manife
     return apps;
 }
 
-std::shared_ptr<GKeyFile> Click::manifestAppDesktop(std::shared_ptr<JsonObject> manifest,
-                                                    const std::string& app,
-                                                    const std::string& clickDir)
+std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
+                                             const std::string& app,
+                                             const std::string& clickDir)
 {
-    if (!manifest)
-    {
-        throw std::runtime_error("No manifest for application '" + app + "'");
-    }
-
     auto hooks = json_object_get_object_member(manifest.get(), "hooks");
     if (hooks == nullptr)
-    {
         throw std::runtime_error("Manifest for application '" + app + "' does not have a 'hooks' field");
-    }
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
-    {
         throw std::runtime_error("GLib JSON confusion, please talk to your library vendor");
-    }
 
     auto hooklist = json_object_get_object_member(hooks, app.c_str());
     if (hooklist == nullptr)
-    {
         throw std::runtime_error("Manifest for does not have an application '" + app + "'");
-    }
 
     auto desktoppath = json_object_get_string_member(hooklist, "desktop");
     if (desktoppath == nullptr)
-    {
         throw std::runtime_error("Manifest for application '" + app + "' does not have a 'desktop' hook");
-    }
 
     auto path = std::shared_ptr<gchar>(g_build_filename(clickDir.c_str(), desktoppath, nullptr), g_free);
 
@@ -156,7 +133,7 @@ std::shared_ptr<GKeyFile> Click::manifestAppDesktop(std::shared_ptr<JsonObject> 
     return keyfile;
 }
 
-std::list<std::shared_ptr<Application>> Click::list(std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> applist;
 
@@ -175,6 +152,6 @@ std::list<std::shared_ptr<Application>> Click::list(std::shared_ptr<Registry> re
     return applist;
 }
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

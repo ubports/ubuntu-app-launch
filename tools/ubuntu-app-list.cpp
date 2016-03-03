@@ -22,7 +22,7 @@
 
 int main(int argc, char* argv[])
 {
-    auto apps = Ubuntu::AppLaunch::Registry::runningApps();
+    auto apps = ubuntu::app_launch::Registry::runningApps();
     for (auto app : apps)
     {
         std::cout << (std::string)app->appId() << std::endl;

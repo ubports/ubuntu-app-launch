@@ -33,13 +33,7 @@ registry.h
 type-tagger.h
 )
 
-set(LAUNCHER_SOURCES
-ubuntu-app-launch.c
-second-exec-core.c
-click-exec.c
-desktop-exec.c
-ubuntu-app-launch-trace.c
-app-info.c
+set(LAUNCHER_CPP_SOURCES
 application.cpp
 helper.cpp
 registry.cpp
@@ -51,6 +45,20 @@ application-impl-libertine.cpp
 application-info-desktop.cpp
 helper-impl-click.cpp
 glib-thread.cpp
+)
+
+set(LAUNCHER_SOURCES
+ubuntu-app-launch.c
+second-exec-core.c
+click-exec.c
+desktop-exec.c
+ubuntu-app-launch-trace.c
+app-info.c
+${LAUNCHER_CPP_SOURCES}
+)
+
+add_custom_target(format
+	COMMAND clang-format -i -style=file ${LAUNCHER_CPP_HEADERS} ${LAUNCHER_CPP_SOURCES}
 )
 
 set(LAUNCHER_GEN_SOURCES

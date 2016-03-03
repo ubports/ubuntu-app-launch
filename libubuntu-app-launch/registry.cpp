@@ -26,9 +26,9 @@
 
 #include "helper-impl-click.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 Registry::Registry()
@@ -43,8 +43,7 @@ Registry::~Registry()
 std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> connection)
 {
     return connection->impl->thread.executeOnThread<std::list<std::shared_ptr<Application>>>(
-        [connection]() -> std::list<std::shared_ptr<Application>>
-        {
+        [connection]() -> std::list<std::shared_ptr<Application>> {
             auto strv = ubuntu_app_launch_list_running_apps();
             if (strv == nullptr)
             {
@@ -69,9 +68,9 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
 {
     std::list<std::shared_ptr<Application>> list;
 
-    list.splice(list.begin(), AppImpls::Click::list(connection));
-    list.splice(list.begin(), AppImpls::Legacy::list(connection));
-    list.splice(list.begin(), AppImpls::Libertine::list(connection));
+    list.splice(list.begin(), app_impls::Click::list(connection));
+    list.splice(list.begin(), app_impls::Legacy::list(connection));
+    list.splice(list.begin(), app_impls::Libertine::list(connection));
 
     return list;
 }
@@ -80,7 +79,7 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
 {
     std::list<std::shared_ptr<Helper>> list;
 
-    list.splice(list.begin(), HelperImpls::Click::running(type, connection));
+    list.splice(list.begin(), helper_impls::Click::running(type, connection));
 
     return list;
 }
@@ -96,5 +95,5 @@ std::shared_ptr<Registry> Registry::getDefault()
     return defaultRegistry;
 }
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu

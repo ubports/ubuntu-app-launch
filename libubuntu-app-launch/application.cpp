@@ -22,20 +22,20 @@ extern "C" {
 #include "ubuntu-app-launch.h"
 }
 
-#include "application.h"
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
+#include "application.h"
 
 #include <iostream>
 #include <regex>
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
-std::shared_ptr<Application> Application::create(const AppID& appid, std::shared_ptr<Registry> registry)
+std::shared_ptr<Application> Application::create(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     if (appid.empty())
     {
@@ -43,17 +43,17 @@ std::shared_ptr<Application> Application::create(const AppID& appid, std::shared
     }
 
     std::string sappid = appid;
-    if (app_info_legacy(sappid.c_str(), NULL, NULL))
+    if (app_info_click(sappid.c_str(), NULL, NULL))
     {
-        return std::make_shared<AppImpls::Legacy>(appid.appname, registry);
-    }
-    else if (app_info_click(sappid.c_str(), NULL, NULL))
-    {
-        return std::make_shared<AppImpls::Click>(appid, registry);
+        return std::make_shared<app_impls::Click>(appid, registry);
     }
     else if (app_info_libertine(sappid.c_str(), NULL, NULL))
     {
-        return std::make_shared<AppImpls::Libertine>(appid.package, appid.appname, registry);
+        return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
+    }
+    else if (app_info_legacy(sappid.c_str(), NULL, NULL))
+    {
+        return std::make_shared<app_impls::Legacy>(appid.appname, registry);
     }
     else
     {
@@ -91,8 +91,7 @@ AppID AppID::parse(const std::string& sappid)
 
     if (std::regex_match(sappid, match, full_appid_regex))
     {
-        return {AppID::Package::from_raw(match[1].str()),
-                AppID::AppName::from_raw(match[2].str()),
+        return {AppID::Package::from_raw(match[1].str()), AppID::AppName::from_raw(match[2].str()),
                 AppID::Version::from_raw(match[3].str())};
     }
     else
@@ -113,8 +112,7 @@ AppID AppID::find(const std::string& sappid)
 
     if (std::regex_match(sappid, match, full_appid_regex))
     {
-        return {AppID::Package::from_raw(match[1].str()),
-                AppID::AppName::from_raw(match[2].str()),
+        return {AppID::Package::from_raw(match[1].str()), AppID::AppName::from_raw(match[2].str()),
                 AppID::Version::from_raw(match[3].str())};
     }
     else if (std::regex_match(sappid, match, short_appid_regex))
@@ -148,16 +146,16 @@ AppID::operator std::string() const
     return package.value() + "_" + appname.value() + "_" + version.value();
 }
 
-int AppID::operator==(const AppID& other) const
+bool operator==(const AppID& a, const AppID& b)
 {
-    return package.value() == other.package.value() && appname.value() == other.appname.value() &&
-           version.value() == other.version.value();
+    return a.package.value() == b.package.value() && a.appname.value() == b.appname.value() &&
+           a.version.value() == b.version.value();
 }
 
-int AppID::operator!=(const AppID& other) const
+bool operator!=(const AppID& a, const AppID& b)
 {
-    return package.value() != other.package.value() || appname.value() != other.appname.value() ||
-           version.value() != other.version.value();
+    return a.package.value() != b.package.value() || a.appname.value() != b.appname.value() ||
+           a.version.value() != b.version.value();
 }
 
 bool AppID::empty() const
@@ -223,5 +221,5 @@ AppID AppID::discover(const std::string& package, const std::string& appname, Ve
     return appid;
 }
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu

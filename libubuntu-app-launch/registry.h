@@ -17,10 +17,10 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <core/signal.h>
+#include <functional>
 #include <list>
 #include <memory>
-#include <functional>
-#include <core/signal.h>
 
 #include "application.h"
 #include "helper.h"
@@ -28,15 +28,15 @@
 #pragma once
 #pragma GCC visibility push(default)
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 class Registry
 {
 public:
-    enum FailureType
+    enum class FailureType
     {
         CRASH,
         START_FAILURE,
@@ -83,7 +83,7 @@ public:
     std::unique_ptr<Impl> impl;
 };
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu
 
 #pragma GCC visibility pop

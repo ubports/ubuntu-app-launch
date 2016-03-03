@@ -20,12 +20,14 @@
 #include "application-impl-legacy.h"
 #include "application-info-desktop.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
+
+std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name);
 
 void clear_keyfile(GKeyFile* keyfile)
 {
@@ -35,23 +37,26 @@ void clear_keyfile(GKeyFile* keyfile)
     }
 }
 
-Legacy::Legacy(const AppID::AppName& appname, std::shared_ptr<GKeyFile> keyfile, std::shared_ptr<Registry> registry)
+Legacy::Legacy(const AppID::AppName& appname,
+               const std::shared_ptr<GKeyFile>& keyfile,
+               const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _appname(appname)
     , _keyfile(keyfile)
 {
+    if (!_keyfile)
+        throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
 }
 
-Legacy::Legacy(const AppID::AppName& appname, std::shared_ptr<Registry> registry)
+Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
     : Legacy(appname, keyfileForApp(appname), registry)
 {
 }
 
-std::shared_ptr<GKeyFile> Legacy::keyfileForApp(const AppID::AppName& name)
+std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
 {
     std::string desktopName = name.value() + ".desktop";
-    auto keyfilecheck = [desktopName](const gchar* dir) -> std::shared_ptr<GKeyFile>
-    {
+    auto keyfilecheck = [desktopName](const gchar* dir) -> std::shared_ptr<GKeyFile> {
         auto fullname = g_build_filename(dir, "applications", desktopName.c_str(), nullptr);
         if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
         {
@@ -67,6 +72,7 @@ std::shared_ptr<GKeyFile> Legacy::keyfileForApp(const AppID::AppName& name)
 
         if (error != nullptr)
         {
+            g_debug("Unable to load keyfile '%s' becuase: %s", desktopName.c_str(), error->message);
             g_error_free(error);
             return {};
         }
@@ -85,19 +91,12 @@ std::shared_ptr<GKeyFile> Legacy::keyfileForApp(const AppID::AppName& name)
     return retval;
 }
 
-std::shared_ptr<Application::Info> Legacy::info(void)
+std::shared_ptr<Application::Info> Legacy::info()
 {
-    if (_keyfile)
-    {
-        return std::make_shared<AppInfo::Desktop>(_keyfile, "/usr/share/icons/");
-    }
-    else
-    {
-        return {};
-    }
+    return std::make_shared<app_info::Desktop>(_keyfile, "/usr/share/icons/");
 }
 
-std::list<std::shared_ptr<Application>> Legacy::list(std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> list;
     GList* head = g_app_info_get_all();
@@ -124,6 +123,6 @@ std::list<std::shared_ptr<Application>> Legacy::list(std::shared_ptr<Registry> r
     return list;
 }
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

@@ -19,14 +19,14 @@
 
 #include "application-impl-base.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
-Base::Base(std::shared_ptr<Registry> registry)
+Base::Base(const std::shared_ptr<Registry>& registry)
     : _registry(registry)
 {
 }
@@ -40,7 +40,7 @@ bool Base::hasInstances()
 class BaseInstance : public Application::Instance
 {
 public:
-    BaseInstance(const std::string& appId);
+    explicit BaseInstance(const std::string& appId);
 
     /* Query lifecycle */
     bool isRunning() override
@@ -58,9 +58,16 @@ public:
     std::string logPath() override
     {
         auto cpath = ubuntu_app_launch_application_log_path(_appId.c_str());
-        std::string retval(cpath);
-        g_free(cpath);
-        return retval;
+        if (cpath != nullptr)
+        {
+            std::string retval(cpath);
+            g_free(cpath);
+            return retval;
+        }
+        else
+        {
+            return {};
+        }
     }
     std::vector<pid_t> pids() override
     {
@@ -120,7 +127,7 @@ std::shared_ptr<gchar*> urlsToStrv(std::vector<Application::URL> urls)
     return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
-std::shared_ptr<Application::Instance> Base::launch(std::vector<Application::URL> urls)
+std::shared_ptr<Application::Instance> Base::launch(const std::vector<Application::URL>& urls)
 {
     std::string appIdStr = appId();
     std::shared_ptr<gchar*> urlstrv;
@@ -135,7 +142,7 @@ std::shared_ptr<Application::Instance> Base::launch(std::vector<Application::URL
     return std::make_shared<BaseInstance>(appIdStr);
 }
 
-std::shared_ptr<Application::Instance> Base::launchTest(std::vector<Application::URL> urls)
+std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Application::URL>& urls)
 {
     std::string appIdStr = appId();
     std::shared_ptr<gchar*> urlstrv;
@@ -150,6 +157,6 @@ std::shared_ptr<Application::Instance> Base::launchTest(std::vector<Application:
     return std::make_shared<BaseInstance>(appIdStr);
 }
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

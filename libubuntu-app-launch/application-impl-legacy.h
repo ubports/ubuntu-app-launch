@@ -23,18 +23,20 @@
 
 #pragma once
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
 class Legacy : public Base
 {
 public:
-    Legacy(const AppID::AppName& appname, std::shared_ptr<Registry> registry);
-    Legacy(const AppID::AppName& appname, std::shared_ptr<GKeyFile> keyfile, std::shared_ptr<Registry> registry);
+    Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry);
+    Legacy(const AppID::AppName& appname,
+           const std::shared_ptr<GKeyFile>& keyfile,
+           const std::shared_ptr<Registry>& registry);
 
     AppID appId() override
     {
@@ -43,15 +45,13 @@ public:
 
     std::shared_ptr<Info> info() override;
 
-    static std::list<std::shared_ptr<Application>> list(std::shared_ptr<Registry> registry);
+    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry> &registry);
 
 private:
     AppID::AppName _appname;
     std::shared_ptr<GKeyFile> _keyfile;
-
-    static std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name);
 };
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

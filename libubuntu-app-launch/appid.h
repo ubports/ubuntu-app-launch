@@ -24,9 +24,9 @@
 #pragma once
 #pragma GCC visibility push(default)
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 struct AppID
@@ -44,8 +44,6 @@ struct AppID
     Version version;
 
     operator std::string() const;
-    int operator==(const AppID& other) const;
-    int operator!=(const AppID& other) const;
 
     AppID();
     AppID(Package pkg, AppName app, Version ver);
@@ -53,15 +51,15 @@ struct AppID
 
     static AppID parse(const std::string& appid);
 
-    enum ApplicationWildcard
+    enum class ApplicationWildcard
     {
         FIRST_LISTED,
         LAST_LISTED,
-        ONLY_LISTED
+        ONLY_LISTED,
     };
-    enum VersionWildcard
+    enum class VersionWildcard
     {
-        CURRENT_USER_VERSION
+        CURRENT_USER_VERSION,
     };
 
     static AppID discover(const std::string& package,
@@ -76,7 +74,10 @@ struct AppID
     static bool valid(const std::string& sappid);
 };
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+bool operator==(const AppID& a, const AppID& b);
+bool operator!=(const AppID& a, const AppID& b);
+
+};  // namespace app_launch
+};  // namespace ubuntu
 
 #pragma GCC visibility pop

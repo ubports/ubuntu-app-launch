@@ -23,11 +23,11 @@
 
 #pragma once
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppInfo
+namespace app_info
 {
 
 class Desktop : public Application::Info
@@ -48,7 +48,7 @@ public:
         return _iconPath;
     }
 
-    Application::Info::SplashInfo splash() override
+    Application::Info::Splash splash() override
     {
         return _splashInfo;
     }
@@ -63,7 +63,7 @@ public:
         return _rotatesWindow;
     }
 
-    Application::Info::UbuntuLifecycle ubuntuLifecycle() override
+    Application::Info::UbuntuLifecycle supportsUbuntuLifecycle() override
     {
         return _ubuntuLifecycle;
     }
@@ -76,7 +76,7 @@ private:
     Application::Info::Description _description;
     Application::Info::IconPath _iconPath;
 
-    Application::Info::SplashInfo _splashInfo;
+    Application::Info::Splash _splashInfo;
     Application::Info::Orientations _supportedOrientations;
     Application::Info::RotatesWindow _rotatesWindow;
     Application::Info::UbuntuLifecycle _ubuntuLifecycle;

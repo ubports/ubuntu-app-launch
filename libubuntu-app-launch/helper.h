@@ -17,8 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 #include <mir_toolkit/mir_prompt_session.h>
 
@@ -28,9 +28,9 @@
 #pragma once
 #pragma GCC visibility push(default)
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 class Registry;
@@ -65,7 +65,7 @@ public:
     virtual std::shared_ptr<Instance> launch(MirPromptSession* session, std::vector<URL> urls = {}) = 0;
 };
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu
 
 #pragma GCC visibility pop

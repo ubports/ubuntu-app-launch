@@ -21,14 +21,18 @@
 #include "application-info-desktop.h"
 #include "libertine.h"
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
-Libertine::Libertine(const AppID::Package& container, const AppID::AppName& appname, std::shared_ptr<Registry> registry)
+std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname);
+
+Libertine::Libertine(const AppID::Package& container,
+                     const AppID::AppName& appname,
+                     const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _container(container)
     , _appname(appname)
@@ -56,22 +60,25 @@ Libertine::Libertine(const AppID::Package& container, const AppID::AppName& appn
         g_free(home_app_path);
         g_free(home_path);
     }
+
+    if (!_keyfile)
+        throw std::runtime_error{"Unable to find a keyfile for application '" + appname.value() + "' in container '" +
+                                 container.value() + "'"};
 }
 
-std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const gchar* pathname)
+std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname)
 {
     if (!g_file_test(pathname, G_FILE_TEST_EXISTS))
     {
         return {};
     }
 
-    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile* keyfile)
-                                      {
-                                          if (keyfile != nullptr)
-                                          {
-                                              g_key_file_free(keyfile);
-                                          }
-                                      });
+    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile* keyfile) {
+        if (keyfile != nullptr)
+        {
+            g_key_file_free(keyfile);
+        }
+    });
     GError* error = nullptr;
 
     g_key_file_load_from_file(keyfile.get(), pathname, G_KEY_FILE_NONE, &error);
@@ -85,7 +92,7 @@ std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const gchar* pathname)
     return keyfile;
 }
 
-std::list<std::shared_ptr<Application>> Libertine::list(std::shared_ptr<Registry> registry)
+std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> applist;
 
@@ -110,18 +117,11 @@ std::list<std::shared_ptr<Application>> Libertine::list(std::shared_ptr<Registry
     return applist;
 }
 
-std::shared_ptr<Application::Info> Libertine::info(void)
+std::shared_ptr<Application::Info> Libertine::info()
 {
-    if (_keyfile)
-    {
-        return std::make_shared<AppInfo::Desktop>(_keyfile, libertine_container_path(_container.value().c_str()));
-    }
-    else
-    {
-        return {};
-    }
+    return std::make_shared<app_info::Desktop>(_keyfile, libertine_container_path(_container.value().c_str()));
 }
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

@@ -17,10 +17,10 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <list>
+#include <memory>
 #include <sys/types.h>
 #include <vector>
-#include <memory>
-#include <list>
 
 #include "appid.h"
 #include "type-tagger.h"
@@ -28,9 +28,9 @@
 #pragma once
 #pragma GCC visibility push(default)
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
 
 class Registry;
@@ -41,7 +41,7 @@ public:
     struct URLTag;
     typedef TypeTagger<URLTag, std::string> URL;
 
-    static std::shared_ptr<Application> create(const AppID& appid, std::shared_ptr<Registry> registry);
+    static std::shared_ptr<Application> create(const AppID& appid, const std::shared_ptr<Registry>& registry);
 
     /* System level info */
     virtual AppID appId() = 0;
@@ -63,27 +63,27 @@ public:
         virtual const IconPath& iconPath() = 0;
 
         /* Splash information */
-        struct SplashTitleTag;
-        struct SplashImageTag;
-        struct SplashColorTag;
-        struct SplashShowHeaderTag;
-
-        typedef TypeTagger<SplashTitleTag, std::string> SplashTitle;
-        typedef TypeTagger<SplashImageTag, std::string> SplashImage;
-        typedef TypeTagger<SplashColorTag, std::string> SplashColor;
-        typedef TypeTagger<SplashShowHeaderTag, bool> SplashShowHeader;
-
-        struct SplashInfo
+        struct Splash
         {
-            SplashTitle title;
-            SplashImage image;
-            SplashColor backgroundColor;
-            SplashColor headerColor;
-            SplashColor footerColor;
-            SplashShowHeader showHeader;
+            struct TitleTag;
+            struct ImageTag;
+            struct ColorTag;
+            struct ShowHeaderTag;
+
+            typedef TypeTagger<TitleTag, std::string> Title;
+            typedef TypeTagger<ImageTag, std::string> Image;
+            typedef TypeTagger<ColorTag, std::string> Color;
+            typedef TypeTagger<ShowHeaderTag, bool> ShowHeader;
+
+            Title title;
+            Image image;
+            Color backgroundColor;
+            Color headerColor;
+            Color footerColor;
+            ShowHeader showHeader;
         };
 
-        virtual SplashInfo splash() = 0;
+        virtual Splash splash() = 0;
 
         /* Orientation and placement */
         struct Orientations
@@ -112,7 +112,7 @@ public:
 
         typedef TypeTagger<UbuntuLifecycleTag, bool> UbuntuLifecycle;
 
-        virtual UbuntuLifecycle ubuntuLifecycle() = 0;
+        virtual UbuntuLifecycle supportsUbuntuLifecycle() = 0;
     };
 
     virtual std::shared_ptr<Info> info() = 0;
@@ -140,11 +140,11 @@ public:
     virtual bool hasInstances() = 0;
     virtual std::vector<std::shared_ptr<Instance>> instances() = 0;
 
-    virtual std::shared_ptr<Instance> launch(std::vector<URL> urls = {}) = 0;
-    virtual std::shared_ptr<Instance> launchTest(std::vector<URL> urls = {}) = 0;
+    virtual std::shared_ptr<Instance> launch(const std::vector<URL>& urls = {}) = 0;
+    virtual std::shared_ptr<Instance> launchTest(const std::vector<URL>& urls = {}) = 0;
 };
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_launch
+};  // namespace ubuntu
 
 #pragma GCC visibility pop

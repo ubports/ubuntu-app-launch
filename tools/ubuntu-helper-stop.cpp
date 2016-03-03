@@ -29,11 +29,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    auto type = Ubuntu::AppLaunch::Helper::Type::from_raw(argv[1]);
-    auto appid = Ubuntu::AppLaunch::AppID::parse(argv[2]);
+    auto type = ubuntu::app_launch::Helper::Type::from_raw(argv[1]);
+    auto appid = ubuntu::app_launch::AppID::parse(argv[2]);
 
-    auto registry = std::make_shared<Ubuntu::AppLaunch::Registry>();
-    auto helper = Ubuntu::AppLaunch::Helper::create(type, appid, registry);
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+    auto helper = ubuntu::app_launch::Helper::create(type, appid, registry);
 
     for (auto instance : helper->instances())
     {

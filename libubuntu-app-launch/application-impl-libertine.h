@@ -22,19 +22,21 @@
 
 #pragma once
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
 class Libertine : public Base
 {
 public:
-    Libertine(const AppID::Package& container, const AppID::AppName& appname, std::shared_ptr<Registry> registry);
+    Libertine(const AppID::Package& container,
+              const AppID::AppName& appname,
+              const std::shared_ptr<Registry>& registry);
 
-    static std::list<std::shared_ptr<Application>> list(std::shared_ptr<Registry> registry);
+    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry> &registry);
 
     AppID appId() override
     {
@@ -47,10 +49,8 @@ private:
     AppID::Package _container;
     AppID::AppName _appname;
     std::shared_ptr<GKeyFile> _keyfile;
-
-    static std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname);
 };
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

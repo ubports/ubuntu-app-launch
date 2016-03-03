@@ -25,28 +25,28 @@ extern "C" {
 
 #pragma once
 
-namespace Ubuntu
+namespace ubuntu
 {
-namespace AppLaunch
+namespace app_launch
 {
-namespace AppImpls
+namespace app_impls
 {
 
-class Base : public Ubuntu::AppLaunch::Application
+class Base : public ubuntu::app_launch::Application
 {
 public:
-    Base(std::shared_ptr<Registry> registry);
+    Base(const std::shared_ptr<Registry> &registry);
 
     bool hasInstances() override;
     std::vector<std::shared_ptr<Instance>> instances() override;
 
-    std::shared_ptr<Instance> launch(std::vector<Application::URL> urls = {}) override;
-    std::shared_ptr<Instance> launchTest(std::vector<Application::URL> urls = {}) override;
+    std::shared_ptr<Instance> launch(const std::vector<Application::URL> &urls = {}) override;
+    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL> &urls = {}) override;
 
 protected:
     std::shared_ptr<Registry> _registry;
 };
 
-};  // namespace AppImpls
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+};  // namespace app_impls
+};  // namespace app_launch
+};  // namespace ubuntu

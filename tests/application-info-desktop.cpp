@@ -41,7 +41,7 @@ TEST_F(ApplicationInfoDesktop, DefaultState)
     g_key_file_set_string(keyfile.get(), DESKTOP, "Exec", "foo");
     g_key_file_set_string(keyfile.get(), DESKTOP, "Icon", "foo.png");
 
-    auto appinfo = Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/");
+    auto appinfo = ubuntu::app_launch::app_info::Desktop(keyfile, "/");
 
     EXPECT_EQ("Foo App", appinfo.name().value());
     EXPECT_EQ("", appinfo.description().value());
@@ -61,31 +61,31 @@ TEST_F(ApplicationInfoDesktop, DefaultState)
 
     EXPECT_FALSE(appinfo.rotatesWindowContents().value());
 
-    EXPECT_FALSE(appinfo.ubuntuLifecycle().value());
+    EXPECT_FALSE(appinfo.supportsUbuntuLifecycle().value());
 }
 
 TEST_F(ApplicationInfoDesktop, KeyfileErrors)
 {
-    EXPECT_THROW(Ubuntu::AppLaunch::AppInfo::Desktop({}, "/"), std::runtime_error);
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop({}, "/"), std::runtime_error);
 
     auto noname = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
     g_key_file_set_string(noname.get(), DESKTOP, "Comment", "This is a comment");
     g_key_file_set_string(noname.get(), DESKTOP, "Exec", "foo");
     g_key_file_set_string(noname.get(), DESKTOP, "Icon", "foo.png");
 
-    EXPECT_THROW(Ubuntu::AppLaunch::AppInfo::Desktop(noname, "/"), std::runtime_error);
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(noname, "/"), std::runtime_error);
 
     auto noicon = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
     g_key_file_set_string(noicon.get(), DESKTOP, "Name", "Foo App");
     g_key_file_set_string(noicon.get(), DESKTOP, "Comment", "This is a comment");
     g_key_file_set_string(noicon.get(), DESKTOP, "Exec", "foo");
 
-    EXPECT_THROW(Ubuntu::AppLaunch::AppInfo::Desktop(noicon, "/"), std::runtime_error);
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(noicon, "/"), std::runtime_error);
 }
 
 TEST_F(ApplicationInfoDesktop, Orientations)
 {
-    Ubuntu::AppLaunch::Application::Info::Orientations defaultOrientations =
+    ubuntu::app_launch::Application::Info::Orientations defaultOrientations =
     {
 portrait:
         true,
@@ -102,47 +102,47 @@ invertedLandscape:
     g_key_file_set_string(keyfile.get(), DESKTOP, "Exec", "foo");
     g_key_file_set_string(keyfile.get(), DESKTOP, "Icon", "foo.png");
 
-    EXPECT_EQ(defaultOrientations, Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ(defaultOrientations, ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "this should not parse");
-    EXPECT_EQ(defaultOrientations, Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ(defaultOrientations, ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "this;should;not;parse;");
-    EXPECT_EQ(defaultOrientations, Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ(defaultOrientations, ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "portrait;");
-    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: false, invertedPortrait: false, invertedLandscape: false}),
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ((ubuntu::app_launch::Application::Info::Orientations {portrait: true, landscape: false, invertedPortrait: false, invertedLandscape: false}),
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "landscape;portrait;");
-    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: false, invertedLandscape: false}),
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ((ubuntu::app_launch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: false, invertedLandscape: false}),
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "landscape  ;  portrait;	invertedPortrait");
-    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: true, invertedLandscape: false}),
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ((ubuntu::app_launch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: true, invertedLandscape: false}),
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "portrait;landscape;");
-    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: false, invertedLandscape: false}),
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ((ubuntu::app_launch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: false, invertedLandscape: false}),
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "portrait;landscape;invertedportrait;invertedlandscape;");
-    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: true, invertedLandscape: true}),
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ((ubuntu::app_launch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: true, invertedLandscape: true}),
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "PORTRAIT;");
-    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: false, invertedPortrait: false, invertedLandscape: false}),
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ((ubuntu::app_launch::Application::Info::Orientations {portrait: true, landscape: false, invertedPortrait: false, invertedLandscape: false}),
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "pOrTraIt;lANDscApE;inVErtEDpORtrAit;iNVErtEDLAnDsCapE;");
-    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: true, invertedLandscape: true}),
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ((ubuntu::app_launch::Application::Info::Orientations {portrait: true, landscape: true, invertedPortrait: true, invertedLandscape: true}),
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "primary;");
-    EXPECT_EQ((Ubuntu::AppLaunch::Application::Info::Orientations {portrait: false, landscape: false, invertedPortrait: false, invertedLandscape: false}),
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+    EXPECT_EQ((ubuntu::app_launch::Application::Info::Orientations {portrait: false, landscape: false, invertedPortrait: false, invertedLandscape: false}),
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "foobar;primary;");
     EXPECT_EQ(defaultOrientations,
-              Ubuntu::AppLaunch::AppInfo::Desktop(keyfile, "/").supportedOrientations());
+              ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 }
