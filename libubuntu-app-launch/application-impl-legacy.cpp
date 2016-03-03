@@ -56,8 +56,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
 {
     std::string desktopName = name.value() + ".desktop";
-    auto keyfilecheck = [desktopName](const gchar* dir) -> std::shared_ptr<GKeyFile>
-    {
+    auto keyfilecheck = [desktopName](const gchar* dir) -> std::shared_ptr<GKeyFile> {
         auto fullname = g_build_filename(dir, "applications", desktopName.c_str(), nullptr);
         if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
         {

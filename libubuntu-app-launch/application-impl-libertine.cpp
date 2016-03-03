@@ -73,13 +73,12 @@ std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname)
         return {};
     }
 
-    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile* keyfile)
-                                      {
-                                          if (keyfile != nullptr)
-                                          {
-                                              g_key_file_free(keyfile);
-                                          }
-                                      });
+    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile* keyfile) {
+        if (keyfile != nullptr)
+        {
+            g_key_file_free(keyfile);
+        }
+    });
     GError* error = nullptr;
 
     g_key_file_load_from_file(keyfile.get(), pathname, G_KEY_FILE_NONE, &error);

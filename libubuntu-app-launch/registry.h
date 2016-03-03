@@ -17,10 +17,10 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <core/signal.h>
+#include <functional>
 #include <list>
 #include <memory>
-#include <functional>
-#include <core/signal.h>
 
 #include "application.h"
 #include "helper.h"

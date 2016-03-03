@@ -17,8 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 #include <mir_toolkit/mir_prompt_session.h>
 

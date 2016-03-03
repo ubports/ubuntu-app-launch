@@ -114,14 +114,13 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
 }
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
-    : _keyfile([keyfile]()
-               {
-                   if (!keyfile)
-                   {
-                       throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
-                   }
-                   return keyfile;
-               }())
+    : _keyfile([keyfile]() {
+        if (!keyfile)
+        {
+            throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
+        }
+        return keyfile;
+    }())
     , _basePath(basePath)
     , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
@@ -136,65 +135,62 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
         showHeader :
             boolFromKeyfile<Application::Info::Splash::ShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)
     })
-    , _supportedOrientations(
-          [keyfile]()
-          {
-              Orientations all = {portrait : true, landscape : true, invertedPortrait : true, invertedLandscape : true};
+    , _supportedOrientations([keyfile]() {
+        Orientations all = {portrait : true, landscape : true, invertedPortrait : true, invertedLandscape : true};
 
-              GError* error = nullptr;
-              auto orientationStrv = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP,
-                                                                "X-Ubuntu-Supported-Orientations", nullptr, &error);
+        GError* error = nullptr;
+        auto orientationStrv = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP,
+                                                          "X-Ubuntu-Supported-Orientations", nullptr, &error);
 
-              if (error != nullptr)
-              {
-                  g_error_free(error);
-                  return all;
-              }
+        if (error != nullptr)
+        {
+            g_error_free(error);
+            return all;
+        }
 
-              Orientations retval =
-                  {portrait : false, landscape : false, invertedPortrait : false, invertedLandscape : false};
+        Orientations retval =
+            {portrait : false, landscape : false, invertedPortrait : false, invertedLandscape : false};
 
-              try
-              {
-                  for (auto i = 0; orientationStrv[i] != nullptr; i++)
-                  {
-                      g_strstrip(orientationStrv[i]); /* remove whitespace */
+        try
+        {
+            for (auto i = 0; orientationStrv[i] != nullptr; i++)
+            {
+                g_strstrip(orientationStrv[i]); /* remove whitespace */
 
-                      if (g_ascii_strcasecmp("portrait", orientationStrv[i]) == 0)
-                      {
-                          retval.portrait = true;
-                      }
-                      else if (g_ascii_strcasecmp("landscape", orientationStrv[i]) == 0)
-                      {
-                          retval.landscape = true;
-                      }
-                      else if (g_ascii_strcasecmp("invertedPortrait", orientationStrv[i]) == 0)
-                      {
-                          retval.invertedPortrait = true;
-                      }
-                      else if (g_ascii_strcasecmp("invertedLandscape", orientationStrv[i]) == 0)
-                      {
-                          retval.invertedLandscape = true;
-                      }
-                      else if (g_ascii_strcasecmp("primary", orientationStrv[i]) == 0 && i == 0)
-                      {
-                          /* Pass, we'll let primary be the first entry, it should be the only. */
-                      }
-                      else
-                      {
-                          throw std::runtime_error("Invalid orientation string '" + std::string(orientationStrv[i]) +
-                                                   "'");
-                      }
-                  }
-              }
-              catch (...)
-              {
-                  retval = all;
-              }
+                if (g_ascii_strcasecmp("portrait", orientationStrv[i]) == 0)
+                {
+                    retval.portrait = true;
+                }
+                else if (g_ascii_strcasecmp("landscape", orientationStrv[i]) == 0)
+                {
+                    retval.landscape = true;
+                }
+                else if (g_ascii_strcasecmp("invertedPortrait", orientationStrv[i]) == 0)
+                {
+                    retval.invertedPortrait = true;
+                }
+                else if (g_ascii_strcasecmp("invertedLandscape", orientationStrv[i]) == 0)
+                {
+                    retval.invertedLandscape = true;
+                }
+                else if (g_ascii_strcasecmp("primary", orientationStrv[i]) == 0 && i == 0)
+                {
+                    /* Pass, we'll let primary be the first entry, it should be the only. */
+                }
+                else
+                {
+                    throw std::runtime_error("Invalid orientation string '" + std::string(orientationStrv[i]) + "'");
+                }
+            }
+        }
+        catch (...)
+        {
+            retval = all;
+        }
 
-              g_strfreev(orientationStrv);
-              return retval;
-          }())
+        g_strfreev(orientationStrv);
+        return retval;
+    }())
     , _rotatesWindow(
           boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Content", false))
     , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))

@@ -24,48 +24,41 @@ namespace GLib
 
 ContextThread::ContextThread(std::function<void()> beforeLoop, std::function<void()> afterLoop)
 {
-    _cancel = std::shared_ptr<GCancellable>(g_cancellable_new(), [](GCancellable* cancel)
-                                            {
-                                                if (cancel != nullptr)
-                                                {
-                                                    g_cancellable_cancel(cancel);
-                                                    g_object_unref(cancel);
-                                                }
-                                            });
+    _cancel = std::shared_ptr<GCancellable>(g_cancellable_new(), [](GCancellable* cancel) {
+        if (cancel != nullptr)
+        {
+            g_cancellable_cancel(cancel);
+            g_object_unref(cancel);
+        }
+    });
     std::promise<std::pair<std::shared_ptr<GMainContext>, std::shared_ptr<GMainLoop>>> context_promise;
 
     /* NOTE: We copy afterLoop but reference beforeLoop. We're blocking so we
        know that beforeLoop will stay valid long enough, but we can't say the
        same for afterLoop */
-    _thread = std::thread(
-        [&context_promise, &beforeLoop, afterLoop, this]()
+    _thread = std::thread([&context_promise, &beforeLoop, afterLoop, this]() {
+        /* Build up the context and loop for the async events and a place
+           for GDBus to send its events back to */
+        auto context = std::shared_ptr<GMainContext>(
+            g_main_context_new(), [](GMainContext* context) { g_clear_pointer(&context, g_main_context_unref); });
+        auto loop = std::shared_ptr<GMainLoop>(g_main_loop_new(context.get(), FALSE),
+                                               [](GMainLoop* loop) { g_clear_pointer(&loop, g_main_loop_unref); });
+
+        g_main_context_push_thread_default(context.get());
+
+        beforeLoop();
+
+        /* Free's the constructor to continue */
+        auto pair = std::pair<std::shared_ptr<GMainContext>, std::shared_ptr<GMainLoop>>(context, loop);
+        context_promise.set_value(pair);
+
+        if (!g_cancellable_is_cancelled(_cancel.get()))
         {
-            /* Build up the context and loop for the async events and a place
-               for GDBus to send its events back to */
-            auto context = std::shared_ptr<GMainContext>(g_main_context_new(), [](GMainContext* context)
-                                                         {
-                                                             g_clear_pointer(&context, g_main_context_unref);
-                                                         });
-            auto loop = std::shared_ptr<GMainLoop>(g_main_loop_new(context.get(), FALSE), [](GMainLoop* loop)
-                                                   {
-                                                       g_clear_pointer(&loop, g_main_loop_unref);
-                                                   });
+            g_main_loop_run(loop.get());
+        }
 
-            g_main_context_push_thread_default(context.get());
-
-            beforeLoop();
-
-            /* Free's the constructor to continue */
-            auto pair = std::pair<std::shared_ptr<GMainContext>, std::shared_ptr<GMainLoop>>(context, loop);
-            context_promise.set_value(pair);
-
-            if (!g_cancellable_is_cancelled(_cancel.get()))
-            {
-                g_main_loop_run(loop.get());
-            }
-
-            afterLoop();
-        });
+        afterLoop();
+    });
 
     /* We need to have the context and the mainloop ready before
        other functions on this object can work properly. So we wait
@@ -129,20 +122,15 @@ void ContextThread::simpleSource(std::function<GSource*()> srcBuilder, std::func
        it to the context. */
     auto heapWork = new std::function<void()>(work);
 
-    auto source = std::shared_ptr<GSource>(srcBuilder(), [](GSource* src)
-                                           {
-                                               g_clear_pointer(&src, g_source_unref);
-                                           });
+    auto source = std::shared_ptr<GSource>(srcBuilder(), [](GSource* src) { g_clear_pointer(&src, g_source_unref); });
     g_source_set_callback(source.get(),
-                          [](gpointer data)
-                          {
+                          [](gpointer data) {
                               auto heapWork = static_cast<std::function<void()>*>(data);
                               (*heapWork)();
                               return G_SOURCE_REMOVE;
                           },
                           heapWork,
-                          [](gpointer data)
-                          {
+                          [](gpointer data) {
                               auto heapWork = static_cast<std::function<void()>*>(data);
                               delete heapWork;
                           });
@@ -157,22 +145,12 @@ void ContextThread::executeOnThread(std::function<void()> work)
 
 void ContextThread::timeout(const std::chrono::milliseconds& length, std::function<void()> work)
 {
-    simpleSource(
-        [length]()
-        {
-            return g_timeout_source_new(length.count());
-        },
-        work);
+    simpleSource([length]() { return g_timeout_source_new(length.count()); }, work);
 }
 
 void ContextThread::timeoutSeconds(const std::chrono::seconds& length, std::function<void()> work)
 {
-    simpleSource(
-        [length]()
-        {
-            return g_timeout_source_new_seconds(length.count());
-        },
-        work);
+    simpleSource([length]() { return g_timeout_source_new_seconds(length.count()); }, work);
 }
 
 }  // ns GLib

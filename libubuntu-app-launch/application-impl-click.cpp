@@ -18,8 +18,8 @@
  */
 
 #include "application-impl-click.h"
-#include "registry-impl.h"
 #include "application-info-desktop.h"
+#include "registry-impl.h"
 
 namespace ubuntu
 {

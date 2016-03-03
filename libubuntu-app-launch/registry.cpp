@@ -43,8 +43,7 @@ Registry::~Registry()
 std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> connection)
 {
     return connection->impl->thread.executeOnThread<std::list<std::shared_ptr<Application>>>(
-        [connection]() -> std::list<std::shared_ptr<Application>>
-        {
+        [connection]() -> std::list<std::shared_ptr<Application>> {
             auto strv = ubuntu_app_launch_list_running_apps();
             if (strv == nullptr)
             {

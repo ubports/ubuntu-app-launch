@@ -17,10 +17,10 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <list>
+#include <memory>
 #include <sys/types.h>
 #include <vector>
-#include <memory>
-#include <list>
 
 #include "appid.h"
 #include "type-tagger.h"
