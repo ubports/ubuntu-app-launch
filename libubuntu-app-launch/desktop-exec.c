@@ -22,10 +22,10 @@
 #include <string.h>
 #include <glib.h>
 #include <gio/gio.h>
+#include <libwhoopsie/recoverable-problem.h>
 
 #include "helpers.h"
 #include "ubuntu-app-launch-trace.h"
-#include "recoverable-problem.h"
 #include "ual-tracepoint.h"
 #include "ubuntu-app-launch.h"
 #include "app-info.h"
@@ -66,7 +66,7 @@ report_error_on_caller (const gchar * app_id) {
 	}
 
 	if (!debugtool) {
-		report_recoverable_problem("ubuntu-app-launch-invalid-appid", pid, TRUE, props);
+		whoopsie_report_recoverable_problem("ubuntu-app-launch-invalid-appid", pid, TRUE, props);
 	} else {
 		g_debug("Suppressing appid recoverable error for debug tool");
 	}

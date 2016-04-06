@@ -22,7 +22,6 @@
 #include <cgmanager/cgmanager.h>
 
 #include "ual-tracepoint.h"
-#include "libubuntu-app-launch/recoverable-problem.h"
 
 /* Check to make sure we have the sections and keys we want */
 gboolean

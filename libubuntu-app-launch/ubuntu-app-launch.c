@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <zeitgeist.h>
+#include <libwhoopsie/recoverable-problem.h>
 
 #include "ubuntu-app-launch-trace.h"
 #include "second-exec-core.h"
@@ -32,7 +33,6 @@
 #include "ual-tracepoint.h"
 #include "click-exec.h"
 #include "desktop-exec.h"
-#include "recoverable-problem.h"
 #include "proxy-socket-demangler.h"
 #include "app-info.h"
 
@@ -1811,7 +1811,7 @@ remove_socket_path (const gchar * path)
 			NULL
 		};
 		props[1] = path;
-		report_recoverable_problem("ubuntu-app-launch-mir-fd-proxy", 0, TRUE, props);
+		whoopsie_report_recoverable_problem("ubuntu-app-launch-mir-fd-proxy", 0, TRUE, props);
 	}
 
 	g_object_unref(obj);
