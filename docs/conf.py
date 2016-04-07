@@ -43,7 +43,7 @@ extensions = [
 ]
 
 # Breathe projects
-breathe_projects = { 'libubuntu-app-launch': '/home/ted/Development/ubuntu-app-launch/sphinx/xml/' }
+breathe_projects = { 'libubuntu-app-launch': '../xml/' }
 breathe_default_project = 'libubuntu-app-launch'
 
 # Add any paths that contain templates here, relative to this directory.
