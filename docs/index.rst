@@ -13,10 +13,8 @@ Contents:
 
 
 
-Indices and tables
-==================
+Doxygen Documentation
+=====================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. doxygenfile:: ubuntu-app-launch.h
 

@@ -15,11 +15,19 @@
 
 import sys
 import os
+import subprocess
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
+
+# -- Use Doxygen ----------------------------------------------------------
+
+#read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+#if read_the_docs_build:
+#    subprocess.call('cd .. ; doxygen docs/Doxyfile', shell=True)
+subprocess.call('cd .. ; doxygen docs/Doxyfile', shell=True)
 
 # -- General configuration ------------------------------------------------
 
@@ -31,7 +39,12 @@ import os
 # ones.
 extensions = [
     'sphinx.ext.todo',
+    'breathe'
 ]
+
+# Breathe projects
+breathe_projects = { 'libubuntu-app-launch': '/home/ted/Development/ubuntu-app-launch/sphinx/xml/' }
+breathe_default_project = 'libubuntu-app-launch'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -49,7 +62,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Ubuntu App Launch'
-copyright = '2016, Ted Gould'
+copyright = '2016, Canonical'
 author = 'Ted Gould'
 
 # The version info for the project you're documenting, acts as replacement for
