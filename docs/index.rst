@@ -61,6 +61,16 @@ Registry
    :private-members:
    :undoc-members:
 
+Type Tagger
+-----------
+
+.. doxygenclass:: ubuntu::app_launch::TypeTagger
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
 Quality
 =======
 
