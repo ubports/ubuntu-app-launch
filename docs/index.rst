@@ -27,8 +27,6 @@ AppID
 .. doxygenstruct:: ubuntu::app_launch::AppID
    :project: libubuntu-app-launch
    :members:
-   :protected-members:
-   :private-members:
    :undoc-members:
 
 Application
@@ -37,8 +35,6 @@ Application
 .. doxygenclass:: ubuntu::app_launch::Application
    :project: libubuntu-app-launch
    :members:
-   :protected-members:
-   :private-members:
    :undoc-members:
 
 Helper
@@ -47,8 +43,6 @@ Helper
 .. doxygenclass:: ubuntu::app_launch::Helper
    :project: libubuntu-app-launch
    :members:
-   :protected-members:
-   :private-members:
    :undoc-members:
 
 Registry
@@ -57,9 +51,21 @@ Registry
 .. doxygenclass:: ubuntu::app_launch::Registry
    :project: libubuntu-app-launch
    :members:
+   :undoc-members:
+
+Implementation Details
+======================
+
+Registry Implementation
+-----------------------
+
+.. doxygenclass:: ubuntu::app_launch::Registry::Impl
+   :project: libubuntu-app-launch
+   :members:
    :protected-members:
    :private-members:
    :undoc-members:
+
 
 Type Tagger
 -----------

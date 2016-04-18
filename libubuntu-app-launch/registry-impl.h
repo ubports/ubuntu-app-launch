@@ -31,6 +31,10 @@ namespace ubuntu
 namespace app_launch
 {
 
+/** \private
+    \brief Private implementation of the Registry object
+
+*/
 class Registry::Impl
 {
 public:

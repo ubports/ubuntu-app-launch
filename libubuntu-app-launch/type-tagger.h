@@ -7,11 +7,11 @@ namespace app_launch
 
 /** \brief A small template to make it clearer when special types are being used
 
-        The TypeTagger a small piece of C++ so that we can have custom types
-        for things in the Ubuntu App Launch API that should be handled in
-        special ways, but really have basic types at their core. In this way
-        there is explicit code to convert these items into their fundamental type
-        so that is obvious and can be easily searched for.
+    The TypeTagger a small piece of C++ so that we can have custom types
+    for things in the Ubuntu App Launch API that should be handled in
+    special ways, but really have basic types at their core. In this way
+    there is explicit code to convert these items into their fundamental type
+    so that is obvious and can be easily searched for.
 */
 template <typename Tag, typename T>
 class TypeTagger

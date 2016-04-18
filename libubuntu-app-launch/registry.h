@@ -81,7 +81,9 @@ public:
     static void clearDefault();
 
     /* Hide our implementation */
+    /** \private */
     class Impl;
+    /** \private */
     std::unique_ptr<Impl> impl;
 };
 
