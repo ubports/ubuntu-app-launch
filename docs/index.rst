@@ -56,6 +56,66 @@ Registry
 Implementation Details
 ======================
 
+Application Implementation Base
+-------------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_impls::Base
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Implementation Click
+--------------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_impls::Click
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Implementation Legacy
+---------------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_impls::Legacy
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Implementation Libertine
+------------------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_impls::Libertine
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Info Desktop
+------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_info::Desktop
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Helper Implementation Click
+---------------------------
+
+.. doxygenclass:: ubuntu::app_launch::helper_impls::Click
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
 Registry Implementation
 -----------------------
 
@@ -65,7 +125,6 @@ Registry Implementation
    :protected-members:
    :private-members:
    :undoc-members:
-
 
 Type Tagger
 -----------
