@@ -36,7 +36,7 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          click-apparmor,
-         libpam-cgfs | libpam-cgm,
+         libpam-cgfs | libpam-cgm | cgmanager (<< 0.37),
          upstart (>= 1.13),
          xmir,
          zeitgeist-core,
