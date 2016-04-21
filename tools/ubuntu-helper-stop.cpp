@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Canonical Ltd.
+ * Copyright © 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,30 +17,28 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
-#include <gio/gio.h>
+#include <iostream>
+#include "libubuntu-app-launch/helper.h"
+#include "libubuntu-app-launch/registry.h"
 
-int
-main (int argc, gchar * argv[]) {
-	if (argc != 3) {
-		g_printerr("Usage: %s <helper type> <app id>\n", argv[0]);
-		return 1;
-	}
+int main(int argc, char* argv[])
+{
+    if (argc != 3)
+    {
+        std::cerr << "Usage: " << argv[0] << " <helper type> <app id>" << std::endl;
+        return 1;
+    }
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, -1);
+    auto type = ubuntu::app_launch::Helper::Type::from_raw(argv[1]);
+    auto appid = ubuntu::app_launch::AppID::parse(argv[2]);
 
-	int retval = -1;
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+    auto helper = ubuntu::app_launch::Helper::create(type, appid, registry);
 
-	/* TODO: Allow URIs */
-	if (ubuntu_app_launch_start_helper(argv[1], argv[2], NULL)) {
-		retval = 0;
-	} else {
-		g_debug("Unable to start app id '%s' of type '%s'", argv[2], argv[1]);
-	}
+    for (auto instance : helper->instances())
+    {
+        instance->stop();
+    }
 
-	g_dbus_connection_flush_sync(con, NULL, NULL);
-	g_object_unref(con);
-
-	return retval; 
+    return 0;
 }

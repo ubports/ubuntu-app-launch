@@ -299,8 +299,6 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	ASSERT_NE(calls, nullptr);
 	ASSERT_STREQ("SetEnvList", calls[0].name);
 
-	unsigned int i;
-
 	bool got_app_isolation = false;
 	bool got_cache_home = false;
 	bool got_config_home = false;

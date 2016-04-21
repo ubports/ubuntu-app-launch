@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Canonical Ltd.
+ * Copyright 2015 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,35 +17,28 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include <iostream>
+#include <libubuntu-app-launch/registry.h>
+#include <libubuntu-app-launch/application.h>
 
-int
-main (int argc, gchar * argv[]) {
+int main(int argc, char* argv[])
+{
 
-	if (argc > 4 || argc == 1) {
-		g_printerr("Usage: %s <package> [application] [version]\n", argv[0]);
-		return 1;
-	}
+    if (argc != 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <app id>" << std::endl;
+        return 1;
+    }
 
-	gchar * pkg = argv[1];
-	gchar * app = NULL;
-	gchar * ver = NULL;
+    auto appid = ubuntu::app_launch::AppID::parse(argv[1]);
+    auto app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
+    auto pid = app->instances()[0]->primaryPid();
 
-	if (argc > 2) {
-		app = argv[2];
-	}
+    if (pid == 0)
+    {
+        return 1;
+    }
 
-	if (argc > 3) {
-		app = argv[3];
-	}
-
-	gchar * appid = ubuntu_app_launch_triplet_to_app_id(pkg, app, ver);
-	if (appid == NULL) {
-		return -1;
-	}
-
-	g_print("%s\n", appid);
-	g_free(appid);
-
-	return 0;
+    std::cout << pid << std::endl;
+    return 0;
 }

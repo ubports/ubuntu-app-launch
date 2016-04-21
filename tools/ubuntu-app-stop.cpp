@@ -17,19 +17,25 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include <iostream>
+#include <libubuntu-app-launch/application.h>
+#include <libubuntu-app-launch/registry.h>
 
-int
-main (int argc, gchar * argv[]) {
+int main(int argc, char* argv[])
+{
+    if (argc != 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <app id>" << std::endl;
+        return 1;
+    }
 
-	if (argc != 2) {
-		g_printerr("Usage: %s <app id>\n", argv[0]);
-		return 1;
-	}
+    auto appid = ubuntu::app_launch::AppID::parse(argv[1]);
+    auto app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
 
-	if (ubuntu_app_launch_stop_application(argv[1])) {
-		return 0;
-	} else {
-		return 1;
-	}
+    for (auto instance : app->instances())
+    {
+        instance->stop();
+    }
+
+    return 0;
 }

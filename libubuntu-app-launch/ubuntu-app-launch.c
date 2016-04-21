@@ -38,7 +38,6 @@
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
-static GList * pids_for_appid (const gchar * appid);
 int kill (pid_t pid, int signal);
 static gchar * escape_dbus_string (const gchar * input);
 
@@ -588,7 +587,7 @@ signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore, const
 
 	do {
 		hash_table_size = g_hash_table_size(pidssignaled);
-		GList * pidlist = pids_for_appid(appid);
+		GList * pidlist = ubuntu_app_launch_get_pids(appid);
 		GList * iter;
 
 		if (pidlist == NULL) {
@@ -1506,9 +1505,10 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 /* Get the PIDs for an AppID. If it's click or legacy single instance that's
    a simple call to the helper. But if it's not, we have to make a call for
    each instance of the app that we have running. */
-static GList *
-pids_for_appid (const gchar * appid)
+GList *
+ubuntu_app_launch_get_pids (const gchar * appid)
 {
+	g_return_val_if_fail(appid != NULL, NULL);
 	ual_tracepoint(pids_list_start, appid);
 
 	GDBusConnection * cgmanager = cgroup_manager_connection();
@@ -1522,7 +1522,7 @@ pids_for_appid (const gchar * appid)
 
 		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
 		return pids;
-	} else if (!is_libertine(appid) && legacy_single_instance(appid)) {
+	} else if (is_libertine(appid) || legacy_single_instance(appid)) {
 		gchar * jobname = g_strdup_printf("%s-", appid);
 		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
 		g_free(jobname);
@@ -1572,7 +1572,7 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 		return FALSE;
 	}
 
-	GList * pidlist = pids_for_appid(appid);
+	GList * pidlist = ubuntu_app_launch_get_pids(appid);
 	GList * head;
 
 	for (head = pidlist; head != NULL; head = g_list_next(head)) {

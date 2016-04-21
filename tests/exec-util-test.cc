@@ -172,7 +172,7 @@ TEST_F(ExecUtil, ClickExec)
 		{"APP_DIR", [](const gchar * value) {
 			EXPECT_STREQ(APP_DIR, value); }},
 		{"APP_EXEC", [](const gchar * value) {
-			EXPECT_STREQ("foo", value); }},
+			EXPECT_STREQ("grep", value); }},
 		{"APP_ID", [](const gchar * value) {
 			EXPECT_STREQ("com.test.good_application_1.2.3", value); }},
 		{"APP_LAUNCHER_PID", [](const gchar * value) {

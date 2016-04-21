@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Canonical Ltd.
+ * Copyright © 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,22 +17,24 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include <iostream>
+#include "libubuntu-app-launch/helper.h"
+#include "libubuntu-app-launch/registry.h"
 
-int
-main (int argc, char * argv[])
+int main(int argc, char* argv[])
 {
-	gchar ** apps;
+    if (argc != 3)
+    {
+        std::cerr << "Usage: " << argv[0] << " <helper type> <app id>" << std::endl;
+        return 1;
+    }
 
-	apps = ubuntu_app_launch_list_running_apps();
+    auto type = ubuntu::app_launch::Helper::Type::from_raw(argv[1]);
+    auto appid = ubuntu::app_launch::AppID::parse(argv[2]);
 
-	int i;
-	for (i = 0; apps[i] != NULL; i++) {
-		g_print("%s\n", apps[i]);
-	}
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+    auto helper = ubuntu::app_launch::Helper::create(type, appid, registry);
 
-	g_strfreev(apps);
-
-	return 0;
+    helper->launch();
+    return 0;
 }
-

@@ -17,11 +17,34 @@ set(ABI_VERSION 2)
 add_lttng_gen_tp(NAME ubuntu-app-launch-trace)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" -DDEMANGLER_PATH="${pkglibexecdir}/socket-demangler" )
 add_definitions ( -DLIBERTINE_LAUNCH="${CMAKE_INSTALL_FULL_BINDIR}/libertine-launch" )
 
 set(LAUNCHER_HEADERS
 ubuntu-app-launch.h
+)
+
+set(LAUNCHER_CPP_HEADERS
+appid.h
+application.h
+helper.h
+registry.h
+type-tagger.h
+)
+
+set(LAUNCHER_CPP_SOURCES
+application.cpp
+helper.cpp
+registry.cpp
+registry-impl.cpp
+application-impl-base.cpp
+application-impl-click.cpp
+application-impl-legacy.cpp
+application-impl-libertine.cpp
+application-info-desktop.cpp
+helper-impl-click.cpp
+glib-thread.cpp
 )
 
 set(LAUNCHER_SOURCES
@@ -31,6 +54,11 @@ click-exec.c
 desktop-exec.c
 ubuntu-app-launch-trace.c
 app-info.c
+${LAUNCHER_CPP_SOURCES}
+)
+
+add_custom_target(format
+	COMMAND clang-format -i -style=file ${LAUNCHER_CPP_HEADERS} ${LAUNCHER_CPP_SOURCES}
 )
 
 set(LAUNCHER_GEN_SOURCES
@@ -59,6 +87,7 @@ target_link_libraries(ubuntu-launcher
 	${CLICK_LIBRARIES}
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
+	${LIBERTINE_LIBRARIES}
 	helpers
 	-Wl,--no-undefined
 )
@@ -66,6 +95,11 @@ target_link_libraries(ubuntu-launcher
 install(
 	FILES ${LAUNCHER_HEADERS}
 	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libubuntu-app-launch-${API_VERSION}"
+)
+
+install(
+	FILES ${LAUNCHER_CPP_HEADERS}
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/libubuntu-app-launch-${API_VERSION}/ubuntu-app-launch"
 )
 
 install(

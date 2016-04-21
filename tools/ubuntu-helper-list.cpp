@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Canonical Ltd.
+ * Copyright © 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,22 +17,23 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
+#include <iostream>
+#include "libubuntu-app-launch/registry.h"
 
-int
-main (int argc, gchar * argv[]) {
+int main(int argc, char* argv[])
+{
+    if (argc != 2)
+    {
+        std::cerr << "Usage: " << argv[0] << " <helper type>" << std::endl;
+        return 1;
+    }
 
-	if (argc != 2) {
-		g_printerr("Usage: %s <app id>\n", argv[0]);
-		return 1;
-	}
+    auto type = ubuntu::app_launch::Helper::Type::from_raw(argv[1]);
+    auto helpers = ubuntu::app_launch::Registry::runningHelpers(type);
+    for (auto helper : helpers)
+    {
+        std::cout << (std::string)helper->appId() << std::endl;
+    }
 
-	GPid pid = ubuntu_app_launch_get_primary_pid(argv[1]);
-
-	if (pid == 0) {
-		return 1;
-	}
-
-	g_print("%d\n", pid);
-	return 0;
+    return 0;
 }
