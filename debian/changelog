@@ -1,10 +1,28 @@
-ubuntu-app-launch (0.9) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.9+16.04.20160421.3-0ubuntu1) xenial; urgency=medium
 
+  [ Ted Gould ]
   * Add new C++ API that has a retained object for maintaining
     connections through multiple calls. Also provides for getting
     consistent application metadata.
+  * Add dependency on libpam-cgfs on Xenial so that cgroups work
+    properly in Upstart (LP: #1535058)
+  * Adding support for Read the Docs
+  * Fix cut-and-paste error in function comment
+  * If no XDG_DATA_DIRS is set ensure that /usr/share is in the list.
+    (LP: #1541037)
 
- -- Ted Gould <ted@ubuntu.com>  Tue, 26 Jan 2016 15:22:06 -0600
+  [ CI Train Bot ]
+  * Ensure all pending events on the context are complete before
+    unref'ing it. (LP: #1495871)
+
+  [ Dimitri John Ledkov ]
+  * Raise to -std=gnu99, because we really want gnu standards, and thus
+    e.g. access CLOCK_MONOTONIC in lttng on arm64/armhf. Resolves FTBFS.
+
+  [ Michael Terry ]
+  * Fix build by correcting typo in function name.
+
+ -- Ted Gould <ted@gould.cx>  Thu, 21 Apr 2016 19:47:16 +0000
 
 ubuntu-app-launch (0.5+15.10.20150817-0ubuntu1) wily; urgency=medium
 
