@@ -454,7 +454,7 @@ set_confined_envvars (EnvHandle * handle, const gchar * package, const gchar * a
 	/* Add the application's dir to the list of sources for data */
 	const gchar * basedatadirs = g_getenv("XDG_DATA_DIRS");
 	if (basedatadirs == NULL || basedatadirs[0] == '\0') {
-		basedatadirs = "/usr/share";
+		basedatadirs = "/usr/local/share:/usr/share";
 	}
 	gchar * datadirs = g_strjoin(":", app_dir, basedatadirs, NULL);
 	env_handle_add(handle, "XDG_DATA_DIRS", datadirs);
