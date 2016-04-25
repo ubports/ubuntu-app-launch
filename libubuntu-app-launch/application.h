@@ -176,6 +176,21 @@ public:
 
         /* Return whether the Ubuntu Lifecycle is supported by this application */
         virtual UbuntuLifecycle supportsUbuntuLifecycle() = 0;
+
+        /** \private */
+        struct TypeTag;
+        /** \private */
+        typedef TypeTagger<TypeTag, std::string> Type;
+
+        /** \private */
+        struct HiddenTag;
+        /** \private */
+        typedef TypeTagger<HiddenTag, bool> Hidden;
+
+        /** \private */
+        struct NoDisplayTag;
+        /** \private */
+        typedef TypeTagger<NoDisplayTag, bool> NoDisplay;
     };
 
     /** Get a Application::Info object to describe the metadata for this
