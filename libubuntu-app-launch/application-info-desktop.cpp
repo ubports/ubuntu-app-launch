@@ -241,6 +241,45 @@ private:
         return false;
     }
 
+    static void addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile, gchar* directory, std::string themePath, std::list<ThemeSubdirectory>& subdirs)
+    {
+        GError* error = nullptr;
+        auto type = g_key_file_get_string(themefile.get(), directory, "Type", &error);
+        if (error == nullptr)
+        {
+            if (g_strcmp0(type, "Fixed") == 0)
+            {
+                auto size = g_key_file_get_integer(themefile.get(), directory, "Size", &error);
+                if (error == nullptr)
+                {
+                    subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size});
+                }
+            }
+            else if (g_strcmp0(type, "Scalable") == 0)
+            {
+                auto size = g_key_file_get_integer(themefile.get(), directory, "MaxSize", &error);
+                if (error == nullptr)
+                {
+                    subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size});
+                }
+            }
+            else if (g_strcmp0(type, "Threshold") == 0)
+            {
+                auto size = g_key_file_get_integer(themefile.get(), directory, "Size", &error);
+                if (error == nullptr)
+                {
+                    auto threshold = g_key_file_get_integer(themefile.get(), directory, "Threshold", &error);
+                    if (error != nullptr)
+                    {
+                        threshold = 2; // threshold defaults to 2
+                    }
+                    subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size + threshold});
+                }
+            }
+        }
+        g_error_free(error);
+    }
+
     static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile, gchar** directories, std::string themePath)
     {
         std::list<ThemeSubdirectory> subdirs;
@@ -257,48 +296,7 @@ private:
             {
                 continue;
             }
-            auto type = g_key_file_get_string(themefile.get(), directories[i], "Type", &error);
-            if (error != nullptr)
-            {
-                g_error_free(error);
-                continue;
-            }
-            if (g_strcmp0(type, "Fixed") == 0)
-            {
-                auto size = g_key_file_get_integer(themefile.get(), directories[i], "Size", &error);
-                if (error != nullptr)
-                {
-                    g_error_free(error);
-                    continue;
-                }
-                subdirs.push_back(ThemeSubdirectory{themePath + directories[i] + "/", size});
-            }
-            else if (g_strcmp0(type, "Scalable") == 0)
-            {
-                auto size = g_key_file_get_integer(themefile.get(), directories[i], "MaxSize", &error);
-                if (error != nullptr)
-                {
-                    g_error_free(error);
-                    continue;
-                }
-                subdirs.push_back(ThemeSubdirectory{themePath + directories[i] + "/", size});
-            }
-            else if (g_strcmp0(type, "Threshold") == 0)
-            {
-                auto size = g_key_file_get_integer(themefile.get(), directories[i], "Size", &error);
-                if (error != nullptr)
-                {
-                    g_error_free(error);
-                    continue;
-                }
-                auto threshold = g_key_file_get_integer(themefile.get(), directories[i], "Threshold", &error);
-                if (error != nullptr)
-                {
-                    g_error_free(error);
-                    threshold = 2; // threshold defaults to 2
-                }
-                subdirs.push_back(ThemeSubdirectory{themePath + directories[i] + "/", size + threshold});
-            }
+            addSubdirectoryByType(themefile, directories[i], themePath, subdirs);
         }
         return subdirs;
     }
