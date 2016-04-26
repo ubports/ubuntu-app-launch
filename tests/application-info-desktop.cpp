@@ -20,6 +20,7 @@
 #include "application-info-desktop.h"
 
 #include <gtest/gtest.h>
+#include <cstdlib>
 
 namespace
 {
@@ -28,8 +29,14 @@ namespace
 class ApplicationInfoDesktop : public ::testing::Test
 {
 protected:
+    ApplicationInfoDesktop()
+      : test_dekstop_env("SomeFreeDesktop")
+    {
+    }
+
     virtual void SetUp()
     {
+        setenv("XDG_CURRENT_DESKTOP", test_dekstop_env.c_str(), true);
     }
 
     virtual void TearDown()
@@ -45,6 +52,8 @@ protected:
         g_key_file_set_string(keyfile.get(), DESKTOP, "Icon", "foo.png");
         return keyfile;
     }
+
+    const std::string test_dekstop_env;
 };
 
 
@@ -105,7 +114,7 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
 
     // not shown in Unity
     auto notshowin = defaultKeyfile();
-    g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", "Gnome;Unity;");
+    g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_dekstop_env + ";").c_str());
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/"), std::runtime_error);
 
     // only show in not Unity
@@ -123,8 +132,13 @@ TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
 
   // Appearing explicitly in only show list
   auto onlyshowin = defaultKeyfile();
-  g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", "Unity;Gnome;");
+  g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_dekstop_env + ";Gnome;").c_str());
   EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/"));
+
+  // Appearing explicitly in only show list not first
+  auto onlyshowinmiddle = defaultKeyfile();
+  g_key_file_set_string(onlyshowinmiddle.get(), DESKTOP, "OnlyShowIn", ("Gnome;" + test_dekstop_env + ";KDE;").c_str());
+  EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowinmiddle, "/"));
 }
 
 TEST_F(ApplicationInfoDesktop, Orientations)
