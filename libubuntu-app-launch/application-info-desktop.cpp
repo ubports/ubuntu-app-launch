@@ -19,6 +19,7 @@
 
 #include "application-info-desktop.h"
 #include <cstdlib>
+#include <iostream>
 
 namespace ubuntu
 {
@@ -152,6 +153,173 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
     return result;
 }
 
+bool hasImageExtension(const char* filename)
+{
+
+    for (const auto& extension : {".png", ".svg", ".xpm"})
+    {
+        if (g_str_has_suffix(filename, extension))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool findExistingIcon(std::string path, std::string &iconPath)
+{
+    for (const auto& extension : {".png", ".svg", ".xpm"})
+    {
+        std::string name = path + extension;
+        if (g_file_test(name.c_str(), G_FILE_TEST_EXISTS))
+        {
+            iconPath = name;
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string searchIconPaths(std::shared_ptr<GKeyFile> themefile, gchar** directories, gchar* iconName, std::string themePath)
+{
+    auto size = 0;
+    std::string iconPath;
+    for (auto i = 0; directories[i] != nullptr; ++i)
+    {
+        GError* error = nullptr;
+        auto context = g_key_file_get_string(themefile.get(), directories[i], "Context", &error);
+        if (error != nullptr)
+        {
+            g_error_free(error);
+            continue;
+        }
+        if (g_strcmp0(context, "Applications") != 0)
+        {
+            continue;
+        }
+        auto type = g_key_file_get_string(themefile.get(), directories[i], "Type", &error);
+        if (error != nullptr)
+        {
+            g_error_free(error);
+            continue;
+        }
+        if (g_strcmp0(type, "Fixed") == 0)
+        {
+            auto _size = g_key_file_get_integer(themefile.get(), directories[i], "Size", &error);
+            if (error != nullptr)
+            {
+                std::cout << "No Size" << std::endl;
+                g_error_free(error);
+                continue;
+            }
+            if (_size > size)
+            {
+                if (findExistingIcon(themePath + directories[i] + "/" + iconName, iconPath))
+                {
+                    size = _size;
+                }
+            }
+        }
+        else if (g_strcmp0(type, "Scalable") == 0)
+        {
+            auto _size = g_key_file_get_integer(themefile.get(), directories[i], "MaxSize", &error);
+            if (error != nullptr)
+            {
+                g_error_free(error);
+                continue;
+            }
+            if (_size > size)
+            {
+                if (findExistingIcon(themePath + directories[i] + "/" + iconName, iconPath))
+                {
+                    size = _size;
+                }
+            }
+        }
+        else if (g_strcmp0(type, "Threshold") == 0)
+        {
+            auto _size = g_key_file_get_integer(themefile.get(), directories[i], "Size", &error);
+            if (error != nullptr)
+            {
+                g_error_free(error);
+                continue;
+            }
+            auto threshold = g_key_file_get_integer(themefile.get(), directories[i], "Threshold", &error);
+            if (error != nullptr)
+            {
+                g_error_free(error);
+                threshold = 2; // threshold defaults to 2
+            }
+            if ((_size + threshold) > size)
+            {
+                if (findExistingIcon(themePath + directories[i] + "/" + iconName, iconPath))
+                {
+                    size = _size + threshold;
+                }
+            }
+        }
+    }
+    std::cout << iconPath << "," << size << std::endl;
+    return iconPath;
+}
+
+Application::Info::IconPath findIcon(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
+{
+    GError* error = nullptr;
+    auto iconName = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, "Icon", nullptr, &error);
+
+    if (error != nullptr)
+    {
+        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        throw std::runtime_error(std::string("Missing icon for desktop file:") + perror.get()->message);
+    }
+    if (iconName[0] == '/') // explicit icon path received
+    {
+        auto retval = Application::Info::IconPath::from_raw(iconName);
+        g_free(iconName);
+        return retval;
+    }
+    else if (hasImageExtension(iconName))
+    {
+        // if exists in pixmaps
+        if (g_file_test((basePath + "/usr/share/pixmaps/" + iconName).c_str(), G_FILE_TEST_EXISTS))
+        {
+            auto retval = Application::Info::IconPath::from_raw(basePath + "/usr/share/pixmaps/" + iconName);
+            g_free(iconName);
+            return retval;
+        }
+        else
+        {
+            g_free(iconName);
+            return Application::Info::IconPath::from_raw("");
+        }
+    }
+
+    auto themefile = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
+    g_key_file_load_from_file(themefile.get(), (basePath + "/usr/share/icons/hicolor/index.theme").c_str(), G_KEY_FILE_NONE, &error);
+    if (error != nullptr)
+    {
+        g_error_free(error);
+        return Application::Info::IconPath::from_raw("");
+    }
+
+    // parse hicolor.theme
+    g_key_file_set_list_separator(themefile.get(), ',');
+    auto directories = g_key_file_get_string_list(themefile.get(), "Icon Theme", "Directories", nullptr, &error);
+    if (error != nullptr)
+    {
+        g_error_free(error);
+        return Application::Info::IconPath::from_raw("");
+    }
+
+    auto iconPath = searchIconPaths(themefile, directories, iconName, basePath + "/usr/share/icons/hicolor/");
+
+    g_strfreev(directories);
+    g_free(iconName);
+
+    return Application::Info::IconPath::from_raw(iconPath);
+}
+
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
     : _keyfile([keyfile]() {
         if (!keyfile)
@@ -182,8 +350,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
     , _basePath(basePath)
     , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
-    , _iconPath(
-          fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file"))
+    , _iconPath(findIcon(keyfile, basePath))
     , _splashInfo({
         title : stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
         image : fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
