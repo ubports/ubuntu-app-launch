@@ -1,3 +1,11 @@
+ubuntu-app-launch (0.9+16.04.20160427-0ubuntu1) xenial; urgency=medium
+
+  [ Ted Gould ]
+  * Adjust version regular expression to handle single character version
+    numbers
+
+ -- Michael Terry <michael.terry@canonical.com>  Wed, 27 Apr 2016 14:52:33 +0000
+
 ubuntu-app-launch (0.9+16.04.20160421.3-0ubuntu1) xenial; urgency=medium
 
   [ Ted Gould ]
