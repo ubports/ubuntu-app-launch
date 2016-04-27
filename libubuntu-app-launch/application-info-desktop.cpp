@@ -19,7 +19,6 @@
 
 #include "application-info-desktop.h"
 #include <cstdlib>
-#include <iostream>
 #include <map>
 
 namespace ubuntu
