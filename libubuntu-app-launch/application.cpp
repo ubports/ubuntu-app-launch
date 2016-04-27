@@ -79,7 +79,7 @@ AppID::AppID(Package pkg, AppName app, Version ver)
    on Jan 16, 2016 revision 566 */
 #define REGEX_PKGNAME "([a-z0-9][a-z0-9+.-]+)"
 #define REGEX_APPNAME "([A-Za-z0-9+-.:~-]+)"
-#define REGEX_VERSION "([\\d+:]?[A-Za-z0-9.+:~-]+?[-[A-Za-z0-9+.~]+]?)"
+#define REGEX_VERSION "([\\d+:]?[A-Za-z0-9.+:~-]+?(?:-[A-Za-z0-9+.~]+)?)"
 
 const std::regex full_appid_regex("^" REGEX_PKGNAME "_" REGEX_APPNAME "_" REGEX_VERSION "$");
 const std::regex short_appid_regex("^" REGEX_PKGNAME "_" REGEX_APPNAME "$");
