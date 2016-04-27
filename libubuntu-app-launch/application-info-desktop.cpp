@@ -179,7 +179,6 @@ public:
         }
         else if (hasImageExtension(iconName))
         {
-            // if exists in pixmaps
             if (g_file_test((_basePath + "/usr/share/pixmaps/" + iconName).c_str(), G_FILE_TEST_EXISTS))
             {
                 auto retval = Application::Info::IconPath::from_raw(_basePath + "/usr/share/pixmaps/" + iconName);
@@ -276,6 +275,7 @@ private:
                     subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size + threshold});
                 }
             }
+            g_free(type);
         }
         g_error_free(error);
     }
@@ -292,11 +292,11 @@ private:
                 g_error_free(error);
                 continue;
             }
-            if (g_strcmp0(context, "Applications") != 0)
+            if (g_strcmp0(context, "Applications") == 0)
             {
-                continue;
+                addSubdirectoryByType(themefile, directories[i], themePath, subdirs);
             }
-            addSubdirectoryByType(themefile, directories[i], themePath, subdirs);
+            g_free(context);
         }
         return subdirs;
     }
@@ -326,6 +326,7 @@ private:
         return iconPaths;
     }
 };
+
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
     : _keyfile([keyfile]() {
