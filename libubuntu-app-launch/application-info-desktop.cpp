@@ -20,6 +20,7 @@
 #include "application-info-desktop.h"
 #include <cstdlib>
 #include <iostream>
+#include <map>
 
 namespace ubuntu
 {
@@ -154,11 +155,21 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
 }
 
 class IconFinder {
-public:
+private:
     IconFinder(std::string basePath)
         : _searchPaths(getSearchPaths(basePath))
         , _basePath(basePath)
     {
+    }
+    static std::map<std::string, std::shared_ptr<IconFinder>> _instances;
+public:
+    static std::shared_ptr<IconFinder> fromBasePath(std::string basePath)
+    {
+        if (_instances.find(basePath) == _instances.end())
+        {
+            _instances[basePath] = std::shared_ptr<IconFinder>(new IconFinder(basePath));
+        }
+        return _instances[basePath];
     }
 
     std::string find(std::shared_ptr<GKeyFile> keyfile)
@@ -326,6 +337,7 @@ private:
         return iconPaths;
     }
 };
+std::map<std::string, std::shared_ptr<IconFinder>> IconFinder::_instances;
 
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
@@ -358,7 +370,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
     , _basePath(basePath)
     , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
-    , _iconPath(Application::Info::IconPath::from_raw(IconFinder(basePath).find(keyfile)))
+    , _iconPath(Application::Info::IconPath::from_raw(IconFinder::fromBasePath(basePath)->find(keyfile)))
     , _splashInfo({
         title : stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
         image : fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
