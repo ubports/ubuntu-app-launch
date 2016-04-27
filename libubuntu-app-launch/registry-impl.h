@@ -31,6 +31,8 @@ namespace ubuntu
 namespace app_launch
 {
 
+class IconFinder;
+
 /** \private
     \brief Private implementation of the Registry object
 
@@ -55,7 +57,7 @@ public:
 
     GLib::ContextThread thread;
 
-
+    std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
 private:
     Registry* _registry;

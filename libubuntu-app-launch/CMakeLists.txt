@@ -43,6 +43,7 @@ application-impl-click.cpp
 application-impl-legacy.cpp
 application-impl-libertine.cpp
 application-info-desktop.cpp
+application-icon-finder.cpp
 helper-impl-click.cpp
 glib-thread.cpp
 )

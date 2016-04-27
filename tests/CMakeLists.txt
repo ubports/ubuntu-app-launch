@@ -60,8 +60,14 @@ add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 # Application Info Desktop
 
 add_executable (application-info-desktop-test
-	application-info-desktop.cpp
-	${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-info-desktop.cpp)
+  # test
+  application-info-desktop.cpp
+
+  # sources
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-info-desktop.cpp
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-icon-finder.cpp
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/glib-thread.cpp
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/registry-impl.cpp)
 target_link_libraries (application-info-desktop-test gtest ${GTEST_LIBS} ubuntu-launcher)
 
 add_test (NAME application-info-desktop-test COMMAND application-info-desktop-test)

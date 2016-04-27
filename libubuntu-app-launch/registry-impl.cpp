@@ -18,6 +18,7 @@
  */
 
 #include "registry-impl.h"
+#include "application-icon-finder.h"
 
 namespace ubuntu
 {
@@ -160,6 +161,11 @@ std::string Registry::Impl::getClickDir(const std::string& package)
         g_free(dir);
         return cppdir;
     });
+}
+
+std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
+{
+    return IconFinder::fromBasePath(basePath);
 }
 
 #if 0

@@ -19,7 +19,8 @@
 
 #include "application-info-desktop.h"
 #include <cstdlib>
-#include <map>
+#include "registry-impl.h"
+#include "application-icon-finder.h"
 
 namespace ubuntu
 {
@@ -153,181 +154,6 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
     return result;
 }
 
-class IconFinder {
-private:
-    IconFinder(std::string basePath)
-        : _searchPaths(getSearchPaths(basePath))
-        , _basePath(basePath)
-    {
-    }
-    static std::map<std::string, std::shared_ptr<IconFinder>> _instances;
-public:
-    static std::shared_ptr<IconFinder> fromBasePath(std::string basePath)
-    {
-        if (_instances.find(basePath) == _instances.end())
-        {
-            _instances[basePath] = std::shared_ptr<IconFinder>(new IconFinder(basePath));
-        }
-        return _instances[basePath];
-    }
-
-    std::string find(const std::string& iconName)
-    {
-        auto defaultPath = g_build_filename(_basePath.c_str(), iconName, nullptr);
-        std::string iconPath = defaultPath;
-        g_free(defaultPath);
-
-        if (iconName[0] == '/') // explicit icon path received
-        {
-            auto retval = Application::Info::IconPath::from_raw(iconName);
-            return retval;
-        }
-        else if (hasImageExtension(iconName.c_str()))
-        {
-            if (g_file_test((_basePath + "/usr/share/pixmaps/" + iconName).c_str(), G_FILE_TEST_EXISTS))
-            {
-                auto retval = Application::Info::IconPath::from_raw(_basePath + "/usr/share/pixmaps/" + iconName);
-                return retval;
-            }
-            return iconPath;
-        }
-        auto size = 0;
-        for (const auto& path: _searchPaths)
-        {
-            if (path.size > size)
-            {
-                if (findExistingIcon(path.path, iconName.c_str(), iconPath))
-                {
-                    size = path.size;
-                }
-            }
-        }
-        return iconPath;
-    }
-
-private:
-    struct ThemeSubdirectory
-    {
-        std::string path;
-        int size;
-    };
-
-    std::list<ThemeSubdirectory> _searchPaths;
-    std::string _basePath;
-
-    static bool hasImageExtension(const char* filename)
-    {
-        for (const auto& extension : {".png", ".svg", ".xpm"})
-        {
-            if (g_str_has_suffix(filename, extension))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static bool findExistingIcon(const std::string& path, const gchar* iconName, std::string &iconPath)
-    {
-        for (const auto& extension : {".png", ".svg", ".xpm"})
-        {
-            std::string name = path + iconName + extension;
-            if (g_file_test(name.c_str(), G_FILE_TEST_EXISTS))
-            {
-                iconPath = name;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static void addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile, gchar* directory, std::string themePath, std::list<ThemeSubdirectory>& subdirs)
-    {
-        GError* error = nullptr;
-        auto type = g_key_file_get_string(themefile.get(), directory, "Type", &error);
-        if (error == nullptr)
-        {
-            if (g_strcmp0(type, "Fixed") == 0)
-            {
-                auto size = g_key_file_get_integer(themefile.get(), directory, "Size", &error);
-                if (error == nullptr)
-                {
-                    subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size});
-                }
-            }
-            else if (g_strcmp0(type, "Scalable") == 0)
-            {
-                auto size = g_key_file_get_integer(themefile.get(), directory, "MaxSize", &error);
-                if (error == nullptr)
-                {
-                    subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size});
-                }
-            }
-            else if (g_strcmp0(type, "Threshold") == 0)
-            {
-                auto size = g_key_file_get_integer(themefile.get(), directory, "Size", &error);
-                if (error == nullptr)
-                {
-                    auto threshold = g_key_file_get_integer(themefile.get(), directory, "Threshold", &error);
-                    if (error != nullptr)
-                    {
-                        threshold = 2; // threshold defaults to 2
-                    }
-                    subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size + threshold});
-                }
-            }
-            g_free(type);
-        }
-        g_error_free(error);
-    }
-
-    static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile, gchar** directories, std::string themePath)
-    {
-        std::list<ThemeSubdirectory> subdirs;
-        for (auto i = 0; directories[i] != nullptr; ++i)
-        {
-            GError* error = nullptr;
-            auto context = g_key_file_get_string(themefile.get(), directories[i], "Context", &error);
-            if (error != nullptr)
-            {
-                g_error_free(error);
-                continue;
-            }
-            if (g_strcmp0(context, "Applications") == 0)
-            {
-                addSubdirectoryByType(themefile, directories[i], themePath, subdirs);
-            }
-            g_free(context);
-        }
-        return subdirs;
-    }
-
-    static std::list<ThemeSubdirectory> getSearchPaths(const std::string& basePath)
-    {
-        GError* error = nullptr;
-        auto themefile = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
-        g_key_file_load_from_file(themefile.get(), (basePath + "/usr/share/icons/hicolor/index.theme").c_str(), G_KEY_FILE_NONE, &error);
-        if (error != nullptr)
-        {
-            g_error_free(error);
-            return std::list<ThemeSubdirectory>();
-        }
-
-        // parse hicolor.theme
-        g_key_file_set_list_separator(themefile.get(), ',');
-        auto directories = g_key_file_get_string_list(themefile.get(), "Icon Theme", "Directories", nullptr, &error);
-        if (error != nullptr)
-        {
-            g_error_free(error);
-            return std::list<ThemeSubdirectory>();
-        }
-
-        auto iconPaths = searchIconPaths(themefile, directories, basePath + "/usr/share/icons/hicolor/");
-        g_strfreev(directories);
-        return iconPaths;
-    }
-};
-std::map<std::string, std::shared_ptr<IconFinder>> IconFinder::_instances;
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath, std::shared_ptr<Registry> registry)
     : _keyfile([keyfile]() {
@@ -363,7 +189,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath,
           if (registry != nullptr)
           {
               auto iconName = stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon", "Missing icon for desktop file");
-              Application::Info::IconPath retval = Application::Info::IconPath::from_raw(IconFinder::fromBasePath(basePath)->find(iconName));
+//              Application::Info::IconPath retval = Application::Info::IconPath::from_raw(IconFinder::fromBasePath(basePath)->find(iconName));
+              Application::Info::IconPath retval = Application::Info::IconPath::from_raw(registry->impl->getIconFinder(basePath)->find(iconName));
               return retval;
           }
           return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
