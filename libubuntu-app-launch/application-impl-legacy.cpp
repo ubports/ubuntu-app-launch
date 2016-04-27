@@ -93,7 +93,7 @@ std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
 
 std::shared_ptr<Application::Info> Legacy::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, "/usr/share/icons/");
+    return std::make_shared<app_info::Desktop>(_keyfile, "/usr/share/icons/", _registry);
 }
 
 std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)

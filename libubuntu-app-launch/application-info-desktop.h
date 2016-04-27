@@ -33,7 +33,7 @@ namespace app_info
 class Desktop : public Application::Info
 {
 public:
-    Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath);
+    Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath, std::shared_ptr<Registry> registry = nullptr);
 
     const Application::Info::Name& name() override
     {

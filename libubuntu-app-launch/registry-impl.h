@@ -55,6 +55,8 @@ public:
 
     GLib::ContextThread thread;
 
+
+
 private:
     Registry* _registry;
 #if 0

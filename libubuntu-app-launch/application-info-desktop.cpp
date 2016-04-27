@@ -171,17 +171,8 @@ public:
         return _instances[basePath];
     }
 
-    std::string find(std::shared_ptr<GKeyFile> keyfile)
+    std::string find(const std::string& iconName)
     {
-        GError* error = nullptr;
-        auto iconName = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, "Icon", nullptr, &error);
-
-        if (error != nullptr)
-        {
-            auto perror = std::shared_ptr<GError>(error, g_error_free);
-            throw std::runtime_error(std::string("Missing icon for desktop file:") + perror.get()->message);
-        }
-
         auto defaultPath = g_build_filename(_basePath.c_str(), iconName, nullptr);
         std::string iconPath = defaultPath;
         g_free(defaultPath);
@@ -189,18 +180,15 @@ public:
         if (iconName[0] == '/') // explicit icon path received
         {
             auto retval = Application::Info::IconPath::from_raw(iconName);
-            g_free(iconName);
             return retval;
         }
-        else if (hasImageExtension(iconName))
+        else if (hasImageExtension(iconName.c_str()))
         {
             if (g_file_test((_basePath + "/usr/share/pixmaps/" + iconName).c_str(), G_FILE_TEST_EXISTS))
             {
                 auto retval = Application::Info::IconPath::from_raw(_basePath + "/usr/share/pixmaps/" + iconName);
-                g_free(iconName);
                 return retval;
             }
-            g_free(iconName);
             return iconPath;
         }
         auto size = 0;
@@ -208,13 +196,12 @@ public:
         {
             if (path.size > size)
             {
-                if (findExistingIcon(path.path, iconName, iconPath))
+                if (findExistingIcon(path.path, iconName.c_str(), iconPath))
                 {
                     size = path.size;
                 }
             }
         }
-        g_free(iconName);
         return iconPath;
     }
 
@@ -240,7 +227,7 @@ private:
         return false;
     }
 
-    static bool findExistingIcon(std::string path, gchar* iconName, std::string &iconPath)
+    static bool findExistingIcon(const std::string& path, const gchar* iconName, std::string &iconPath)
     {
         for (const auto& extension : {".png", ".svg", ".xpm"})
         {
@@ -342,8 +329,7 @@ private:
 };
 std::map<std::string, std::shared_ptr<IconFinder>> IconFinder::_instances;
 
-
-Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
+Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath, std::shared_ptr<Registry> registry)
     : _keyfile([keyfile]() {
         if (!keyfile)
         {
@@ -373,7 +359,15 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
     , _basePath(basePath)
     , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
-    , _iconPath(Application::Info::IconPath::from_raw(IconFinder::fromBasePath(basePath)->find(keyfile)))
+    , _iconPath([keyfile, basePath, registry]() {
+          if (registry != nullptr)
+          {
+              auto iconName = stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon", "Missing icon for desktop file");
+              Application::Info::IconPath retval = Application::Info::IconPath::from_raw(IconFinder::fromBasePath(basePath)->find(iconName));
+              return retval;
+          }
+          return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
+    }())
     , _splashInfo({
         title : stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
         image : fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
