@@ -182,6 +182,11 @@ public:
             auto perror = std::shared_ptr<GError>(error, g_error_free);
             throw std::runtime_error(std::string("Missing icon for desktop file:") + perror.get()->message);
         }
+
+        auto defaultPath = g_build_filename(_basePath.c_str(), iconName, nullptr);
+        std::string iconPath = defaultPath;
+        g_free(defaultPath);
+
         if (iconName[0] == '/') // explicit icon path received
         {
             auto retval = Application::Info::IconPath::from_raw(iconName);
@@ -197,10 +202,9 @@ public:
                 return retval;
             }
             g_free(iconName);
-            return "";
+            return iconPath;
         }
         auto size = 0;
-        std::string iconPath;
         for (const auto& path: _searchPaths)
         {
             if (path.size > size)
