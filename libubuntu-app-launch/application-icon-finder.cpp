@@ -18,8 +18,6 @@
  */
 
 #include "application-icon-finder.h"
-//#include <glib.h>
-//#include <string>
 
 namespace ubuntu
 {
