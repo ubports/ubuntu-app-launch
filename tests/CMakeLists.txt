@@ -73,11 +73,6 @@ add_test (NAME application-info-desktop-test COMMAND application-info-desktop-te
 
 # Application Icon Finder
 
-file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-set(CTEST_ENVIRONMENT
-  "TEST_DATA_DIR=${CMAKE_CURRENT_BINARY_DIR}/data"
-)
-
 add_executable (application-icon-finder-test
   # test
   application-icon-finder.cpp
@@ -87,6 +82,8 @@ add_executable (application-icon-finder-test
 target_link_libraries (application-icon-finder-test gtest ${GTEST_LIBS} ubuntu-launcher)
 
 add_test (NAME application-icon-finder-test COMMAND application-icon-finder-test)
+
+file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # Failure Test
 
