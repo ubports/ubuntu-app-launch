@@ -219,7 +219,14 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
         return std::list<ThemeSubdirectory>();
     }
 
+
+    // find icons sorted by size, highest to lowest
     auto iconPaths = searchIconPaths(themefile, directories, basePath + HICOLOR_THEME_DIR);
+    iconPaths.sort([](const ThemeSubdirectory& lhs, const ThemeSubdirectory& rhs)
+    {
+        return lhs.size > rhs.size;
+    });
+
     g_strfreev(directories);
     return iconPaths;
 }
