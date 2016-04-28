@@ -62,8 +62,6 @@ std::shared_ptr<IconFinder> IconFinder::fromBasePath(const std::string& basePath
 std::string IconFinder::find(const std::string& iconName)
 {
     auto defaultPath = g_build_filename(_basePath.c_str(), iconName.c_str(), nullptr);
-    std::string iconPath = defaultPath;
-    g_free(defaultPath);
 
     if (g_str_has_prefix(iconName.c_str(), "/")) // explicit icon path received
     {
@@ -75,9 +73,10 @@ std::string IconFinder::find(const std::string& iconName)
         {
             return _basePath + PIXMAPS_PATH + iconName;
         }
-        return iconPath;
+        return defaultPath;
     }
     auto size = 0;
+    std::string iconPath;
     for (const auto& path: _searchPaths)
     {
         if (path.size > size)
@@ -88,6 +87,15 @@ std::string IconFinder::find(const std::string& iconName)
             }
         }
     }
+    if (iconPath == "")
+    {
+        if (!findExistingIcon(_basePath + PIXMAPS_PATH, iconName.c_str(), iconPath))
+        {
+            iconPath = defaultPath;
+        }
+    }
+
+    g_free(defaultPath);
     return iconPath;
 }
 
@@ -105,6 +113,15 @@ bool IconFinder::hasImageExtension(const char* filename)
 
 bool IconFinder::findExistingIcon(const std::string& path, const gchar* iconName, std::string &iconPath)
 {
+    if (hasImageExtension(iconName))
+    {
+        if (g_file_test((path + iconName).c_str(), G_FILE_TEST_EXISTS))
+        {
+            iconPath = path + iconName;
+            return true;
+        }
+        return false;
+    }
     for (const auto& extension : ICON_TYPES)
     {
         std::string name = path + iconName + extension;
