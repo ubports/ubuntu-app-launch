@@ -25,22 +25,22 @@ namespace app_launch
 {
 namespace
 {
-constexpr auto HICOLOR_THEME_DIR     = "/usr/share/icons/hicolor/";
-constexpr auto HICOLOR_THEME_FILE    = "/usr/share/icons/hicolor/index.theme";
-constexpr auto APPLICATIONS_TYPE     = "Applications";
-constexpr auto SIZE_PROPERTY         = "Size";
-constexpr auto MAXSIZE_PROPERTY      = "MaxSize";
-constexpr auto THRESHOLD_PROPERTY    = "Threshold";
-constexpr auto FIXED_CONTEXT         = "Fixed";
-constexpr auto SCALABLE_CONTEXT      = "Scalable";
-constexpr auto THRESHOLD_CONTEXT     = "Threshold";
-constexpr auto CONTEXT_PROPERTY      = "Context";
-constexpr auto TYPE_PROPERTY         = "Type";
-constexpr auto DIRECTORIES_PROPERTY  = "Directories";
-constexpr auto ICON_THEME_KEY        = "Icon Theme";
-constexpr auto PIXMAPS_PATH          = "/usr/share/pixmaps/";
-constexpr auto ICON_TYPES           = {".png", ".svg", ".xpm"};
-} // anonymous namespace
+constexpr auto HICOLOR_THEME_DIR = "/usr/share/icons/hicolor/";
+constexpr auto HICOLOR_THEME_FILE = "/usr/share/icons/hicolor/index.theme";
+constexpr auto APPLICATIONS_TYPE = "Applications";
+constexpr auto SIZE_PROPERTY = "Size";
+constexpr auto MAXSIZE_PROPERTY = "MaxSize";
+constexpr auto THRESHOLD_PROPERTY = "Threshold";
+constexpr auto FIXED_CONTEXT = "Fixed";
+constexpr auto SCALABLE_CONTEXT = "Scalable";
+constexpr auto THRESHOLD_CONTEXT = "Threshold";
+constexpr auto CONTEXT_PROPERTY = "Context";
+constexpr auto TYPE_PROPERTY = "Type";
+constexpr auto DIRECTORIES_PROPERTY = "Directories";
+constexpr auto ICON_THEME_KEY = "Icon Theme";
+constexpr auto PIXMAPS_PATH = "/usr/share/pixmaps/";
+constexpr auto ICON_TYPES = {".png", ".svg", ".xpm"};
+}  // anonymous namespace
 
 IconFinder::IconFinder(std::string basePath)
     : _searchPaths(getSearchPaths(basePath))
@@ -50,13 +50,13 @@ IconFinder::IconFinder(std::string basePath)
 
 Application::Info::IconPath IconFinder::find(const std::string& iconName)
 {
-    if (iconName[0] == '/') // explicit icon path received
+    if (iconName[0] == '/')  // explicit icon path received
     {
         return Application::Info::IconPath::from_raw(iconName);
     }
     auto size = 0;
     std::string iconPath;
-    for (const auto& path: _searchPaths)
+    for (const auto& path : _searchPaths)
     {
         if (path.size > size)
         {
@@ -68,7 +68,7 @@ Application::Info::IconPath IconFinder::find(const std::string& iconName)
             }
         }
     }
-    if (iconPath == "") // attempt to fallback to pixmaps
+    if (iconPath == "")  // attempt to fallback to pixmaps
     {
         auto pixmap = g_build_filename(_basePath.c_str(), PIXMAPS_PATH, nullptr);
         iconPath = findExistingIcon(pixmap, iconName);
@@ -123,7 +123,10 @@ std::string IconFinder::findExistingIcon(const std::string& path, const std::str
     return iconPath;
 }
 
-void IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile, gchar* directory, std::string themePath, std::list<IconFinder::ThemeSubdirectory>& subdirs)
+void IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
+                                       gchar* directory,
+                                       std::string themePath,
+                                       std::list<IconFinder::ThemeSubdirectory>& subdirs)
 {
     GError* error = nullptr;
     auto gType = g_key_file_get_string(themefile.get(), directory, TYPE_PROPERTY, &error);
@@ -171,7 +174,7 @@ void IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile, gcha
             auto threshold = g_key_file_get_integer(themefile.get(), directory, THRESHOLD_PROPERTY, &error);
             if (error != nullptr)
             {
-                threshold = 2; // threshold defaults to 2
+                threshold = 2;  // threshold defaults to 2
                 g_error_free(error);
             }
             subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size + threshold});
@@ -179,7 +182,9 @@ void IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile, gcha
     }
 }
 
-std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared_ptr<GKeyFile> themefile, gchar** directories, std::string themePath)
+std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared_ptr<GKeyFile> themefile,
+                                                                     gchar** directories,
+                                                                     std::string themePath)
 {
     std::list<ThemeSubdirectory> subdirs;
     for (auto i = 0; directories[i] != nullptr; ++i)
@@ -212,24 +217,21 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
     }
 
     g_key_file_set_list_separator(themefile.get(), ',');
-    auto directories = g_key_file_get_string_list(themefile.get(), ICON_THEME_KEY, DIRECTORIES_PROPERTY, nullptr, &error);
+    auto directories =
+        g_key_file_get_string_list(themefile.get(), ICON_THEME_KEY, DIRECTORIES_PROPERTY, nullptr, &error);
     if (error != nullptr)
     {
         g_error_free(error);
         return std::list<ThemeSubdirectory>();
     }
 
-
     // find icons sorted by size, highest to lowest
     auto iconPaths = searchIconPaths(themefile, directories, basePath + HICOLOR_THEME_DIR);
-    iconPaths.sort([](const ThemeSubdirectory& lhs, const ThemeSubdirectory& rhs)
-    {
-        return lhs.size > rhs.size;
-    });
+    iconPaths.sort([](const ThemeSubdirectory& lhs, const ThemeSubdirectory& rhs) { return lhs.size > rhs.size; });
 
     g_strfreev(directories);
     return iconPaths;
 }
 
-} // namesapce app_launch
-} // namespace ubuntu
+}  // namesapce app_launch
+}  // namespace ubuntu

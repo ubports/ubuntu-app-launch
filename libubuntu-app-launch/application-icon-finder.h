@@ -20,16 +20,17 @@
 #pragma once
 
 #include "application-info-desktop.h"
+#include <glib.h>
 #include <list>
 #include <map>
 #include <memory>
-#include <glib.h>
 
 namespace ubuntu
 {
 namespace app_launch
 {
-class IconFinder {
+class IconFinder
+{
 public:
     explicit IconFinder(std::string basePath);
     virtual ~IconFinder() = default;
@@ -47,10 +48,15 @@ private:
 
     static bool hasImageExtension(const char* filename);
     static std::string findExistingIcon(const std::string& path, const std::string& iconName);
-    static void addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile, gchar* directory, std::string themePath, std::list<ThemeSubdirectory>& subdirs);
-    static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile, gchar** directories, std::string themePath);
+    static void addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
+                                      gchar* directory,
+                                      std::string themePath,
+                                      std::list<ThemeSubdirectory>& subdirs);
+    static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile,
+                                                        gchar** directories,
+                                                        std::string themePath);
     static std::list<ThemeSubdirectory> getSearchPaths(const std::string& basePath);
 };
 
-} // namespace app_launch
-} // namesapce ubuntu
+}  // namespace app_launch
+}  // namesapce ubuntu

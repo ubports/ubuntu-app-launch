@@ -46,7 +46,8 @@ TEST(ApplicationIconFinder, ReturnsIconAsDirectlyGiven)
 {
     auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg", finder.find(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg").value());
+    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg",
+              finder.find(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsIconFromPixmapAsFallback)

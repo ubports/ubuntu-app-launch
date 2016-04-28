@@ -18,9 +18,9 @@
  */
 
 #include "application-info-desktop.h"
-#include <cstdlib>
-#include "registry-impl.h"
 #include "application-icon-finder.h"
+#include "registry-impl.h"
+#include <cstdlib>
 
 namespace ubuntu
 {
@@ -40,7 +40,7 @@ typedef TypeTagger<HiddenTag, bool> Hidden;
 
 struct NoDisplayTag;
 typedef TypeTagger<NoDisplayTag, bool> NoDisplay;
-} // anonymous namespace
+}  // anonymous namespace
 
 template <typename T>
 auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, const std::string& exceptionText = {})
@@ -136,8 +136,8 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
     auto results = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, &error);
     if (error != nullptr)
     {
-      g_error_free(error);
-      return defaultValue;
+        g_error_free(error);
+        return defaultValue;
     }
 
     bool result = false;
@@ -153,7 +153,6 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
 
     return result;
 }
-
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath, std::shared_ptr<Registry> registry)
     : _keyfile([keyfile]() {
@@ -174,8 +173,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath,
             throw std::runtime_error("Application keyfile is hidden");
         }
         auto xdg_current_desktop = getenv("XDG_CURRENT_DESKTOP");
-        if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false)
-                 || !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
+        if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false) ||
+            !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
         {
             throw std::runtime_error("Application is not shown in Unity");
         }
@@ -186,12 +185,13 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath,
     , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
     , _iconPath([keyfile, basePath, registry]() {
-          if (registry != nullptr)
-          {
-              auto iconName = stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon", "Missing icon for desktop file");
-              return registry->impl->getIconFinder(basePath)->find(iconName);
-          }
-          return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
+        if (registry != nullptr)
+        {
+            auto iconName =
+                stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon", "Missing icon for desktop file");
+            return registry->impl->getIconFinder(basePath)->find(iconName);
+        }
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
     }())
     , _splashInfo({
         title : stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),

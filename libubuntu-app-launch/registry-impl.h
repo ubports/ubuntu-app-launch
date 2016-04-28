@@ -17,12 +17,12 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "registry.h"
 #include "glib-thread.h"
-#include <map>
-#include <json-glib/json-glib.h>
+#include "registry.h"
 #include <click.h>
 #include <gio/gio.h>
+#include <json-glib/json-glib.h>
+#include <map>
 
 #pragma once
 
