@@ -19,7 +19,7 @@
 
 #include "registry.h"
 #include "glib-thread.h"
-
+#include <map>
 #include <json-glib/json-glib.h>
 #include <click.h>
 #include <gio/gio.h>
@@ -71,6 +71,8 @@ private:
     std::shared_ptr<GDBusConnection> _dbus;
 
     void initClick();
+
+    static std::map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 };
 
 };  // namespace app_launch

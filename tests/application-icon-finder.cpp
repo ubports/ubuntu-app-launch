@@ -21,10 +21,12 @@
 #include <gtest/gtest.h>
 #include <glib.h>
 
+using namespace ubuntu::app_launch;
+
 TEST(ApplicationIconFinder, ReturnsDefaultPathWhenNoThemeFileAvailable)
 {
-    auto finder = ubuntu::app_launch::IconFinder::fromBasePath("/tmp/please/dont/put/stuff/here");
-    EXPECT_EQ("/tmp/please/dont/put/stuff/here/app", finder->find("app"));
+    IconFinder finder("/tmp/please/dont/put/stuff/here");
+    EXPECT_EQ("/tmp/please/dont/put/stuff/here/app", finder.find("app").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsDefaultPathWhenNoAppIconFound)
@@ -32,8 +34,8 @@ TEST(ApplicationIconFinder, ReturnsDefaultPathWhenNoAppIconFound)
     auto dir = g_get_current_dir();
     auto basePath = std::string(dir) + "/data";
     g_free(dir);
-    auto finder = ubuntu::app_launch::IconFinder::fromBasePath(basePath);
-    EXPECT_EQ(basePath + "/app_unknown", finder->find("app_unknown"));
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/app_unknown", finder.find("app_unknown").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsLargestAvailableIcon)
@@ -41,8 +43,8 @@ TEST(ApplicationIconFinder, ReturnsLargestAvailableIcon)
     auto dir = g_get_current_dir();
     auto basePath = std::string(dir) + "/data";
     g_free(dir);
-    auto finder = ubuntu::app_launch::IconFinder::fromBasePath(basePath);
-    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/24x24/apps/app.xpm", finder->find("app"));
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/24x24/apps/app.xpm", finder.find("app").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsIconAsDirectlyGiven)
@@ -50,8 +52,8 @@ TEST(ApplicationIconFinder, ReturnsIconAsDirectlyGiven)
     auto dir = g_get_current_dir();
     auto basePath = std::string(dir) + "/data";
     g_free(dir);
-    auto finder = ubuntu::app_launch::IconFinder::fromBasePath(basePath);
-    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg", finder->find(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg"));
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg", finder.find(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsIconFromPixmapWhenGivenExtension)
@@ -59,6 +61,6 @@ TEST(ApplicationIconFinder, ReturnsIconFromPixmapWhenGivenExtension)
     auto dir = g_get_current_dir();
     auto basePath = std::string(dir) + "/data";
     g_free(dir);
-    auto finder = ubuntu::app_launch::IconFinder::fromBasePath(basePath);
-    EXPECT_EQ(basePath + "/usr/share/pixmaps/app.png", finder->find("app.png"));
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/usr/share/pixmaps/app.png", finder.find("app.png").value());
 }

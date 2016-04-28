@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "application-info-desktop.h"
 #include <list>
 #include <map>
 #include <memory>
@@ -30,9 +31,9 @@ namespace app_launch
 {
 class IconFinder {
 public:
-    static std::shared_ptr<IconFinder> fromBasePath(const std::string& basePath);
-    virtual std::string find(const std::string& iconName);
+    explicit IconFinder(std::string basePath);
     virtual ~IconFinder() = default;
+    virtual Application::Info::IconPath find(const std::string& iconName);
 
 private:
     struct ThemeSubdirectory
@@ -41,17 +42,14 @@ private:
         int size;
     };
 
-    static std::map<std::string, std::shared_ptr<IconFinder>> _instances;
     std::list<ThemeSubdirectory> _searchPaths;
     std::string _basePath;
 
     static bool hasImageExtension(const char* filename);
-    static bool findExistingIcon(const std::string& path, const gchar* iconName, std::string &iconPath);
+    static std::string findExistingIcon(const std::string& path, const std::string& iconName);
     static void addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile, gchar* directory, std::string themePath, std::list<ThemeSubdirectory>& subdirs);
     static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile, gchar** directories, std::string themePath);
     static std::list<ThemeSubdirectory> getSearchPaths(const std::string& basePath);
-
-    explicit IconFinder(std::string basePath);
 };
 
 } // namespace app_launch

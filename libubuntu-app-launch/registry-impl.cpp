@@ -163,9 +163,14 @@ std::string Registry::Impl::getClickDir(const std::string& package)
     });
 }
 
+std::map<std::string, std::shared_ptr<IconFinder>> Registry::Impl::_iconFinders;
 std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
 {
-    return IconFinder::fromBasePath(basePath);
+    if (_iconFinders.find(basePath) == _iconFinders.end())
+    {
+        _iconFinders[basePath] = std::make_shared<IconFinder>(basePath);
+    }
+    return _iconFinders[basePath];
 }
 
 #if 0
