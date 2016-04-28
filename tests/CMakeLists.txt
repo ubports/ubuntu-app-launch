@@ -1,4 +1,3 @@
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 configure_file ("click-db-dir/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-db-dir/test.conf" @ONLY)
@@ -71,6 +70,23 @@ add_executable (application-info-desktop-test
 target_link_libraries (application-info-desktop-test gtest ${GTEST_LIBS} ubuntu-launcher)
 
 add_test (NAME application-info-desktop-test COMMAND application-info-desktop-test)
+
+# Application Icon Finder
+
+file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+set(CTEST_ENVIRONMENT
+  "TEST_DATA_DIR=${CMAKE_CURRENT_BINARY_DIR}/data"
+)
+
+add_executable (application-icon-finder-test
+  # test
+  application-icon-finder.cpp
+
+  # sources
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-icon-finder.cpp)
+target_link_libraries (application-icon-finder-test gtest ${GTEST_LIBS} ubuntu-launcher)
+
+add_test (NAME application-icon-finder-test COMMAND application-icon-finder-test)
 
 # Failure Test
 

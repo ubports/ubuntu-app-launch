@@ -30,8 +30,9 @@ namespace app_launch
 {
 class IconFinder {
 public:
-    static std::shared_ptr<IconFinder> fromBasePath(std::string basePath);
-    std::string find(const std::string& iconName);
+    static std::shared_ptr<IconFinder> fromBasePath(const std::string& basePath);
+    virtual std::string find(const std::string& iconName);
+    virtual ~IconFinder() = default;
 
 private:
     struct ThemeSubdirectory
@@ -50,7 +51,7 @@ private:
     static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile, gchar** directories, std::string themePath);
     static std::list<ThemeSubdirectory> getSearchPaths(const std::string& basePath);
 
-    IconFinder(std::string basePath);
+    explicit IconFinder(std::string basePath);
 };
 
 } // namespace app_launch
