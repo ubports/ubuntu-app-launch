@@ -49,9 +49,23 @@ TEST(ApplicationIconFinder, ReturnsIconAsDirectlyGiven)
     EXPECT_EQ(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg", finder.find(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg").value());
 }
 
-TEST(ApplicationIconFinder, ReturnsIconFromPixmapWhenGivenExtension)
+TEST(ApplicationIconFinder, ReturnsIconFromPixmapAsFallback)
 {
     auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/usr/share/pixmaps/app.png", finder.find("app.png").value());
+    EXPECT_EQ(basePath + "/usr/share/pixmaps/app2.png", finder.find("app2.png").value());
+}
+
+TEST(ApplicationIconFinder, ReturnsThresholdIconBasedOnGap)
+{
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/22x22/apps/app1.png", finder.find("app1.png").value());
+}
+
+TEST(ApplicationIconFinder, IgnoresDirectoriesWithJunkSize)
+{
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/16x16/apps/app3.png", finder.find("app3.png").value());
 }
