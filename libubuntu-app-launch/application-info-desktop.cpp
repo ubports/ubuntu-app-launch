@@ -140,9 +140,6 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
         return defaultValue;
     }
 
-    if (results == nullptr)
-        return defaultValue;
-
     bool result = false;
     for (auto i = 0; results[i] != nullptr; ++i)
     {
