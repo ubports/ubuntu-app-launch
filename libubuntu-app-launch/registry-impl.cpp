@@ -35,6 +35,7 @@ Registry::Impl::Impl(Registry* registry)
                  _dbus.reset();
              })
     , _registry(registry)
+    , _iconFinders()
 // _manager(nullptr)
 {
     auto cancel = thread.getCancellable();
@@ -163,7 +164,6 @@ std::string Registry::Impl::getClickDir(const std::string& package)
     });
 }
 
-std::map<std::string, std::shared_ptr<IconFinder>> Registry::Impl::_iconFinders;
 std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
 {
     if (_iconFinders.find(basePath) == _iconFinders.end())

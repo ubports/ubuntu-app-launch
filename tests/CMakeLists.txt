@@ -77,7 +77,7 @@ add_executable (application-icon-finder-test
   # test
   application-icon-finder.cpp
 
-  # sources
+  #sources
   ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-icon-finder.cpp)
 target_link_libraries (application-icon-finder-test gtest ${GTEST_LIBS} ubuntu-launcher)
 

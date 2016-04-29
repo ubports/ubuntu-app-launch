@@ -48,10 +48,10 @@ private:
 
     static bool hasImageExtension(const char* filename);
     static std::string findExistingIcon(const std::string& path, const std::string& iconName);
-    static void addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
-                                      gchar* directory,
-                                      std::string themePath,
-                                      std::list<ThemeSubdirectory>& subdirs);
+    static std::list<ThemeSubdirectory> validDirectories(std::string basePath, gchar* directory, int size);
+    static std::list<ThemeSubdirectory> addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
+                                                              gchar* directory,
+                                                              std::string themePath);
     static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile,
                                                         gchar** directories,
                                                         std::string themePath);

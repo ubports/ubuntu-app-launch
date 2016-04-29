@@ -22,7 +22,7 @@
 #include <click.h>
 #include <gio/gio.h>
 #include <json-glib/json-glib.h>
-#include <map>
+#include <unordered_map>
 
 #pragma once
 
@@ -72,7 +72,7 @@ private:
 
     void initClick();
 
-    static std::map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
+    std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 };
 
 };  // namespace app_launch

@@ -27,6 +27,8 @@ namespace
 {
 constexpr auto HICOLOR_THEME_DIR = "/usr/share/icons/hicolor/";
 constexpr auto HICOLOR_THEME_FILE = "/usr/share/icons/hicolor/index.theme";
+constexpr auto LOCAL_HICOLOR_THEME_DIR = "/.local/share/icons/hicolor/";
+constexpr auto HOME_DIR = "/home/";
 constexpr auto APPLICATIONS_TYPE = "Applications";
 constexpr auto SIZE_PROPERTY = "Size";
 constexpr auto MAXSIZE_PROPERTY = "MaxSize";
@@ -123,17 +125,53 @@ std::string IconFinder::findExistingIcon(const std::string& path, const std::str
     return iconPath;
 }
 
-void IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
-                                       gchar* directory,
-                                       std::string themePath,
-                                       std::list<IconFinder::ThemeSubdirectory>& subdirs)
+std::list<IconFinder::ThemeSubdirectory> IconFinder::validDirectories(std::string basePath, gchar* directory, int size)
+{
+    std::list<IconFinder::ThemeSubdirectory> dirs;
+    auto globalHicolorTheme = g_build_filename(basePath.c_str(), HICOLOR_THEME_DIR, directory, nullptr);
+    if (g_file_test(globalHicolorTheme, G_FILE_TEST_EXISTS))
+    {
+        dirs.push_back(ThemeSubdirectory{std::string(globalHicolorTheme), size});
+    }
+    g_free(globalHicolorTheme);
+
+    // given basePath, probe the home directory
+    GError* error = nullptr;
+    auto homeDirBase = g_build_filename(basePath.c_str(), HOME_DIR, nullptr);
+    auto homeDir = g_dir_open(homeDirBase, 0, &error);
+    if (error != nullptr)
+    {
+        g_error_free(error);
+        g_free(homeDirBase);
+        return dirs;
+    }
+    auto name = g_dir_read_name(homeDir);  // no need to free
+    while (name != nullptr)
+    {
+        auto localHicolorTheme = g_build_filename(homeDirBase, name, LOCAL_HICOLOR_THEME_DIR, directory, nullptr);
+        if (g_file_test(localHicolorTheme, G_FILE_TEST_EXISTS))
+        {
+            dirs.push_back(ThemeSubdirectory{std::string(localHicolorTheme), size});
+        }
+        g_free(localHicolorTheme);
+        name = g_dir_read_name(homeDir);
+    }
+    g_free(homeDir);
+    g_free(homeDirBase);
+
+    return dirs;
+}
+
+std::list<IconFinder::ThemeSubdirectory> IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
+                                                                           gchar* directory,
+                                                                           std::string basePath)
 {
     GError* error = nullptr;
     auto gType = g_key_file_get_string(themefile.get(), directory, TYPE_PROPERTY, &error);
     if (error != nullptr)
     {
         g_error_free(error);
-        return;
+        return std::list<ThemeSubdirectory>{};
     }
     std::string type(gType);
     g_free(gType);
@@ -147,7 +185,7 @@ void IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
         }
         else
         {
-            subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size});
+            return validDirectories(basePath, directory, size);
         }
     }
     else if (type == SCALABLE_CONTEXT)
@@ -159,7 +197,7 @@ void IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
         }
         else
         {
-            subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size});
+            return validDirectories(basePath, directory, size);
         }
     }
     else if (type == THRESHOLD_CONTEXT)
@@ -177,14 +215,15 @@ void IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
                 threshold = 2;  // threshold defaults to 2
                 g_error_free(error);
             }
-            subdirs.push_back(ThemeSubdirectory{themePath + directory + "/", size + threshold});
+            return validDirectories(basePath, directory, size + threshold);
         }
     }
+    return std::list<ThemeSubdirectory>{};
 }
 
 std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared_ptr<GKeyFile> themefile,
                                                                      gchar** directories,
-                                                                     std::string themePath)
+                                                                     std::string basePath)
 {
     std::list<ThemeSubdirectory> subdirs;
     for (auto i = 0; directories[i] != nullptr; ++i)
@@ -198,7 +237,8 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared
         }
         if (g_strcmp0(context, APPLICATIONS_TYPE) == 0)
         {
-            addSubdirectoryByType(themefile, directories[i], themePath, subdirs);
+            auto newDirs = addSubdirectoryByType(themefile, directories[i], basePath);
+            subdirs.insert(subdirs.end(), newDirs.begin(), newDirs.end());
         }
         g_free(context);
     }
@@ -226,7 +266,7 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
     }
 
     // find icons sorted by size, highest to lowest
-    auto iconPaths = searchIconPaths(themefile, directories, basePath + HICOLOR_THEME_DIR);
+    auto iconPaths = searchIconPaths(themefile, directories, basePath);
     iconPaths.sort([](const ThemeSubdirectory& lhs, const ThemeSubdirectory& rhs) { return lhs.size > rhs.size; });
 
     g_strfreev(directories);
