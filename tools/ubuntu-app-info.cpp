@@ -28,27 +28,41 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	auto appid = ubuntu::app_launch::AppID::find(argv[1]);
-	auto app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
-	auto info = app->info();
+	ubuntu::app_launch::AppID appid;
+	std::shared_ptr<ubuntu::app_launch::Application> app;
 
-	std::cout << "Name:             " << info->name().value() << std::endl;
-	std::cout << "Description:      " << info->description().value() << std::endl;
-	std::cout << "Icon Path:        " << info->iconPath().value() << std::endl;
-	std::cout << "Splash:           " << std::endl;
-	std::cout << "  Title:          " << info->splash().title.value() << std::endl;
-	std::cout << "  Image:          " << info->splash().image.value() << std::endl;
-	std::cout << "  BG Color:       " << info->splash().backgroundColor.value() << std::endl;
-	std::cout << "  Header Color:   " << info->splash().headerColor.value() << std::endl;
-	std::cout << "  Footer Color:   " << info->splash().footerColor.value() << std::endl;
-	std::cout << "  Show Header:    " << info->splash().showHeader.value() << std::endl;
-	std::cout << "Orientations:     " << std::endl;
-	std::cout << "  Portrait:       " << info->supportedOrientations().portrait << std::endl;
-	std::cout << "  Landscape:      " << info->supportedOrientations().landscape << std::endl;
-	std::cout << "  Inv Portrait:   " << info->supportedOrientations().invertedPortrait << std::endl;
-	std::cout << "  Inv Landscape:  " << info->supportedOrientations().invertedLandscape << std::endl;
-	std::cout << "Rotates:          " << info->rotatesWindowContents().value() << std::endl;
-	std::cout << "Ubuntu Lifecycle: " << info->supportsUbuntuLifecycle().value() << std::endl;
+	try {
+		appid = ubuntu::app_launch::AppID::find(argv[1]);
+		app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
+	} catch (std::runtime_error &e) {
+		std::cerr << "Unable to find application for AppID: " << argv[1] << std::endl;
+		exit(1);
+	}
+
+	try {
+		auto info = app->info();
+
+		std::cout << "Name:             " << info->name().value() << std::endl;
+		std::cout << "Description:      " << info->description().value() << std::endl;
+		std::cout << "Icon Path:        " << info->iconPath().value() << std::endl;
+		std::cout << "Splash:           " << std::endl;
+		std::cout << "  Title:          " << info->splash().title.value() << std::endl;
+		std::cout << "  Image:          " << info->splash().image.value() << std::endl;
+		std::cout << "  BG Color:       " << info->splash().backgroundColor.value() << std::endl;
+		std::cout << "  Header Color:   " << info->splash().headerColor.value() << std::endl;
+		std::cout << "  Footer Color:   " << info->splash().footerColor.value() << std::endl;
+		std::cout << "  Show Header:    " << info->splash().showHeader.value() << std::endl;
+		std::cout << "Orientations:     " << std::endl;
+		std::cout << "  Portrait:       " << info->supportedOrientations().portrait << std::endl;
+		std::cout << "  Landscape:      " << info->supportedOrientations().landscape << std::endl;
+		std::cout << "  Inv Portrait:   " << info->supportedOrientations().invertedPortrait << std::endl;
+		std::cout << "  Inv Landscape:  " << info->supportedOrientations().invertedLandscape << std::endl;
+		std::cout << "Rotates:          " << info->rotatesWindowContents().value() << std::endl;
+		std::cout << "Ubuntu Lifecycle: " << info->supportsUbuntuLifecycle().value() << std::endl;
+	} catch (std::runtime_error &e) {
+		std::cerr << "Unable to parse Application info for application '" << std::string(appid) << "': " << e.what() << std::endl;
+		exit(1);
+	}
 
     return 0;
 }
