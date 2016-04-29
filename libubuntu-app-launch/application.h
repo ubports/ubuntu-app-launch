@@ -38,7 +38,7 @@ class Registry;
 /** \brief Class to represent an application, whether running or not, and
         query more information about it.
 
-    Generally the Application object represnts an Application in the system. It
+    Generally the Application object represents an Application in the system. It
     hooks up all of it's signals, finds out information about it and controls
     whether it is running or not. This class is what most users of Ubuntu App
     Launch will do the majority of their work.
