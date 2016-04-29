@@ -40,8 +40,17 @@ namespace app_launch
 class IconFinder
 {
 public:
+    /** Create an IconFinder
+
+        \param basePath the root directory to begin searching for themes
+    */
     explicit IconFinder(std::string basePath);
     virtual ~IconFinder() = default;
+
+    /** Find the optimal icon for the given icon name.
+
+        \param iconName name of or path to application icon
+    */
     virtual Application::Info::IconPath find(const std::string& iconName);
 
 private:
