@@ -119,7 +119,8 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
 std::shared_ptr<Application::Info> Libertine::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, libertine_container_path(_container.value().c_str()), _registry);
+    return std::make_shared<app_info::Desktop>(_keyfile, libertine_container_path(_container.value().c_str()),
+                                               _registry);
 }
 
 };  // namespace app_impls

@@ -140,6 +140,9 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
         return defaultValue;
     }
 
+    if (results == nullptr)
+        return defaultValue;
+
     bool result = false;
     for (auto i = 0; results[i] != nullptr; ++i)
     {
@@ -154,8 +157,11 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
     return result;
 }
 
-Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath, std::shared_ptr<Registry> registry)
-    : _keyfile([keyfile]() {
+Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
+                 const std::string& basePath,
+                 std::shared_ptr<Registry> registry,
+                 bool allowNoDisplay)
+    : _keyfile([keyfile, allowNoDisplay]() {
         if (!keyfile)
         {
             throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
@@ -164,7 +170,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath,
         {
             throw std::runtime_error("Keyfile does not represent application type");
         }
-        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value())
+        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value() && !allowNoDisplay)
         {
             throw std::runtime_error("Application is not meant to be displayed");
         }
@@ -173,10 +179,13 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath,
             throw std::runtime_error("Application keyfile is hidden");
         }
         auto xdg_current_desktop = getenv("XDG_CURRENT_DESKTOP");
-        if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false) ||
-            !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
+        if (xdg_current_desktop != nullptr)
         {
-            throw std::runtime_error("Application is not shown in Unity");
+            if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false) ||
+                !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
+            {
+                throw std::runtime_error("Application is not shown in Unity");
+            }
         }
 
         return keyfile;
