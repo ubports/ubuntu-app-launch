@@ -27,7 +27,7 @@ namespace app_launch
 namespace
 {
 constexpr auto ICONS_DIR = "/icons";
-constexpr auto HICOLOR_THEME_DIR = "/icons/hicolor/";
+constexpr auto HICOLOR_THEME_DIR = "/icons/hicolor";
 constexpr auto HICOLOR_THEME_FILE = "/icons/hicolor/index.theme";
 constexpr auto APPLICATIONS_TYPE = "Applications";
 constexpr auto SIZE_PROPERTY = "Size";
@@ -43,7 +43,7 @@ constexpr auto ICON_THEME_KEY = "Icon Theme";
 constexpr auto PIXMAPS_PATH = "/pixmaps/";
 constexpr auto ICON_TYPES = {".png", ".svg", ".xpm"};
 
-static const std::regex iconSizeDirname = std::regex("$(\\d+)x(\\d+)^");
+static const std::regex iconSizeDirname = std::regex("^(\\d+)x(\\d+)$");
 }  // anonymous namespace
 
 IconFinder::IconFinder(std::string basePath)
