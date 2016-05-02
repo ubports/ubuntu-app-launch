@@ -80,7 +80,8 @@ private:
     static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile,
                                                         gchar** directories,
                                                         const std::string &basePath);
-    /** \private */
+    static std::list<ThemeSubdirectory> themeFileSearchPaths(const std::string& basePath);
+    static std::list<ThemeSubdirectory> themeDirSearchPaths(const std::string& basePath);
     static std::list<ThemeSubdirectory> getSearchPaths(const std::string& basePath);
 };
 
