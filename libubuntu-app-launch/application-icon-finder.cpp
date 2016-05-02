@@ -334,6 +334,8 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
         iconPaths.emplace_back(IconFinder::ThemeSubdirectory{pixmapsPath, 1});
     }
 
+    g_debug("Base directory '%s' has %d searchable folders", basePath.c_str(), (int)iconPaths.size());
+
     // find icons sorted by size, highest to lowest
     iconPaths.sort([](const ThemeSubdirectory& lhs, const ThemeSubdirectory& rhs) { return lhs.size > rhs.size; });
     return iconPaths;
