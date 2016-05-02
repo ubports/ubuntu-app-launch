@@ -41,9 +41,16 @@ Libertine::Libertine(const AppID::Package& container,
     {
         auto container_path = libertine_container_path(container.value().c_str());
         auto container_app_path = g_build_filename(container_path, "usr", "share", "applications",
-                                                   (appname.value() + ".desktop").c_str(), NULL);
+                                                   (appname.value() + ".desktop").c_str(), nullptr);
 
         _keyfile = keyfileFromPath(container_app_path);
+
+        if (_keyfile)
+        {
+            auto gbasedir = g_build_filename(container_path, "usr", nullptr);
+            _basedir = gbasedir;
+            g_free(gbasedir);
+        }
 
         g_free(container_app_path);
         g_free(container_path);
@@ -56,6 +63,13 @@ Libertine::Libertine(const AppID::Package& container,
                                               (appname.value() + ".desktop").c_str(), NULL);
 
         _keyfile = keyfileFromPath(home_app_path);
+
+        if (_keyfile)
+        {
+            auto gbasedir = g_build_filename(home_path, ".local", nullptr);
+            _basedir = gbasedir;
+            g_free(gbasedir);
+        }
 
         g_free(home_app_path);
         g_free(home_path);
@@ -119,8 +133,7 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
 std::shared_ptr<Application::Info> Libertine::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, libertine_container_path(_container.value().c_str()),
-                                               _registry);
+    return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry);
 }
 
 };  // namespace app_impls
