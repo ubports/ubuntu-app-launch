@@ -42,7 +42,7 @@ constexpr auto ICON_THEME_KEY = "Icon Theme";
 constexpr auto PIXMAPS_PATH = "/pixmaps/";
 constexpr auto ICON_TYPES = {".png", ".svg", ".xpm"};
 
-static const std::regex iconSizeDirname = std::regex("^(\\d+)x(\\1)$");
+static const std::regex iconSizeDirname = std::regex("^(\\d+)x\\1$");
 }  // anonymous namespace
 
 IconFinder::IconFinder(std::string basePath)
