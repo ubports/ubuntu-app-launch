@@ -27,7 +27,7 @@ namespace app_launch
 namespace app_impls
 {
 
-std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name);
+std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name);
 
 void clear_keyfile(GKeyFile* keyfile)
 {
@@ -51,15 +51,20 @@ Legacy::Legacy(const AppID::AppName& appname,
 }
 
 Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
-    : Legacy(appname, "/usr", keyfileForApp(appname), registry)
+    : Base(registry)
+    , _appname(appname)
 {
+    std::tie(_basedir, _keyfile) = keyfileForApp(appname);
+
+    if (!_keyfile)
+        throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
 }
 
-std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
+std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name)
 {
     std::string desktopName = name.value() + ".desktop";
-    auto keyfilecheck = [desktopName](const gchar* dir) -> std::shared_ptr<GKeyFile> {
-        auto fullname = g_build_filename(dir, "applications", desktopName.c_str(), nullptr);
+    auto keyfilecheck = [desktopName](const std::string& dir) -> std::shared_ptr<GKeyFile> {
+        auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
         if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
         {
             g_free(fullname);
@@ -82,15 +87,17 @@ std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
         return keyfile;
     };
 
-    auto retval = keyfilecheck(g_get_user_data_dir());
+    std::string basedir = g_get_user_data_dir();
+    auto retval = keyfilecheck(basedir);
 
     auto systemDirs = g_get_system_data_dirs();
     for (auto i = 0; !retval && systemDirs[i] != nullptr; i++)
     {
-        retval = keyfilecheck(systemDirs[i]);
+        basedir = systemDirs[i];
+        retval = keyfilecheck(basedir);
     }
 
-    return retval;
+    return std::make_pair(basedir, retval);
 }
 
 std::shared_ptr<Application::Info> Legacy::info()
