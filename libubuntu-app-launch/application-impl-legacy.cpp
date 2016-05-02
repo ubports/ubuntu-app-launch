@@ -38,10 +38,12 @@ void clear_keyfile(GKeyFile* keyfile)
 }
 
 Legacy::Legacy(const AppID::AppName& appname,
+               const std::string& basedir,
                const std::shared_ptr<GKeyFile>& keyfile,
                const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _appname(appname)
+    , _basedir(basedir)
     , _keyfile(keyfile)
 {
     if (!_keyfile)
@@ -49,7 +51,7 @@ Legacy::Legacy(const AppID::AppName& appname,
 }
 
 Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
-    : Legacy(appname, keyfileForApp(appname), registry)
+    : Legacy(appname, "/usr", keyfileForApp(appname), registry)
 {
 }
 
@@ -93,7 +95,7 @@ std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
 
 std::shared_ptr<Application::Info> Legacy::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, "/usr/share/icons/", _registry, true);
+    return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true);
 }
 
 std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
