@@ -47,7 +47,7 @@ Libertine::Libertine(const AppID::Package& container,
 
         if (_keyfile)
         {
-            auto gbasedir = g_build_filename(container_path, "usr", nullptr);
+            auto gbasedir = g_build_filename(container_path, "usr", "share", nullptr);
             _basedir = gbasedir;
             g_free(gbasedir);
         }
@@ -66,7 +66,7 @@ Libertine::Libertine(const AppID::Package& container,
 
         if (_keyfile)
         {
-            auto gbasedir = g_build_filename(home_path, ".local", nullptr);
+            auto gbasedir = g_build_filename(home_path, ".local", "share", nullptr);
             _basedir = gbasedir;
             g_free(gbasedir);
         }

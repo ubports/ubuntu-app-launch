@@ -25,8 +25,8 @@ namespace app_launch
 {
 namespace
 {
-constexpr auto HICOLOR_THEME_DIR = "/share/icons/hicolor/";
-constexpr auto HICOLOR_THEME_FILE = "/share/icons/hicolor/index.theme";
+constexpr auto HICOLOR_THEME_DIR = "/icons/hicolor/";
+constexpr auto HICOLOR_THEME_FILE = "/icons/hicolor/index.theme";
 constexpr auto APPLICATIONS_TYPE = "Applications";
 constexpr auto SIZE_PROPERTY = "Size";
 constexpr auto MAXSIZE_PROPERTY = "MaxSize";
@@ -38,7 +38,7 @@ constexpr auto CONTEXT_PROPERTY = "Context";
 constexpr auto TYPE_PROPERTY = "Type";
 constexpr auto DIRECTORIES_PROPERTY = "Directories";
 constexpr auto ICON_THEME_KEY = "Icon Theme";
-constexpr auto PIXMAPS_PATH = "/share/pixmaps/";
+constexpr auto PIXMAPS_PATH = "/pixmaps/";
 constexpr auto ICON_TYPES = {".png", ".svg", ".xpm"};
 }  // anonymous namespace
 
