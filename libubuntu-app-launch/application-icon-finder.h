@@ -71,15 +71,15 @@ private:
     /** \private */
     static std::string findExistingIcon(const std::string& path, const std::string& iconName);
     /** \private */
-    static std::list<ThemeSubdirectory> validDirectories(std::string basePath, gchar* directory, int size);
+    static std::list<ThemeSubdirectory> validDirectories(const std::string &basePath, gchar* directory, int size);
     /** \private */
     static std::list<ThemeSubdirectory> addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
                                                               gchar* directory,
-                                                              std::string themePath);
+                                                              const std::string &basePath);
     /** \private */
     static std::list<ThemeSubdirectory> searchIconPaths(std::shared_ptr<GKeyFile> themefile,
                                                         gchar** directories,
-                                                        std::string themePath);
+                                                        const std::string &basePath);
     /** \private */
     static std::list<ThemeSubdirectory> getSearchPaths(const std::string& basePath);
 };

@@ -25,8 +25,8 @@ namespace app_launch
 {
 namespace
 {
-constexpr auto HICOLOR_THEME_DIR = "share/icons/hicolor/";
-constexpr auto HICOLOR_THEME_FILE = "share/icons/hicolor/index.theme";
+constexpr auto HICOLOR_THEME_DIR = "/share/icons/hicolor/";
+constexpr auto HICOLOR_THEME_FILE = "/share/icons/hicolor/index.theme";
 constexpr auto APPLICATIONS_TYPE = "Applications";
 constexpr auto SIZE_PROPERTY = "Size";
 constexpr auto MAXSIZE_PROPERTY = "MaxSize";
@@ -38,7 +38,7 @@ constexpr auto CONTEXT_PROPERTY = "Context";
 constexpr auto TYPE_PROPERTY = "Type";
 constexpr auto DIRECTORIES_PROPERTY = "Directories";
 constexpr auto ICON_THEME_KEY = "Icon Theme";
-constexpr auto PIXMAPS_PATH = "/usr/share/pixmaps/";
+constexpr auto PIXMAPS_PATH = "/share/pixmaps/";
 constexpr auto ICON_TYPES = {".png", ".svg", ".xpm"};
 }  // anonymous namespace
 
@@ -48,12 +48,16 @@ IconFinder::IconFinder(std::string basePath)
 {
 }
 
+/** Finds an icon in the search paths that we have for this path */
 Application::Info::IconPath IconFinder::find(const std::string& iconName)
 {
     if (iconName[0] == '/')  // explicit icon path received
     {
         return Application::Info::IconPath::from_raw(iconName);
     }
+
+    /* Look in each directory slowly decreasing the size until we find
+       and icon */
     auto size = 0;
     std::string iconPath;
     for (const auto& path : _searchPaths)
@@ -68,7 +72,8 @@ Application::Info::IconPath IconFinder::find(const std::string& iconName)
             }
         }
     }
-    if (iconPath == "")  // attempt to fallback to pixmaps
+
+    if (iconPath.empty())  // attempt to fallback to pixmaps
     {
         auto pixmap = g_build_filename(_basePath.c_str(), PIXMAPS_PATH, nullptr);
         iconPath = findExistingIcon(pixmap, iconName);
@@ -80,9 +85,11 @@ Application::Info::IconPath IconFinder::find(const std::string& iconName)
             g_free(defaultPath);
         }
     }
+
     return Application::Info::IconPath::from_raw(iconPath);
 }
 
+/** Check to see if this is an icon name or an icon filename */
 bool IconFinder::hasImageExtension(const char* filename)
 {
     for (const auto& extension : ICON_TYPES)
@@ -95,9 +102,12 @@ bool IconFinder::hasImageExtension(const char* filename)
     return false;
 }
 
+/** Check in a given path if there is an existing file in it that satifies our name */
 std::string IconFinder::findExistingIcon(const std::string& path, const std::string& iconName)
 {
     std::string iconPath;
+
+    /* If it already has an extension, only check that one */
     if (hasImageExtension(iconName.c_str()))
     {
         auto fullpath = g_build_filename(path.c_str(), iconName.c_str(), nullptr);
@@ -109,6 +119,7 @@ std::string IconFinder::findExistingIcon(const std::string& path, const std::str
         return iconPath;
     }
 
+    /* Otherwise check all the valid extensions to see if they exist */
     for (const auto& extension : ICON_TYPES)
     {
         auto fullpath = g_build_filename(path.c_str(), (iconName + extension).c_str(), nullptr);
@@ -123,22 +134,26 @@ std::string IconFinder::findExistingIcon(const std::string& path, const std::str
     return iconPath;
 }
 
-std::list<IconFinder::ThemeSubdirectory> IconFinder::validDirectories(std::string basePath, gchar* directory, int size)
+/** Create a directory item if the directory exists */
+std::list<IconFinder::ThemeSubdirectory> IconFinder::validDirectories(const std::string& basePath,
+                                                                      gchar* directory,
+                                                                      int size)
 {
     std::list<IconFinder::ThemeSubdirectory> dirs;
     auto globalHicolorTheme = g_build_filename(basePath.c_str(), HICOLOR_THEME_DIR, directory, nullptr);
     if (g_file_test(globalHicolorTheme, G_FILE_TEST_EXISTS))
     {
-        dirs.push_back(ThemeSubdirectory{std::string(globalHicolorTheme), size});
+        dirs.emplace_back(ThemeSubdirectory{std::string(globalHicolorTheme), size});
     }
     g_free(globalHicolorTheme);
 
     return dirs;
 }
 
+/** Take the data in a directory stanza and turn it into an actual directory */
 std::list<IconFinder::ThemeSubdirectory> IconFinder::addSubdirectoryByType(std::shared_ptr<GKeyFile> themefile,
                                                                            gchar* directory,
-                                                                           std::string basePath)
+                                                                           const std::string& basePath)
 {
     GError* error = nullptr;
     auto gType = g_key_file_get_string(themefile.get(), directory, TYPE_PROPERTY, &error);
@@ -195,9 +210,10 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::addSubdirectoryByType(std::
     return std::list<ThemeSubdirectory>{};
 }
 
+/** Parse a theme file's various stanzas for each directory */
 std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared_ptr<GKeyFile> themefile,
                                                                      gchar** directories,
-                                                                     std::string basePath)
+                                                                     const std::string& basePath)
 {
     std::list<ThemeSubdirectory> subdirs;
     for (auto i = 0; directories[i] != nullptr; ++i)
@@ -219,6 +235,8 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared
     return subdirs;
 }
 
+/** Try to get theme subdirectories using .theme file in the hicolor theme file
+    if it exists */
 std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::string& basePath)
 {
     GError* error = nullptr;
