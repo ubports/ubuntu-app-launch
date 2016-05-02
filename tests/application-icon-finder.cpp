@@ -22,59 +22,59 @@
 
 using namespace ubuntu::app_launch;
 
-TEST(ApplicationIconFinder, ReturnsDefaultPathWhenNoThemeFileAvailable)
+TEST(ApplicationIconFinder, ReturnsEmptyWhenNoThemeFileAvailable)
 {
     IconFinder finder("/tmp/please/dont/put/stuff/here");
-    EXPECT_EQ("/tmp/please/dont/put/stuff/here/app", finder.find("app").value());
+    EXPECT_TRUE(finder.find("app").value().empty());
 }
 
-TEST(ApplicationIconFinder, ReturnsDefaultPathWhenNoAppIconFound)
+TEST(ApplicationIconFinder, ReturnsEmptyWhenNoAppIconFound)
 {
     auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/app_unknown", finder.find("app_unknown").value());
+    EXPECT_TRUE(finder.find("app_unknown").value().empty());
 }
 
 TEST(ApplicationIconFinder, ReturnsLargestAvailableIcon)
 {
-    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/24x24/apps/app.xpm", finder.find("app").value());
+    EXPECT_EQ(basePath + "/icons/hicolor/24x24/apps/app.xpm", finder.find("app").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsLargestAvailableIconIncludingLocalIcons)
 {
-    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/home/test/.local/share";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/home/test/.local/share/icons/hicolor/32x32/apps/steam_123456.png",
+    EXPECT_EQ(basePath + "/icons/hicolor/32x32/apps/steam_123456.png",
               finder.find("steam_123456").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsIconAsDirectlyGiven)
 {
-    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg",
-              finder.find(basePath + "/usr/share/icons/hicolor/scalable/apps/app.svg").value());
+    EXPECT_EQ(basePath + "/icons/hicolor/scalable/apps/app.svg",
+              finder.find(basePath + "/icons/hicolor/scalable/apps/app.svg").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsIconFromPixmapAsFallback)
 {
-    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/usr/share/pixmaps/app2.png", finder.find("app2.png").value());
+    EXPECT_EQ(basePath + "/pixmaps/app2.png", finder.find("app2.png").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsThresholdIconBasedOnGap)
 {
-    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/22x22/apps/app1.png", finder.find("app1.png").value());
+    EXPECT_EQ(basePath + "/icons/hicolor/22x22/apps/app1.png", finder.find("app1.png").value());
 }
 
 TEST(ApplicationIconFinder, IgnoresDirectoriesWithJunkSize)
 {
-    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data";
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/usr/share/icons/hicolor/16x16/apps/app3.png", finder.find("app3.png").value());
+    EXPECT_EQ(basePath + "/icons/hicolor/16x16/apps/app3.png", finder.find("app3.png").value());
 }

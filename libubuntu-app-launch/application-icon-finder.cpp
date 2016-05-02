@@ -43,7 +43,7 @@ constexpr auto ICON_THEME_KEY = "Icon Theme";
 constexpr auto PIXMAPS_PATH = "/pixmaps/";
 constexpr auto ICON_TYPES = {".png", ".svg", ".xpm"};
 
-static const std::regex iconSizeDirname = std::regex("^(\\d+)x(\\d+)$");
+static const std::regex iconSizeDirname = std::regex("^(\\d+)x(\\1)$");
 }  // anonymous namespace
 
 IconFinder::IconFinder(std::string basePath)
@@ -61,7 +61,7 @@ Application::Info::IconPath IconFinder::find(const std::string& iconName)
     }
 
     /* Look in each directory slowly decreasing the size until we find
-       and icon */
+       an icon */
     auto size = 0;
     std::string iconPath;
     for (const auto& path : _searchPaths)
@@ -274,27 +274,27 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::themeDirSearchPaths(const s
     const gchar* dirname = nullptr;
     while ((dirname = g_dir_read_name(gdir)) != nullptr)
     {
-        std::string fullPath = themeDir + "/" + dirname;
-
+        auto fullPath = g_build_filename(themeDir.c_str(), dirname, "apps", nullptr);
         /* Directories only */
-        if (!g_file_test(fullPath.c_str(), G_FILE_TEST_IS_DIR))
-            continue;
-
-        if (dirname == std::string("scalable"))
+        if (g_file_test(fullPath, G_FILE_TEST_IS_DIR))
         {
-            /* We don't really know what to do with scalable here, let's
-               call them 1024 images */
-            searchPaths.emplace_back(IconFinder::ThemeSubdirectory{fullPath, 1024});
-            continue;
-        }
+            if (g_strcmp0(dirname, "scalable") == 0)
+            {
+                /* We don't really know what to do with scalable here, let's
+                   call them 256 images */
+                searchPaths.emplace_back(IconFinder::ThemeSubdirectory{fullPath, 256});
+                continue;
+            }
 
-        std::smatch match;
-        std::string dirstr(dirname);
-        /* We want it to match and have the same values for the first and second size */
-        if (std::regex_match(dirstr, match, iconSizeDirname) && match[1].str() == match[2].str())
-        {
-            searchPaths.emplace_back(IconFinder::ThemeSubdirectory{fullPath, std::atoi(match[1].str().c_str())});
+            std::smatch match;
+            std::string dirstr(dirname);
+            /* We want it to match and have the same values for the first and second size */
+            if (std::regex_match(dirstr, match, iconSizeDirname))
+            {
+                searchPaths.emplace_back(IconFinder::ThemeSubdirectory{fullPath, std::atoi(match[1].str().c_str())});
+            }
         }
+        g_free(fullPath);
     }
 
     g_dir_close(gdir);
@@ -307,10 +307,10 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
 {
     std::list<IconFinder::ThemeSubdirectory> iconPaths;
 
-    std::string hicolorDir = basePath + HICOLOR_THEME_DIR;
-    if (g_file_test(hicolorDir.c_str(), (GFileTest)(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
+    auto hicolorDir = g_build_filename(basePath.c_str(), HICOLOR_THEME_DIR, nullptr);
+    if (g_file_test(hicolorDir, G_FILE_TEST_IS_DIR))
     {
-        /* If the directory exists, it could have icons */
+        /* If the directory exists, it could have icons of unknown size */
         iconPaths.emplace_back(IconFinder::ThemeSubdirectory{hicolorDir, 1});
 
         /* Now see if we can get directories from a theme file */
@@ -321,12 +321,12 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
         }
         else
         {
-            /* If we didn't get from a theme file, we need to look
-               at the directories ourselves :-( */
+            /* If we didn't get from a theme file, we need to manually scan the directories */
             auto dirPaths = themeDirSearchPaths(hicolorDir);
             iconPaths.splice(iconPaths.end(), dirPaths);
         }
     }
+    g_free(hicolorDir);
 
     std::string iconsPath = basePath + ICONS_DIR;
     if (g_file_test(iconsPath.c_str(), (GFileTest)(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
@@ -336,12 +336,10 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
 
     /* Add the pixmaps path as a fallback if it exists */
     std::string pixmapsPath = basePath + PIXMAPS_PATH;
-    if (g_file_test(pixmapsPath.c_str(), (GFileTest)(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
+    if (g_file_test(pixmapsPath.c_str(), G_FILE_TEST_IS_DIR))
     {
         iconPaths.emplace_back(IconFinder::ThemeSubdirectory{pixmapsPath, 1});
     }
-
-    g_debug("Base directory '%s' has %d searchable folders", basePath.c_str(), (int)iconPaths.size());
 
     // find icons sorted by size, highest to lowest
     iconPaths.sort([](const ThemeSubdirectory& lhs, const ThemeSubdirectory& rhs) { return lhs.size > rhs.size; });
