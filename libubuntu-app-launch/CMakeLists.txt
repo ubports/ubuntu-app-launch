@@ -39,7 +39,9 @@ registry.cpp
 registry-impl.cpp
 application-impl-base.cpp
 application-impl-click.cpp
+application-impl-legacy.h
 application-impl-legacy.cpp
+application-impl-libertine.h
 application-impl-libertine.cpp
 application-info-desktop.cpp
 application-icon-finder.cpp
