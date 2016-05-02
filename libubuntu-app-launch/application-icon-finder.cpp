@@ -306,8 +306,8 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
 {
     std::list<IconFinder::ThemeSubdirectory> iconPaths;
 
-    std::string hicolorDir = basePath + HICOLOR_THEME_DIR;
-    if (g_file_test(hicolorDir.c_str(), G_FILE_TEST_IS_DIR))
+    auto hicolorDir = g_build_filename(basePath.c_str(), HICOLOR_THEME_DIR, nullptr);
+    if (g_file_test(hicolorDir, G_FILE_TEST_IS_DIR))
     {
         /* If the directory exists, it could have icons of unknown size */
         iconPaths.emplace_back(IconFinder::ThemeSubdirectory{hicolorDir, 1});
@@ -325,6 +325,7 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
             iconPaths.splice(iconPaths.end(), dirPaths);
         }
     }
+    g_free(hicolorDir);
 
     /* Add the pixmaps path as a fallback if it exists */
     std::string pixmapsPath = basePath + PIXMAPS_PATH;
