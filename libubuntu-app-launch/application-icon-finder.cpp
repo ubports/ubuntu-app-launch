@@ -239,11 +239,13 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared
     if it exists */
 std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::string& basePath)
 {
+    std::string themeFilePath = basePath + HICOLOR_THEME_FILE;
     GError* error = nullptr;
     auto themefile = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
-    g_key_file_load_from_file(themefile.get(), (basePath + HICOLOR_THEME_FILE).c_str(), G_KEY_FILE_NONE, &error);
+    g_key_file_load_from_file(themefile.get(), themeFilePath.c_str(), G_KEY_FILE_NONE, &error);
     if (error != nullptr)
     {
+        g_debug("Unable to find Hicolor theme file: %s", themeFilePath.c_str());
         g_error_free(error);
         return std::list<ThemeSubdirectory>();
     }
@@ -253,6 +255,7 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
         g_key_file_get_string_list(themefile.get(), ICON_THEME_KEY, DIRECTORIES_PROPERTY, nullptr, &error);
     if (error != nullptr)
     {
+        g_debug("Hicolor theme file '%s' didn't have any directories", themeFilePath.c_str());
         g_error_free(error);
         return std::list<ThemeSubdirectory>();
     }
