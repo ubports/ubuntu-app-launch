@@ -135,30 +135,6 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::validDirectories(std::strin
     }
     g_free(globalHicolorTheme);
 
-    // given basePath, probe the home directory
-    GError* error = nullptr;
-    auto homeDirBase = g_build_filename(basePath.c_str(), HOME_DIR, nullptr);
-    auto homeDir = g_dir_open(homeDirBase, 0, &error);
-    if (error != nullptr)
-    {
-        g_error_free(error);
-        g_free(homeDirBase);
-        return dirs;
-    }
-    auto name = g_dir_read_name(homeDir);  // no need to free
-    while (name != nullptr)
-    {
-        auto localHicolorTheme = g_build_filename(homeDirBase, name, LOCAL_HICOLOR_THEME_DIR, directory, nullptr);
-        if (g_file_test(localHicolorTheme, G_FILE_TEST_EXISTS))
-        {
-            dirs.push_back(ThemeSubdirectory{std::string(localHicolorTheme), size});
-        }
-        g_free(localHicolorTheme);
-        name = g_dir_read_name(homeDir);
-    }
-    g_free(homeDir);
-    g_free(homeDirBase);
-
     return dirs;
 }
 
