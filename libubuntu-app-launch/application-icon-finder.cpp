@@ -26,7 +26,8 @@ namespace app_launch
 {
 namespace
 {
-constexpr auto HICOLOR_THEME_DIR = "/icons/hicolor/";
+constexpr auto ICONS_DIR = "/icons";
+constexpr auto HICOLOR_THEME_DIR = "/icons/hicolor";
 constexpr auto HICOLOR_THEME_FILE = "/icons/hicolor/index.theme";
 constexpr auto APPLICATIONS_TYPE = "Applications";
 constexpr auto SIZE_PROPERTY = "Size";
@@ -326,6 +327,12 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
         }
     }
     g_free(hicolorDir);
+
+    std::string iconsPath = basePath + ICONS_DIR;
+    if (g_file_test(iconsPath.c_str(), (GFileTest)(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
+    {
+        iconPaths.emplace_back(IconFinder::ThemeSubdirectory{iconsPath, 1});
+    }
 
     /* Add the pixmaps path as a fallback if it exists */
     std::string pixmapsPath = basePath + PIXMAPS_PATH;
