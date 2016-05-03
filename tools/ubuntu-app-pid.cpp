@@ -31,14 +31,24 @@ int main(int argc, char* argv[])
     }
 
     auto appid = ubuntu::app_launch::AppID::parse(argv[1]);
-    auto app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
-    auto pid = app->instances()[0]->primaryPid();
-
-    if (pid == 0)
-    {
+    if (appid.empty()) {
+        std::cerr << "Unable to find app for appid: " << argv[1] << std::endl;
         return 1;
     }
 
-    std::cout << pid << std::endl;
-    return 0;
+    try {
+        auto app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
+        auto pid = app->instances()[0]->primaryPid();
+
+        if (pid == 0)
+        {
+            return 1;
+        }
+
+        std::cout << pid << std::endl;
+        return 0;
+    } catch (std::runtime_error &e) {
+        std::cerr << "Unable to find application for '" << std::string(appid) << "': " << e.what() << std::endl;
+        return 1;
+    }
 }

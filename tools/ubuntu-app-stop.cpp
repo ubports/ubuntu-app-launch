@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Canonical Ltd.
+ * Copyright © 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -42,7 +42,8 @@ int main(int argc, char* argv[])
         {
             instance->stop();
         }
-    } catch (...) {
+    } catch (std::runtime_error &e) {
+        std::cerr << "Unable to find application for '" << std::string(appid) << "': " << e.what() << std::endl;
         return 1;
     }
 
