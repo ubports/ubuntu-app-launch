@@ -46,8 +46,7 @@ TEST(ApplicationIconFinder, ReturnsLargestAvailableIconIncludingLocalIcons)
 {
     auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/home/test/.local/share";
     IconFinder finder(basePath);
-    EXPECT_EQ(basePath + "/icons/hicolor/32x32/apps/steam_123456.png",
-              finder.find("steam_123456").value());
+    EXPECT_EQ(basePath + "/icons/hicolor/32x32/apps/steam_123456.png", finder.find("steam_123456").value());
 }
 
 TEST(ApplicationIconFinder, ReturnsIconAsDirectlyGiven)
