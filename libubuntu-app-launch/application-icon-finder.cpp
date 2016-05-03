@@ -328,18 +328,21 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
     }
     g_free(hicolorDir);
 
-    std::string iconsPath = basePath + ICONS_DIR;
-    if (g_file_test(iconsPath.c_str(), (GFileTest)(G_FILE_TEST_EXISTS | G_FILE_TEST_IS_DIR)))
+    /* Add root icons directory as potential path */
+    auto iconsPath = g_build_filename(basePath.c_str(), ICONS_DIR, nullptr);
+    if (g_file_test(iconsPath, G_FILE_TEST_IS_DIR))
     {
         iconPaths.emplace_back(IconFinder::ThemeSubdirectory{iconsPath, 1});
     }
+    g_free(iconsPath);
 
     /* Add the pixmaps path as a fallback if it exists */
-    std::string pixmapsPath = basePath + PIXMAPS_PATH;
-    if (g_file_test(pixmapsPath.c_str(), G_FILE_TEST_IS_DIR))
+    auto pixmapsPath = g_build_filename(basePath.c_str(), PIXMAPS_PATH, nullptr);
+    if (g_file_test(pixmapsPath, G_FILE_TEST_IS_DIR))
     {
         iconPaths.emplace_back(IconFinder::ThemeSubdirectory{pixmapsPath, 1});
     }
+    g_free(pixmapsPath);
 
     // find icons sorted by size, highest to lowest
     iconPaths.sort([](const ThemeSubdirectory& lhs, const ThemeSubdirectory& rhs) { return lhs.size > rhs.size; });

@@ -65,6 +65,20 @@ TEST(ApplicationIconFinder, ReturnsIconFromPixmapAsFallback)
     EXPECT_EQ(basePath + "/pixmaps/app2.png", finder.find("app2.png").value());
 }
 
+TEST(ApplicationIconFinder, ReturnsIconFromRootThemeDirectory)
+{
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/icons/hicolor/app4.png", finder.find("app4.png").value());
+}
+
+TEST(ApplicationIconFinder, ReturnsIconFromRootIconsDirectory)
+{
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/icons/app5.png", finder.find("app5.png").value());
+}
+
 TEST(ApplicationIconFinder, ReturnsThresholdIconBasedOnGap)
 {
     auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
