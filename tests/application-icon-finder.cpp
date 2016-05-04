@@ -91,3 +91,10 @@ TEST(ApplicationIconFinder, IgnoresDirectoriesWithJunkSize)
     IconFinder finder(basePath);
     EXPECT_EQ(basePath + "/icons/hicolor/16x16/apps/app3.png", finder.find("app3.png").value());
 }
+
+TEST(ApplicationIconFinder, FindsHumanityIcon)
+{
+    auto basePath = std::string(CMAKE_SOURCE_DIR) + "/data/usr/share";
+    IconFinder finder(basePath);
+    EXPECT_EQ(basePath + "/icons/Humanity/16x16/apps/gedit.png", finder.find("gedit.png").value());
+}
