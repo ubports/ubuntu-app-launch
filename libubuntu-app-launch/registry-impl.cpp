@@ -18,6 +18,7 @@
  */
 
 #include "registry-impl.h"
+#include "application-icon-finder.h"
 
 namespace ubuntu
 {
@@ -34,6 +35,7 @@ Registry::Impl::Impl(Registry* registry)
                  _dbus.reset();
              })
     , _registry(registry)
+    , _iconFinders()
 // _manager(nullptr)
 {
     auto cancel = thread.getCancellable();
@@ -160,6 +162,15 @@ std::string Registry::Impl::getClickDir(const std::string& package)
         g_free(dir);
         return cppdir;
     });
+}
+
+std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
+{
+    if (_iconFinders.find(basePath) == _iconFinders.end())
+    {
+        _iconFinders[basePath] = std::make_shared<IconFinder>(basePath);
+    }
+    return _iconFinders[basePath];
 }
 
 #if 0

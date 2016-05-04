@@ -106,6 +106,16 @@ Application Info Desktop
    :private-members:
    :undoc-members:
 
+Application Icon Finder
+------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_info::IconFinder
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
 Helper Implementation Click
 ---------------------------
 

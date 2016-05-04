@@ -17,12 +17,12 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "registry.h"
 #include "glib-thread.h"
-
-#include <json-glib/json-glib.h>
+#include "registry.h"
 #include <click.h>
 #include <gio/gio.h>
+#include <json-glib/json-glib.h>
+#include <unordered_map>
 
 #pragma once
 
@@ -30,6 +30,8 @@ namespace ubuntu
 {
 namespace app_launch
 {
+
+class IconFinder;
 
 /** \private
     \brief Private implementation of the Registry object
@@ -55,6 +57,8 @@ public:
 
     GLib::ContextThread thread;
 
+    std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
+
 private:
     Registry* _registry;
 #if 0
@@ -67,6 +71,8 @@ private:
     std::shared_ptr<GDBusConnection> _dbus;
 
     void initClick();
+
+    std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 };
 
 };  // namespace app_launch
