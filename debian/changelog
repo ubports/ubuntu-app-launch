@@ -1,3 +1,25 @@
+ubuntu-app-launch (0.9+16.04.20160504.1-0ubuntu1) xenial; urgency=medium
+
+  [ CI Train Bot ]
+  * Add a depends for cgmanager for the desktop
+
+  [ Larry Price ]
+  * Add additional cases for not presenting desktop launchers based on
+    keyfile entries.
+  * Refactoring IconFinder to include icons from the Humanity theme (LP:
+    #1558741)
+  * Update icon search for non-click applications to search the hicolor
+    theme directory for appropriate icons. (LP: #1576722)
+
+  [ Ted Gould ]
+  * Add a small commandline tool for application information
+  * Fix typo in desktop key name (LP: #1578112)
+  * Handle exceptions and print errors with command line tools (LP:
+    #1575990)
+  * Minor cleanup which causes an annoying warning message
+
+ -- Ted Gould <ted@gould.cx>  Wed, 04 May 2016 20:12:55 +0000
+
 ubuntu-app-launch (0.9+16.04.20160427-0ubuntu1) xenial; urgency=medium
 
   [ Ted Gould ]
