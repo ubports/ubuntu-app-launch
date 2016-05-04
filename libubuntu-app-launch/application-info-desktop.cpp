@@ -18,6 +18,7 @@
  */
 
 #include "application-info-desktop.h"
+#include <cstdlib>
 
 namespace ubuntu
 {
@@ -25,8 +26,19 @@ namespace app_launch
 {
 namespace app_info
 {
-
+namespace
+{
 constexpr const char* DESKTOP_GROUP = "Desktop Entry";
+
+struct TypeTag;
+typedef TypeTagger<TypeTag, std::string> Type;
+
+struct HiddenTag;
+typedef TypeTagger<HiddenTag, bool> Hidden;
+
+struct NoDisplayTag;
+typedef TypeTagger<NoDisplayTag, bool> NoDisplay;
+} // anonymous namespace
 
 template <typename T>
 auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, const std::string& exceptionText = {})
@@ -113,12 +125,58 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
     return retval;
 }
 
+bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
+                                   const gchar* key,
+                                   const std::string& match,
+                                   bool defaultValue)
+{
+    GError* error = nullptr;
+    auto results = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, &error);
+    if (error != nullptr)
+    {
+      g_error_free(error);
+      return defaultValue;
+    }
+
+    bool result = false;
+    for (auto i = 0; results[i] != nullptr; ++i)
+    {
+        if (results[i] == match)
+        {
+            result = true;
+            break;
+        }
+    }
+    g_strfreev(results);
+
+    return result;
+}
+
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
     : _keyfile([keyfile]() {
         if (!keyfile)
         {
             throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
         }
+        if (stringFromKeyfile<Type>(keyfile, "Type").value() != "Application")
+        {
+            throw std::runtime_error("Keyfile does not represent application type");
+        }
+        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value())
+        {
+            throw std::runtime_error("Application is not meant to be displayed");
+        }
+        if (boolFromKeyfile<Hidden>(keyfile, "Hidden", false).value())
+        {
+            throw std::runtime_error("Application keyfile is hidden");
+        }
+        auto xdg_current_desktop = getenv("XDG_CURRENT_DESKTOP");
+        if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false)
+                 || !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
+        {
+            throw std::runtime_error("Application is not shown in Unity");
+        }
+
         return keyfile;
     }())
     , _basePath(basePath)

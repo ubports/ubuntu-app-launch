@@ -20,28 +20,46 @@
 #include "application-info-desktop.h"
 
 #include <gtest/gtest.h>
+#include <cstdlib>
+
+namespace
+{
+#define DESKTOP "Desktop Entry"
 
 class ApplicationInfoDesktop : public ::testing::Test
 {
+protected:
+    ApplicationInfoDesktop()
+      : test_dekstop_env("SomeFreeDesktop")
+    {
+    }
+
     virtual void SetUp()
     {
+        setenv("XDG_CURRENT_DESKTOP", test_dekstop_env.c_str(), true);
     }
 
     virtual void TearDown()
     {
     }
+
+    std::shared_ptr<GKeyFile> defaultKeyfile()
+    {
+        auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
+        g_key_file_set_string(keyfile.get(), DESKTOP, "Type", "Application");
+        g_key_file_set_string(keyfile.get(), DESKTOP, "Name", "Foo App");
+        g_key_file_set_string(keyfile.get(), DESKTOP, "Exec", "foo");
+        g_key_file_set_string(keyfile.get(), DESKTOP, "Icon", "foo.png");
+        return keyfile;
+    }
+
+    const std::string test_dekstop_env;
 };
 
-#define DESKTOP "Desktop Entry"
 
 TEST_F(ApplicationInfoDesktop, DefaultState)
 {
-    auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
-    g_key_file_set_string(keyfile.get(), DESKTOP, "Name", "Foo App");
-    g_key_file_set_string(keyfile.get(), DESKTOP, "Exec", "foo");
-    g_key_file_set_string(keyfile.get(), DESKTOP, "Icon", "foo.png");
-
-    auto appinfo = ubuntu::app_launch::app_info::Desktop(keyfile, "/");
+    auto appinfo = ubuntu::app_launch::app_info::Desktop(defaultKeyfile(), "/");
 
     EXPECT_EQ("Foo App", appinfo.name().value());
     EXPECT_EQ("", appinfo.description().value());
@@ -66,21 +84,61 @@ TEST_F(ApplicationInfoDesktop, DefaultState)
 
 TEST_F(ApplicationInfoDesktop, KeyfileErrors)
 {
+    // empty
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop({}, "/"), std::runtime_error);
 
-    auto noname = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
-    g_key_file_set_string(noname.get(), DESKTOP, "Comment", "This is a comment");
-    g_key_file_set_string(noname.get(), DESKTOP, "Exec", "foo");
-    g_key_file_set_string(noname.get(), DESKTOP, "Icon", "foo.png");
-
+    // empty name
+    auto noname = defaultKeyfile();
+    g_key_file_remove_key(noname.get(), DESKTOP, "Name", nullptr);
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(noname, "/"), std::runtime_error);
 
-    auto noicon = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
-    g_key_file_set_string(noicon.get(), DESKTOP, "Name", "Foo App");
-    g_key_file_set_string(noicon.get(), DESKTOP, "Comment", "This is a comment");
-    g_key_file_set_string(noicon.get(), DESKTOP, "Exec", "foo");
-
+    // empty icon
+    auto noicon = defaultKeyfile();
+    g_key_file_remove_key(noicon.get(), DESKTOP, "Icon", nullptr);
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(noicon, "/"), std::runtime_error);
+
+    // wrong type
+    auto wrongtype = defaultKeyfile();
+    g_key_file_set_string(wrongtype.get(), DESKTOP, "Type", "MimeType");
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(wrongtype, "/"), std::runtime_error);
+
+    // not displayable
+    auto nodisplay = defaultKeyfile();
+    g_key_file_set_string(nodisplay.get(), DESKTOP, "NoDisplay", "true");
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(nodisplay, "/"), std::runtime_error);
+
+    // hidden
+    auto hidden = defaultKeyfile();
+    g_key_file_set_string(hidden.get(), DESKTOP, "Hidden", "true");
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(hidden, "/"), std::runtime_error);
+
+    // not shown in Unity
+    auto notshowin = defaultKeyfile();
+    g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_dekstop_env + ";").c_str());
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/"), std::runtime_error);
+
+    // only show in not Unity
+    auto onlyshowin = defaultKeyfile();
+    g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", "KDE;Gnome;");
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/"), std::runtime_error);
+}
+
+TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
+{
+  // Not appearing in not show list
+  auto notshowin = defaultKeyfile();
+  g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", "Gnome;KDE;");
+  EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/"));
+
+  // Appearing explicitly in only show list
+  auto onlyshowin = defaultKeyfile();
+  g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_dekstop_env + ";Gnome;").c_str());
+  EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/"));
+
+  // Appearing explicitly in only show list not first
+  auto onlyshowinmiddle = defaultKeyfile();
+  g_key_file_set_string(onlyshowinmiddle.get(), DESKTOP, "OnlyShowIn", ("Gnome;" + test_dekstop_env + ";KDE;").c_str());
+  EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowinmiddle, "/"));
 }
 
 TEST_F(ApplicationInfoDesktop, Orientations)
@@ -97,10 +155,7 @@ invertedLandscape:
         true
     };
 
-    auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
-    g_key_file_set_string(keyfile.get(), DESKTOP, "Name", "Foo App");
-    g_key_file_set_string(keyfile.get(), DESKTOP, "Exec", "foo");
-    g_key_file_set_string(keyfile.get(), DESKTOP, "Icon", "foo.png");
+    auto keyfile = defaultKeyfile();
 
     EXPECT_EQ(defaultOrientations, ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 
@@ -146,3 +201,4 @@ invertedLandscape:
     EXPECT_EQ(defaultOrientations,
               ubuntu::app_launch::app_info::Desktop(keyfile, "/").supportedOrientations());
 }
+} //anonymous namespace
