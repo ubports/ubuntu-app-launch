@@ -265,7 +265,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         return retval;
     }())
     , _rotatesWindow(
-          boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Content", false))
+          boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Contents", false))
     , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
 {
 }
