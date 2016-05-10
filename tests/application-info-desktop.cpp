@@ -112,6 +112,8 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
     g_key_file_set_string(hidden.get(), DESKTOP, "Hidden", "true");
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(hidden, "/"), std::runtime_error);
 
+	/* Disabling for OTA11 */
+#if 0
     // not shown in Unity
     auto notshowin = defaultKeyfile();
     g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_dekstop_env + ";").c_str());
@@ -121,6 +123,7 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
     auto onlyshowin = defaultKeyfile();
     g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", "KDE;Gnome;");
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/"), std::runtime_error);
+#endif
 }
 
 TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
