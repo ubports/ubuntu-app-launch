@@ -1,3 +1,9 @@
+ubuntu-app-launch (0.9+16.04.20160510.2-0ubuntu1) xenial; urgency=medium
+
+  * Allow invalid desktop files for OTA11 quick fix (LP: #1580092)
+
+ -- Ted Gould <ted@gould.cx>  Tue, 10 May 2016 19:11:21 +0000
+
 ubuntu-app-launch (0.9+16.04.20160504.1-0ubuntu1) xenial; urgency=medium
 
   [ CI Train Bot ]
