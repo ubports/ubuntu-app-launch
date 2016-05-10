@@ -112,7 +112,7 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
     g_key_file_set_string(hidden.get(), DESKTOP, "Hidden", "true");
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(hidden, "/"), std::runtime_error);
 
-	/* Disabling for OTA10 */
+	/* Disabling for OTA11 */
 #if 0
     // not shown in Unity
     auto notshowin = defaultKeyfile();
