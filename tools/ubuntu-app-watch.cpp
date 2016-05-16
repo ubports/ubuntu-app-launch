@@ -27,27 +27,27 @@ int main(int argc, char* argv[])
 {
     ubuntu::app_launch::Registry registry;
 
-    registry.appStarted.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+    registry.appStarted().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                 {
                                     std::cout << "Started: " << (std::string)app->appId() << std::endl;
                                 });
-    registry.appStopped.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+    registry.appStopped().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                 {
                                     std::cout << "Stopped: " << (std::string)app->appId() << std::endl;
                                 });
-    registry.appPaused.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+    registry.appPaused().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                {
                                    std::cout << "Paused:  " << (std::string)app->appId() << std::endl;
                                });
-    registry.appResumed.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+    registry.appResumed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                 {
                                     std::cout << "Resumed: " << (std::string)app->appId() << std::endl;
                                 });
-    registry.appFailed.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+    registry.appFailed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
                                   ubuntu::app_launch::Registry::FailureType type)
                                {

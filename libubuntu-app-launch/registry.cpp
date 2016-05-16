@@ -95,5 +95,31 @@ std::shared_ptr<Registry> Registry::getDefault()
     return defaultRegistry;
 }
 
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted()
+{
+    return impl->sig_appStarted;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped()
+{
+    return impl->sig_appStopped;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    Registry::appFailed()
+{
+    return impl->sig_appFailed;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appPaused()
+{
+    return impl->sig_appPaused;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appResumed()
+{
+    return impl->sig_appResumed;
+}
+
 };  // namespace app_launch
 };  // namespace ubuntu

@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
-    registry->appStarted.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+    registry->appStarted().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                  {
                                      if (app->appId() != global_appid)
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
                                      retval.set_value(0);
                                  });
 
-    registry->appFailed.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+    registry->appFailed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
                                    ubuntu::app_launch::Registry::FailureType type)
                                 {

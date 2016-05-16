@@ -174,8 +174,7 @@ std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
     return _iconFinders[basePath];
 }
 
-void
-Registry::Impl::setManager (Registry::Manager* manager)
+void Registry::Impl::setManager(Registry::Manager* manager)
 {
     if (_manager != nullptr)
     {
@@ -185,8 +184,7 @@ Registry::Impl::setManager (Registry::Manager* manager)
     _manager = manager;
 }
 
-void
-Registry::Impl::clearManager ()
+void Registry::Impl::clearManager()
 {
     _manager = nullptr;
 }
