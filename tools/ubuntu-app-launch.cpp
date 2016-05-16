@@ -23,7 +23,7 @@
 #include "libubuntu-app-launch/application.h"
 #include "libubuntu-app-launch/registry.h"
 
-Ubuntu::AppLaunch::AppID global_appid;
+ubuntu::app_launch::AppID global_appid;
 std::promise<int> retval;
 
 int main(int argc, char* argv[])
@@ -34,18 +34,18 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    global_appid = Ubuntu::AppLaunch::AppID::parse(argv[1]);
+    global_appid = ubuntu::app_launch::AppID::parse(argv[1]);
 
-    std::vector<Ubuntu::AppLaunch::Application::URL> urls;
+    std::vector<ubuntu::app_launch::Application::URL> urls;
     for (int i = 2; i < argc; i++)
     {
-        urls.push_back(Ubuntu::AppLaunch::Application::URL::from_raw(argv[i]));
+        urls.push_back(ubuntu::app_launch::Application::URL::from_raw(argv[i]));
     }
 
-    auto registry = std::make_shared<Ubuntu::AppLaunch::Registry>();
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
-    registry->appStarted.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
-                                    std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance)
+    registry->appStarted.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                  {
                                      if (app->appId() != global_appid)
                                      {
@@ -56,9 +56,9 @@ int main(int argc, char* argv[])
                                      retval.set_value(0);
                                  });
 
-    registry->appFailed.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
-                                   std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance,
-                                   Ubuntu::AppLaunch::Registry::FailureType type)
+    registry->appFailed.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                                   ubuntu::app_launch::Registry::FailureType type)
                                 {
                                     if (app->appId() != global_appid)
                                     {
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
                                     retval.set_value(-1);
                                 });
 
-    auto app = Ubuntu::AppLaunch::Application::create(global_appid, registry);
+    auto app = ubuntu::app_launch::Application::create(global_appid, registry);
     app->launch(urls);
 
     std::signal(SIGTERM, [](int signal) -> void

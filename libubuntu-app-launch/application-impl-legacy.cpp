@@ -27,7 +27,7 @@ namespace app_launch
 namespace app_impls
 {
 
-std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name);
+std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name);
 
 void clear_keyfile(GKeyFile* keyfile)
 {
@@ -38,10 +38,12 @@ void clear_keyfile(GKeyFile* keyfile)
 }
 
 Legacy::Legacy(const AppID::AppName& appname,
+               const std::string& basedir,
                const std::shared_ptr<GKeyFile>& keyfile,
                const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _appname(appname)
+    , _basedir(basedir)
     , _keyfile(keyfile)
 {
     if (!_keyfile)
@@ -49,15 +51,20 @@ Legacy::Legacy(const AppID::AppName& appname,
 }
 
 Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
-    : Legacy(appname, keyfileForApp(appname), registry)
+    : Base(registry)
+    , _appname(appname)
 {
+    std::tie(_basedir, _keyfile) = keyfileForApp(appname);
+
+    if (!_keyfile)
+        throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
 }
 
-std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
+std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name)
 {
     std::string desktopName = name.value() + ".desktop";
-    auto keyfilecheck = [desktopName](const gchar* dir) -> std::shared_ptr<GKeyFile> {
-        auto fullname = g_build_filename(dir, "applications", desktopName.c_str(), nullptr);
+    auto keyfilecheck = [desktopName](const std::string& dir) -> std::shared_ptr<GKeyFile> {
+        auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
         if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
         {
             g_free(fullname);
@@ -80,20 +87,22 @@ std::shared_ptr<GKeyFile> keyfileForApp(const AppID::AppName& name)
         return keyfile;
     };
 
-    auto retval = keyfilecheck(g_get_user_data_dir());
+    std::string basedir = g_get_user_data_dir();
+    auto retval = keyfilecheck(basedir);
 
     auto systemDirs = g_get_system_data_dirs();
     for (auto i = 0; !retval && systemDirs[i] != nullptr; i++)
     {
-        retval = keyfilecheck(systemDirs[i]);
+        basedir = systemDirs[i];
+        retval = keyfilecheck(basedir);
     }
 
-    return retval;
+    return std::make_pair(basedir, retval);
 }
 
 std::shared_ptr<Application::Info> Legacy::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, "/usr/share/icons/");
+    return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true);
 }
 
 std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)

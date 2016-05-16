@@ -29,15 +29,25 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    auto appid = ubuntu::app_launch::AppID::parse(argv[1]);
-    auto app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
+    auto appid = ubuntu::app_launch::AppID::find(argv[1]);
+    if (appid.empty()) {
+        std::cerr << "Unable to find app for appid: " << argv[1] << std::endl;
+        return 1;
+    }
 
-    for (auto instance : app->instances())
-    {
-        for (auto pid : instance->pids())
+    try {
+        auto app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
+
+        for (auto instance : app->instances())
         {
-            std::cout << pid << std::endl;
+            for (auto pid : instance->pids())
+            {
+                std::cout << pid << std::endl;
+            }
         }
+    } catch (std::runtime_error &e) {
+        std::cerr << "Unable to find application for '" << std::string(appid) << "': " << e.what() << std::endl;
+        return 1;
     }
 
     return 0;

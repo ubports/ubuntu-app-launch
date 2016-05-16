@@ -18,6 +18,7 @@
  */
 
 #include "registry-impl.h"
+#include "application-icon-finder.h"
 
 namespace ubuntu
 {
@@ -30,11 +31,13 @@ Registry::Impl::Impl(Registry* registry)
                  _clickUser.reset();
                  _clickDB.reset();
 
-                 g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
+                 if (_dbus)
+                     g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
                  _dbus.reset();
              })
     , _registry(registry)
     , _manager(nullptr)
+    , _iconFinders()
 {
     auto cancel = thread.getCancellable();
     _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
@@ -160,6 +163,15 @@ std::string Registry::Impl::getClickDir(const std::string& package)
         g_free(dir);
         return cppdir;
     });
+}
+
+std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
+{
+    if (_iconFinders.find(basePath) == _iconFinders.end())
+    {
+        _iconFinders[basePath] = std::make_shared<IconFinder>(basePath);
+    }
+    return _iconFinders[basePath];
 }
 
 void

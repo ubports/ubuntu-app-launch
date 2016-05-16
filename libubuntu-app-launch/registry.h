@@ -33,20 +33,44 @@ namespace ubuntu
 namespace app_launch
 {
 
+/** The application registry provides a central source for finding information
+    about the applications in the system. This includes installed applications
+    and running applications.
+
+    This class also holds onto shared resources for Ubuntu App Launch objects and
+    functions. Generally speaking, there should only be one of them in the
+    process. There are singleton functions, getDefault() and clearDefault(), which
+    can be used to port applications from the old C API to the new C++ one
+    but their use is discouraged. */
 class Registry
 {
 public:
+    /** Sometimes apps fail, this gives us information on why they
+        failed. */
     enum class FailureType
     {
-        CRASH,
-        START_FAILURE,
+        CRASH,         /**< The application was running, but failed while running. */
+        START_FAILURE, /**< Something in the configuration of the application made it impossible to start the
+                          application */
     };
 
     Registry();
     virtual ~Registry();
 
     /* Lots of application lists */
+    /** List the applications that are currently running, each will have a valid
+        Application::Instance at call time, but that could change as soon as
+        the call occurs.
+
+        \param registry Shared registry for the tracking
+    */
     static std::list<std::shared_ptr<Application>> runningApps(std::shared_ptr<Registry> registry = getDefault());
+    /** List all of the applications that are currently installed on the system.
+        Queries the various packaging schemes that are supported to get thier
+        list of applications.
+
+        \param registry Shared registry for the tracking
+    */
     static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Registry> registry = getDefault());
 
     /* Signals to discover what is happening to apps */
@@ -71,15 +95,28 @@ public:
     void clearManager ();
 
     /* Helper Lists */
+    /** Get a list of all the helpers for a given helper type
+
+        \param type Helper type string
+        \param registry Shared registry for the tracking
+    */
     static std::list<std::shared_ptr<Helper>> runningHelpers(Helper::Type type,
                                                              std::shared_ptr<Registry> registry = getDefault());
 
     /* Default Junk */
+    /** Use the Registry as a global singleton, this function will create
+        a Registry object if one doesn't exist. Use of this function is
+        discouraged. */
     static std::shared_ptr<Registry> getDefault();
+    /** Clear the default. If you're using the singleton interface in the
+        Registry::getDefault() function you should call this as your service
+        and/or tests exit to ensure you don't get Valgrind errors. */
     static void clearDefault();
 
     /* Hide our implementation */
+    /** \private */
     class Impl;
+    /** \private */
     std::unique_ptr<Impl> impl;
 };
 

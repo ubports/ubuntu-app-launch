@@ -1,10 +1,64 @@
-ubuntu-app-launch (0.9) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.9+16.04.20160510.2-0ubuntu1) xenial; urgency=medium
 
+  * Allow invalid desktop files for OTA11 quick fix (LP: #1580092)
+
+ -- Ted Gould <ted@gould.cx>  Tue, 10 May 2016 19:11:21 +0000
+
+ubuntu-app-launch (0.9+16.04.20160504.1-0ubuntu1) xenial; urgency=medium
+
+  [ CI Train Bot ]
+  * Add a depends for cgmanager for the desktop
+
+  [ Larry Price ]
+  * Add additional cases for not presenting desktop launchers based on
+    keyfile entries.
+  * Refactoring IconFinder to include icons from the Humanity theme (LP:
+    #1558741)
+  * Update icon search for non-click applications to search the hicolor
+    theme directory for appropriate icons. (LP: #1576722)
+
+  [ Ted Gould ]
+  * Add a small commandline tool for application information
+  * Fix typo in desktop key name (LP: #1578112)
+  * Handle exceptions and print errors with command line tools (LP:
+    #1575990)
+  * Minor cleanup which causes an annoying warning message
+
+ -- Ted Gould <ted@gould.cx>  Wed, 04 May 2016 20:12:55 +0000
+
+ubuntu-app-launch (0.9+16.04.20160427-0ubuntu1) xenial; urgency=medium
+
+  [ Ted Gould ]
+  * Adjust version regular expression to handle single character version
+    numbers
+
+ -- Michael Terry <michael.terry@canonical.com>  Wed, 27 Apr 2016 14:52:33 +0000
+
+ubuntu-app-launch (0.9+16.04.20160421.3-0ubuntu1) xenial; urgency=medium
+
+  [ Ted Gould ]
   * Add new C++ API that has a retained object for maintaining
     connections through multiple calls. Also provides for getting
     consistent application metadata.
+  * Add dependency on libpam-cgfs on Xenial so that cgroups work
+    properly in Upstart (LP: #1535058)
+  * Adding support for Read the Docs
+  * Fix cut-and-paste error in function comment
+  * If no XDG_DATA_DIRS is set ensure that /usr/share is in the list.
+    (LP: #1541037)
 
- -- Ted Gould <ted@ubuntu.com>  Tue, 26 Jan 2016 15:22:06 -0600
+  [ CI Train Bot ]
+  * Ensure all pending events on the context are complete before
+    unref'ing it. (LP: #1495871)
+
+  [ Dimitri John Ledkov ]
+  * Raise to -std=gnu99, because we really want gnu standards, and thus
+    e.g. access CLOCK_MONOTONIC in lttng on arm64/armhf. Resolves FTBFS.
+
+  [ Michael Terry ]
+  * Fix build by correcting typo in function name.
+
+ -- Ted Gould <ted@gould.cx>  Thu, 21 Apr 2016 19:47:16 +0000
 
 ubuntu-app-launch (0.5+15.10.20150817-0ubuntu1) wily; urgency=medium
 

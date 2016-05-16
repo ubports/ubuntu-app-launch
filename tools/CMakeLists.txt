@@ -18,6 +18,15 @@ target_link_libraries(ubuntu-app-list-pids ubuntu-launcher)
 install(TARGETS ubuntu-app-list-pids RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ########################
+# ubuntu-app-info
+########################
+
+add_executable(ubuntu-app-info ubuntu-app-info.cpp)
+set_target_properties(ubuntu-app-info PROPERTIES OUTPUT_NAME "ubuntu-app-info")
+target_link_libraries(ubuntu-app-info ubuntu-launcher)
+install(TARGETS ubuntu-app-info RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+########################
 # ubuntu-app-launch
 ########################
 

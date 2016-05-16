@@ -20,6 +20,7 @@ Build-Depends: click-dev (>= 0.2.2),
                libmirclient-dev (>= 0.5),
                libnih-dbus-dev,
                libnih-dev,
+               libproperties-cpp-dev,
                libupstart-dev,
                libzeitgeist-2.0-dev,
                gobject-introspection,
@@ -36,8 +37,11 @@ Package: ubuntu-app-launch
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         cgmanager,
          click-apparmor,
+         libpam-cgfs | libpam-cgm | cgmanager (<< 0.37),
          upstart (>= 1.13),
+         xmir [amd64 armhf i386],
          zeitgeist-core,
 Replaces: upstart-app-launch
 Conflicts: upstart-app-launch

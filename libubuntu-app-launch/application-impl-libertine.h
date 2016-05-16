@@ -36,7 +36,7 @@ public:
               const AppID::AppName& appname,
               const std::shared_ptr<Registry>& registry);
 
-    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry> &registry);
+    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
 
     AppID appId() override
     {
@@ -49,6 +49,7 @@ private:
     AppID::Package _container;
     AppID::AppName _appname;
     std::shared_ptr<GKeyFile> _keyfile;
+    std::string _basedir;
 };
 
 };  // namespace app_impls

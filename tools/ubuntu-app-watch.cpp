@@ -25,39 +25,39 @@ std::promise<int> retval;
 
 int main(int argc, char* argv[])
 {
-    Ubuntu::AppLaunch::Registry registry;
+    ubuntu::app_launch::Registry registry;
 
-    registry.appStarted.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
-                                   std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance)
+    registry.appStarted.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                 {
                                     std::cout << "Started: " << (std::string)app->appId() << std::endl;
                                 });
-    registry.appStopped.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
-                                   std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance)
+    registry.appStopped.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                 {
                                     std::cout << "Stopped: " << (std::string)app->appId() << std::endl;
                                 });
-    registry.appPaused.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
-                                  std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance)
+    registry.appPaused.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                  std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                {
                                    std::cout << "Paused:  " << (std::string)app->appId() << std::endl;
                                });
-    registry.appResumed.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
-                                   std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance)
+    registry.appResumed.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
                                 {
                                     std::cout << "Resumed: " << (std::string)app->appId() << std::endl;
                                 });
-    registry.appFailed.connect([](std::shared_ptr<Ubuntu::AppLaunch::Application> app,
-                                  std::shared_ptr<Ubuntu::AppLaunch::Application::Instance> instance,
-                                  Ubuntu::AppLaunch::Registry::FailureType type)
+    registry.appFailed.connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                  std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                                  ubuntu::app_launch::Registry::FailureType type)
                                {
                                    std::cout << "Failed:  " << (std::string)app->appId();
                                    switch (type)
                                    {
-                                       case Ubuntu::AppLaunch::Registry::FailureType::CRASH:
+                                       case ubuntu::app_launch::Registry::FailureType::CRASH:
                                            std::cout << " (crash)";
                                            break;
-                                       case Ubuntu::AppLaunch::Registry::FailureType::START_FAILURE:
+                                       case ubuntu::app_launch::Registry::FailureType::START_FAILURE:
                                            std::cout << " (start failure)";
                                            break;
                                    }

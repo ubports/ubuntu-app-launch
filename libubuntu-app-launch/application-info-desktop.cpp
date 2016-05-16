@@ -18,6 +18,9 @@
  */
 
 #include "application-info-desktop.h"
+#include "application-icon-finder.h"
+#include "registry-impl.h"
+#include <cstdlib>
 
 namespace ubuntu
 {
@@ -25,8 +28,19 @@ namespace app_launch
 {
 namespace app_info
 {
-
+namespace
+{
 constexpr const char* DESKTOP_GROUP = "Desktop Entry";
+
+struct TypeTag;
+typedef TypeTagger<TypeTag, std::string> Type;
+
+struct HiddenTag;
+typedef TypeTagger<HiddenTag, bool> Hidden;
+
+struct NoDisplayTag;
+typedef TypeTagger<NoDisplayTag, bool> NoDisplay;
+}  // anonymous namespace
 
 template <typename T>
 auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, const std::string& exceptionText = {})
@@ -113,19 +127,80 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
     return retval;
 }
 
-Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
-    : _keyfile([keyfile]() {
+bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
+                                   const gchar* key,
+                                   const std::string& match,
+                                   bool defaultValue)
+{
+    GError* error = nullptr;
+    auto results = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, &error);
+    if (error != nullptr)
+    {
+        g_error_free(error);
+        return defaultValue;
+    }
+
+    bool result = false;
+    for (auto i = 0; results[i] != nullptr; ++i)
+    {
+        if (results[i] == match)
+        {
+            result = true;
+            break;
+        }
+    }
+    g_strfreev(results);
+
+    return result;
+}
+
+Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
+                 const std::string& basePath,
+                 std::shared_ptr<Registry> registry,
+                 bool allowNoDisplay)
+    : _keyfile([keyfile, allowNoDisplay]() {
         if (!keyfile)
         {
             throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
         }
+        if (stringFromKeyfile<Type>(keyfile, "Type").value() != "Application")
+        {
+            throw std::runtime_error("Keyfile does not represent application type");
+        }
+        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value() && !allowNoDisplay)
+        {
+            throw std::runtime_error("Application is not meant to be displayed");
+        }
+        if (boolFromKeyfile<Hidden>(keyfile, "Hidden", false).value())
+        {
+            throw std::runtime_error("Application keyfile is hidden");
+        }
+        auto xdg_current_desktop = getenv("XDG_CURRENT_DESKTOP");
+        if (xdg_current_desktop != nullptr)
+        {
+            if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false) ||
+                !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
+            {
+                g_warning("Application is not shown in Unity");
+                // Exception removed for OTA11 as a temporary fix
+                // throw std::runtime_error("Application is not shown in Unity");
+            }
+        }
+
         return keyfile;
     }())
     , _basePath(basePath)
     , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
-    , _iconPath(
-          fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file"))
+    , _iconPath([keyfile, basePath, registry]() {
+        if (registry != nullptr)
+        {
+            auto iconName =
+                stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon", "Missing icon for desktop file");
+            return registry->impl->getIconFinder(basePath)->find(iconName);
+        }
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
+    }())
     , _splashInfo({
         title : stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
         image : fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
@@ -192,7 +267,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile, const std::string& basePath)
         return retval;
     }())
     , _rotatesWindow(
-          boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Content", false))
+          boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Contents", false))
     , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
 {
 }

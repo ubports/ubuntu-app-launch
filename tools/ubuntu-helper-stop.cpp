@@ -30,15 +30,25 @@ int main(int argc, char* argv[])
     }
 
     auto type = ubuntu::app_launch::Helper::Type::from_raw(argv[1]);
-    auto appid = ubuntu::app_launch::AppID::parse(argv[2]);
-
-    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
-    auto helper = ubuntu::app_launch::Helper::create(type, appid, registry);
-
-    for (auto instance : helper->instances())
-    {
-        instance->stop();
+    auto appid = ubuntu::app_launch::AppID::find(argv[2]);
+    if (appid.empty()) {
+        std::cerr << "Unable to find helper for appid: " << argv[1] << std::endl;
+        return 1;
     }
 
-    return 0;
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    try {
+        auto helper = ubuntu::app_launch::Helper::create(type, appid, registry);
+
+        for (auto instance : helper->instances())
+        {
+            instance->stop();
+        }
+
+        return 0;
+    } catch (std::runtime_error &e) {
+        std::cerr << "Unable to find helper for '" << std::string(appid) << "' type '" << type.value() << "': " << e.what() << std::endl;
+        return 1;
+    }
 }
