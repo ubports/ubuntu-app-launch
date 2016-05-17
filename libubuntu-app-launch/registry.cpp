@@ -84,6 +84,16 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
     return list;
 }
 
+void Registry::setManager(Manager* manager)
+{
+    impl->setManager(manager);
+}
+
+void Registry::clearManager()
+{
+    impl->clearManager();
+}
+
 std::shared_ptr<Registry> defaultRegistry;
 std::shared_ptr<Registry> Registry::getDefault()
 {
