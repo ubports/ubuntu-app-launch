@@ -22,6 +22,7 @@
 #include <map>
 
 #include "application-impl-base.h"
+#include "registry-impl.h"
 
 namespace ubuntu
 {
@@ -44,24 +45,24 @@ bool Base::hasInstances()
 class BaseInstance : public Application::Instance
 {
 public:
-    explicit BaseInstance(const std::string& appId);
+    explicit BaseInstance(const std::string& appId, const std::shared_ptr<Registry>& registry);
 
     /* Query lifecycle */
     bool isRunning() override
     {
-        return ubuntu_app_launch_get_primary_pid(_appId.c_str()) != 0;
+        return ubuntu_app_launch_get_primary_pid(appId_.c_str()) != 0;
     }
     pid_t primaryPid() override
     {
-        return ubuntu_app_launch_get_primary_pid(_appId.c_str());
+        return ubuntu_app_launch_get_primary_pid(appId_.c_str());
     }
     bool hasPid(pid_t pid) override
     {
-        return ubuntu_app_launch_pid_in_app_id(pid, _appId.c_str()) == TRUE;
+        return ubuntu_app_launch_pid_in_app_id(pid, appId_.c_str()) == TRUE;
     }
     std::string logPath() override
     {
-        auto cpath = ubuntu_app_launch_application_log_path(_appId.c_str());
+        auto cpath = ubuntu_app_launch_application_log_path(appId_.c_str());
         if (cpath != nullptr)
         {
             std::string retval(cpath);
@@ -76,7 +77,7 @@ public:
     std::vector<pid_t> pids() override
     {
         std::vector<pid_t> vector;
-        GList* list = ubuntu_app_launch_get_pids(_appId.c_str());
+        GList* list = ubuntu_app_launch_get_pids(appId_.c_str());
 
         for (GList* pntr = list; pntr != nullptr; pntr = g_list_next(pntr))
         {
@@ -91,15 +92,15 @@ public:
     /* Manage lifecycle */
     void pause() override
     {
-        ubuntu_app_launch_pause_application(_appId.c_str());
+        ubuntu_app_launch_pause_application(appId_.c_str());
     }
     void resume() override
     {
-        ubuntu_app_launch_resume_application(_appId.c_str());
+        ubuntu_app_launch_resume_application(appId_.c_str());
     }
     void stop() override
     {
-        ubuntu_app_launch_stop_application(_appId.c_str());
+        ubuntu_app_launch_stop_application(appId_.c_str());
     }
 
     /* OOM Functions */
@@ -114,7 +115,8 @@ public:
     }
 
 private:
-    std::string _appId;
+    std::string appId_;
+    std::shared_ptr<Registry> registry_;
 
     /** Go through the list of PIDs calling a function and handling
         the issue with getting PIDs being a racey condition. */
@@ -241,18 +243,67 @@ private:
 
     void pidListToDbus(std::vector<pid_t>& pids, const std::string& signal)
     {
+        auto vpids = std::shared_ptr<GVariant>(
+            [pids]() {
+                GVariant* pidarray = nullptr;
+
+                if (pids.size() == 0)
+                {
+                    pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, NULL, 0);
+                    g_variant_ref_sink(pidarray);
+                    return pidarray;
+                }
+
+                GVariantBuilder builder;
+                g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
+                for (auto pid : pids)
+                {
+                    g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
+                }
+
+                pidarray = g_variant_builder_end(&builder);
+                g_variant_ref_sink(pidarray);
+                return pidarray;
+            }(),
+            [](GVariant* var) { g_variant_unref(var); });
+
+        GVariantBuilder params;
+        g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
+        g_variant_builder_add_value(&params, g_variant_new_string(std::string(appId_).c_str()));
+        g_variant_builder_add_value(&params, vpids.get());
+
+        GError* error = nullptr;
+        g_dbus_connection_emit_signal(registry_->impl->_dbus.get(),    /* bus */
+                                      nullptr,                         /* destination */
+                                      "/",                             /* path */
+                                      "com.canonical.UbuntuAppLaunch", /* interface */
+                                      signal.c_str(),                  /* signal */
+                                      g_variant_builder_end(&params),  /* params, the same */
+                                      &error);                         /* error */
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(appId_).c_str(),
+                      error->message);
+            g_error_free(error);
+        }
+        else
+        {
+            g_debug("Emmitted '%s' to DBus", signal.c_str());
+        }
     }
 };
 
-BaseInstance::BaseInstance(const std::string& appId)
-    : _appId(appId)
+BaseInstance::BaseInstance(const std::string& appId, const std::shared_ptr<Registry>& registry)
+    : appId_(appId)
+    , registry_(registry)
 {
 }
 
 std::vector<std::shared_ptr<Application::Instance>> Base::instances()
 {
     std::vector<std::shared_ptr<Instance>> vect;
-    vect.emplace_back(std::make_shared<BaseInstance>(appId()));
+    vect.emplace_back(std::make_shared<BaseInstance>(appId(), _registry));
     return vect;
 }
 
@@ -281,7 +332,7 @@ std::shared_ptr<Application::Instance> Base::launch(const std::vector<Applicatio
 
     ubuntu_app_launch_start_application(appIdStr.c_str(), urlstrv.get());
 
-    return std::make_shared<BaseInstance>(appIdStr);
+    return std::make_shared<BaseInstance>(appIdStr, _registry);
 }
 
 std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Application::URL>& urls)
@@ -296,7 +347,7 @@ std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Applic
 
     ubuntu_app_launch_start_application_test(appIdStr.c_str(), urlstrv.get());
 
-    return std::make_shared<BaseInstance>(appIdStr);
+    return std::make_shared<BaseInstance>(appIdStr, _registry);
 }
 
 };  // namespace app_impls

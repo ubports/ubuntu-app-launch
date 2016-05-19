@@ -56,6 +56,7 @@ public:
 #endif
 
     GLib::ContextThread thread;
+    std::shared_ptr<GDBusConnection> _dbus;
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
@@ -67,8 +68,6 @@ private:
 
     std::shared_ptr<ClickDB> _clickDB;
     std::shared_ptr<ClickUser> _clickUser;
-
-    std::shared_ptr<GDBusConnection> _dbus;
 
     void initClick();
 
