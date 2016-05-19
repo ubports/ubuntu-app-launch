@@ -51,7 +51,7 @@ glib-thread.cpp
 )
 
 set(LAUNCHER_SOURCES
-ubuntu-app-launch.c
+ubuntu-app-launch.cpp
 second-exec-core.c
 click-exec.c
 desktop-exec.c

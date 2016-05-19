@@ -17,6 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+extern "C" {
 #include "ubuntu-app-launch.h"
 #include <upstart.h>
 #include <gio/gio.h>
@@ -35,6 +36,11 @@
 #include "recoverable-problem.h"
 #include "proxy-socket-demangler.h"
 #include "app-info.h"
+}
+
+/* C++ Interface */
+#include "application.h"
+#include "appid.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -115,7 +121,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 
 	if (cachedata != NULL) {
 		g_free(cachepath);
-		return cachedata;
+		return (const gchar*)cachedata;
 	}
 
 	GError * error = NULL;
@@ -397,7 +403,7 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 	g_return_val_if_fail(con != NULL, FALSE);
 
 	gboolean found = FALSE;
-	int i;
+	unsigned int i;
 
 	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
 	g_array_set_clear_func(apps, free_helper);
@@ -764,7 +770,7 @@ gdbus_upstart_ref (void) {
 	static GDBusConnection * gdbus_upstart = NULL;
 
 	if (gdbus_upstart != NULL) {
-		return g_object_ref(gdbus_upstart);
+		return G_DBUS_CONNECTION(g_object_ref(gdbus_upstart));
 	}
 
 	GError * error = NULL;
@@ -776,7 +782,7 @@ gdbus_upstart_ref (void) {
 		return NULL;
 	}
 
-	g_object_add_weak_pointer(G_OBJECT(gdbus_upstart), (gpointer)&gdbus_upstart);
+	g_object_add_weak_pointer(G_OBJECT(gdbus_upstart), (void **)(&gdbus_upstart));
 
 	return gdbus_upstart;
 }
@@ -1393,11 +1399,7 @@ apps_for_job_instance (GDBusConnection * con, GVariant * props_dict, gpointer us
 static void
 apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gboolean truncate_legacy)
 {
-	apps_for_job_t data = {
-		.jobname = jobname,
-		.apps = apps,
-		.truncate_legacy = truncate_legacy
-	};
+	apps_for_job_t data = {apps, truncate_legacy, jobname};
 
 	foreach_job_instance(con, jobname, apps_for_job_instance, &data);
 }
@@ -1468,11 +1470,7 @@ pid_for_job_instance (GDBusConnection * con, GVariant * props_dict, gpointer use
 static GPid
 pid_for_job (GDBusConnection * con, const gchar * jobname, const gchar * appid)
 {
-	pid_for_job_t data = {
-		.jobname = jobname,
-		.appid = appid,
-		.pid = 0
-	};
+	pid_for_job_t data = {0, appid, jobname};
 
 	foreach_job_instance(con, jobname, pid_for_job_instance, &data);
 
@@ -1777,7 +1775,7 @@ remove_socket_path_find (gconstpointer a, gconstpointer b)
 	GObject * obj = (GObject *)a;
 	const gchar * path = (const gchar *)b;
 
-	gchar * objpath = g_object_get_qdata(obj, proxy_path_quark());
+	gchar * objpath = (gchar *)g_object_get_qdata(obj, proxy_path_quark());
 	
 	return g_strcmp0(objpath, path);
 }
@@ -1835,7 +1833,7 @@ proxy_cleanup_list (void)
 {
 	while (open_proxies) {
 		GObject * obj = G_OBJECT(open_proxies->data);
-		gchar * path = g_object_get_qdata(obj, proxy_path_quark());
+		gchar * path = (gchar *)g_object_get_qdata(obj, proxy_path_quark());
 		remove_socket_path(path);
 	}
 }
