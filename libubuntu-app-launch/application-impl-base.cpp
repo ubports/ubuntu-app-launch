@@ -21,6 +21,10 @@
 #include <cstring>
 #include <map>
 
+extern "C" {
+#include <zeitgeist.h>
+}
+
 #include "application-impl-base.h"
 #include "registry-impl.h"
 
@@ -45,24 +49,24 @@ bool Base::hasInstances()
 class BaseInstance : public Application::Instance
 {
 public:
-    explicit BaseInstance(const std::string& appId, const std::shared_ptr<Registry>& registry);
+    explicit BaseInstance(const AppID& appId, const std::shared_ptr<Registry>& registry);
 
     /* Query lifecycle */
     bool isRunning() override
     {
-        return ubuntu_app_launch_get_primary_pid(appId_.c_str()) != 0;
+        return ubuntu_app_launch_get_primary_pid(std::string(appId_).c_str()) != 0;
     }
     pid_t primaryPid() override
     {
-        return ubuntu_app_launch_get_primary_pid(appId_.c_str());
+        return ubuntu_app_launch_get_primary_pid(std::string(appId_).c_str());
     }
     bool hasPid(pid_t pid) override
     {
-        return ubuntu_app_launch_pid_in_app_id(pid, appId_.c_str()) == TRUE;
+        return ubuntu_app_launch_pid_in_app_id(pid, std::string(appId_).c_str()) == TRUE;
     }
     std::string logPath() override
     {
-        auto cpath = ubuntu_app_launch_application_log_path(appId_.c_str());
+        auto cpath = ubuntu_app_launch_application_log_path(std::string(appId_).c_str());
         if (cpath != nullptr)
         {
             std::string retval(cpath);
@@ -77,7 +81,7 @@ public:
     std::vector<pid_t> pids() override
     {
         std::vector<pid_t> vector;
-        GList* list = ubuntu_app_launch_get_pids(appId_.c_str());
+        GList* list = ubuntu_app_launch_get_pids(std::string(appId_).c_str());
 
         for (GList* pntr = list; pntr != nullptr; pntr = g_list_next(pntr))
         {
@@ -92,7 +96,7 @@ public:
     /* Manage lifecycle */
     void pause() override
     {
-        // report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
+        zgSendEvent(ZEITGEIST_ZG_LEAVE_EVENT);
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::paused()));
         auto pids = forAllPids([this, oomstr](pid_t pid) {
@@ -104,7 +108,7 @@ public:
     }
     void resume() override
     {
-        // report_zg_event(appid, ZEITGEIST_ZG_ACCESS_EVENT);
+        zgSendEvent(ZEITGEIST_ZG_ACCESS_EVENT);
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::focused()));
         auto pids = forAllPids([this, oomstr](pid_t pid) {
@@ -116,13 +120,14 @@ public:
     }
     void stop() override
     {
-        ubuntu_app_launch_stop_application(appId_.c_str());
+        ubuntu_app_launch_stop_application(std::string(appId_).c_str());
     }
 
     /* OOM Functions */
     void setOomAdjustment(const oom::Score score) override
     {
-        forAllPids([this, score](pid_t pid) { oomValueToPid(pid, std::to_string(static_cast<std::int32_t>(score))); });
+        auto scorestr = std::to_string(static_cast<std::int32_t>(score));
+        forAllPids([this, scorestr](pid_t pid) { oomValueToPid(pid, scorestr); });
     }
 
     const oom::Score getOomAdjustment() override
@@ -140,7 +145,7 @@ public:
         if (error != nullptr)
         {
             auto serror = std::shared_ptr<GError>(error, g_error_free);
-            throw std::runtime_error("Unable to access OOM value for '" + appId_ + "' primary PID '" +
+            throw std::runtime_error("Unable to access OOM value for '" + std::string(appId_) + "' primary PID '" +
                                      std::to_string(pid) + "' becuase: " + serror->message);
         }
 
@@ -150,7 +155,7 @@ public:
     }
 
 private:
-    std::string appId_;
+    AppID appId_;
     std::shared_ptr<Registry> registry_;
 
     /** Go through the list of PIDs calling a function and handling
@@ -340,9 +345,67 @@ private:
             g_debug("Emmitted '%s' to DBus", signal.c_str());
         }
     }
+
+    /** Send an event to Zietgeist using the registry thread so that
+        the callback comes back in the right place. */
+    void zgSendEvent(const std::string& eventtype)
+    {
+        auto lappid = appId_;
+        registry_->impl->thread.executeOnThread([lappid, eventtype] {
+            std::string uri;
+
+            if (lappid.package.value().empty())
+            {
+                uri = "application://" + lappid.appname.value() + ".desktop";
+            }
+            else
+            {
+                uri = "application://" + lappid.package.value() + "_" + lappid.appname.value() + ".desktop";
+            }
+
+            ZeitgeistLog* log = zeitgeist_log_get_default();
+
+            ZeitgeistEvent* event = zeitgeist_event_new();
+            zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
+            zeitgeist_event_set_interpretation(event, eventtype.c_str());
+            zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
+
+            ZeitgeistSubject* subject = zeitgeist_subject_new();
+            zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
+            zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
+            zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
+            zeitgeist_subject_set_uri(subject, uri.c_str());
+
+            zeitgeist_event_add_subject(event, subject);
+
+            zeitgeist_log_insert_event(log,     /* log */
+                                       event,   /* event */
+                                       nullptr, /* cancellable */
+                                       [](GObject* obj, GAsyncResult* res, gpointer user_data) -> void {
+                                           GError* error = nullptr;
+                                           GArray* result = nullptr;
+
+                                           result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
+
+                                           if (error != nullptr)
+                                           {
+                                               g_warning("Unable to submit Zeitgeist Event: %s", error->message);
+                                               g_error_free(error);
+                                           }
+
+                                           g_array_free(result, TRUE);
+                                       },        /* callback */
+                                       nullptr); /* userdata */
+
+            g_object_unref(log);
+            g_object_unref(event);
+            g_object_unref(subject);
+
+        });
+    }
 };
 
-BaseInstance::BaseInstance(const std::string& appId, const std::shared_ptr<Registry>& registry)
+BaseInstance::BaseInstance(const AppID& appId, const std::shared_ptr<Registry>& registry)
     : appId_(appId)
     , registry_(registry)
 {
@@ -380,7 +443,7 @@ std::shared_ptr<Application::Instance> Base::launch(const std::vector<Applicatio
 
     ubuntu_app_launch_start_application(appIdStr.c_str(), urlstrv.get());
 
-    return std::make_shared<BaseInstance>(appIdStr, _registry);
+    return std::make_shared<BaseInstance>(appId(), _registry);
 }
 
 std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Application::URL>& urls)
@@ -395,7 +458,7 @@ std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Applic
 
     ubuntu_app_launch_start_application_test(appIdStr.c_str(), urlstrv.get());
 
-    return std::make_shared<BaseInstance>(appIdStr, _registry);
+    return std::make_shared<BaseInstance>(appId(), _registry);
 }
 
 };  // namespace app_impls
