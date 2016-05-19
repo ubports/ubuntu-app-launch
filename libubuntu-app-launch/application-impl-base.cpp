@@ -254,11 +254,14 @@ private:
         std::string pidstr = std::to_string(pid);
         std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomvalue.c_str(), nullptr};
 
-        g_spawn_async(nullptr,                           /* working dir */
-                      (char**)(args.data()), nullptr,    /* env */
-                      G_SPAWN_DEFAULT, nullptr, nullptr, /* child setup */
-                      nullptr,                           /* pid */
-                      &error);                           /* error */
+        g_spawn_async(nullptr,               /* working dir */
+                      (char**)(args.data()), /* args */
+                      nullptr,               /* env */
+                      G_SPAWN_DEFAULT,       /* flags */
+                      nullptr,               /* child setup */
+                      nullptr,               /* child setup userdata*/
+                      nullptr,               /* pid */
+                      &error);               /* error */
 
         if (error != nullptr)
         {
