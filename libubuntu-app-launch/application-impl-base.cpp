@@ -98,6 +98,16 @@ public:
         ubuntu_app_launch_stop_application(_appId.c_str());
     }
 
+    /* OOM Functions */
+    void setOomAdjustment(const oom::Score score) override
+    {
+    }
+
+    const oom::Score getOomAdjustment() override
+    {
+        return oom::focused();
+    }
+
 private:
     std::string _appId;
 };

@@ -28,6 +28,7 @@ set(LAUNCHER_CPP_HEADERS
 appid.h
 application.h
 helper.h
+oom.h
 registry.h
 type-tagger.h
 )
