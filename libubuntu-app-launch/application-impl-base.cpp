@@ -111,7 +111,26 @@ public:
 
     const oom::Score getOomAdjustment() override
     {
-        return oom::focused();
+        auto pid = primaryPid();
+        auto path = pidToOomPath(pid);
+        GError* error = nullptr;
+        gchar* content = nullptr;
+
+        g_file_get_contents(path.c_str(), /* path */
+                            &content,     /* data */
+                            nullptr,      /* size */
+                            &error);      /* error */
+
+        if (error != nullptr)
+        {
+            auto serror = std::shared_ptr<GError>(error, g_error_free);
+            throw std::runtime_error("Unable to access OOM value for '" + appId_ + "' primary PID '" +
+                                     std::to_string(pid) + "' becuase: " + serror->message);
+        }
+
+        auto score = static_cast<oom::Score>(std::atoi(content));
+        g_free(content);
+        return score;
     }
 
 private:
@@ -156,9 +175,10 @@ private:
         }
     }
 
-    /** Writes an OOM value to proc, assuming we have a string
-        in the outer loop */
-    void oomValueToPid(pid_t pid, const std::string& oomvalue)
+    /** Get the path to the PID's OOM adjust path, with allowing for an
+        override for testing using the environment variable
+        UBUNTU_APP_LAUNCH_OOM_PROC_PATH */
+    std::string pidToOomPath(pid_t pid)
     {
         static std::string procpath;
         if (G_UNLIKELY(procpath.empty()))
@@ -171,10 +191,19 @@ private:
             }
         }
 
-        gchar* path = g_build_filename(procpath.c_str(), std::to_string(pid).c_str(), "oom_score_adj", nullptr);
-        FILE* adj = fopen(path, "w");
+        gchar* gpath = g_build_filename(procpath.c_str(), std::to_string(pid).c_str(), "oom_score_adj", nullptr);
+        std::string path = gpath;
+        g_free(gpath);
+        return path;
+    }
+
+    /** Writes an OOM value to proc, assuming we have a string
+        in the outer loop */
+    void oomValueToPid(pid_t pid, const std::string& oomvalue)
+    {
+        auto path = pidToOomPath(pid);
+        FILE* adj = fopen(path.c_str(), "w");
         int openerr = errno;
-        g_free(path);
 
         if (adj == nullptr)
         {
