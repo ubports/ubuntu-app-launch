@@ -696,7 +696,7 @@ gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
 	report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
-	return signal_to_cgroup(appid, SIGSTOP, "900", "ApplicationPaused");
+	return signal_to_cgroup(appid, SIGSTOP, "901", "ApplicationPaused");
 }
 
 gboolean

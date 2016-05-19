@@ -92,11 +92,27 @@ public:
     /* Manage lifecycle */
     void pause() override
     {
-        ubuntu_app_launch_pause_application(appId_.c_str());
+        // report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
+
+        auto oomstr = std::to_string(static_cast<std::int32_t>(oom::paused()));
+        auto pids = forAllPids([this, oomstr](pid_t pid) {
+            signalToPid(pid, SIGSTOP);
+            oomValueToPid(pid, oomstr);
+        });
+
+        pidListToDbus(pids, "ApplicationPaused");
     }
     void resume() override
     {
-        ubuntu_app_launch_resume_application(appId_.c_str());
+        // report_zg_event(appid, ZEITGEIST_ZG_ACCESS_EVENT);
+
+        auto oomstr = std::to_string(static_cast<std::int32_t>(oom::focused()));
+        auto pids = forAllPids([this, oomstr](pid_t pid) {
+            signalToPid(pid, SIGSTOP);
+            oomValueToPid(pid, oomstr);
+        });
+
+        pidListToDbus(pids, "ApplicationPaused");
     }
     void stop() override
     {
