@@ -294,56 +294,62 @@ private:
         return;
     }
 
+    /** Send a signal that we've change the application. Do this on the
+        registry thread in an idle so that we don't block anyone. */
     void pidListToDbus(std::vector<pid_t>& pids, const std::string& signal)
     {
-        auto vpids = std::shared_ptr<GVariant>(
-            [pids]() {
-                GVariant* pidarray = nullptr;
+        auto registry = registry_;
+        auto lappid = appId_;
+        registry_->impl->thread.executeOnThread([registry, lappid, pids, signal] {
+            auto vpids = std::shared_ptr<GVariant>(
+                [pids]() {
+                    GVariant* pidarray = nullptr;
 
-                if (pids.size() == 0)
-                {
-                    pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, NULL, 0);
+                    if (pids.size() == 0)
+                    {
+                        pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, NULL, 0);
+                        g_variant_ref_sink(pidarray);
+                        return pidarray;
+                    }
+
+                    GVariantBuilder builder;
+                    g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
+                    for (auto pid : pids)
+                    {
+                        g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
+                    }
+
+                    pidarray = g_variant_builder_end(&builder);
                     g_variant_ref_sink(pidarray);
                     return pidarray;
-                }
+                }(),
+                [](GVariant* var) { g_variant_unref(var); });
 
-                GVariantBuilder builder;
-                g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
-                for (auto pid : pids)
-                {
-                    g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
-                }
+            GVariantBuilder params;
+            g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
+            g_variant_builder_add_value(&params, g_variant_new_string(std::string(lappid).c_str()));
+            g_variant_builder_add_value(&params, vpids.get());
 
-                pidarray = g_variant_builder_end(&builder);
-                g_variant_ref_sink(pidarray);
-                return pidarray;
-            }(),
-            [](GVariant* var) { g_variant_unref(var); });
+            GError* error = nullptr;
+            g_dbus_connection_emit_signal(registry->impl->_dbus.get(),     /* bus */
+                                          nullptr,                         /* destination */
+                                          "/",                             /* path */
+                                          "com.canonical.UbuntuAppLaunch", /* interface */
+                                          signal.c_str(),                  /* signal */
+                                          g_variant_builder_end(&params),  /* params, the same */
+                                          &error);                         /* error */
 
-        GVariantBuilder params;
-        g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
-        g_variant_builder_add_value(&params, g_variant_new_string(std::string(appId_).c_str()));
-        g_variant_builder_add_value(&params, vpids.get());
-
-        GError* error = nullptr;
-        g_dbus_connection_emit_signal(registry_->impl->_dbus.get(),    /* bus */
-                                      nullptr,                         /* destination */
-                                      "/",                             /* path */
-                                      "com.canonical.UbuntuAppLaunch", /* interface */
-                                      signal.c_str(),                  /* signal */
-                                      g_variant_builder_end(&params),  /* params, the same */
-                                      &error);                         /* error */
-
-        if (error != nullptr)
-        {
-            g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(appId_).c_str(),
-                      error->message);
-            g_error_free(error);
-        }
-        else
-        {
-            g_debug("Emmitted '%s' to DBus", signal.c_str());
-        }
+            if (error != nullptr)
+            {
+                g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(lappid).c_str(),
+                          error->message);
+                g_error_free(error);
+            }
+            else
+            {
+                g_debug("Emmitted '%s' to DBus", signal.c_str());
+            }
+        });
     }
 
     /** Send an event to Zietgeist using the registry thread so that
