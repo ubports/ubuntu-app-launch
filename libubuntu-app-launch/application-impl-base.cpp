@@ -17,6 +17,10 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <cerrno>
+#include <cstring>
+#include <map>
+
 #include "application-impl-base.h"
 
 namespace ubuntu
@@ -101,6 +105,7 @@ public:
     /* OOM Functions */
     void setOomAdjustment(const oom::Score score) override
     {
+        forAllPids([this, score](pid_t pid) { oomValueToPid(pid, std::to_string(static_cast<std::int32_t>(score))); });
     }
 
     const oom::Score getOomAdjustment() override
@@ -110,6 +115,133 @@ public:
 
 private:
     std::string _appId;
+
+    /** Go through the list of PIDs calling a function and handling
+        the issue with getting PIDs being a racey condition. */
+    std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid)
+    {
+        std::map<pid_t, bool> seenPids;
+        std::vector<pid_t> pidlist;
+
+        do
+        {
+            pidlist = pids();
+            for (auto pid : pidlist)
+            {
+                try
+                {
+                    seenPids[pid];
+                }
+                catch (std::out_of_range& e)
+                {
+                    eachPid(pid);
+                    seenPids[pid] = true;
+                }
+            }
+        } while (pidlist.size() <= seenPids.size());
+
+        return pidlist;
+    }
+
+    /** Sends a signal to a PID with a warning if we can't send it.
+        We could throw an exception, but we can't handle it usefully anyway */
+    void signalToPid(pid_t pid, int signal)
+    {
+        if (-1 == kill(pid, signal))
+        {
+            /* While that didn't work, we still want to try as many as we can */
+            g_warning("Unable to send signal %d to pid %d", signal, pid);
+        }
+    }
+
+    /** Writes an OOM value to proc, assuming we have a string
+        in the outer loop */
+    void oomValueToPid(pid_t pid, const std::string& oomvalue)
+    {
+        static std::string procpath;
+        if (G_UNLIKELY(procpath.empty()))
+        {
+            /* Set by the test suite, probably not anyone else */
+            procpath = g_getenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH");
+            if (G_LIKELY(procpath.empty()))
+            {
+                procpath = "/proc";
+            }
+        }
+
+        gchar* path = g_build_filename(procpath.c_str(), std::to_string(pid).c_str(), "oom_score_adj", nullptr);
+        FILE* adj = fopen(path, "w");
+        int openerr = errno;
+        g_free(path);
+
+        if (adj == nullptr)
+        {
+            switch (openerr)
+            {
+                case ENOENT:
+                    /* ENOENT happens a fair amount because of races, so it's not
+                       worth printing a warning about */
+                    return;
+                case EACCES:
+                {
+                    /* We can get this error when trying to set the OOM value on
+                       Oxide renderers because they're started by the sandbox and
+                       don't have their adjustment value available for us to write.
+                       We have a helper to deal with this, but it's kinda expensive
+                       so we only use it when we have to. */
+                    oomValueToPidHelper(pid, oomvalue);
+                    return;
+                }
+                default:
+                    g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomvalue.c_str(),
+                              std::strerror(openerr));
+                    return;
+            }
+        }
+
+        size_t writesize = fwrite(oomvalue.c_str(), 1, oomvalue.size(), adj);
+        int writeerr = errno;
+        fclose(adj);
+
+        if (writesize == oomvalue.size())
+            return;
+
+        if (writeerr != 0)
+            g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomvalue.c_str(), strerror(writeerr));
+        else
+            /* No error, but yet, wrong size. Not sure, what could cause this. */
+            g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomvalue.c_str(), (int)writesize);
+
+        return;
+    }
+
+    /** Use a setuid root helper for setting the oom value of
+        Chromium instances */
+    void oomValueToPidHelper(pid_t pid, const std::string& oomvalue)
+    {
+        GError* error = nullptr;
+        std::string pidstr = std::to_string(pid);
+        std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomvalue.c_str(), nullptr};
+
+        g_spawn_async(nullptr,                           /* working dir */
+                      (char**)(args.data()), nullptr,    /* env */
+                      G_SPAWN_DEFAULT, nullptr, nullptr, /* child setup */
+                      nullptr,                           /* pid */
+                      &error);                           /* error */
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to launch OOM helper '" OOM_HELPER "' on PID '%d': %s", pid, error->message);
+            g_error_free(error);
+            return;
+        }
+
+        return;
+    }
+
+    void pidListToDbus(std::vector<pid_t>& pids, const std::string& signal)
+    {
+    }
 };
 
 BaseInstance::BaseInstance(const std::string& appId)
