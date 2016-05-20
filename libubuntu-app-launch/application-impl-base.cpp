@@ -124,15 +124,24 @@ public:
     }
 
     /* OOM Functions */
+    /** Sets the OOM adjustment by getting the list of PIDs and writing
+        the value to each of their files in proc */
     void setOomAdjustment(const oom::Score score) override
     {
         auto scorestr = std::to_string(static_cast<std::int32_t>(score));
         forAllPids([this, scorestr](pid_t pid) { oomValueToPid(pid, scorestr); });
     }
 
+    /** Figures out the path to the primary PID of the application and
+        then reads its OOM adjustment file. */
     const oom::Score getOomAdjustment() override
     {
         auto pid = primaryPid();
+        if (pid == 0)
+        {
+            throw std::runtime_error("No PID for application: " + std::string(appId_));
+        }
+
         auto path = pidToOomPath(pid);
         GError* error = nullptr;
         gchar* content = nullptr;
@@ -300,6 +309,7 @@ private:
     {
         auto registry = registry_;
         auto lappid = appId_;
+
         registry_->impl->thread.executeOnThread([registry, lappid, pids, signal] {
             auto vpids = std::shared_ptr<GVariant>(
                 [pids]() {
