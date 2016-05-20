@@ -41,6 +41,7 @@ extern "C" {
 /* C++ Interface */
 #include "application.h"
 #include "appid.h"
+#include "registry.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -444,266 +445,32 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 	return found;
 }
 
-/* Set the OOM value using the helper as an async task */
-static gboolean
-use_oom_helper (GPid pid, const gchar * oomscore)
-{
-	GError * error = NULL;
-	const gchar * args[4] = {
-		OOM_HELPER,
-		NULL, /* pid */
-		oomscore,
-		NULL
-	};
-	gchar * pidstr = g_strdup_printf("%d", pid);
-	args[1] = pidstr;
-
-	g_spawn_async(NULL, /* working dir */
-		(gchar **)args,
-		NULL, /* env */
-		G_SPAWN_DEFAULT,
-		NULL, NULL, /* child setup */
-		NULL, /* pid */
-		&error); /* error */
-
-	g_free(pidstr);
-
-	if (error != NULL) {
-		g_warning("Unable to launch OOM helper '" OOM_HELPER "' on PID '%d': %s", pid, error->message);
-		g_error_free(error);
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-/* Sets the OOM score to a particular value, returns true on NULL */
-static gboolean
-set_oom_value (GPid pid, const gchar * oomscore)
-{
-	static const gchar * procpath = NULL;
-	if (G_UNLIKELY(procpath == NULL)) {
-		/* Set by the test suite, probably not anyone else */
-		procpath = g_getenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH");
-		if (G_LIKELY(procpath == NULL)) {
-			procpath = "/proc";
-		}
-	}
-
-	gchar * path = g_strdup_printf("%s/%d/oom_score_adj", procpath, pid);
-	FILE * adj = fopen(path, "w");
-	int openerr = errno;
-	g_free(path);
-
-	if (adj == NULL) {
-		switch (openerr) {
-		case ENOENT:
-			/* ENOENT happens a fair amount because of races, so it's not
-			   worth printing a warning about */
-			return TRUE;
-		case EACCES: {
-			/* We can get this error when trying to set the OOM value on
-			   Oxide renderers because they're started by the sandbox and
-			   don't have their adjustment value available for us to write.
-			   We have a helper to deal with this, but it's kinda expensive
-			   so we only use it when we have to. */
-			return use_oom_helper(pid, oomscore);
-		}
-		default:
-			g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
-			return FALSE;
-		}
-	}
-
-	size_t writesize = fwrite(oomscore, 1, strlen(oomscore), adj);
-	int writeerr = errno;
-	fclose(adj);
-
-	if (writesize == strlen(oomscore))
-		return TRUE;
-	
-	if (writeerr != 0)
-		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(writeerr));
-	else
-		/* No error, but yet, wrong size. Not sure, what could cause this. */
-		g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
-
-	return FALSE;
-}
-
-/* Throw out a DBus signal that we've signalled all of these processes. This
-   is the fun GVariant building part. */
-static void
-notify_signalling (GList * pids, const gchar * appid, const gchar * signal_name)
-{
-	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	if (conn == NULL) {
-		return;
-	}
-
-	/* Pull together a PID array */
-	GVariant *pidarray = NULL;
-	if (pids == NULL) {
-		pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, NULL, 0);
-	} else {
-		GList * i;
-		GVariantBuilder builder;
-		g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
-
-		for (i = pids; i != NULL; i = g_list_next(i))
-			g_variant_builder_add_value(&builder, g_variant_new_uint64(GPOINTER_TO_INT(i->data)));
-
-		pidarray = g_variant_builder_end(&builder);
-	}
-
-	/* Combine into the wrapping tuple */
-	GVariantBuilder btuple;
-	g_variant_builder_init(&btuple, G_VARIANT_TYPE_TUPLE);
-	g_variant_builder_add_value(&btuple, g_variant_new_string(appid));
-	g_variant_builder_add_value(&btuple, pidarray);
-
-	/* Emit !!! */
-	GError * error = NULL;
-	g_dbus_connection_emit_signal(conn,
-		NULL, /* destination */
-		"/", /* path */
-		"com.canonical.UbuntuAppLaunch", /* interface */
-		signal_name, /* signal */
-		g_variant_builder_end(&btuple), /* params, the same */
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to emit signal '%s' for appid '%s': %s", signal_name, appid, error->message);
-		g_error_free(error);
-	} else {
-		g_debug("Emmitted '%s' to DBus", signal_name);
-	}
-
-	g_object_unref(conn);
-}
-
-/* Gets all the pids for an appid and sends a signal to all of them. This also
-   loops to ensure no new pids are added while we're signaling */
-static gboolean
-signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore, const gchar * signal_name)
-{
-	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
-	guint hash_table_size = 0;
-	gboolean retval = TRUE;
-
-	do {
-		hash_table_size = g_hash_table_size(pidssignaled);
-		GList * pidlist = ubuntu_app_launch_get_pids(appid);
-		GList * iter;
-
-		if (pidlist == NULL) {
-			g_warning("Unable to get pids for '%s' to send signal %d", appid, signal);
-			retval = FALSE;
-			break;
-		}
-
-		for (iter = pidlist; iter != NULL; iter = g_list_next(iter)) {
-			if (g_hash_table_contains(pidssignaled, iter->data)) {
-				continue;
-			}
-
-			/* We've got a PID that we've not previously signaled */
-			GPid pid = GPOINTER_TO_INT(iter->data);
-			if (-1 == kill(pid, signal)) {
-				/* While that didn't work, we still want to try as many as we can */
-				g_warning("Unable to send signal %d to pid %d", signal, pid);
-				retval = FALSE;
-			}
-
-			if (!set_oom_value(pid, oomscore)) {
-				retval = FALSE;
-			}
-
-			g_hash_table_add(pidssignaled, iter->data);
-		}
-
-		g_list_free(pidlist);
-	/* If it grew, then try again */
-	} while (hash_table_size != g_hash_table_size(pidssignaled));
-
-	notify_signalling(g_hash_table_get_keys(pidssignaled), appid, signal_name);
-	g_hash_table_destroy(pidssignaled);
-
-	return retval;
-}
-
-/* Mostly here to just print a warning if we can't submit the event, they're
-   not critical to have */
-static void
-zg_insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
-{
-	GError * error = NULL;
-	GArray * result = NULL;
-
-	result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
-
-	if (error != NULL) {
-		g_warning("Unable to submit Zeitgeist Event: %s", error->message);
-		g_error_free(error);
-	}
-
-	g_array_free(result, TRUE);
-	return;
-}
-
-/* Function to report the access and leaving events to Zeitgeist so we
-   can track application usage */
-static void
-report_zg_event (const gchar * appid, const gchar * eventtype)
-{
-	gchar * uri = NULL;
-	gchar * pkg = NULL;
-	gchar * app = NULL;
-
-	if (ubuntu_app_launch_app_id_parse(appid, &pkg, &app, NULL)) {
-		/* If it's parseable, use the short form */
-		uri = g_strdup_printf("application://%s_%s.desktop", pkg, app);
-		g_free(pkg);
-		g_free(app);
-	} else {
-		uri = g_strdup_printf("application://%s.desktop", appid);
-	}
-
-	ZeitgeistLog * log = zeitgeist_log_get_default();
-
-	ZeitgeistEvent * event = zeitgeist_event_new();
-	zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
-	zeitgeist_event_set_interpretation(event, eventtype);
-	zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
-
-	ZeitgeistSubject * subject = zeitgeist_subject_new();
-	zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
-	zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
-	zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
-	zeitgeist_subject_set_uri(subject, uri);
-
-	zeitgeist_event_add_subject(event, subject);
-
-	zeitgeist_log_insert_event(log, event, NULL, zg_insert_complete, NULL);
-
-	g_free(uri);
-	g_object_unref(log);
-	g_object_unref(event);
-	g_object_unref(subject);
-}
-
 gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
-	report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
-	return signal_to_cgroup(appid, SIGSTOP, "901", "ApplicationPaused");
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		app->instances()[0]->pause();
+		return TRUE;
+	} catch (...) {
+		return FALSE;
+	}
 }
 
 gboolean
 ubuntu_app_launch_resume_application (const gchar * appid)
 {
-	report_zg_event(appid, ZEITGEIST_ZG_ACCESS_EVENT);
-	return signal_to_cgroup(appid, SIGCONT, "100", "ApplicationResumed");
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		app->instances()[0]->resume();
+		return TRUE;
+	} catch (...) {
+		return FALSE;
+	}
 }
 
 gchar *
