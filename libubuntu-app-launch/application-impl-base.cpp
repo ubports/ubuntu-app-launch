@@ -86,7 +86,7 @@ public:
 
         for (GList* pntr = list; pntr != nullptr; pntr = g_list_next(pntr))
         {
-            vector.push_back(static_cast<pid_t>(GPOINTER_TO_INT(list->data)));
+            vector.push_back(static_cast<pid_t>(GPOINTER_TO_INT(pntr->data)));
         }
 
         g_list_free(list);
@@ -184,7 +184,7 @@ private:
             {
                 try
                 {
-                    seenPids[pid];
+                    seenPids.at(pid);
                 }
                 catch (std::out_of_range& e)
                 {
