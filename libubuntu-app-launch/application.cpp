@@ -222,7 +222,8 @@ AppID AppID::discover(const std::string& package, const std::string& appname, Ve
 enum class oom::Score : std::int32_t
 {
     FOCUSED = 100,
-    PAUSED = 800
+    UNTRUSTED_HELPER = 200,
+    PAUSED = 900,
 };
 
 const oom::Score oom::focused()

@@ -17,6 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <map>
@@ -100,6 +101,7 @@ public:
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::paused()));
         auto pids = forAllPids([this, oomstr](pid_t pid) {
+            g_debug("Pausing PID: %d", pid);
             signalToPid(pid, SIGSTOP);
             oomValueToPid(pid, oomstr);
         });
@@ -193,7 +195,12 @@ private:
             }
         }
 
-        return {};
+        std::vector<pid_t> pidsout;
+        std::for_each(seenPids.begin(), seenPids.end(), /* entries to grab */
+                      [&pidsout](std::pair<const pid_t, bool>& entry) {
+                          return pidsout.push_back(entry.first);
+                      }); /* transform function */
+        return pidsout;
     }
 
     /** Sends a signal to a PID with a warning if we can't send it.
@@ -380,6 +387,8 @@ private:
             {
                 uri = "application://" + lappid.package.value() + "_" + lappid.appname.value() + ".desktop";
             }
+
+            g_debug("Sending ZG event for '%s': %s", uri.c_str(), eventtype.c_str());
 
             ZeitgeistLog* log = zeitgeist_log_get_default();
 
