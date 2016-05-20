@@ -95,5 +95,10 @@ std::shared_ptr<Registry> Registry::getDefault()
     return defaultRegistry;
 }
 
+void Registry::clearDefault()
+{
+    defaultRegistry.reset();
+}
+
 };  // namespace app_launch
 };  // namespace ubuntu

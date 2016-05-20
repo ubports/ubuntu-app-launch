@@ -25,6 +25,8 @@
 #include <zeitgeist.h>
 #include "mir-mock.h"
 
+#include "registry.h"
+
 extern "C" {
 #include "ubuntu-app-launch.h"
 #include "libdbustest/dbus-test.h"
@@ -265,6 +267,8 @@ class LibUAL : public ::testing::Test
 		virtual void TearDown() {
 			ubuntu_app_launch_observer_delete_app_focus(focus_cb, this);
 			ubuntu_app_launch_observer_delete_app_resume(resume_cb, this);
+
+			ubuntu::app_launch::Registry::clearDefault();
 
 			g_clear_object(&mock);
 			g_clear_object(&cgmock);

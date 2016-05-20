@@ -172,11 +172,12 @@ private:
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid)
     {
         std::map<pid_t, bool> seenPids;
-        std::vector<pid_t> pidlist;
+        bool found = true;
 
-        do
+        while (found)
         {
-            pidlist = pids();
+            found = false;
+            auto pidlist = pids();
             for (auto pid : pidlist)
             {
                 try
@@ -187,11 +188,12 @@ private:
                 {
                     eachPid(pid);
                     seenPids[pid] = true;
+                    found = true;
                 }
             }
-        } while (pidlist.size() <= seenPids.size());
+        }
 
-        return pidlist;
+        return {};
     }
 
     /** Sends a signal to a PID with a warning if we can't send it.
