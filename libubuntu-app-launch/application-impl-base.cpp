@@ -114,11 +114,11 @@ public:
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::focused()));
         auto pids = forAllPids([this, oomstr](pid_t pid) {
-            signalToPid(pid, SIGSTOP);
+            signalToPid(pid, SIGCONT);
             oomValueToPid(pid, oomstr);
         });
 
-        pidListToDbus(pids, "ApplicationPaused");
+        pidListToDbus(pids, "ApplicationResumed");
     }
     void stop() override
     {

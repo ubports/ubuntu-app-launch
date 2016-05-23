@@ -1467,8 +1467,8 @@ TEST_F(LibUAL, PauseResume)
 
 	pause(200);
 
+	/* Ensure we started getting some data */
 	EXPECT_NE(0, datacnt);
-	EXPECT_EQ(1, resumed_count);
 
 	/* Check to make sure we sent the event to ZG */
 	numcalls = 0;
@@ -1482,6 +1482,9 @@ TEST_F(LibUAL, PauseResume)
 	ASSERT_TRUE(g_file_get_contents(oomadjfile, &resumeoomscore, NULL, NULL));
 	EXPECT_STREQ("100", resumeoomscore);
 	g_free(resumeoomscore);
+
+	/* Check to see if we got the resume dbus signal */
+	EXPECT_EQ(1, resumed_count);
 
 	/* Clean up */
 	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
