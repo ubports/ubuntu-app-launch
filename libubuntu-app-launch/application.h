@@ -212,14 +212,14 @@ public:
         virtual std::vector<pid_t> pids() = 0;
 
         /* OOM Adjustment */
-        /** Sets the value of the OOM Adjust kernel property for the processes in
-            this instance. */
+        /** Sets the value of the OOM Adjust kernel property for the all of
+            the processes this instance. */
         virtual void setOomAdjustment(const oom::Score score) = 0;
         /** Gets the value of the OOM Adjust kernel property for the primary process
             of this instance.
 
             \note This function does not check all the processes and ensure they are
-                  consistent, it just checks the primary and asuumes that.
+                  consistent, it just checks the primary and assumes that.
         */
         virtual const oom::Score getOomAdjustment() = 0;
 
