@@ -37,6 +37,7 @@ set(LAUNCHER_CPP_SOURCES
 application.cpp
 helper.cpp
 registry.cpp
+registry-impl.h
 registry-impl.cpp
 application-impl-base.cpp
 application-impl-click.cpp

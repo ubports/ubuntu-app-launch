@@ -23,6 +23,7 @@
 #include <gio/gio.h>
 #include <json-glib/json-glib.h>
 #include <unordered_map>
+#include <zeitgeist.h>
 
 #pragma once
 
@@ -60,6 +61,8 @@ public:
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
+    void zgSendEvent(AppID appid, const std::string& eventtype);
+
 private:
     Registry* _registry;
 #if 0
@@ -70,6 +73,8 @@ private:
     std::shared_ptr<ClickUser> _clickUser;
 
     void initClick();
+
+    std::shared_ptr<ZeitgeistLog> zgLog_;
 
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 };

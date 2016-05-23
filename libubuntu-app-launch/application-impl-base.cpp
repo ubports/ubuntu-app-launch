@@ -22,10 +22,6 @@
 #include <cstring>
 #include <map>
 
-extern "C" {
-#include <zeitgeist.h>
-}
-
 #include "application-impl-base.h"
 #include "registry-impl.h"
 
@@ -97,7 +93,7 @@ public:
     /* Manage lifecycle */
     void pause() override
     {
-        zgSendEvent(ZEITGEIST_ZG_LEAVE_EVENT);
+        registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::paused()));
         auto pids = forAllPids([this, oomstr](pid_t pid) {
@@ -110,7 +106,7 @@ public:
     }
     void resume() override
     {
-        zgSendEvent(ZEITGEIST_ZG_ACCESS_EVENT);
+        registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::focused()));
         auto pids = forAllPids([this, oomstr](pid_t pid) {
@@ -368,66 +364,6 @@ private:
             {
                 g_debug("Emmitted '%s' to DBus", signal.c_str());
             }
-        });
-    }
-
-    /** Send an event to Zietgeist using the registry thread so that
-        the callback comes back in the right place. */
-    void zgSendEvent(const std::string& eventtype)
-    {
-        auto lappid = appId_;
-        registry_->impl->thread.executeOnThread([lappid, eventtype] {
-            std::string uri;
-
-            if (lappid.package.value().empty())
-            {
-                uri = "application://" + lappid.appname.value() + ".desktop";
-            }
-            else
-            {
-                uri = "application://" + lappid.package.value() + "_" + lappid.appname.value() + ".desktop";
-            }
-
-            g_debug("Sending ZG event for '%s': %s", uri.c_str(), eventtype.c_str());
-
-            ZeitgeistLog* log = zeitgeist_log_get_default();
-
-            ZeitgeistEvent* event = zeitgeist_event_new();
-            zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
-            zeitgeist_event_set_interpretation(event, eventtype.c_str());
-            zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
-
-            ZeitgeistSubject* subject = zeitgeist_subject_new();
-            zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
-            zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
-            zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
-            zeitgeist_subject_set_uri(subject, uri.c_str());
-
-            zeitgeist_event_add_subject(event, subject);
-
-            zeitgeist_log_insert_event(log,     /* log */
-                                       event,   /* event */
-                                       nullptr, /* cancellable */
-                                       [](GObject* obj, GAsyncResult* res, gpointer user_data) -> void {
-                                           GError* error = nullptr;
-                                           GArray* result = nullptr;
-
-                                           result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
-
-                                           if (error != nullptr)
-                                           {
-                                               g_warning("Unable to submit Zeitgeist Event: %s", error->message);
-                                               g_error_free(error);
-                                           }
-
-                                           g_array_free(result, TRUE);
-                                       },        /* callback */
-                                       nullptr); /* userdata */
-
-            g_object_unref(log);
-            g_object_unref(event);
-            g_object_unref(subject);
-
         });
     }
 };

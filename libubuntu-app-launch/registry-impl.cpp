@@ -31,6 +31,8 @@ Registry::Impl::Impl(Registry* registry)
                  _clickUser.reset();
                  _clickDB.reset();
 
+                 zgLog_.reset();
+
                  if (_dbus)
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
                  _dbus.reset();
@@ -162,6 +164,68 @@ std::string Registry::Impl::getClickDir(const std::string& package)
         std::string cppdir(dir);
         g_free(dir);
         return cppdir;
+    });
+}
+
+/** Send an event to Zietgeist using the registry thread so that
+        the callback comes back in the right place. */
+void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
+{
+    thread.executeOnThread([this, appid, eventtype] {
+        std::string uri;
+
+        if (appid.package.value().empty())
+        {
+            uri = "application://" + appid.appname.value() + ".desktop";
+        }
+        else
+        {
+            uri = "application://" + appid.package.value() + "_" + appid.appname.value() + ".desktop";
+        }
+
+        g_debug("Sending ZG event for '%s': %s", uri.c_str(), eventtype.c_str());
+
+        if (!zgLog_)
+        {
+            zgLog_ =
+                std::shared_ptr<ZeitgeistLog>(zeitgeist_log_new(), /* create a new log for us */
+                                              [](ZeitgeistLog* log) { g_clear_object(&log); }); /* Free as a GObject */
+        }
+
+        ZeitgeistEvent* event = zeitgeist_event_new();
+        zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
+        zeitgeist_event_set_interpretation(event, eventtype.c_str());
+        zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
+
+        ZeitgeistSubject* subject = zeitgeist_subject_new();
+        zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
+        zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
+        zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
+        zeitgeist_subject_set_uri(subject, uri.c_str());
+
+        zeitgeist_event_add_subject(event, subject);
+
+        zeitgeist_log_insert_event(zgLog_.get(), /* log */
+                                   event,        /* event */
+                                   nullptr,      /* cancellable */
+                                   [](GObject* obj, GAsyncResult* res, gpointer user_data) -> void {
+                                       GError* error = nullptr;
+                                       GArray* result = nullptr;
+
+                                       result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
+
+                                       if (error != nullptr)
+                                       {
+                                           g_warning("Unable to submit Zeitgeist Event: %s", error->message);
+                                           g_error_free(error);
+                                       }
+
+                                       g_array_free(result, TRUE);
+                                   },        /* callback */
+                                   nullptr); /* userdata */
+
+        g_object_unref(event);
+        g_object_unref(subject);
     });
 }
 
