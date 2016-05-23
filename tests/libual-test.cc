@@ -1498,11 +1498,6 @@ TEST_F(LibUAL, PauseResume)
 	g_dbus_connection_signal_unsubscribe(bus, paused_signal);
 	g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
 
-	/* Kill ZG default instance :-( */
-	ZeitgeistLog * log = zeitgeist_log_get_default();
-	g_object_unref(log);
-	g_object_unref(log);
-	
 	g_free(oomadjfile);
 }
 

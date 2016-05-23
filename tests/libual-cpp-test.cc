@@ -217,10 +217,10 @@ protected:
 
     virtual void TearDown()
     {
-        registry.reset();
-
         ubuntu_app_launch_observer_delete_app_focus(focus_cb, this);
         ubuntu_app_launch_observer_delete_app_resume(resume_cb, this);
+
+        registry.reset();
 
         g_clear_object(&mock);
         g_clear_object(&cgmock);
@@ -1350,12 +1350,20 @@ TEST_F(LibUAL, PauseResume)
         bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationResumed", "/", nullptr, G_DBUS_SIGNAL_FLAGS_NONE,
         signal_increment, &resumed_count, nullptr);
 
+	/* Get our app object */
+	auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+	auto app = ubuntu::app_launch::Application::create(appid, registry);
+
+	EXPECT_EQ(1, app->instances().size());
+
+	auto instance = app->instances()[0];
+
     /* Test it */
     EXPECT_NE(0, datacnt);
     paused_count = 0;
 
     /* Pause the app */
-    EXPECT_TRUE(ubuntu_app_launch_pause_application("com.test.good_application_1.2.3"));
+	instance->pause();
 
     pause(0);    /* Flush queued events */
     datacnt = 0; /* clear it */
@@ -1384,7 +1392,7 @@ TEST_F(LibUAL, PauseResume)
     resumed_count = 0;
 
     /* Now Resume the App */
-    EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
+	instance->resume();
 
     pause(200);
 
@@ -1415,11 +1423,6 @@ TEST_F(LibUAL, PauseResume)
 
     g_dbus_connection_signal_unsubscribe(bus, paused_signal);
     g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
-
-    /* Kill ZG default instance :-( */
-    ZeitgeistLog* log = zeitgeist_log_get_default();
-    g_object_unref(log);
-    g_object_unref(log);
 
     g_free(oomadjfile);
 }
