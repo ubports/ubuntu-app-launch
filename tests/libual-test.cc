@@ -1378,6 +1378,22 @@ TEST_F(LibUAL, PauseResume)
 		G_VARIANT_TYPE("au"),
 		"ret = [ 0 ]",
 		NULL);
+	
+	dbus_test_dbus_mock_object_add_property(zgmock, zgobj,
+		"version",
+		G_VARIANT_TYPE("(iii)"),
+		g_variant_new("(iii)", 0, 9, 16),
+		nullptr);
+	dbus_test_dbus_mock_object_add_property(zgmock, zgobj,
+		"extensions",
+		G_VARIANT_TYPE("as"),
+		g_variant_new_array(G_VARIANT_TYPE_STRING, nullptr, 0),
+		nullptr);
+	dbus_test_dbus_mock_object_add_property(zgmock, zgobj,
+		"datapath",
+		G_VARIANT_TYPE("s"),
+		g_variant_new_string(CMAKE_BINARY_DIR "/zg/activity.sqlite"),
+		nullptr);
 
 	dbus_test_service_add_task(service, DBUS_TEST_TASK(zgmock));
 	dbus_test_task_run(DBUS_TEST_TASK(zgmock));
