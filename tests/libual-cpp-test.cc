@@ -20,18 +20,18 @@
 #include <future>
 #include <thread>
 
-#include <gtest/gtest.h>
-#include <gio/gio.h>
-#include <zeitgeist.h>
 #include "mir-mock.h"
+#include <gio/gio.h>
+#include <gtest/gtest.h>
+#include <zeitgeist.h>
 
-#include "registry.h"
 #include "application.h"
 #include "helper.h"
+#include "registry.h"
 
 extern "C" {
-#include "ubuntu-app-launch.h"
 #include "libdbustest/dbus-test.h"
+#include "ubuntu-app-launch.h"
 #include <fcntl.h>
 }
 
@@ -303,8 +303,7 @@ protected:
             GMainLoop* mainloop = g_main_loop_new(NULL, FALSE);
 
             g_timeout_add(time,
-                          [](gpointer pmainloop) -> gboolean
-                          {
+                          [](gpointer pmainloop) -> gboolean {
                               g_main_loop_quit(static_cast<GMainLoop*>(pmainloop));
                               return G_SOURCE_REMOVE;
                           },
@@ -579,13 +578,12 @@ TEST_F(LibUAL, ApplicationList)
     ASSERT_EQ(2, apps.size());
 
     apps.sort([](const std::shared_ptr<ubuntu::app_launch::Application>& a,
-                 const std::shared_ptr<ubuntu::app_launch::Application>& b)
-              {
-                  std::string sa = a->appId();
-                  std::string sb = b->appId();
+                 const std::shared_ptr<ubuntu::app_launch::Application>& b) {
+        std::string sa = a->appId();
+        std::string sb = b->appId();
 
-                  return sa < sb;
-              });
+        return sa < sb;
+    });
 
     EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.front()->appId());
     EXPECT_EQ("multiple", (std::string)apps.back()->appId());
@@ -1158,8 +1156,7 @@ TEST_F(LibUAL, HelperList)
     EXPECT_EQ(2, goodlist.size());
 
     goodlist.sort(
-        [](const std::shared_ptr<ubuntu::app_launch::Helper>& a, const std::shared_ptr<ubuntu::app_launch::Helper>& b)
-        {
+        [](const std::shared_ptr<ubuntu::app_launch::Helper>& a, const std::shared_ptr<ubuntu::app_launch::Helper>& b) {
             std::string sa = a->appId();
             std::string sb = b->appId();
 
@@ -1350,20 +1347,20 @@ TEST_F(LibUAL, PauseResume)
         bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationResumed", "/", nullptr, G_DBUS_SIGNAL_FLAGS_NONE,
         signal_increment, &resumed_count, nullptr);
 
-	/* Get our app object */
-	auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
-	auto app = ubuntu::app_launch::Application::create(appid, registry);
+    /* Get our app object */
+    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto app = ubuntu::app_launch::Application::create(appid, registry);
 
-	EXPECT_EQ(1, app->instances().size());
+    EXPECT_EQ(1, app->instances().size());
 
-	auto instance = app->instances()[0];
+    auto instance = app->instances()[0];
 
     /* Test it */
     EXPECT_NE(0, datacnt);
     paused_count = 0;
 
     /* Pause the app */
-	instance->pause();
+    instance->pause();
 
     pause(0);    /* Flush queued events */
     datacnt = 0; /* clear it */
@@ -1392,7 +1389,7 @@ TEST_F(LibUAL, PauseResume)
     resumed_count = 0;
 
     /* Now Resume the App */
-	instance->resume();
+    instance->resume();
 
     pause(200);
 
@@ -1486,27 +1483,25 @@ TEST_F(LibUAL, StartSessionHelper)
 
     /* Exec our tool */
     std::promise<std::string> outputpromise;
-    std::thread t(
-        [&outputpromise]()
+    std::thread t([&outputpromise]() {
+        gchar* socketstdout = nullptr;
+        GError* error = nullptr;
+        g_unsetenv("G_MESSAGES_DEBUG");
+
+        g_spawn_command_line_sync(SOCKET_DEMANGLER " " SOCKET_TOOL, &socketstdout, nullptr, nullptr, &error);
+
+        if (error != nullptr)
         {
-            gchar* socketstdout = nullptr;
-            GError* error = nullptr;
-            g_unsetenv("G_MESSAGES_DEBUG");
-
-            g_spawn_command_line_sync(SOCKET_DEMANGLER " " SOCKET_TOOL, &socketstdout, nullptr, nullptr, &error);
-
-            if (error != nullptr)
-            {
-                fprintf(stderr, "Unable to spawn '" SOCKET_DEMANGLER " " SOCKET_TOOL "': %s\n", error->message);
-                g_error_free(error);
-                outputpromise.set_value(std::string(""));
-            }
-            else
-            {
-                outputpromise.set_value(std::string(socketstdout));
-                g_free(socketstdout);
-            }
-        });
+            fprintf(stderr, "Unable to spawn '" SOCKET_DEMANGLER " " SOCKET_TOOL "': %s\n", error->message);
+            g_error_free(error);
+            outputpromise.set_value(std::string(""));
+        }
+        else
+        {
+            outputpromise.set_value(std::string(socketstdout));
+            g_free(socketstdout);
+        }
+    });
     t.detach();
 
     auto outputfuture = outputpromise.get_future();
