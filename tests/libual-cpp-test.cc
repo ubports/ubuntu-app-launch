@@ -1351,7 +1351,7 @@ TEST_F(LibUAL, PauseResume)
     auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
-    EXPECT_EQ(1, app->instances().size());
+    ASSERT_EQ(1, app->instances().size());
 
     auto instance = app->instances()[0];
 
@@ -1421,6 +1421,82 @@ TEST_F(LibUAL, PauseResume)
     g_dbus_connection_signal_unsubscribe(bus, paused_signal);
     g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
 
+    g_free(oomadjfile);
+}
+
+TEST_F(LibUAL, OOMSet)
+{
+    g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/libual-proc", 1);
+
+    GPid testpid = getpid();
+
+    /* Setup our OOM adjust file */
+    gchar* procdir = g_strdup_printf(CMAKE_BINARY_DIR "/libual-proc/%d", testpid);
+    ASSERT_EQ(0, g_mkdir_with_parents(procdir, 0700));
+    gchar* oomadjfile = g_strdup_printf("%s/oom_score_adj", procdir);
+    g_free(procdir);
+    ASSERT_TRUE(g_file_set_contents(oomadjfile, "0", -1, NULL));
+
+    /* Setup the cgroup */
+    g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock2", TRUE);
+    DbusTestDbusMock* cgmock2 = dbus_test_dbus_mock_new("org.test.cgmock2");
+    DbusTestDbusMockObject* cgobject = dbus_test_dbus_mock_get_object(cgmock2, "/org/linuxcontainers/cgmanager",
+                                                                      "org.linuxcontainers.cgmanager0_0", NULL);
+    gchar* pypids = g_strdup_printf("ret = [%d]", testpid);
+    dbus_test_dbus_mock_object_add_method(cgmock, cgobject, "GetTasksRecursive", G_VARIANT_TYPE("(ss)"),
+                                          G_VARIANT_TYPE("ai"), pypids, NULL);
+    g_free(pypids);
+
+    dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock2));
+    dbus_test_task_run(DBUS_TEST_TASK(cgmock2));
+    g_object_unref(G_OBJECT(cgmock2));
+
+    /* Give things a chance to start */
+    do
+    {
+        g_debug("Giving mocks a chance to start");
+        pause(200);
+    } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING);
+
+    /* Get our app object */
+    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto app = ubuntu::app_launch::Application::create(appid, registry);
+
+    ASSERT_EQ(1, app->instances().size());
+
+    auto instance = app->instances()[0];
+
+    /* Set the OOM Score */
+    instance->setOomAdjustment(ubuntu::app_launch::oom::paused());
+
+    /* Check to ensure we set the OOM score */
+    gchar* oomscore = NULL;
+    ASSERT_TRUE(g_file_get_contents(oomadjfile, &oomscore, NULL, NULL));
+    EXPECT_STREQ("900", oomscore);
+    g_free(oomscore);
+
+    /* Set the OOM Score */
+    instance->setOomAdjustment(ubuntu::app_launch::oom::focused());
+
+    /* Check to ensure we set the OOM score */
+    ASSERT_TRUE(g_file_get_contents(oomadjfile, &oomscore, NULL, NULL));
+    EXPECT_STREQ("100", oomscore);
+    g_free(oomscore);
+
+    /* Custom Score */
+    auto custom = ubuntu::app_launch::oom::fromLabelAndValue(432, "Custom");
+    instance->setOomAdjustment(custom);
+
+    /* Check to ensure we set the OOM score */
+    ASSERT_TRUE(g_file_get_contents(oomadjfile, &oomscore, NULL, NULL));
+    EXPECT_STREQ("432", oomscore);
+    g_free(oomscore);
+
+    /* Check we can read it too! */
+    EXPECT_EQ(custom, instance->getOomAdjustment());
+
+    /* Cleanup */
+    g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
     g_free(oomadjfile);
 }
 
