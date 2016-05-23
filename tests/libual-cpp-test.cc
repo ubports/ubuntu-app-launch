@@ -1495,8 +1495,17 @@ TEST_F(LibUAL, OOMSet)
     /* Check we can read it too! */
     EXPECT_EQ(custom, instance->getOomAdjustment());
 
+    /* Remove write access from it */
+    auto nowrite = std::string("chmod -w ") + oomadjfile;
+    g_spawn_command_line_sync(nowrite.c_str(), nullptr, nullptr, nullptr, nullptr);
+    instance->setOomAdjustment(ubuntu::app_launch::oom::focused());
+
     /* Cleanup */
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
+
+    /* Test no entry */
+    instance->setOomAdjustment(ubuntu::app_launch::oom::focused());
+
     g_free(oomadjfile);
 }
 
