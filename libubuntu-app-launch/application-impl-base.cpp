@@ -169,34 +169,24 @@ private:
         the issue with getting PIDs being a racey condition. */
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid)
     {
-        std::map<pid_t, bool> seenPids;
-        bool found = true;
+        std::set<pid_t> seenPids;
+        bool added = true;
 
-        while (found)
+        while (added)
         {
-            found = false;
+            added = false;
             auto pidlist = pids();
             for (auto pid : pidlist)
             {
-                try
-                {
-                    seenPids.at(pid);
-                }
-                catch (std::out_of_range& e)
+                if (seenPids.insert(pid).second)
                 {
                     eachPid(pid);
-                    seenPids[pid] = true;
-                    found = true;
+                    added = true;
                 }
             }
         }
 
-        std::vector<pid_t> pidsout;
-        std::for_each(seenPids.begin(), seenPids.end(), /* entries to grab */
-                      [&pidsout](std::pair<const pid_t, bool>& entry) {
-                          return pidsout.push_back(entry.first);
-                      }); /* transform function */
-        return pidsout;
+        return std::vector<pid_t>(seenPids.begin(), seenPids.end());
     }
 
     /** Sends a signal to a PID with a warning if we can't send it.
