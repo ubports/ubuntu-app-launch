@@ -153,7 +153,7 @@ public:
         {
             auto serror = std::shared_ptr<GError>(error, g_error_free);
             throw std::runtime_error("Unable to access OOM value for '" + std::string(appId_) + "' primary PID '" +
-                                     std::to_string(pid) + "' becuase: " + serror->message);
+                                     std::to_string(pid) + "' because: " + serror->message);
         }
 
         auto score = static_cast<oom::Score>(std::atoi(content));
