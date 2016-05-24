@@ -249,7 +249,7 @@ private:
                     return;
                 }
                 default:
-                    g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomvalue.c_str(),
+                    g_warning("Unable to set OOM value for '%d' to '%s': %s", int(pid), oomvalue.c_str(),
                               std::strerror(openerr));
                     return;
             }
@@ -263,10 +263,10 @@ private:
             return;
 
         if (writeerr != 0)
-            g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomvalue.c_str(), strerror(writeerr));
+            g_warning("Unable to set OOM value for '%d' to '%s': %s", int(pid), oomvalue.c_str(), strerror(writeerr));
         else
             /* No error, but yet, wrong size. Not sure, what could cause this. */
-            g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomvalue.c_str(), (int)writesize);
+            g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", int(pid), oomvalue.c_str(), int(writesize));
 
         return;
     }
