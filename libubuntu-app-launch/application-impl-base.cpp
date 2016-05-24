@@ -209,11 +209,11 @@ private:
         if (G_UNLIKELY(procpath.empty()))
         {
             /* Set by the test suite, probably not anyone else */
-            procpath = g_getenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH");
-            if (G_LIKELY(procpath.empty()))
-            {
+            auto envvar = g_getenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH");
+            if (G_LIKELY(envvar == nullptr))
                 procpath = "/proc";
-            }
+            else
+                procpath = envvar;
         }
 
         gchar* gpath = g_build_filename(procpath.c_str(), std::to_string(pid).c_str(), "oom_score_adj", nullptr);
