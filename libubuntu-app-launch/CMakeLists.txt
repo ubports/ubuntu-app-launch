@@ -92,6 +92,7 @@ target_link_libraries(ubuntu-launcher
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
 	${LIBERTINE_LIBRARIES}
+	-lpthread
 	helpers
 	-Wl,--no-undefined
 )

@@ -145,7 +145,7 @@ cgroup_manager_connection_addr_cb (GObject * obj, GAsyncResult * res, gpointer d
 	cgroup_manager_connection_core_cb(g_dbus_connection_new_for_address_finish, res, (cgm_connection_t *)data);
 }
 
-G_DEFINE_QUARK(CGMANAGER_CONTEXT, cgmanager_context);
+G_DEFINE_QUARK(CGMANAGER_CONTEXT, cgmanager_context)
 
 /* Get the connection to the cgroup manager */
 GDBusConnection *
