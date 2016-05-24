@@ -296,7 +296,7 @@ private:
 
     /** Send a signal that we've change the application. Do this on the
         registry thread in an idle so that we don't block anyone. */
-    void pidListToDbus(std::vector<pid_t>& pids, const std::string& signal)
+    void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal)
     {
         auto registry = registry_;
         auto lappid = appId_;
