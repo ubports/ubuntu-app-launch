@@ -267,8 +267,6 @@ private:
         else
             /* No error, but yet, wrong size. Not sure, what could cause this. */
             g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", int(pid), oomvalue.c_str(), int(writesize));
-
-        return;
     }
 
     /** Use a setuid root helper for setting the oom value of
@@ -294,8 +292,6 @@ private:
             g_error_free(error);
             return;
         }
-
-        return;
     }
 
     /** Send a signal that we've change the application. Do this on the
