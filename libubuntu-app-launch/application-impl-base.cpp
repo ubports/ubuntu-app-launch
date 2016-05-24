@@ -308,7 +308,7 @@ private:
 
                     if (pids.empty())
                     {
-                        pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, NULL, 0);
+                        pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, nullptr, 0);
                         g_variant_ref_sink(pidarray);
                         return pidarray;
                     }
