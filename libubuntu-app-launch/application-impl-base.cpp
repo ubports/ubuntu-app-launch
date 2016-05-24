@@ -96,7 +96,7 @@ public:
         registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::paused()));
-        auto pids = forAllPids([this, oomstr](pid_t pid) {
+        auto pids = forAllPids([this, &oomstr](pid_t pid) {
             g_debug("Pausing PID: %d", pid);
             signalToPid(pid, SIGSTOP);
             oomValueToPid(pid, oomstr);
@@ -109,7 +109,7 @@ public:
         registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::focused()));
-        auto pids = forAllPids([this, oomstr](pid_t pid) {
+        auto pids = forAllPids([this, &oomstr](pid_t pid) {
             signalToPid(pid, SIGCONT);
             oomValueToPid(pid, oomstr);
         });
@@ -127,7 +127,7 @@ public:
     void setOomAdjustment(const oom::Score score) override
     {
         auto scorestr = std::to_string(static_cast<std::int32_t>(score));
-        forAllPids([this, scorestr](pid_t pid) { oomValueToPid(pid, scorestr); });
+        forAllPids([this, &scorestr](pid_t pid) { oomValueToPid(pid, scorestr); });
     }
 
     /** Figures out the path to the primary PID of the application and
