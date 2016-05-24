@@ -162,7 +162,7 @@ public:
     }
 
 private:
-    AppID appId_;
+    const AppID appId_;
     std::shared_ptr<Registry> registry_;
 
     /** Go through the list of PIDs calling a function and handling
