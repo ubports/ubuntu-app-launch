@@ -51,7 +51,7 @@ public:
     /* Query lifecycle */
     bool isRunning() override
     {
-        return ubuntu_app_launch_get_primary_pid(std::string(appId_).c_str()) != 0;
+        return primaryPid() != 0;
     }
     pid_t primaryPid() override
     {
