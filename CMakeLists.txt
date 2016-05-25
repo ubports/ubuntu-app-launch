@@ -43,9 +43,10 @@ add_compile_options(
 	-Wno-error=deprecated-declarations
 	-g
 	-pthread
-	$<$<COMPILE_LANGUAGE:CXX>:-std=c++11>
-	$<$<COMPILE_LANGUAGE:C>:-std=gnu99>
 )
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 enable_testing()
 
