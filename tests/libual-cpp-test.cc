@@ -1559,6 +1559,24 @@ TEST_F(LibUAL, MultiPause)
     EXPECT_NE(0, std::accumulate(spews.begin(), spews.end(), int{0},
                                  [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
 
+    /* Pause the app */
+    instance->pause();
+
+    std::for_each(spews.begin(), spews.end(), [](SpewMaster& spew) { spew.reset(); });
+    pause(50);
+
+    /* Check data coming out */
+    EXPECT_EQ(0, std::accumulate(spews.begin(), spews.end(), int{0},
+                                 [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
+
+    /* Now Resume the App */
+    instance->resume();
+
+    pause(50);
+
+    EXPECT_NE(0, std::accumulate(spews.begin(), spews.end(), int{0},
+                                 [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
+
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
 }
 
