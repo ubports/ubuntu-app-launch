@@ -1269,7 +1269,7 @@ public:
 
                   spewoutchan = g_io_channel_unix_new(spewstdout);
                   g_io_channel_set_flags(spewoutchan, G_IO_FLAG_NONBLOCK, NULL);
-                  g_io_add_watch(spewoutchan, G_IO_IN, datain, this);
+                  iosource = g_io_add_watch(spewoutchan, G_IO_IN, datain, this);
 
                   /* Setup our OOM adjust file */
                   gchar* procdir = g_strdup_printf(CMAKE_BINARY_DIR "/libual-proc/%d", pid_);
@@ -1284,6 +1284,7 @@ public:
                   ASSERT_TRUE(g_spawn_command_line_sync(killstr, NULL, NULL, NULL, NULL));
                   g_free(killstr);
 
+                  g_source_remove(iosource);
                   g_io_channel_unref(spewoutchan);
                   g_clear_pointer(&oomadjfile, g_free);
               })
@@ -1329,6 +1330,7 @@ private:
     GPid pid_ = 0;
     gchar* oomadjfile = nullptr;
     GIOChannel* spewoutchan = nullptr;
+    guint iosource = 0;
     GLib::ContextThread thread;
 
     static gboolean datain(GIOChannel* source, GIOCondition cond, gpointer data)
