@@ -1509,12 +1509,25 @@ TEST_F(LibUAL, MultiPause)
     dbus_test_task_run(DBUS_TEST_TASK(cgmock2));
     g_object_unref(G_OBJECT(cgmock2));
 
-    /* Give cgmanager a chance to start */
+    /* Setup ZG Mock */
+    DbusTestDbusMock* zgmock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
+    DbusTestDbusMockObject* zgobj =
+        dbus_test_dbus_mock_get_object(zgmock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", NULL);
+
+    dbus_test_dbus_mock_object_add_method(zgmock, zgobj, "InsertEvents", G_VARIANT_TYPE("a(asaasay)"),
+                                          G_VARIANT_TYPE("au"), "ret = [ 0 ]", NULL);
+
+    dbus_test_service_add_task(service, DBUS_TEST_TASK(zgmock));
+    dbus_test_task_run(DBUS_TEST_TASK(zgmock));
+    g_object_unref(G_OBJECT(zgmock));
+
+    /* Give things a chance to start */
     do
     {
         g_debug("Giving mocks a chance to start");
         pause(200);
-    } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING);
+    } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING &&
+             dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
 
     /* Get our app object */
     auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
@@ -1532,6 +1545,7 @@ TEST_F(LibUAL, MultiPause)
     instance->pause();
 
     std::for_each(spews.begin(), spews.end(), [](SpewMaster& spew) { spew.reset(); });
+    pause(50);
 
     /* Check data coming out */
     EXPECT_EQ(0, std::accumulate(spews.begin(), spews.end(), int{0},
@@ -1539,6 +1553,8 @@ TEST_F(LibUAL, MultiPause)
 
     /* Now Resume the App */
     instance->resume();
+
+    pause(50);
 
     EXPECT_NE(0, std::accumulate(spews.begin(), spews.end(), int{0},
                                  [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));

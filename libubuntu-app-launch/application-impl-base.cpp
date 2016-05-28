@@ -110,6 +110,7 @@ public:
 
         auto oomstr = std::to_string(static_cast<std::int32_t>(oom::focused()));
         auto pids = forAllPids([this, &oomstr](pid_t pid) {
+            g_debug("Resuming PID: %d", pid);
             signalToPid(pid, SIGCONT);
             oomValueToPid(pid, oomstr);
         });
