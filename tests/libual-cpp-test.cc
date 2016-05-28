@@ -1266,7 +1266,7 @@ public:
 
                   spewoutchan = g_io_channel_unix_new(spewstdout);
                   g_io_channel_set_flags(spewoutchan, G_IO_FLAG_NONBLOCK, NULL);
-                  g_io_add_watch(spewoutchan, G_IO_IN, datain, &datacnt_);
+                  g_io_add_watch(spewoutchan, G_IO_IN, datain, this);
 
                   /* Setup our OOM adjust file */
                   gchar* procdir = g_strdup_printf(CMAKE_BINARY_DIR "/libual-proc/%d", pid_);
@@ -1285,6 +1285,7 @@ public:
                   g_clear_pointer(&oomadjfile, g_free);
               })
     {
+		datacnt_ = 0;
     }
 
     ~SpewMaster()
@@ -1321,7 +1322,7 @@ public:
     }
 
 private:
-    gsize datacnt_ = 0;
+    std::atomic<gsize> datacnt_;
     GPid pid_ = 0;
     gchar* oomadjfile = nullptr;
     GIOChannel* spewoutchan = nullptr;
@@ -1329,7 +1330,7 @@ private:
 
     static gboolean datain(GIOChannel* source, GIOCondition cond, gpointer data)
     {
-        gsize* datacnt = static_cast<gsize*>(data);
+        auto spew = static_cast<SpewMaster*>(data);
         gchar* str = NULL;
         gsize len = 0;
         GError* error = NULL;
@@ -1343,7 +1344,7 @@ private:
             g_error_free(error);
         }
 
-        *datacnt += len;
+        spew->datacnt_ += len;
 
         return TRUE;
     }
