@@ -17,7 +17,10 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <algorithm>
+#include <functional>
 #include <future>
+#include <numeric>
 #include <thread>
 
 #include "mir-mock.h"
@@ -1285,7 +1288,7 @@ public:
                   g_clear_pointer(&oomadjfile, g_free);
               })
     {
-		datacnt_ = 0;
+        datacnt_ = 0;
     }
 
     ~SpewMaster()
@@ -1475,6 +1478,70 @@ TEST_F(LibUAL, PauseResume)
 
     g_dbus_connection_signal_unsubscribe(bus, paused_signal);
     g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
+}
+
+TEST_F(LibUAL, MultiPause)
+{
+    g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/libual-proc", 1);
+
+    /* Setup some A TON OF spew */
+    std::array<SpewMaster, 15> spews;
+
+    /* Setup the cgroup */
+    g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock2", TRUE);
+    DbusTestDbusMock* cgmock2 = dbus_test_dbus_mock_new("org.test.cgmock2");
+    DbusTestDbusMockObject* cgobject = dbus_test_dbus_mock_get_object(cgmock2, "/org/linuxcontainers/cgmanager",
+                                                                      "org.linuxcontainers.cgmanager0_0", NULL);
+
+    std::string pypids = "ret = [ " + std::accumulate(spews.begin(), spews.end(), std::string{},
+                                                      [](const std::string& accum, SpewMaster& spew) {
+                                                          return accum.empty() ?
+                                                                     std::to_string(spew.pid()) :
+                                                                     accum + ", " + std::to_string(spew.pid());
+                                                      }) +
+                         "]";
+    dbus_test_dbus_mock_object_add_method(cgmock, cgobject, "GetTasksRecursive", G_VARIANT_TYPE("(ss)"),
+                                          G_VARIANT_TYPE("ai"), pypids.c_str(), NULL);
+
+    dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock2));
+    dbus_test_task_run(DBUS_TEST_TASK(cgmock2));
+    g_object_unref(G_OBJECT(cgmock2));
+
+    /* Give cgmanager a chance to start */
+    do
+    {
+        g_debug("Giving mocks a chance to start");
+        pause(200);
+    } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING);
+
+    /* Get our app object */
+    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto app = ubuntu::app_launch::Application::create(appid, registry);
+
+    ASSERT_EQ(1, app->instances().size());
+
+    auto instance = app->instances()[0];
+
+    /* Test it */
+    EXPECT_NE(0, std::accumulate(spews.begin(), spews.end(), int{0},
+                                 [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
+
+    /* Pause the app */
+    instance->pause();
+
+    std::for_each(spews.begin(), spews.end(), [](SpewMaster& spew) { spew.reset(); });
+
+    /* Check data coming out */
+    EXPECT_EQ(0, std::accumulate(spews.begin(), spews.end(), int{0},
+                                 [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
+
+    /* Now Resume the App */
+    instance->resume();
+
+    EXPECT_NE(0, std::accumulate(spews.begin(), spews.end(), int{0},
+                                 [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
+
+    g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
 }
 
 TEST_F(LibUAL, OOMSet)
