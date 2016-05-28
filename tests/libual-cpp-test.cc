@@ -26,6 +26,7 @@
 #include <zeitgeist.h>
 
 #include "application.h"
+#include "glib-thread.h"
 #include "helper.h"
 #include "registry.h"
 
@@ -1243,26 +1244,110 @@ TEST_F(LibUAL, StartStopHelperObserver)
     ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
 }
 
-gboolean datain(GIOChannel* source, GIOCondition cond, gpointer data)
+class SpewMaster
 {
-    gsize* datacnt = static_cast<gsize*>(data);
-    gchar* str = NULL;
-    gsize len = 0;
-    GError* error = NULL;
+public:
+    SpewMaster()
+        : thread(
+              [this]() {
+                  gint spewstdout = 0;
+                  std::array<const gchar*, 2> spewline{SPEW_UTILITY, nullptr};
+                  ASSERT_TRUE(g_spawn_async_with_pipes(NULL,                    /* directory */
+                                                       (char**)spewline.data(), /* command line */
+                                                       NULL,                    /* environment */
+                                                       G_SPAWN_DEFAULT,         /* flags */
+                                                       NULL,                    /* child setup */
+                                                       NULL,                    /* child setup */
+                                                       &pid_,                   /* pid */
+                                                       NULL,                    /* stdin */
+                                                       &spewstdout,             /* stdout */
+                                                       NULL,                    /* stderr */
+                                                       NULL));                  /* error */
 
-    g_io_channel_read_line(source, &str, &len, NULL, &error);
-    g_free(str);
+                  spewoutchan = g_io_channel_unix_new(spewstdout);
+                  g_io_channel_set_flags(spewoutchan, G_IO_FLAG_NONBLOCK, NULL);
+                  g_io_add_watch(spewoutchan, G_IO_IN, datain, &datacnt_);
 
-    if (error != NULL)
+                  /* Setup our OOM adjust file */
+                  gchar* procdir = g_strdup_printf(CMAKE_BINARY_DIR "/libual-proc/%d", pid_);
+                  ASSERT_EQ(0, g_mkdir_with_parents(procdir, 0700));
+                  oomadjfile = g_strdup_printf("%s/oom_score_adj", procdir);
+                  g_free(procdir);
+                  ASSERT_TRUE(g_file_set_contents(oomadjfile, "0", -1, NULL));
+              },
+              [this]() {
+                  /* Clean up */
+                  gchar* killstr = g_strdup_printf("kill -9 %d", pid_);
+                  ASSERT_TRUE(g_spawn_command_line_sync(killstr, NULL, NULL, NULL, NULL));
+                  g_free(killstr);
+
+                  g_io_channel_unref(spewoutchan);
+                  g_clear_pointer(&oomadjfile, g_free);
+              })
     {
-        g_warning("Unable to read from channel: %s", error->message);
-        g_error_free(error);
     }
 
-    *datacnt += len;
+    ~SpewMaster()
+    {
+    }
 
-    return TRUE;
-}
+    std::string oomScore()
+    {
+        gchar* oomvalue = nullptr;
+        g_file_get_contents(oomadjfile, &oomvalue, nullptr, nullptr);
+        if (oomvalue != nullptr)
+        {
+            return std::string(oomvalue);
+        }
+        else
+        {
+            return {};
+        }
+    }
+
+    GPid pid()
+    {
+        return pid_;
+    }
+
+    gsize dataCnt()
+    {
+        return datacnt_;
+    }
+
+    void reset()
+    {
+        datacnt_ = 0;
+    }
+
+private:
+    gsize datacnt_ = 0;
+    GPid pid_ = 0;
+    gchar* oomadjfile = nullptr;
+    GIOChannel* spewoutchan = nullptr;
+    GLib::ContextThread thread;
+
+    static gboolean datain(GIOChannel* source, GIOCondition cond, gpointer data)
+    {
+        gsize* datacnt = static_cast<gsize*>(data);
+        gchar* str = NULL;
+        gsize len = 0;
+        GError* error = NULL;
+
+        g_io_channel_read_line(source, &str, &len, NULL, &error);
+        g_free(str);
+
+        if (error != NULL)
+        {
+            g_warning("Unable to read from channel: %s", error->message);
+            g_error_free(error);
+        }
+
+        *datacnt += len;
+
+        return TRUE;
+    }
+};
 
 static void signal_increment(GDBusConnection* connection,
                              const gchar* sender,
@@ -1282,33 +1367,14 @@ TEST_F(LibUAL, PauseResume)
     g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/libual-proc", 1);
 
     /* Setup some spew */
-    GPid spewpid = 0;
-    gint spewstdout = 0;
-    const gchar* spewline[] = {SPEW_UTILITY, NULL};
-    ASSERT_TRUE(g_spawn_async_with_pipes(NULL, (gchar**)spewline, NULL, /* environment */
-                                         G_SPAWN_DEFAULT, NULL, NULL,   /* child setup */
-                                         &spewpid, NULL,                /* stdin */
-                                         &spewstdout, NULL,             /* stderr */
-                                         NULL));                        /* error */
-
-    gsize datacnt = 0;
-    GIOChannel* spewoutchan = g_io_channel_unix_new(spewstdout);
-    g_io_channel_set_flags(spewoutchan, G_IO_FLAG_NONBLOCK, NULL);
-    g_io_add_watch(spewoutchan, G_IO_IN, datain, &datacnt);
-
-    /* Setup our OOM adjust file */
-    gchar* procdir = g_strdup_printf(CMAKE_BINARY_DIR "/libual-proc/%d", spewpid);
-    ASSERT_EQ(0, g_mkdir_with_parents(procdir, 0700));
-    gchar* oomadjfile = g_strdup_printf("%s/oom_score_adj", procdir);
-    g_free(procdir);
-    ASSERT_TRUE(g_file_set_contents(oomadjfile, "0", -1, NULL));
+    SpewMaster spew;
 
     /* Setup the cgroup */
     g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock2", TRUE);
     DbusTestDbusMock* cgmock2 = dbus_test_dbus_mock_new("org.test.cgmock2");
     DbusTestDbusMockObject* cgobject = dbus_test_dbus_mock_get_object(cgmock2, "/org/linuxcontainers/cgmanager",
                                                                       "org.linuxcontainers.cgmanager0_0", NULL);
-    gchar* pypids = g_strdup_printf("ret = [%d]", spewpid);
+    gchar* pypids = g_strdup_printf("ret = [%d]", spew.pid());
     dbus_test_dbus_mock_object_add_method(cgmock, cgobject, "GetTasksRecursive", G_VARIANT_TYPE("(ss)"),
                                           G_VARIANT_TYPE("ai"), pypids, NULL);
     g_free(pypids);
@@ -1356,20 +1422,20 @@ TEST_F(LibUAL, PauseResume)
     auto instance = app->instances()[0];
 
     /* Test it */
-    EXPECT_NE(0, datacnt);
+    EXPECT_NE(0, spew.dataCnt());
     paused_count = 0;
 
     /* Pause the app */
     instance->pause();
 
-    pause(0);    /* Flush queued events */
-    datacnt = 0; /* clear it */
+    pause(0);     /* Flush queued events */
+    spew.reset(); /* clear it */
 
     pause(200);
 
     /* Check data coming out */
     EXPECT_EQ(1, paused_count);
-    EXPECT_EQ(0, datacnt);
+    EXPECT_EQ(0, spew.dataCnt());
 
     /* Check to make sure we sent the event to ZG */
     guint numcalls = 0;
@@ -1382,10 +1448,8 @@ TEST_F(LibUAL, PauseResume)
     dbus_test_dbus_mock_object_clear_method_calls(zgmock, zgobj, NULL);
 
     /* Check to ensure we set the OOM score */
-    gchar* pauseoomscore = NULL;
-    ASSERT_TRUE(g_file_get_contents(oomadjfile, &pauseoomscore, NULL, NULL));
-    EXPECT_STREQ("900", pauseoomscore);
-    g_free(pauseoomscore);
+    EXPECT_EQ("900", spew.oomScore());
+
     resumed_count = 0;
 
     /* Now Resume the App */
@@ -1393,7 +1457,7 @@ TEST_F(LibUAL, PauseResume)
 
     pause(200);
 
-    EXPECT_NE(0, datacnt);
+    EXPECT_NE(0, spew.dataCnt());
     EXPECT_EQ(1, resumed_count);
 
     /* Check to make sure we sent the event to ZG */
@@ -1404,24 +1468,12 @@ TEST_F(LibUAL, PauseResume)
     EXPECT_EQ(1, numcalls);
 
     /* Check to ensure we set the OOM score */
-    gchar* resumeoomscore = NULL;
-    ASSERT_TRUE(g_file_get_contents(oomadjfile, &resumeoomscore, NULL, NULL));
-    EXPECT_STREQ("100", resumeoomscore);
-    g_free(resumeoomscore);
-
-    /* Clean up */
-    gchar* killstr = g_strdup_printf("kill -9 %d", spewpid);
-    ASSERT_TRUE(g_spawn_command_line_sync(killstr, NULL, NULL, NULL, NULL));
-    g_free(killstr);
-
-    g_io_channel_unref(spewoutchan);
+    EXPECT_EQ("100", spew.oomScore());
 
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
 
     g_dbus_connection_signal_unsubscribe(bus, paused_signal);
     g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
-
-    g_free(oomadjfile);
 }
 
 TEST_F(LibUAL, OOMSet)
