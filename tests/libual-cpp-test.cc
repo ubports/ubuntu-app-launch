@@ -1269,7 +1269,10 @@ public:
 
                   spewoutchan = g_io_channel_unix_new(spewstdout);
                   g_io_channel_set_flags(spewoutchan, G_IO_FLAG_NONBLOCK, NULL);
-                  iosource = g_io_add_watch(spewoutchan, G_IO_IN, datain, this);
+
+                  iosource = g_io_create_watch(spewoutchan, G_IO_IN);
+                  g_source_set_callback(iosource, (GSourceFunc)datain, this, nullptr);
+                  g_source_attach(iosource, g_main_context_get_thread_default());
 
                   /* Setup our OOM adjust file */
                   gchar* procdir = g_strdup_printf(CMAKE_BINARY_DIR "/libual-proc/%d", pid_);
@@ -1284,7 +1287,7 @@ public:
                   ASSERT_TRUE(g_spawn_command_line_sync(killstr, NULL, NULL, NULL, NULL));
                   g_free(killstr);
 
-                  g_source_remove(iosource);
+                  g_source_destroy(iosource);
                   g_io_channel_unref(spewoutchan);
                   g_clear_pointer(&oomadjfile, g_free);
               })
@@ -1317,12 +1320,22 @@ public:
 
     gsize dataCnt()
     {
+        g_debug("Data Count for %d: %d", pid_, int(datacnt_));
         return datacnt_;
     }
 
     void reset()
     {
-        datacnt_ = 0;
+        bool endofqueue = thread.executeOnThread<bool>([this]() {
+            while (G_IO_STATUS_AGAIN == g_io_channel_flush(spewoutchan, nullptr))
+                ;
+            return true; /* the main loop has processed */
+        });
+        g_debug("Reset %d", pid_);
+        if (endofqueue)
+            datacnt_ = 0;
+        else
+            g_warning("Unable to clear mainloop on reset");
     }
 
 private:
@@ -1330,7 +1343,7 @@ private:
     GPid pid_ = 0;
     gchar* oomadjfile = nullptr;
     GIOChannel* spewoutchan = nullptr;
-    guint iosource = 0;
+    GSource* iosource = nullptr;
     GLib::ContextThread thread;
 
     static gboolean datain(GIOChannel* source, GIOCondition cond, gpointer data)
@@ -1487,7 +1500,7 @@ TEST_F(LibUAL, MultiPause)
     g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/libual-proc", 1);
 
     /* Setup some A TON OF spew */
-    std::array<SpewMaster, 15> spews;
+    std::array<SpewMaster, 50> spews;
 
     /* Setup the cgroup */
     g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME", "org.test.cgmock2", TRUE);
