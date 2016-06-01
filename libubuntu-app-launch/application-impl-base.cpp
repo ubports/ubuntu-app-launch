@@ -46,7 +46,10 @@ bool Base::hasInstances()
 class BaseInstance : public Application::Instance
 {
 public:
-    explicit BaseInstance(const AppID& appId, const std::shared_ptr<Registry>& registry);
+    explicit BaseInstance(const AppID& appId,
+                          const std::string& job,
+                          const std::string& instance,
+                          const std::shared_ptr<Registry>& registry);
 
     /* Query lifecycle */
     bool isRunning() override
@@ -77,17 +80,7 @@ public:
     }
     std::vector<pid_t> pids() override
     {
-        std::vector<pid_t> vector;
-        GList* list = ubuntu_app_launch_get_pids(std::string(appId_).c_str());
-
-        for (GList* pntr = list; pntr != nullptr; pntr = g_list_next(pntr))
-        {
-            vector.push_back(static_cast<pid_t>(GPOINTER_TO_INT(pntr->data)));
-        }
-
-        g_list_free(list);
-
-        return vector;
+        return registry_->impl->pidsFromCgroup(job_, instance_);
     }
 
     /* Manage lifecycle */
@@ -164,6 +157,8 @@ public:
 
 private:
     const AppID appId_;
+    const std::string job_;
+    const std::string instance_;
     std::shared_ptr<Registry> registry_;
 
     /** Go through the list of PIDs calling a function and handling
@@ -356,16 +351,25 @@ private:
     }
 };
 
-BaseInstance::BaseInstance(const AppID& appId, const std::shared_ptr<Registry>& registry)
+BaseInstance::BaseInstance(const AppID& appId,
+                           const std::string& job,
+                           const std::string& instance,
+                           const std::shared_ptr<Registry>& registry)
     : appId_(appId)
+    , job_(job)
+    , instance_(instance)
     , registry_(registry)
 {
 }
 
 std::vector<std::shared_ptr<Application::Instance>> Base::instances()
 {
+    std::string job;
+    std::string instance;
+    std::tie(job, instance) = jobAndInstance();
+
     std::vector<std::shared_ptr<Instance>> vect;
-    vect.emplace_back(std::make_shared<BaseInstance>(appId(), _registry));
+    vect.emplace_back(std::make_shared<BaseInstance>(appId(), job, instance, _registry));
     return vect;
 }
 
@@ -392,9 +396,13 @@ std::shared_ptr<Application::Instance> Base::launch(const std::vector<Applicatio
         urlstrv = urlsToStrv(urls);
     }
 
+    std::string job;
+    std::string instance;
+    std::tie(job, instance) = jobAndInstance();
+
     ubuntu_app_launch_start_application(appIdStr.c_str(), urlstrv.get());
 
-    return std::make_shared<BaseInstance>(appId(), _registry);
+    return std::make_shared<BaseInstance>(appId(), job, instance, _registry);
 }
 
 std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Application::URL>& urls)
@@ -407,9 +415,13 @@ std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Applic
         urlstrv = urlsToStrv(urls);
     }
 
+    std::string job;
+    std::string instance;
+    std::tie(job, instance) = jobAndInstance();
+
     ubuntu_app_launch_start_application_test(appIdStr.c_str(), urlstrv.get());
 
-    return std::make_shared<BaseInstance>(appId(), _registry);
+    return std::make_shared<BaseInstance>(appId(), job, instance, _registry);
 }
 
 };  // namespace app_impls

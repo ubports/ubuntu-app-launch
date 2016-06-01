@@ -136,6 +136,11 @@ std::shared_ptr<Application::Info> Libertine::info()
     return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry);
 }
 
+std::pair<const std::string&, const std::string&> Libertine::jobAndInstance()
+{
+    return std::make_pair<const std::string&, const std::string&>("application-legacy", std::string(appId()) + "-");
+}
+
 };  // namespace app_impls
 };  // namespace app_launch
 };  // namespace ubuntu

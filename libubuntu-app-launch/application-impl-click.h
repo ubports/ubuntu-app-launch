@@ -42,6 +42,8 @@ public:
 
     std::shared_ptr<Info> info() override;
 
+    std::pair<const std::string&, const std::string&> jobAndInstance () override;
+
 private:
     AppID _appid;
 

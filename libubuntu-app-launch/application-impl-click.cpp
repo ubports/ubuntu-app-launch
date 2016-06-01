@@ -152,6 +152,11 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
     return applist;
 }
 
+std::pair<const std::string&, const std::string&> Click::jobAndInstance()
+{
+    return std::make_pair<const std::string&, const std::string&>("application-click", appId());
+}
+
 };  // namespace app_impls
 };  // namespace app_launch
 };  // namespace ubuntu

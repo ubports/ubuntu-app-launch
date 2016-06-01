@@ -132,6 +132,11 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
     return list;
 }
 
+std::pair<const std::string&, const std::string&> Legacy::jobAndInstance()
+{
+    return std::make_pair<const std::string&, const std::string&>("application-legacy", std::string(appId()) + "-");
+}
+
 };  // namespace app_impls
 };  // namespace app_launch
 };  // namespace ubuntu
