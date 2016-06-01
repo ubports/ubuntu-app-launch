@@ -20,6 +20,7 @@
 #include "registry-impl.h"
 #include "application-icon-finder.h"
 #include <cgmanager/cgmanager.h>
+#include <upstart.h>
 
 namespace ubuntu
 {
@@ -276,6 +277,131 @@ std::vector<pid_t> Registry::Impl::pidsFromCgroup(const std::string& job, const 
         g_variant_unref(vtpids);
 
         return pids;
+    });
+}
+
+/** Looks to find the Upstart object path for a specific Upstart job. This first
+    checks the cache, and otherwise does the lookup on DBus. */
+std::string Registry::Impl::upstartJobPath(const std::string& job)
+{
+    try
+    {
+        return upstartJobPathCache_[job];
+    }
+    catch (std::out_of_range& e)
+    {
+        auto path = thread.executeOnThread<std::string>([this, &job]() -> std::string {
+            GError* error = nullptr;
+            GVariant* job_path_variant = g_dbus_connection_call_sync(_dbus.get(),                       /* connection */
+                                                                     DBUS_SERVICE_UPSTART,              /* service */
+                                                                     DBUS_PATH_UPSTART,                 /* path */
+                                                                     DBUS_INTERFACE_UPSTART,            /* iface */
+                                                                     "GetJobByName",                    /* method */
+                                                                     g_variant_new("(s)", job.c_str()), /* params */
+                                                                     G_VARIANT_TYPE("(o)"),             /* return */
+                                                                     G_DBUS_CALL_FLAGS_NONE,            /* flags */
+                                                                     -1, /* timeout: default */
+                                                                     thread.getCancellable().get(), /* cancelable */
+                                                                     &error);                       /* error */
+
+            if (error != nullptr)
+            {
+                g_warning("Unable to find job '%s': %s", job.c_str(), error->message);
+                g_error_free(error);
+                return {};
+            }
+
+            gchar* job_path = nullptr;
+            g_variant_get(job_path_variant, "(o)", &job_path);
+            g_variant_unref(job_path_variant);
+
+            if (job_path != nullptr)
+            {
+                std::string path(job_path);
+                g_free(job_path);
+                return path;
+            }
+            else
+            {
+                return {};
+            }
+        });
+
+        upstartJobPathCache_[job] = path;
+        return path;
+    }
+}
+
+/** Queries Upstart to get all the instances of a given job. This
+    can take a while as the number of dbus calls is n+1. It is
+    rare that apps have many instances though. */
+std::vector<std::string> Registry::Impl::upstartInstancesForJob(const std::string& job)
+{
+    std::string jobpath = upstartJobPath(job);
+
+    return thread.executeOnThread<std::vector<std::string>>([this, &job, &jobpath]() -> std::vector<std::string> {
+        GError* error = nullptr;
+        GVariant* instance_tuple = g_dbus_connection_call_sync(_dbus.get(),                   /* connection */
+                                                               DBUS_SERVICE_UPSTART,          /* service */
+                                                               jobpath.c_str(),               /* object path */
+                                                               DBUS_INTERFACE_UPSTART_JOB,    /* iface */
+                                                               "GetAllInstances",             /* method */
+                                                               nullptr,                       /* params */
+                                                               G_VARIANT_TYPE("(ao)"),        /* return type */
+                                                               G_DBUS_CALL_FLAGS_NONE,        /* flags */
+                                                               -1,                            /* timeout: default */
+                                                               thread.getCancellable().get(), /* cancelable */
+                                                               &error);
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to get instances of job '%s': %s", job.c_str(), error->message);
+            g_error_free(error);
+            return {};
+        }
+
+        GVariant* instance_list = g_variant_get_child_value(instance_tuple, 0);
+        g_variant_unref(instance_tuple);
+
+        GVariantIter instance_iter;
+        g_variant_iter_init(&instance_iter, instance_list);
+        const gchar* instance_path = nullptr;
+        std::vector<std::string> instances;
+
+        while (g_variant_iter_loop(&instance_iter, "&o", &instance_path))
+        {
+            GVariant* props_tuple = g_dbus_connection_call_sync(
+                _dbus.get(), DBUS_SERVICE_UPSTART, instance_path, "org.freedesktop.DBus.Properties", "GetAll",
+                g_variant_new("(s)", DBUS_INTERFACE_UPSTART_INSTANCE), G_VARIANT_TYPE("(a{sv})"),
+                G_DBUS_CALL_FLAGS_NONE, -1,    /* timeout: default */
+                thread.getCancellable().get(), /* cancelable */
+                &error);
+
+            if (error != nullptr)
+            {
+                g_warning("Unable to name of instance '%s': %s", instance_path, error->message);
+                g_error_free(error);
+                error = nullptr;
+                continue;
+            }
+
+            GVariant* props_dict = g_variant_get_child_value(props_tuple, 0);
+
+            GVariant* namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+            if (namev != nullptr)
+            {
+                auto name = g_variant_get_string(namev, NULL);
+                instances.push_back(name);
+                g_variant_unref(namev);
+            }
+
+            g_variant_unref(props_dict);
+            g_variant_unref(props_tuple);
+        }
+
+        g_variant_unref(instance_list);
+
+        return instances;
     });
 }
 
