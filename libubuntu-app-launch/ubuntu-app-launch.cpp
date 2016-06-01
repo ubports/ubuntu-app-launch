@@ -1273,59 +1273,21 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 GList *
 ubuntu_app_launch_get_pids (const gchar * appid)
 {
-	g_return_val_if_fail(appid != NULL, NULL);
-	ual_tracepoint(pids_list_start, appid);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		auto pids = app->instances()[0]->pids();
 
-	GDBusConnection * cgmanager = cgroup_manager_connection();
-	g_return_val_if_fail(cgmanager != NULL, NULL);
-
-	ual_tracepoint(pids_list_connected, appid);
-
-	if (is_click(appid)) {
-		GList * pids = pids_from_cgroup(cgmanager, "application-click", appid);
-		cgroup_manager_unref(cgmanager);
-
-		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
-		return pids;
-	} else if (is_libertine(appid) || legacy_single_instance(appid)) {
-		gchar * jobname = g_strdup_printf("%s-", appid);
-		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
-		g_free(jobname);
-		cgroup_manager_unref(cgmanager);
-
-		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
-		return pids;
-	}
-
-	/* If we're not single instance, we need to find all the pids for all
-	   the instances of the app */
-	unsigned int i;
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, NULL);
-
-	GList * pids = NULL;
-
-	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-	g_array_set_clear_func(apps, free_helper);
-
-	apps_for_job(con, "application-legacy", apps, FALSE);
-	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
-	for (i = 0; i < apps->len; i++) {
-		const gchar * array_id = g_array_index(apps, const gchar *, i);
-		if (g_str_has_prefix(array_id, appiddash)) {
-			GList * morepids = pids_from_cgroup(cgmanager, "application-legacy", array_id);
-			pids = g_list_concat(pids, morepids);
+		GList * retval = nullptr;
+		for (auto pid : pids) {
+			retval = g_list_prepend(retval, GINT_TO_POINTER(pid));
 		}
+
+		return retval;
+	} catch (...) {
+		return nullptr;
 	}
-	g_free(appiddash);
-
-	g_array_free(apps, TRUE);
-	g_object_unref(con);
-
-	cgroup_manager_unref(cgmanager);
-
-	ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
-	return pids;
 }
 
 gboolean
