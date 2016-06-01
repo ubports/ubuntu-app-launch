@@ -77,11 +77,20 @@ pid_t UpstartInstance::primaryPid()
         }
 
         /* Jump rope to make this into a C++ type */
+        std::string instance_path;
         gchar* cinstance_path = nullptr;
         g_variant_get(vinstance_path, "(o)", &cinstance_path);
         g_variant_unref(vinstance_path);
-        std::string instance_path(cinstance_path);
-        g_free(cinstance_path);
+        if (cinstance_path != nullptr)
+        {
+            instance_path = cinstance_path;
+            g_free(cinstance_path);
+        }
+
+        if (instance_path.empty())
+        {
+            return 0;
+        }
 
         GVariant* props_tuple =
             g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                          /* connection */
@@ -425,6 +434,24 @@ UpstartInstance::UpstartInstance(const AppID& appId,
 {
 }
 
+std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls)
+{
+    if (urls.empty())
+    {
+        return {};
+    }
+
+    auto array = g_array_new(TRUE, FALSE, sizeof(gchar*));
+
+    for (auto url : urls)
+    {
+        auto str = g_strdup(url.value().c_str());
+        g_array_append_val(array, str);
+    }
+
+    return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
+}
+
 std::shared_ptr<UpstartInstance> UpstartInstance::launch(const AppID& appId,
                                                          const std::string& job,
                                                          const std::string& instance,
@@ -432,8 +459,23 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(const AppID& appId,
                                                          const std::shared_ptr<Registry>& registry,
                                                          launchMode mode)
 {
-    // TODO
-    return {};
+    auto urlstrv = urlsToStrv(urls);
+    gboolean start_result;
+    if (mode == launchMode::STANDARD)
+    {
+        start_result = ubuntu_app_launch_start_application(std::string(appId).c_str(), urlstrv.get());
+    }
+    else
+    {
+        start_result = ubuntu_app_launch_start_application_test(std::string(appId).c_str(), urlstrv.get());
+    }
+
+    if (start_result == FALSE)
+    {
+        return {};
+    }
+
+    return std::make_shared<UpstartInstance>(appId, job, instance, registry);
 }
 
 };  // namespace app_impls
