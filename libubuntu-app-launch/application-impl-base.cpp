@@ -128,8 +128,12 @@ pid_t UpstartInstance::primaryPid()
 
 bool UpstartInstance::hasPid(pid_t pid)
 {
-    return ubuntu_app_launch_pid_in_app_id(pid, std::string(appId_).c_str()) == TRUE;
+    for (auto testpid : registry_->impl->pidsFromCgroup(job_, instance_))
+        if (pid == testpid)
+            return true;
+    return false;
 }
+
 std::string UpstartInstance::logPath()
 {
     auto cpath = ubuntu_app_launch_application_log_path(std::string(appId_).c_str());
@@ -144,6 +148,7 @@ std::string UpstartInstance::logPath()
         return {};
     }
 }
+
 std::vector<pid_t> UpstartInstance::pids()
 {
     return registry_->impl->pidsFromCgroup(job_, instance_);
@@ -162,6 +167,7 @@ void UpstartInstance::pause()
 
     pidListToDbus(pids, "ApplicationPaused");
 }
+
 void UpstartInstance::resume()
 {
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
@@ -175,6 +181,7 @@ void UpstartInstance::resume()
 
     pidListToDbus(pids, "ApplicationResumed");
 }
+
 void UpstartInstance::stop()
 {
     ubuntu_app_launch_stop_application(std::string(appId_).c_str());
