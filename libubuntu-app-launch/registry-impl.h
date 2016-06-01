@@ -63,6 +63,8 @@ public:
 
     void zgSendEvent(AppID appid, const std::string& eventtype);
 
+    std::vector<pid_t> pidsFromCgroup(const std::string& job, const std::string& instance);
+
 private:
     Registry* _registry;
 #if 0
@@ -75,6 +77,10 @@ private:
     void initClick();
 
     std::shared_ptr<ZeitgeistLog> zgLog_;
+
+    std::shared_ptr<GDBusConnection> cgManager_;
+
+    void initCGManager();
 
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 };
