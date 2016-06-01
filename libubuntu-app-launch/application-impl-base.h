@@ -35,18 +35,56 @@ namespace app_impls
 class Base : public ubuntu::app_launch::Application
 {
 public:
-    Base(const std::shared_ptr<Registry> &registry);
+    Base(const std::shared_ptr<Registry>& registry);
 
     bool hasInstances() override;
     std::vector<std::shared_ptr<Instance>> instances() override;
 
-    std::shared_ptr<Instance> launch(const std::vector<Application::URL> &urls = {}) override;
-    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL> &urls = {}) override;
+    std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
+    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
 
-	virtual std::pair<const std::string, const std::string> jobAndInstance () = 0;
+    virtual std::pair<const std::string, const std::string> jobAndInstance() = 0;
 
 protected:
     std::shared_ptr<Registry> _registry;
+};
+
+class UpstartInstance : public Application::Instance
+{
+public:
+    explicit UpstartInstance(const AppID& appId,
+                             const std::string& job,
+                             const std::string& instance,
+                             const std::shared_ptr<Registry>& registry);
+
+    /* Query lifecycle */
+    bool isRunning() override;
+    pid_t primaryPid() override;
+    bool hasPid(pid_t pid) override;
+    std::string logPath() override;
+    std::vector<pid_t> pids() override;
+
+    /* Manage lifecycle */
+    void pause() override;
+    void resume() override;
+    void stop() override;
+
+    /* OOM Functions */
+    void setOomAdjustment(const oom::Score score) override;
+    const oom::Score getOomAdjustment() override;
+
+private:
+    const AppID appId_;
+    const std::string job_;
+    const std::string instance_;
+    std::shared_ptr<Registry> registry_;
+
+    std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
+    void signalToPid(pid_t pid, int signal);
+    std::string pidToOomPath(pid_t pid);
+    void oomValueToPid(pid_t pid, const std::string& oomvalue);
+    void oomValueToPidHelper(pid_t pid, const std::string& oomvalue);
+    void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal);
 };
 
 };  // namespace app_impls

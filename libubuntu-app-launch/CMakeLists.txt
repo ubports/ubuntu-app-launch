@@ -39,6 +39,7 @@ helper.cpp
 registry.cpp
 registry-impl.h
 registry-impl.cpp
+application-impl-base.h
 application-impl-base.cpp
 application-impl-click.cpp
 application-impl-legacy.h
