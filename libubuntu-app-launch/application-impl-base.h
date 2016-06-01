@@ -38,12 +38,6 @@ public:
     Base(const std::shared_ptr<Registry>& registry);
 
     bool hasInstances() override;
-    std::vector<std::shared_ptr<Instance>> instances() override;
-
-    std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
-    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
-
-    virtual std::pair<const std::string, const std::string> jobAndInstance() = 0;
 
 protected:
     std::shared_ptr<Registry> _registry;
@@ -72,6 +66,19 @@ public:
     /* OOM Functions */
     void setOomAdjustment(const oom::Score score) override;
     const oom::Score getOomAdjustment() override;
+
+    /* Creating by launch */
+    enum class launchMode
+    {
+        STANDARD,
+        TEST
+    };
+    static std::shared_ptr<UpstartInstance> launch(const AppID& appId,
+                                                   const std::string& job,
+                                                   const std::string& instance,
+                                                   const std::vector<Application::URL>& urls,
+                                                   const std::shared_ptr<Registry>& registry,
+                                                   launchMode mode);
 
 private:
     const AppID appId_;

@@ -20,6 +20,7 @@
 #include <gio/gdesktopappinfo.h>
 
 #include "application-impl-base.h"
+#include "application-info-desktop.h"
 
 #pragma once
 
@@ -48,12 +49,16 @@ public:
 
     static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
 
-    std::pair<const std::string, const std::string> jobAndInstance() override;
+    std::vector<std::shared_ptr<Instance>> instances() override;
+
+    std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
+    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
 
 private:
     AppID::AppName _appname;
     std::string _basedir;
     std::shared_ptr<GKeyFile> _keyfile;
+    std::shared_ptr<app_info::Desktop> appinfo_;
 };
 
 };  // namespace app_impls

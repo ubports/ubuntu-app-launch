@@ -136,9 +136,24 @@ std::shared_ptr<Application::Info> Libertine::info()
     return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry);
 }
 
-std::pair<const std::string, const std::string> Libertine::jobAndInstance()
+std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
 {
-    return std::make_pair<const std::string&, const std::string&>("application-legacy", std::string(appId()) + "-");
+    std::vector<std::shared_ptr<Instance>> vect;
+    vect.emplace_back(
+        std::make_shared<UpstartInstance>(appId(), "application-legacy", std::string(appId()) + "-", _registry));
+    return vect;
+}
+
+std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
+{
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
+                                   UpstartInstance::launchMode::STANDARD);
+}
+
+std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
+{
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
+                                   UpstartInstance::launchMode::TEST);
 }
 
 };  // namespace app_impls

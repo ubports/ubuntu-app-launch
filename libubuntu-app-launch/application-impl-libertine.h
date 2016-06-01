@@ -45,7 +45,10 @@ public:
 
     std::shared_ptr<Info> info() override;
 
-    std::pair<const std::string, const std::string> jobAndInstance() override;
+    std::vector<std::shared_ptr<Instance>> instances() override;
+
+    std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
+    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
 
 private:
     AppID::Package _container;

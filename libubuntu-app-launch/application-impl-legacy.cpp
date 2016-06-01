@@ -102,7 +102,11 @@ std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::App
 
 std::shared_ptr<Application::Info> Legacy::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true);
+    if (!appinfo_)
+    {
+        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true);
+    }
+    return appinfo_;
 }
 
 std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
@@ -132,9 +136,24 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
     return list;
 }
 
-std::pair<const std::string, const std::string> Legacy::jobAndInstance()
+std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
 {
-    return std::make_pair<const std::string&, const std::string&>("application-legacy", std::string(appId()) + "-");
+    std::vector<std::shared_ptr<Instance>> vect;
+    vect.emplace_back(
+        std::make_shared<UpstartInstance>(appId(), "application-legacy", std::string(appId()) + "-", _registry));
+    return vect;
+}
+
+std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
+{
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
+                                   UpstartInstance::launchMode::STANDARD);
+}
+
+std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
+{
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
+                                   UpstartInstance::launchMode::TEST);
 }
 
 };  // namespace app_impls

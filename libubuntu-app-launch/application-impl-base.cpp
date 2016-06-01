@@ -343,66 +343,15 @@ UpstartInstance::UpstartInstance(const AppID& appId,
 {
 }
 
-std::vector<std::shared_ptr<Application::Instance>> Base::instances()
+std::shared_ptr<UpstartInstance> UpstartInstance::launch(const AppID& appId,
+                                                         const std::string& job,
+                                                         const std::string& instance,
+                                                         const std::vector<Application::URL>& urls,
+                                                         const std::shared_ptr<Registry>& registry,
+                                                         launchMode mode)
 {
-    std::string job;
-    std::string instance;
-    std::tie(job, instance) = jobAndInstance();
-
-    std::vector<std::shared_ptr<Instance>> vect;
-    vect.emplace_back(std::make_shared<UpstartInstance>(appId(), job, instance, _registry));
-    return vect;
-}
-
-std::shared_ptr<gchar*> urlsToStrv(std::vector<Application::URL> urls)
-{
-    auto array = g_array_new(TRUE, FALSE, sizeof(gchar*));
-
-    for (auto url : urls)
-    {
-        auto str = g_strdup(url.value().c_str());
-        g_array_append_val(array, str);
-    }
-
-    return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
-}
-
-std::shared_ptr<Application::Instance> Base::launch(const std::vector<Application::URL>& urls)
-{
-    std::string appIdStr = appId();
-    std::shared_ptr<gchar*> urlstrv;
-
-    if (urls.size() > 0)
-    {
-        urlstrv = urlsToStrv(urls);
-    }
-
-    std::string job;
-    std::string instance;
-    std::tie(job, instance) = jobAndInstance();
-
-    ubuntu_app_launch_start_application(appIdStr.c_str(), urlstrv.get());
-
-    return std::make_shared<UpstartInstance>(appId(), job, instance, _registry);
-}
-
-std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Application::URL>& urls)
-{
-    std::string appIdStr = appId();
-    std::shared_ptr<gchar*> urlstrv;
-
-    if (urls.size() > 0)
-    {
-        urlstrv = urlsToStrv(urls);
-    }
-
-    std::string job;
-    std::string instance;
-    std::tie(job, instance) = jobAndInstance();
-
-    ubuntu_app_launch_start_application_test(appIdStr.c_str(), urlstrv.get());
-
-    return std::make_shared<UpstartInstance>(appId(), job, instance, _registry);
+    // TODO
+    return {};
 }
 
 };  // namespace app_impls
