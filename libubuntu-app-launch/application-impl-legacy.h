@@ -48,7 +48,7 @@ public:
 
     static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
 
-    std::pair<const std::string&, const std::string&> jobAndInstance() override;
+    std::pair<const std::string, const std::string> jobAndInstance() override;
 
 private:
     AppID::AppName _appname;

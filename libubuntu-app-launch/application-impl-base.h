@@ -43,7 +43,7 @@ public:
     std::shared_ptr<Instance> launch(const std::vector<Application::URL> &urls = {}) override;
     std::shared_ptr<Instance> launchTest(const std::vector<Application::URL> &urls = {}) override;
 
-	virtual std::pair<const std::string&, const std::string&> jobAndInstance () = 0;
+	virtual std::pair<const std::string, const std::string> jobAndInstance () = 0;
 
 protected:
     std::shared_ptr<Registry> _registry;
