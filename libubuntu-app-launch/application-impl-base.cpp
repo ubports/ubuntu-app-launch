@@ -22,6 +22,8 @@
 #include <cstring>
 #include <map>
 
+#include <upstart.h>
+
 #include "application-impl-base.h"
 #include "registry-impl.h"
 
@@ -47,10 +49,83 @@ bool UpstartInstance::isRunning()
 {
     return primaryPid() != 0;
 }
+
 pid_t UpstartInstance::primaryPid()
 {
-    return ubuntu_app_launch_get_primary_pid(std::string(appId_).c_str());
+    auto jobpath = registry_->impl->upstartJobPath(job_);
+
+    return registry_->impl->thread.executeOnThread<pid_t>([this, &jobpath]() -> pid_t {
+        GError* error = nullptr;
+        GVariant* vinstance_path =
+            g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* connection */
+                                        DBUS_SERVICE_UPSTART,                           /* service */
+                                        jobpath.c_str(),                                /* object path */
+                                        DBUS_INTERFACE_UPSTART_JOB,                     /* iface */
+                                        "GetInstanceByName",                            /* method */
+                                        g_variant_new("(s)", instance_.c_str()),        /* params */
+                                        G_VARIANT_TYPE("(o)"),                          /* return type */
+                                        G_DBUS_CALL_FLAGS_NONE,                         /* flags */
+                                        -1,                                             /* timeout: default */
+                                        registry_->impl->thread.getCancellable().get(), /* cancelable */
+                                        &error);
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to get instance '%s' of job '%s': %s", instance_.c_str(), job_.c_str(), error->message);
+            g_error_free(error);
+            return 0;
+        }
+
+        /* Jump rope to make this into a C++ type */
+        gchar* cinstance_path = nullptr;
+        g_variant_get(vinstance_path, "(o)", &cinstance_path);
+        g_variant_unref(vinstance_path);
+        std::string instance_path(cinstance_path);
+        g_free(cinstance_path);
+
+        GVariant* props_tuple =
+            g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                          /* connection */
+                                        DBUS_SERVICE_UPSTART,                                  /* service */
+                                        instance_path.c_str(),                                 /* object path */
+                                        "org.freedesktop.DBus.Properties",                     /* interface */
+                                        "GetAll",                                              /* method */
+                                        g_variant_new("(s)", DBUS_INTERFACE_UPSTART_INSTANCE), /* params */
+                                        G_VARIANT_TYPE("(a{sv})"),                             /* return type */
+                                        G_DBUS_CALL_FLAGS_NONE,                                /* flags */
+                                        -1,                                                    /* timeout: default */
+                                        registry_->impl->thread.getCancellable().get(),        /* cancelable */
+                                        &error);
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to name of properties '%s': %s", instance_path.c_str(), error->message);
+            g_error_free(error);
+            error = nullptr;
+            return 0;
+        }
+
+        GVariant* props_dict = g_variant_get_child_value(props_tuple, 0);
+
+        pid_t retval = 0;
+        GVariant* processes = g_variant_lookup_value(props_dict, "processes", G_VARIANT_TYPE("a(si)"));
+        if (processes == nullptr && g_variant_n_children(processes) > 0)
+        {
+
+            GVariant* first_entry = g_variant_get_child_value(processes, 0);
+            GVariant* pidv = g_variant_get_child_value(first_entry, 1);
+
+            retval = g_variant_get_int32(pidv);
+
+            g_variant_unref(pidv);
+            g_variant_unref(first_entry);
+        }
+
+        g_variant_unref(props_dict);
+
+        return retval;
+    });
 }
+
 bool UpstartInstance::hasPid(pid_t pid)
 {
     return ubuntu_app_launch_pid_in_app_id(pid, std::string(appId_).c_str()) == TRUE;

@@ -68,6 +68,7 @@ public:
 
     /* Upstart Jobs */
     std::vector<std::string> upstartInstancesForJob(const std::string& job);
+    std::string upstartJobPath(const std::string& job);
 
 private:
     Registry* _registry;
@@ -91,7 +92,6 @@ private:
     /** Getting the Upstart job path is relatively expensive in
         that it requires a DBus call. Worth keeping a cache of. */
     std::map<std::string, std::string> upstartJobPathCache_;
-    std::string upstartJobPath(const std::string& job);
 };
 
 };  // namespace app_launch

@@ -370,12 +370,18 @@ std::vector<std::string> Registry::Impl::upstartInstancesForJob(const std::strin
 
         while (g_variant_iter_loop(&instance_iter, "&o", &instance_path))
         {
-            GVariant* props_tuple = g_dbus_connection_call_sync(
-                _dbus.get(), DBUS_SERVICE_UPSTART, instance_path, "org.freedesktop.DBus.Properties", "GetAll",
-                g_variant_new("(s)", DBUS_INTERFACE_UPSTART_INSTANCE), G_VARIANT_TYPE("(a{sv})"),
-                G_DBUS_CALL_FLAGS_NONE, -1,    /* timeout: default */
-                thread.getCancellable().get(), /* cancelable */
-                &error);
+            GVariant* props_tuple =
+                g_dbus_connection_call_sync(_dbus.get(),                                           /* connection */
+                                            DBUS_SERVICE_UPSTART,                                  /* service */
+                                            instance_path,                                         /* object path */
+                                            "org.freedesktop.DBus.Properties",                     /* interface */
+                                            "GetAll",                                              /* method */
+                                            g_variant_new("(s)", DBUS_INTERFACE_UPSTART_INSTANCE), /* params */
+                                            G_VARIANT_TYPE("(a{sv})"),                             /* return type */
+                                            G_DBUS_CALL_FLAGS_NONE,                                /* flags */
+                                            -1,                            /* timeout: default */
+                                            thread.getCancellable().get(), /* cancelable */
+                                            &error);
 
             if (error != nullptr)
             {
