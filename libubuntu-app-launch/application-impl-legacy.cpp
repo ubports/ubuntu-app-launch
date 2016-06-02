@@ -19,6 +19,7 @@
 
 #include "application-impl-legacy.h"
 #include "application-info-desktop.h"
+#include "registry-impl.h"
 
 namespace ubuntu
 {
@@ -139,8 +140,16 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
 std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
 {
     std::vector<std::shared_ptr<Instance>> vect;
-    vect.emplace_back(
-        std::make_shared<UpstartInstance>(appId(), "application-legacy", std::string(appId()) + "-", _registry));
+    auto startsWith = std::string(appId()) + "-";
+
+    for (auto instance : _registry->impl->upstartInstancesForJob("application-legacy"))
+    {
+        if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
+        {
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", instance, _registry));
+        }
+    }
+
     return vect;
 }
 

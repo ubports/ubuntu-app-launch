@@ -141,6 +141,10 @@ protected:
         dbus_test_dbus_mock_object_add_method(mock, jobobj, "GetAllInstances", NULL, G_VARIANT_TYPE("ao"),
                                               "ret = [ dbus.ObjectPath('/com/test/app_instance') ]", NULL);
 
+        dbus_test_dbus_mock_object_add_method(mock, jobobj, "GetInstanceByName", G_VARIANT_TYPE_STRING,
+                                              G_VARIANT_TYPE("o"), "ret = dbus.ObjectPath('/com/test/app_instance')",
+                                              NULL);
+
         DbusTestDbusMockObject* instobj =
             dbus_test_dbus_mock_get_object(mock, "/com/test/app_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
         dbus_test_dbus_mock_object_add_property(mock, instobj, "name", G_VARIANT_TYPE_STRING,
@@ -159,13 +163,26 @@ protected:
         dbus_test_dbus_mock_object_add_method(mock, ljobobj, "Stop", G_VARIANT_TYPE("(asb)"), NULL, "", NULL);
 
         dbus_test_dbus_mock_object_add_method(mock, ljobobj, "GetAllInstances", NULL, G_VARIANT_TYPE("ao"),
-                                              "ret = [ dbus.ObjectPath('/com/test/legacy_app_instance') ]", NULL);
+                                              "ret = [ dbus.ObjectPath('/com/test/legacy_app_instance'), "
+                                              "dbus.ObjectPath('/com/test/legacy_app_instance2') ]",
+                                              NULL);
+
+        dbus_test_dbus_mock_object_add_method(mock, ljobobj, "GetInstanceByName", G_VARIANT_TYPE_STRING,
+                                              G_VARIANT_TYPE("o"),
+                                              "ret = dbus.ObjectPath('/com/test/legacy_app_instance')", NULL);
 
         DbusTestDbusMockObject* linstobj = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance",
                                                                           "com.ubuntu.Upstart0_6.Instance", NULL);
         dbus_test_dbus_mock_object_add_property(mock, linstobj, "name", G_VARIANT_TYPE_STRING,
                                                 g_variant_new_string("multiple-2342345"), NULL);
         dbus_test_dbus_mock_object_add_property(mock, linstobj, "processes", G_VARIANT_TYPE("a(si)"),
+                                                g_variant_new_parsed("[('main', 5678)]"), NULL);
+
+        DbusTestDbusMockObject* linstobj2 = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance2",
+                                                                           "com.ubuntu.Upstart0_6.Instance", NULL);
+        dbus_test_dbus_mock_object_add_property(mock, linstobj2, "name", G_VARIANT_TYPE_STRING,
+                                                g_variant_new_string("single-"), NULL);
+        dbus_test_dbus_mock_object_add_property(mock, linstobj2, "processes", G_VARIANT_TYPE("a(si)"),
                                                 g_variant_new_parsed("[('main', 5678)]"), NULL);
 
         /*  Untrusted Helper */
@@ -458,7 +475,13 @@ TEST_F(LibUAL, ApplicationPid)
     auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
-    EXPECT_FALSE(app->instances()[0]->hasPid(0));
+    ASSERT_LT(0, app->instances().size());
+
+    /* Look at PIDs from cgmanager */
+    EXPECT_FALSE(app->instances()[0]->hasPid(1));
+    EXPECT_TRUE(app->instances()[0]->hasPid(100));
+    EXPECT_TRUE(app->instances()[0]->hasPid(200));
+    EXPECT_TRUE(app->instances()[0]->hasPid(300));
 
     /* Check primary pid, which comes from Upstart */
     EXPECT_EQ(getpid(), app->instances()[0]->primaryPid());
@@ -476,6 +499,7 @@ TEST_F(LibUAL, ApplicationPid)
     guint len = 0;
 
     /* Click in the set */
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
     EXPECT_TRUE(app->instances()[0]->hasPid(100));
     calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
     EXPECT_EQ(1, len);
@@ -497,6 +521,7 @@ TEST_F(LibUAL, ApplicationPid)
     auto singleappid = ubuntu::app_launch::AppID::find("single");
     auto singleapp = ubuntu::app_launch::Application::create(singleappid, registry);
 
+    ASSERT_LT(0, singleapp->instances().size());
     EXPECT_TRUE(singleapp->instances()[0]->hasPid(100));
 
     calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
@@ -581,7 +606,7 @@ TEST_F(LibUAL, ApplicationList)
 {
     auto apps = ubuntu::app_launch::Registry::runningApps(registry);
 
-    ASSERT_EQ(2, apps.size());
+    ASSERT_EQ(3, apps.size());
 
     apps.sort([](const std::shared_ptr<ubuntu::app_launch::Application>& a,
                  const std::shared_ptr<ubuntu::app_launch::Application>& b) {
@@ -592,7 +617,7 @@ TEST_F(LibUAL, ApplicationList)
     });
 
     EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.front()->appId());
-    EXPECT_EQ("multiple", (std::string)apps.back()->appId());
+    EXPECT_EQ("single", (std::string)apps.back()->appId());
 }
 
 typedef struct

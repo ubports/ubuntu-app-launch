@@ -53,6 +53,11 @@ bool UpstartInstance::isRunning()
 pid_t UpstartInstance::primaryPid()
 {
     auto jobpath = registry_->impl->upstartJobPath(job_);
+    if (jobpath.empty())
+    {
+        g_debug("Unable to get a valid job path");
+        return 0;
+    }
 
     return registry_->impl->thread.executeOnThread<pid_t>([this, &jobpath]() -> pid_t {
         GError* error = nullptr;
@@ -89,6 +94,7 @@ pid_t UpstartInstance::primaryPid()
 
         if (instance_path.empty())
         {
+            g_debug("No instance object for instance name: %s", instance_.c_str());
             return 0;
         }
 
@@ -117,7 +123,7 @@ pid_t UpstartInstance::primaryPid()
 
         pid_t retval = 0;
         GVariant* processes = g_variant_lookup_value(props_dict, "processes", G_VARIANT_TYPE("a(si)"));
-        if (processes == nullptr && g_variant_n_children(processes) > 0)
+        if (processes != nullptr && g_variant_n_children(processes) > 0)
         {
 
             GVariant* first_entry = g_variant_get_child_value(processes, 0);
@@ -127,6 +133,10 @@ pid_t UpstartInstance::primaryPid()
 
             g_variant_unref(pidv);
             g_variant_unref(first_entry);
+        }
+        else
+        {
+            g_debug("Unable to get 'processes' from properties of instance at path: %s", instance_path.c_str());
         }
 
         g_variant_unref(props_dict);

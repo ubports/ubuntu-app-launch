@@ -286,7 +286,7 @@ std::string Registry::Impl::upstartJobPath(const std::string& job)
 {
     try
     {
-        return upstartJobPathCache_[job];
+        return upstartJobPathCache_.at(job);
     }
     catch (std::out_of_range& e)
     {
@@ -338,6 +338,10 @@ std::string Registry::Impl::upstartJobPath(const std::string& job)
 std::vector<std::string> Registry::Impl::upstartInstancesForJob(const std::string& job)
 {
     std::string jobpath = upstartJobPath(job);
+    if (jobpath.empty())
+    {
+        return {};
+    }
 
     return thread.executeOnThread<std::vector<std::string>>([this, &job, &jobpath]() -> std::vector<std::string> {
         GError* error = nullptr;
@@ -357,6 +361,11 @@ std::vector<std::string> Registry::Impl::upstartInstancesForJob(const std::strin
         {
             g_warning("Unable to get instances of job '%s': %s", job.c_str(), error->message);
             g_error_free(error);
+            return {};
+        }
+
+        if (instance_tuple == nullptr)
+        {
             return {};
         }
 
