@@ -465,7 +465,9 @@ TEST_F(LibUAL, ApplicationPid)
 
     auto multiappid = ubuntu::app_launch::AppID::find("multiple");
     auto multiapp = ubuntu::app_launch::Application::create(multiappid, registry);
-    EXPECT_EQ(5678, multiapp->instances()[0]->primaryPid());
+    auto instances = multiapp->instances();
+    ASSERT_LT(0, instances.size());
+    EXPECT_EQ(5678, instances[0]->primaryPid());
 
     /* Look at the full PID list from CG Manager */
     DbusTestDbusMockObject* cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager",
