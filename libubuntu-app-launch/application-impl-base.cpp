@@ -470,15 +470,16 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(const AppID& appId,
                                                          launchMode mode)
 {
     auto urlstrv = urlsToStrv(urls);
-    gboolean start_result;
-    if (mode == launchMode::STANDARD)
-    {
-        start_result = ubuntu_app_launch_start_application(std::string(appId).c_str(), urlstrv.get());
-    }
-    else
-    {
-        start_result = ubuntu_app_launch_start_application_test(std::string(appId).c_str(), urlstrv.get());
-    }
+    auto start_result = registry->impl->thread.executeOnThread<gboolean>([&appId, &urlstrv, &mode]() {
+        if (mode == launchMode::STANDARD)
+        {
+            return ubuntu_app_launch_start_application(std::string(appId).c_str(), urlstrv.get());
+        }
+        else
+        {
+            return ubuntu_app_launch_start_application_test(std::string(appId).c_str(), urlstrv.get());
+        }
+    });
 
     if (start_result == FALSE)
     {
