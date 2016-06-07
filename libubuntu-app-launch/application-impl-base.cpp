@@ -182,9 +182,10 @@ void UpstartInstance::pause()
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
 
     auto pids = forAllPids([this](pid_t pid) {
-        g_debug("Pausing PID: %d", pid);
+        auto oomval = oom::paused();
+        g_debug("Pausing PID: %d (%d)", pid, int(oomval));
         signalToPid(pid, SIGSTOP);
-        oomValueToPid(pid, oom::paused());
+        oomValueToPid(pid, oomval);
     });
 
     pidListToDbus(pids, "ApplicationPaused");
@@ -195,9 +196,10 @@ void UpstartInstance::resume()
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
 
     auto pids = forAllPids([this](pid_t pid) {
-        g_debug("Resuming PID: %d", pid);
+        auto oomval = oom::focused();
+        g_debug("Resuming PID: %d (%d)", pid, int(oomval));
         signalToPid(pid, SIGCONT);
-        oomValueToPid(pid, oom::focused());
+        oomValueToPid(pid, oomval);
     });
 
     pidListToDbus(pids, "ApplicationResumed");
