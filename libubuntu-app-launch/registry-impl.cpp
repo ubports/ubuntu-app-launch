@@ -406,6 +406,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
             if (namev != nullptr)
             {
                 auto name = g_variant_get_string(namev, NULL);
+                g_debug("Adding instance for job '%s': %s", job.c_str(), name);
                 instances.push_back(name);
                 g_variant_unref(namev);
             }

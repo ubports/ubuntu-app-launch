@@ -75,10 +75,12 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
 
     /* Add in the click instances */
     for (auto instance : connection->impl->upstartInstancesForJob("application-click"))
+    {
         instanceset.insert(instance);
+    }
 
-    g_debug("Overall there are %d instances: %s", int(instances.size()),
-            std::accumulate(instances.begin(), instances.end(), std::string{},
+    g_debug("Overall there are %d instances: %s", int(instanceset.size()),
+            std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
                             [](const std::string &instr, std::string instance) {
                                 return instr.empty() ? instance : instr + ", " + instance;
                             })

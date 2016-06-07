@@ -61,6 +61,7 @@ pid_t UpstartInstance::primaryPid()
 
     return registry_->impl->thread.executeOnThread<pid_t>([this, &jobpath]() -> pid_t {
         GError* error = nullptr;
+        g_debug("Getting instance by name: %s", instance_.c_str());
         GVariant* vinstance_path =
             g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* connection */
                                         DBUS_SERVICE_UPSTART,                           /* service */

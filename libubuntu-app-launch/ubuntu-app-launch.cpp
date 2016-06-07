@@ -462,7 +462,7 @@ gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
 	try {
-		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		app->instances()[0]->pause();
@@ -476,7 +476,7 @@ gboolean
 ubuntu_app_launch_resume_application (const gchar * appid)
 {
 	try {
-		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		app->instances()[0]->resume();
@@ -1191,6 +1191,7 @@ ubuntu_app_launch_list_running_apps (void)
 		GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
 		for (auto app : ubuntu::app_launch::Registry::runningApps()) {
 			std::string appid = app->appId();
+			g_debug("Adding AppID to list: %s", appid.c_str());
 			gchar * gappid = g_strdup(appid.c_str());
 			g_array_append_val(apps, gappid);
 		}

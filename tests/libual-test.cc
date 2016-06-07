@@ -194,6 +194,17 @@ class LibUAL : public ::testing::Test
 				"ret = [ dbus.ObjectPath('/com/test/legacy_app_instance'), dbus.ObjectPath('/com/test/legacy_app_instance2')]",
 				NULL);
 
+			dbus_test_dbus_mock_object_add_method(mock,
+				ljobobj,
+				"GetInstanceByName",
+				G_VARIANT_TYPE_STRING,
+				G_VARIANT_TYPE("o"),
+				"if args[0] == 'multiple-2342345':\n"
+				"  ret = dbus.ObjectPath('/com/test/legacy_app_instance')\n"
+				"elif args[0] == 'single-':\n"
+				"  ret = dbus.ObjectPath('/com/test/legacy_app_instance2')",
+				NULL);
+
 			DbusTestDbusMockObject * linstobj = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
 			dbus_test_dbus_mock_object_add_property(mock, linstobj,
 				"name",
@@ -481,8 +492,8 @@ TEST_F(LibUAL, ApplicationPid)
 	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(100, NULL));
 
 	/* Check primary pid, which comes from Upstart */
-	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("com.test.good_application_1.2.3"), getpid());
-	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("multiple"), 5678);
+	EXPECT_EQ(getpid(), ubuntu_app_launch_get_primary_pid("com.test.good_application_1.2.3"));
+	EXPECT_EQ(5678, ubuntu_app_launch_get_primary_pid("multiple"));
 
 	/* Look at the full PID list from CG Manager */
 	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
@@ -490,6 +501,7 @@ TEST_F(LibUAL, ApplicationPid)
 	guint len = 0;
 
 	/* Click in the set */
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "com.test.good_application_1.2.3"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
@@ -587,7 +599,7 @@ TEST_F(LibUAL, ApplicationList)
 	gchar ** apps = ubuntu_app_launch_list_running_apps();
 
 	ASSERT_NE(apps, nullptr);
-	ASSERT_EQ(g_strv_length(apps), 2);
+	ASSERT_EQ(3, g_strv_length(apps));
 
 	/* Not enforcing order, but wanting to use the GTest functions
 	   for "actually testing" so the errors look right. */

@@ -144,11 +144,14 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
 
     for (auto instance : _registry->impl->upstartInstancesForJob("application-legacy"))
     {
+        g_debug("Looking at legacy instance: %s", instance.c_str());
         if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
         {
             vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", instance, _registry));
         }
     }
+
+    g_debug("Legacy app '%s' has %d instances", std::string(appId()).c_str(), int(vect.size()));
 
     return vect;
 }
