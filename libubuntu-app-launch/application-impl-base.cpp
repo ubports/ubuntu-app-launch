@@ -24,6 +24,7 @@
 
 #include <upstart.h>
 
+#include "app-info.h"
 #include "application-impl-base.h"
 #include "registry-impl.h"
 
@@ -469,15 +470,10 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(const AppID& appId,
                                                          launchMode mode)
 {
     auto urlstrv = urlsToStrv(urls);
-    auto start_result = registry->impl->thread.executeOnThread<gboolean>([&appId, &urlstrv, &mode]() {
-        if (mode == launchMode::STANDARD)
-        {
-            return ubuntu_app_launch_start_application(std::string(appId).c_str(), urlstrv.get());
-        }
-        else
-        {
-            return ubuntu_app_launch_start_application_test(std::string(appId).c_str(), urlstrv.get());
-        }
+    auto start_result = registry->impl->thread.executeOnThread<gboolean>([registry, &appId, &urlstrv, &mode]() {
+        return start_application_core(registry->impl->_dbus.get(), registry->impl->thread.getCancellable().get(),
+                                      std::string(appId).c_str(), urlstrv.get(),
+                                      mode == launchMode::STANDARD ? FALSE : TRUE);
     });
 
     if (start_result == FALSE)

@@ -19,7 +19,9 @@
 
 #pragma once
 
-#include <glib.h>
+#include <gio/gio.h>
+
+G_BEGIN_DECLS
 
 gboolean app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
 gboolean app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
@@ -27,3 +29,7 @@ gboolean app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdeskt
 
 gchar * click_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver);
 gchar * libertine_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver);
+
+gboolean start_application_core (GDBusConnection * con, GCancellable * cancel, const gchar * appid, const gchar * const * uris, gboolean test);
+
+G_END_DECLS

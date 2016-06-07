@@ -226,15 +226,12 @@ is_libertine (const gchar * appid)
 	}
 }
 
-static gboolean
-start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
+gboolean
+start_application_core (GDBusConnection * con, GCancellable * cancel, const gchar * appid, const gchar * const * uris, gboolean test)
 {
 	ual_tracepoint(libual_start, appid);
 
 	g_return_val_if_fail(appid != NULL, FALSE);
-
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
 
 	gboolean click = is_click(appid);
 	ual_tracepoint(libual_determine_type, appid, click ? "click" : "legacy");
@@ -317,7 +314,7 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 		                       NULL,
 		                       G_DBUS_CALL_FLAGS_NONE,
 		                       -1,
-		                       NULL, /* cancelable */
+		                       cancel, /* cancelable */
 		                       application_start_cb,
 		                       app_start_data);
 
@@ -326,21 +323,31 @@ start_application_core (const gchar * appid, const gchar * const * uris, gboolea
 		g_variant_builder_clear(&builder);
 	}
 
-	g_object_unref(con);
-
 	return setup_complete;
 }
 
 gboolean
 ubuntu_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
-	return start_application_core(appid, uris, FALSE);
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	auto coreret = start_application_core(con, nullptr, appid, uris, FALSE);
+
+	g_object_unref(con);
+	return coreret;
 }
 
 gboolean
 ubuntu_app_launch_start_application_test (const gchar * appid, const gchar * const * uris)
 {
-	return start_application_core(appid, uris, TRUE);
+	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	g_return_val_if_fail(con != NULL, FALSE);
+
+	auto coreret = start_application_core(con, nullptr, appid, uris, TRUE);
+
+	g_object_unref(con);
+	return coreret;
 }
 
 static void
