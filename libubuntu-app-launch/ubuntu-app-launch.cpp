@@ -74,6 +74,8 @@ app_uris_string (const gchar * const * uris)
 typedef struct {
 	gchar * appid;
 	gchar * uris;
+	GDBusConnection * con;
+	GCancellable * cancel;
 } app_start_t;
 
 static void
@@ -97,7 +99,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 			gchar * remote_error = g_dbus_error_get_remote_error(error);
 			g_debug("Remote error: %s", remote_error);
 			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
-				second_exec(data->appid, data->uris);
+				second_exec(data->con, data->cancel, data->appid, data->uris);
 			}
 
 			g_free(remote_error);
@@ -107,6 +109,8 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 		g_error_free(error);
 	}
 
+	g_clear_object(&data->con);
+	g_clear_object(&data->cancel);
 	g_free(data->appid);
 	g_free(data->uris);
 	g_free(data);
@@ -263,6 +267,8 @@ start_application_core (GDBusConnection * con, GCancellable * cancel, const gcha
 	/* Callback data */
 	app_start_t * app_start_data = g_new0(app_start_t, 1);
 	app_start_data->appid = g_strdup(appid);
+	app_start_data->con = G_DBUS_CONNECTION(g_object_ref(con));
+	app_start_data->cancel = cancel ? G_CANCELLABLE(g_object_ref(cancel)) : nullptr;
 
 	/* Build up our environment */
 	GVariantBuilder builder;
@@ -456,7 +462,7 @@ gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
 	try {
-		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		app->instances()[0]->pause();
@@ -470,7 +476,7 @@ gboolean
 ubuntu_app_launch_resume_application (const gchar * appid)
 {
 	try {
-		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		app->instances()[0]->resume();
@@ -1201,7 +1207,7 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 	g_return_val_if_fail(appid != NULL, 0);
 
 	try {
-		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		return app->instances()[0]->primaryPid();
@@ -1217,7 +1223,7 @@ GList *
 ubuntu_app_launch_get_pids (const gchar * appid)
 {
 	try {
-		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		auto pids = app->instances()[0]->pids();
@@ -1238,7 +1244,7 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 	try {
-		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
