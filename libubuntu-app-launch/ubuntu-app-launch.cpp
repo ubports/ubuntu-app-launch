@@ -1174,74 +1174,18 @@ apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gbool
 gchar **
 ubuntu_app_launch_list_running_apps (void)
 {
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, g_new0(gchar *, 1));
-
-	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-
-	apps_for_job(con, "application-legacy", apps, TRUE);
-	apps_for_job(con, "application-click", apps, FALSE);
-
-	g_object_unref(con);
-
-	return (gchar **)g_array_free(apps, FALSE);
-}
-
-typedef struct {
-	GPid pid;
-	const gchar * appid;
-	const gchar * jobname;
-} pid_for_job_t;
-
-static void
-pid_for_job_instance (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
-{
-	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
-	if (namev == NULL) {
-		return;
-	}
-
-	pid_for_job_t * data = (pid_for_job_t *)user_data;
-	gchar * instance_name = g_variant_dup_string(namev, NULL);
-	g_variant_unref(namev);
-
-	if (g_strcmp0(data->jobname, "application-legacy") == 0) {
-		gchar * last_dash = g_strrstr(instance_name, "-");
-		if (last_dash != NULL) {
-			last_dash[0] = '\0';
+	try {
+		GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
+		for (auto app : ubuntu::app_launch::Registry::runningApps()) {
+			std::string appid = app->appId();
+			gchar * gappid = g_strdup(appid.c_str());
+			g_array_append_val(apps, gappid);
 		}
+
+		return (gchar **)g_array_free(apps, FALSE);
+	} catch (...) {
+		return nullptr;
 	}
-
-	if (g_strcmp0(instance_name, data->appid) == 0) {
-		GVariant * processv = g_variant_lookup_value(props_dict, "processes", G_VARIANT_TYPE("a(si)"));
-
-		if (processv != NULL) {
-			if (g_variant_n_children(processv) > 0) {
-				GVariant * first_entry = g_variant_get_child_value(processv, 0);
-				GVariant * pidv = g_variant_get_child_value(first_entry, 1);
-
-				data->pid = g_variant_get_int32(pidv);
-
-				g_variant_unref(pidv);
-				g_variant_unref(first_entry);
-			}
-
-			g_variant_unref(processv);
-		}
-	}
-
-	g_free(instance_name);
-}
-
-/* Look for the app for a job */
-static GPid
-pid_for_job (GDBusConnection * con, const gchar * jobname, const gchar * appid)
-{
-	pid_for_job_t data = {0, appid, jobname};
-
-	foreach_job_instance(con, jobname, pid_for_job_instance, &data);
-
-	return data.pid;
 }
 
 GPid
@@ -1249,22 +1193,14 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, 0);
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, 0);
-
-	GPid pid = 0;
-
-	if (pid == 0) {
-		pid = pid_for_job(con, "application-legacy", appid);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		return app->instances()[0]->primaryPid();
+	} catch (...) {
+		return 0;
 	}
-
-	if (pid == 0) {
-		pid = pid_for_job(con, "application-click", appid);
-	}
-
-	g_object_unref(con);
-
-	return pid;
 }
 
 /* Get the PIDs for an AppID. If it's click or legacy single instance that's
@@ -1294,24 +1230,19 @@ gboolean
 ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-	if (pid == 0) {
+		if (app->instances()[0]->hasPid(pid)) {
+			return TRUE;
+		} else {
+			return FALSE;
+		}
+	} catch (...) {
 		return FALSE;
 	}
-
-	GList * pidlist = ubuntu_app_launch_get_pids(appid);
-	GList * head;
-
-	for (head = pidlist; head != NULL; head = g_list_next(head)) {
-		GPid checkpid = GPOINTER_TO_INT(head->data);
-		if (checkpid == pid) {
-			g_list_free(pidlist);
-			return TRUE;
-		}
-	}
-
-	g_list_free(pidlist);
-	return FALSE;
 }
 
 gboolean
@@ -1319,33 +1250,28 @@ ubuntu_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** 
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
-	/* 'Parse' the App ID */
-	gchar ** app_id_segments = g_strsplit(appid, "_", 4);
-	if (g_strv_length(app_id_segments) != 3) {
-		g_debug("Unable to parse Application ID: %s", appid);
-		g_strfreev(app_id_segments);
+	try {
+		auto appId = ubuntu::app_launch::AppID::parse(appid);
+
+		if (appId.empty()) {
+			return FALSE;
+		}
+
+		if (package != nullptr) {
+			*package = g_strdup(appId.package.value().c_str());
+		}
+
+		if (application != nullptr) {
+			*application = g_strdup(appId.appname.value().c_str());
+		}
+
+		if (version != nullptr) {
+			*version = g_strdup(appId.version.value().c_str());
+		}
+	} catch (...) {
 		return FALSE;
 	}
 
-	if (package != NULL) {
-		*package = app_id_segments[0];
-	} else {
-		g_free(app_id_segments[0]);
-	}
-
-	if (application != NULL) {
-		*application = app_id_segments[1];
-	} else {
-		g_free(app_id_segments[1]);
-	}
-
-	if (version != NULL) {
-		*version = app_id_segments[2];
-	} else {
-		g_free(app_id_segments[2]);
-	}
-
-	g_free(app_id_segments);
 	return TRUE;
 }
 

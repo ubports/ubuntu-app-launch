@@ -20,6 +20,7 @@
 #include "application-impl-libertine.h"
 #include "application-info-desktop.h"
 #include "libertine.h"
+#include "registry-impl.h"
 
 namespace ubuntu
 {
@@ -139,8 +140,15 @@ std::shared_ptr<Application::Info> Libertine::info()
 std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
 {
     std::vector<std::shared_ptr<Instance>> vect;
-    vect.emplace_back(
-        std::make_shared<UpstartInstance>(appId(), "application-legacy", std::string(appId()) + "-", _registry));
+    std::string sappid = appId();
+
+    for (auto instancename : _registry->impl->upstartInstancesForJob("application-legacy"))
+    {
+        if (std::equal(sappid.begin(), sappid.end(), instancename.begin()))
+            vect.emplace_back(
+                std::make_shared<UpstartInstance>(appId(), "application-legacy", sappid + "-", _registry));
+    }
+
     return vect;
 }
 

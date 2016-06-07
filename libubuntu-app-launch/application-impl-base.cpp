@@ -41,8 +41,7 @@ Base::Base(const std::shared_ptr<Registry>& registry)
 
 bool Base::hasInstances()
 {
-    std::string sappid = appId();
-    return ubuntu_app_launch_get_primary_pid(sappid.c_str()) != 0;
+    return !instances().empty();
 }
 
 bool UpstartInstance::isRunning()

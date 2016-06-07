@@ -335,7 +335,7 @@ std::string Registry::Impl::upstartJobPath(const std::string& job)
 /** Queries Upstart to get all the instances of a given job. This
     can take a while as the number of dbus calls is n+1. It is
     rare that apps have many instances though. */
-std::vector<std::string> Registry::Impl::upstartInstancesForJob(const std::string& job)
+std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string& job)
 {
     std::string jobpath = upstartJobPath(job);
     if (jobpath.empty())
@@ -343,7 +343,7 @@ std::vector<std::string> Registry::Impl::upstartInstancesForJob(const std::strin
         return {};
     }
 
-    return thread.executeOnThread<std::vector<std::string>>([this, &job, &jobpath]() -> std::vector<std::string> {
+    return thread.executeOnThread<std::list<std::string>>([this, &job, &jobpath]() -> std::list<std::string> {
         GError* error = nullptr;
         GVariant* instance_tuple = g_dbus_connection_call_sync(_dbus.get(),                   /* connection */
                                                                DBUS_SERVICE_UPSTART,          /* service */
@@ -375,7 +375,7 @@ std::vector<std::string> Registry::Impl::upstartInstancesForJob(const std::strin
         GVariantIter instance_iter;
         g_variant_iter_init(&instance_iter, instance_list);
         const gchar* instance_path = nullptr;
-        std::vector<std::string> instances;
+        std::list<std::string> instances;
 
         while (g_variant_iter_loop(&instance_iter, "&o", &instance_path))
         {

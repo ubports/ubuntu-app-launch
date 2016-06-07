@@ -155,7 +155,18 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
 std::vector<std::shared_ptr<Application::Instance>> Click::instances()
 {
     std::vector<std::shared_ptr<Instance>> vect;
-    vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", std::string(appId()), _registry));
+    std::string sappid = appId();
+
+    for (auto instancename : _registry->impl->upstartInstancesForJob("application-click"))
+    {
+        /* There an be only one, but we want to make sure it is
+           there or return an empty vector */
+        if (sappid == instancename)
+        {
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", sappid, _registry));
+            break;
+        }
+    }
     return vect;
 }
 

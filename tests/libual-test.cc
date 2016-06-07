@@ -148,6 +148,14 @@ class LibUAL : public ::testing::Test
 				"ret = [ dbus.ObjectPath('/com/test/app_instance') ]",
 				NULL);
 
+			dbus_test_dbus_mock_object_add_method(mock,
+				jobobj,
+				"GetInstanceByName",
+				G_VARIANT_TYPE_STRING,
+				G_VARIANT_TYPE("o"),
+				"ret = dbus.ObjectPath('/com/test/app_instance')",
+				NULL);
+
 			DbusTestDbusMockObject * instobj = dbus_test_dbus_mock_get_object(mock, "/com/test/app_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
 			dbus_test_dbus_mock_object_add_property(mock, instobj,
 				"name",
@@ -183,7 +191,7 @@ class LibUAL : public ::testing::Test
 				"GetAllInstances",
 				NULL,
 				G_VARIANT_TYPE("ao"),
-				"ret = [ dbus.ObjectPath('/com/test/legacy_app_instance') ]",
+				"ret = [ dbus.ObjectPath('/com/test/legacy_app_instance'), dbus.ObjectPath('/com/test/legacy_app_instance2')]",
 				NULL);
 
 			DbusTestDbusMockObject * linstobj = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
@@ -197,6 +205,13 @@ class LibUAL : public ::testing::Test
 				G_VARIANT_TYPE("a(si)"),
 				g_variant_new_parsed("[('main', 5678)]"),
 				NULL);
+
+			DbusTestDbusMockObject* linstobj2 = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance2",
+																			   "com.ubuntu.Upstart0_6.Instance", NULL);
+			dbus_test_dbus_mock_object_add_property(mock, linstobj2, "name", G_VARIANT_TYPE_STRING,
+													g_variant_new_string("single-"), NULL);
+			dbus_test_dbus_mock_object_add_property(mock, linstobj2, "processes", G_VARIANT_TYPE("a(si)"),
+													g_variant_new_parsed("[('main', 5678)]"), NULL);
 
 			/*  Untrusted Helper */
 			DbusTestDbusMockObject * uhelperobj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);

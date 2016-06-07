@@ -459,6 +459,8 @@ TEST_F(LibUAL, ApplicationLog)
     appid = ubuntu::app_launch::AppID::find("single");
     app = ubuntu::app_launch::Application::create(appid, registry);
 
+	ASSERT_LT(0, app->instances().size());
+
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
               app->instances()[0]->logPath());
 

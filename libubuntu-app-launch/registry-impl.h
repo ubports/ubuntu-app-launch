@@ -67,7 +67,7 @@ public:
     std::vector<pid_t> pidsFromCgroup(const std::string& job, const std::string& instance);
 
     /* Upstart Jobs */
-    std::vector<std::string> upstartInstancesForJob(const std::string& job);
+    std::list<std::string> upstartInstancesForJob(const std::string& job);
     std::string upstartJobPath(const std::string& job);
 
 private:
