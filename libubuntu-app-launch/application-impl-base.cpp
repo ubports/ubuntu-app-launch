@@ -360,22 +360,23 @@ void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
     std::string pidstr = std::to_string(pid);
     std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomstr.c_str(), nullptr};
 
-    g_debug("Excuting OOM Helper: %s", std::accumulate(args.begin(), args.end(), std::string{},
-                                                       [](const std::string& instr, const char* output) -> std::string {
-                                                           if (instr.empty())
-                                                           {
-                                                               return output;
-                                                           }
-                                                           else if (output != nullptr)
-                                                           {
-                                                               return instr + " " + std::string(output);
-                                                           }
-                                                           else
-                                                           {
-                                                               return instr;
-                                                           }
-                                                       })
-                                           .c_str());
+    g_debug("Excuting OOM Helper (pid: %d, score: %d): %s", int(pid), int(oomvalue),
+            std::accumulate(args.begin(), args.end(), std::string{},
+                            [](const std::string& instr, const char* output) -> std::string {
+                                if (instr.empty())
+                                {
+                                    return output;
+                                }
+                                else if (output != nullptr)
+                                {
+                                    return instr + " " + std::string(output);
+                                }
+                                else
+                                {
+                                    return instr;
+                                }
+                            })
+                .c_str());
 
     g_spawn_async(nullptr,               /* working dir */
                   (char**)(args.data()), /* args */
