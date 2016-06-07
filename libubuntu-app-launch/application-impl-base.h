@@ -89,8 +89,8 @@ private:
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
     void signalToPid(pid_t pid, int signal);
     std::string pidToOomPath(pid_t pid);
-    void oomValueToPid(pid_t pid, const std::string& oomvalue);
-    void oomValueToPidHelper(pid_t pid, const std::string& oomvalue);
+    void oomValueToPid(pid_t pid, const oom::Score oomvalue);
+    void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
     void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal);
 };
 

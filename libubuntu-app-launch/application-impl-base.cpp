@@ -181,11 +181,10 @@ void UpstartInstance::pause()
 {
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
 
-    auto oomstr = std::to_string(static_cast<std::int32_t>(oom::paused()));
-    auto pids = forAllPids([this, &oomstr](pid_t pid) {
+    auto pids = forAllPids([this](pid_t pid) {
         g_debug("Pausing PID: %d", pid);
         signalToPid(pid, SIGSTOP);
-        oomValueToPid(pid, oomstr);
+        oomValueToPid(pid, oom::paused());
     });
 
     pidListToDbus(pids, "ApplicationPaused");
@@ -195,11 +194,10 @@ void UpstartInstance::resume()
 {
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
 
-    auto oomstr = std::to_string(static_cast<std::int32_t>(oom::focused()));
-    auto pids = forAllPids([this, &oomstr](pid_t pid) {
+    auto pids = forAllPids([this](pid_t pid) {
         g_debug("Resuming PID: %d", pid);
         signalToPid(pid, SIGCONT);
-        oomValueToPid(pid, oomstr);
+        oomValueToPid(pid, oom::focused());
     });
 
     pidListToDbus(pids, "ApplicationResumed");
@@ -214,8 +212,7 @@ void UpstartInstance::stop()
     the value to each of their files in proc */
 void UpstartInstance::setOomAdjustment(const oom::Score score)
 {
-    auto scorestr = std::to_string(static_cast<std::int32_t>(score));
-    forAllPids([this, &scorestr](pid_t pid) { oomValueToPid(pid, scorestr); });
+    forAllPids([this, &score](pid_t pid) { oomValueToPid(pid, score); });
 }
 
 /** Figures out the path to the primary PID of the application and
@@ -308,8 +305,9 @@ std::string UpstartInstance::pidToOomPath(pid_t pid)
 
 /** Writes an OOM value to proc, assuming we have a string
     in the outer loop */
-void UpstartInstance::oomValueToPid(pid_t pid, const std::string& oomvalue)
+void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
 {
+    auto oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
     auto path = pidToOomPath(pid);
     FILE* adj = fopen(path.c_str(), "w");
     int openerr = errno;
@@ -333,33 +331,34 @@ void UpstartInstance::oomValueToPid(pid_t pid, const std::string& oomvalue)
                 return;
             }
             default:
-                g_warning("Unable to set OOM value for '%d' to '%s': %s", int(pid), oomvalue.c_str(),
+                g_warning("Unable to set OOM value for '%d' to '%s': %s", int(pid), oomstr.c_str(),
                           std::strerror(openerr));
                 return;
         }
     }
 
-    size_t writesize = fwrite(oomvalue.c_str(), 1, oomvalue.size(), adj);
+    size_t writesize = fwrite(oomstr.c_str(), 1, oomstr.size(), adj);
     int writeerr = errno;
     fclose(adj);
 
-    if (writesize == oomvalue.size())
+    if (writesize == oomstr.size())
         return;
 
     if (writeerr != 0)
-        g_warning("Unable to set OOM value for '%d' to '%s': %s", int(pid), oomvalue.c_str(), strerror(writeerr));
+        g_warning("Unable to set OOM value for '%d' to '%s': %s", int(pid), oomstr.c_str(), strerror(writeerr));
     else
         /* No error, but yet, wrong size. Not sure, what could cause this. */
-        g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", int(pid), oomvalue.c_str(), int(writesize));
+        g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", int(pid), oomstr.c_str(), int(writesize));
 }
 
 /** Use a setuid root helper for setting the oom value of
     Chromium instances */
-void UpstartInstance::oomValueToPidHelper(pid_t pid, const std::string& oomvalue)
+void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
 {
     GError* error = nullptr;
+    std::string oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
     std::string pidstr = std::to_string(pid);
-    std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomvalue.c_str(), nullptr};
+    std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomstr.c_str(), nullptr};
 
     g_debug("Excuting OOM Helper: %s", std::accumulate(args.begin(), args.end(), std::string{},
                                                        [](const std::string& instr, const char* output) -> std::string {
