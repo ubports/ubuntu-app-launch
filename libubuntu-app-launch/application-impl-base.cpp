@@ -171,7 +171,9 @@ std::string UpstartInstance::logPath()
 
 std::vector<pid_t> UpstartInstance::pids()
 {
-    return registry_->impl->pidsFromCgroup(job_, instance_);
+    auto pids = registry_->impl->pidsFromCgroup(job_, instance_);
+    g_debug("Got %d PIDs for AppID '%s'", int(pids.size()), std::string(appId_).c_str());
+    return pids;
 }
 
 void UpstartInstance::pause()
