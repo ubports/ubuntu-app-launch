@@ -32,5 +32,5 @@ std::shared_ptr<Helper> Helper::create(Type type, AppID appid, std::shared_ptr<R
     return std::make_shared<helper_impls::Click>(type, appid, registry);
 }
 
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+}  // namespace AppLaunch
+}  // namespace Ubuntu

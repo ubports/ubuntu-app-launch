@@ -157,6 +157,6 @@ std::shared_ptr<Application::Instance> Base::launchTest(const std::vector<Applic
     return std::make_shared<BaseInstance>(appIdStr);
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu
