@@ -61,6 +61,8 @@ public:
     */
     static std::shared_ptr<Application> create(const AppID& appid, const std::shared_ptr<Registry>& registry);
 
+    virtual ~Application() = default;
+
     /* System level info */
     /** Get the Application ID of this Application */
     virtual AppID appId() = 0;
