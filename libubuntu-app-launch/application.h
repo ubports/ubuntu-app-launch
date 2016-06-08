@@ -93,6 +93,8 @@ public:
         /** \private */
         typedef TypeTagger<IconPathTag, std::string> IconPath;
 
+        virtual ~Info() = default;
+
         /** Name of the application */
         virtual const Name& name() = 0;
         /** Textual description of the application */
@@ -190,6 +192,8 @@ public:
     class Instance
     {
     public:
+        virtual ~Instance() = default;
+
         /* Query lifecycle */
         /** Check to see if the instance is currently running. The object can
             exist even after the instance has stopped running. */
