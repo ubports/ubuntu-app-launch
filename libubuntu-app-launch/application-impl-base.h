@@ -47,6 +47,6 @@ protected:
     std::shared_ptr<Registry> _registry;
 };
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+} // namespace app_impls
+} // namespace app_launch
+} // namespace ubuntu

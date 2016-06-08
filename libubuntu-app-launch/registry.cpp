@@ -95,5 +95,5 @@ std::shared_ptr<Registry> Registry::getDefault()
     return defaultRegistry;
 }
 
-};  // namespace app_launch
-};  // namespace ubuntu
+} // namespace app_launch
+} // namespace ubuntu

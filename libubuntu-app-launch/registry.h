@@ -122,7 +122,7 @@ public:
     std::unique_ptr<Impl> impl;
 };
 
-};  // namespace app_launch
-};  // namespace ubuntu
+} // namespace app_launch
+} // namespace ubuntu
 
 #pragma GCC visibility pop

@@ -52,6 +52,6 @@ private:
     std::string _basedir;
 };
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+} // namespace app_impls
+} // namespace app_launch
+} // namespace ubuntu

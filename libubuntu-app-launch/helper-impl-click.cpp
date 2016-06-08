@@ -171,6 +171,6 @@ std::list<std::shared_ptr<Helper>> Click::running(Helper::Type type, std::shared
     });
 }
 
-};  // namespace helper_impl
-};  // namespace app_launch
-};  // namespace ubuntu
+} // namespace helper_impl
+} // namespace app_launch
+} // namespace ubuntu

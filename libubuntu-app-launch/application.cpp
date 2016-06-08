@@ -219,5 +219,5 @@ AppID AppID::discover(const std::string& package, const std::string& appname, Ve
     return appid;
 }
 
-};  // namespace app_launch
-};  // namespace ubuntu
+} // namespace app_launch
+} // namespace ubuntu

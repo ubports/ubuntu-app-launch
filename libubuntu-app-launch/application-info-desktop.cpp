@@ -272,6 +272,6 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
 {
 }
 
-};  // namespace app_info
-};  // namespace app_launch
-};  // namespace ubuntu
+} // namespace app_info
+} // namespace app_launch
+} // namespace ubuntu

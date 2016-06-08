@@ -152,6 +152,6 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
     return applist;
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+} // namespace app_impls
+} // namespace app_launch
+} // namespace ubuntu
