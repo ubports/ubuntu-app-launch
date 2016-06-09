@@ -35,16 +35,63 @@ namespace app_impls
 class Base : public ubuntu::app_launch::Application
 {
 public:
-    Base(const std::shared_ptr<Registry> &registry);
+    Base(const std::shared_ptr<Registry>& registry);
 
     bool hasInstances() override;
-    std::vector<std::shared_ptr<Instance>> instances() override;
-
-    std::shared_ptr<Instance> launch(const std::vector<Application::URL> &urls = {}) override;
-    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL> &urls = {}) override;
 
 protected:
     std::shared_ptr<Registry> _registry;
+};
+
+class UpstartInstance : public Application::Instance
+{
+public:
+    explicit UpstartInstance(const AppID& appId,
+                             const std::string& job,
+                             const std::string& instance,
+                             const std::shared_ptr<Registry>& registry);
+
+    /* Query lifecycle */
+    bool isRunning() override;
+    pid_t primaryPid() override;
+    bool hasPid(pid_t pid) override;
+    std::string logPath() override;
+    std::vector<pid_t> pids() override;
+
+    /* Manage lifecycle */
+    void pause() override;
+    void resume() override;
+    void stop() override;
+
+    /* OOM Functions */
+    void setOomAdjustment(const oom::Score score) override;
+    const oom::Score getOomAdjustment() override;
+
+    /* Creating by launch */
+    enum class launchMode
+    {
+        STANDARD,
+        TEST
+    };
+    static std::shared_ptr<UpstartInstance> launch(const AppID& appId,
+                                                   const std::string& job,
+                                                   const std::string& instance,
+                                                   const std::vector<Application::URL>& urls,
+                                                   const std::shared_ptr<Registry>& registry,
+                                                   launchMode mode);
+
+private:
+    const AppID appId_;
+    const std::string job_;
+    const std::string instance_;
+    std::shared_ptr<Registry> registry_;
+
+    std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
+    void signalToPid(pid_t pid, int signal);
+    std::string pidToOomPath(pid_t pid);
+    void oomValueToPid(pid_t pid, const oom::Score oomvalue);
+    void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
+    void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal);
 };
 
 };  // namespace app_impls

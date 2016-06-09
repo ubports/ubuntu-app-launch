@@ -269,10 +269,12 @@ desktop_exec_segment_parse (GArray * finalarray, const gchar * execsegment, gcha
 
 	/* Handle %F and %U as an argument on their own as per the spec */
 	if (g_strcmp0(execsegment, "%U") == 0) {
-		return file_list_handling(finalarray, uri_list, g_strdup);
+		file_list_handling(finalarray, uri_list, g_strdup);
+		return;
 	}
 	if (g_strcmp0(execsegment, "%F") == 0) {
-		return file_list_handling(finalarray, uri_list, uri2file);
+		file_list_handling(finalarray, uri_list, uri2file);
+		return;
 	}
 
 	/* Start looking at individual codes */

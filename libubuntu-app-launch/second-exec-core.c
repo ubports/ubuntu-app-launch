@@ -364,24 +364,16 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 }
 
 gboolean
-second_exec (const gchar * app_id, const gchar * appuris)
+second_exec (GDBusConnection * session, GCancellable * cancel, const gchar * app_id, const gchar * appuris)
 {
 	ual_tracepoint(second_exec_start, app_id, appuris);
-
-	/* DBus tell us! */
 	GError * error = NULL;
-	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-	if (error != NULL) {
-		g_error("Unable to get session bus");
-		g_error_free(error);
-		return FALSE;
-	}
 
 	/* Setup our continuation data */
 	second_exec_t * data = g_new0(second_exec_t, 1);
 	data->appid = g_strdup(app_id);
 	data->input_uris = g_strdup(appuris);
-	data->bus = session;
+	data->bus = g_object_ref(session);
 
 	/* Set up listening for the unfrozen signal from Unity */
 	data->signal = g_dbus_connection_signal_subscribe(session,
@@ -463,6 +455,7 @@ second_exec_complete (second_exec_t * data)
 	}
 
 	ual_tracepoint(second_exec_finish, data->appid);
+	g_debug("Second Exec complete");
 
 	/* Clean up */
 	if (data->signal != 0)
