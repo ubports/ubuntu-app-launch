@@ -57,6 +57,6 @@ private:
     std::shared_ptr<Registry> _registry;
 };
 
-} // namespace helper_impl
-} // namespace app_launch
-} // namespace ubuntu
+}  // namespace helper_impl
+}  // namespace app_launch
+}  // namespace ubuntu

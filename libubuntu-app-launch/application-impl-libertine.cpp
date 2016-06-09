@@ -136,6 +136,6 @@ std::shared_ptr<Application::Info> Libertine::info()
     return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry);
 }
 
-} // namespace app_impls
-} // namespace app_launch
-} // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

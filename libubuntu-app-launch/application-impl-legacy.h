@@ -41,7 +41,7 @@ public:
 
     AppID appId() override
     {
-        return {package : AppID::Package::from_raw({}), appname : _appname, version : AppID::Version::from_raw({})};
+        return {AppID::Package::from_raw({}), _appname, AppID::Version::from_raw({})};
     }
 
     std::shared_ptr<Info> info() override;
@@ -54,6 +54,6 @@ private:
     std::shared_ptr<GKeyFile> _keyfile;
 };
 
-} // namespace app_impls
-} // namespace app_launch
-} // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

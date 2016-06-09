@@ -75,5 +75,5 @@ private:
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 };
 
-} // namespace app_launch
-} // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu

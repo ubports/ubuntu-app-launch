@@ -85,6 +85,6 @@ private:
     Application::Info::UbuntuLifecycle _ubuntuLifecycle;
 };
 
-} // namespace AppInfo
-} // namespace AppLaunch
-} // namespace Ubuntu
+}  // namespace AppInfo
+}  // namespace AppLaunch
+}  // namespace Ubuntu

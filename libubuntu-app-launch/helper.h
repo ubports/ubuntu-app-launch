@@ -116,7 +116,7 @@ public:
     virtual std::shared_ptr<Instance> launch(MirPromptSession* session, std::vector<URL> urls = {}) = 0;
 };
 
-} // namespace app_launch
-} // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu
 
 #pragma GCC visibility pop

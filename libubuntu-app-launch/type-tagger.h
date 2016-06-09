@@ -45,5 +45,5 @@ private:
     T _value; /**< The memory allocation for the fundamental type */
 };
 
-} // namespace app_launch
-} // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu
