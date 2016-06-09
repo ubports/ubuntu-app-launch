@@ -30,10 +30,10 @@ namespace oom
 enum class Score : std::int32_t;
 
 /** Get the OOM Score that should be associated with an application that
-        is focused. */
+    is focused. */
 const Score focused();
 /** Get the OOM Score that should be associated with an application that
-        is pause. */
+    is pause. */
 const Score paused();
 /** Create a new OOM Score value with a label for debugging messages. This
     function will throw a warning if the value isn't between focused() and

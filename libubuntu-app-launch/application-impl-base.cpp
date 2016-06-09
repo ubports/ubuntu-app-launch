@@ -179,6 +179,7 @@ std::vector<pid_t> UpstartInstance::pids()
 
 void UpstartInstance::pause()
 {
+    g_debug("Pausing application: %s", std::string(appId_).c_str());
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
 
     auto pids = forAllPids([this](pid_t pid) {
@@ -193,6 +194,7 @@ void UpstartInstance::pause()
 
 void UpstartInstance::resume()
 {
+    g_debug("Resuming application: %s", std::string(appId_).c_str());
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
 
     auto pids = forAllPids([this](pid_t pid) {
