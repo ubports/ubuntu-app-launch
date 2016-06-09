@@ -46,6 +46,8 @@ application-impl-legacy.h
 application-impl-legacy.cpp
 application-impl-libertine.h
 application-impl-libertine.cpp
+application-impl-snap.h
+application-impl-snap.cpp
 application-info-desktop.cpp
 application-icon-finder.cpp
 helper-impl-click.cpp
