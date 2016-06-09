@@ -219,7 +219,7 @@ void Registry::Impl::initCGManager()
     });
 
     cgManager_ = future.get();
-    thread.timeoutSeconds(std::chrono::minutes{5}, [this]() { cgManager_.reset(); });
+    thread.timeoutSeconds(std::chrono::seconds{10}, [this]() { cgManager_.reset(); });
 }
 
 /** Get a list of PIDs from a CGroup, uses the CGManager connection to list
