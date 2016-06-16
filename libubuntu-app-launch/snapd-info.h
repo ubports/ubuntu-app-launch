@@ -19,6 +19,11 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
+#include "appid.h"
+
 namespace ubuntu
 {
 namespace app_launch
@@ -33,6 +38,13 @@ class Info
 public:
     Info();
     virtual ~Info() = default;
+
+    struct AppInfo
+    {
+    };
+    std::shared_ptr<AppInfo> appInfo(AppID &appid);
+
+    std::vector<AppID> appsForInterface(const std::string &interface);
 };
 
 }  // namespace snapd

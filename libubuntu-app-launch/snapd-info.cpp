@@ -19,6 +19,8 @@
 
 #include "snapd-info.h"
 
+#include <curl/curl.h>
+
 namespace ubuntu
 {
 namespace app_launch
@@ -30,7 +32,33 @@ namespace snapd
 
 Info::Info()
 {
+}
 
+std::shared_ptr<Info::AppInfo> Info::appInfo(AppID &appid)
+{
+    return {};
+}
+
+std::vector<AppID> Info::appsForInterface(const std::string &interface)
+{
+    CURL *curl = curl_easy_init();
+    if (curl == nullptr)
+    {
+        return {};
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, "http://example.com");
+    auto res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK)
+    {
+        curl_easy_cleanup(curl);
+        return {};
+    }
+
+    curl_easy_cleanup(curl);
+
+    return {};
 }
 
 }  // namespace snapd

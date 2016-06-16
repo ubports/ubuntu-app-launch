@@ -30,7 +30,6 @@ namespace snapd
 
 EventWatcher::EventWatcher()
 {
-
 }
 
 }  // namespace snapd
