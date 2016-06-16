@@ -54,6 +54,8 @@ helper-impl-click.cpp
 glib-thread.cpp
 snapd-event-watcher.h
 snapd-event-watcher.cpp
+snapd-info.h
+snapd-info.cpp
 )
 
 set(LAUNCHER_SOURCES
