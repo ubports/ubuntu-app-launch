@@ -22,6 +22,8 @@
 #include <memory>
 #include <vector>
 
+#include <json-glib/json-glib.h>
+
 #include "appid.h"
 
 namespace ubuntu
@@ -45,6 +47,9 @@ public:
     std::shared_ptr<AppInfo> appInfo(AppID &appid);
 
     std::vector<AppID> appsForInterface(const std::string &interface);
+
+private:
+    std::shared_ptr<JsonParser> snapdJson(const std::string &endpoint);
 };
 
 }  // namespace snapd
