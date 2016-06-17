@@ -49,7 +49,7 @@ public:
     std::vector<AppID> appsForInterface(const std::string &interface);
 
 private:
-    std::shared_ptr<JsonParser> snapdJson(const std::string &endpoint);
+    std::shared_ptr<JsonNode> snapdJson(const std::string &endpoint);
 };
 
 }  // namespace snapd

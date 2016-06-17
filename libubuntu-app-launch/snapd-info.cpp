@@ -39,7 +39,7 @@ std::shared_ptr<Info::AppInfo> Info::appInfo(AppID &appid)
     return {};
 }
 
-std::shared_ptr<JsonParser> Info::snapdJson(const std::string &endpoint)
+std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
 {
     /* Setup the CURL connection and suck some data */
     CURL *curl = curl_easy_init();
@@ -88,14 +88,55 @@ std::shared_ptr<JsonParser> Info::snapdJson(const std::string &endpoint)
         throw std::runtime_error("Can not parse JSON response");
     }
 
-    return parser;
+    auto root = json_parser_get_root(parser.get());
+    auto rootobj = json_node_get_object(root);
+
+    if (rootobj == nullptr)
+    {
+        throw std::runtime_error("Root of JSON result isn't an object");
+    }
+
+    /* Check members */
+    for (auto member : {"status",
+                        "status-code"
+                        "result",
+                        "type"})
+    {
+        if (!json_object_has_member(rootobj, member))
+        {
+            throw std::runtime_error("Resulting JSON didn't have a '" + std::string(member) + "'");
+        }
+    }
+
+    auto status = json_object_get_int_member(rootobj, "status-code");
+    if (status != 200)
+    {
+        throw std::runtime_error("Status code is: " + std::to_string(status));
+    }
+
+    std::string statusstr = json_object_get_string_member(rootobj, "status");
+    if (statusstr != "OK")
+    {
+        throw std::runtime_error("Status string is: " + statusstr);
+    }
+
+    std::string typestr = json_object_get_string_member(rootobj, "type");
+    if (typestr != "sync")
+    {
+        throw std::runtime_error("We only support 'sync' results right now, but we got a: " + typestr);
+    }
+
+    auto result = std::shared_ptr<JsonNode>((JsonNode *)g_object_ref(json_object_get_member(rootobj, "result")),
+                                            [](JsonNode *node) { g_clear_object(&node); });
+
+    return result;
 }
 
 std::vector<AppID> Info::appsForInterface(const std::string &interface)
 {
     try
     {
-        auto parser = snapdJson("/v2/interfaces");
+        auto interfaces = snapdJson("/v2/interfaces");
     }
     catch (std::runtime_error &e)
     {
