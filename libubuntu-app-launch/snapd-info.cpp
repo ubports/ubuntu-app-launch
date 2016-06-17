@@ -56,6 +56,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, [](char *ptr, size_t size, size_t nmemb, void *userdata) -> size_t {
         unsigned int i;
         std::vector<char> *data = static_cast<std::vector<char> *>(userdata);
+        data->reserve(data->size() + (size * nmemb)); /* allocate once */
         for (i = 0; i < size * nmemb; i++)
         {
             data->push_back(ptr[i]);
