@@ -70,7 +70,23 @@ public:
              const std::shared_ptr<Registry>& registry,
              const std::string& interface,
              const std::string& snapDir)
-        : Desktop([appid, snapDir]() -> std::shared_ptr<GKeyFile> { return {}; }(), snapDir, registry, false)
+        : Desktop(
+              [appid, snapDir]() -> std::shared_ptr<GKeyFile> {
+                  std::string path = snapDir + "/meta/gui/" + appid.appname.value() + ".desktop";
+                  std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), g_key_file_free);
+                  GError* error = nullptr;
+                  g_key_file_load_from_file(keyfile.get(), path.c_str(), G_KEY_FILE_NONE, &error);
+                  if (error != nullptr)
+                  {
+                      auto perror = std::shared_ptr<GError>(error, g_error_free);
+                      throw std::runtime_error(perror.get()->message);
+                  }
+
+                  return keyfile;
+              }(),
+              snapDir,
+              registry,
+              false)
         , interface_(interface)
     {
     }
