@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <list>
 #include <memory>
 #include <vector>
 
@@ -43,6 +44,10 @@ public:
 
     struct AppInfo
     {
+        std::string name;
+        std::string version;
+        int revision;
+        std::list<std::string> apps;
     };
     std::shared_ptr<AppInfo> appInfo(AppID &appid);
 

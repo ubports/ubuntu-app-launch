@@ -36,7 +36,85 @@ Info::Info()
 
 std::shared_ptr<Info::AppInfo> Info::appInfo(AppID &appid)
 {
-    return {};
+    try
+    {
+        auto snapnode = snapdJson("/v2/snap/" + appid.package.value());
+        auto snapobject = json_node_get_object(snapnode.get());
+        if (snapobject == nullptr)
+        {
+            throw std::runtime_error("Results returned by snapd were not a valid JSON object");
+        }
+
+        for (auto member : {"name", "status", "revision", "type", "apps", "version"})
+        {
+            if (!json_object_has_member(snapobject, member))
+            {
+                throw std::runtime_error("Snap JSON didn't have a '" + std::string(member) + "'");
+            }
+        }
+
+        std::string namestr = json_object_get_string_member(snapobject, "name");
+        if (namestr != appid.package.value())
+        {
+            throw std::runtime_error("Snapd returned information for snap '" + namestr + "' when we asked for '" +
+                                     appid.package.value() + "'");
+        }
+
+        std::string statusstr = json_object_get_string_member(snapobject, "status");
+        if (statusstr != "active")
+        {
+            throw std::runtime_error("Snap is not in the 'active' state.");
+        }
+
+        std::string typestr = json_object_get_string_member(snapobject, "type");
+        if (typestr != "app")
+        {
+            throw std::runtime_error("Specified snap is not an application, we only support applications");
+        }
+
+        auto revision = json_object_get_int_member(snapobject, "revision");
+        auto revisionstr = std::to_string(revision);
+        if (revisionstr != appid.version.value())
+        {
+            std::string message = "Revision mismatch in request and info given. Expected: '" + appid.version.value() +
+                                  "'  Given: '" + revisionstr + "'";
+            if (appid.version.value() == "0")
+            {
+                /* We are special casing this to be a wild card for now
+                   because we know that the interface code isn't returning
+                   a revision, so we need to handle that. When the interface
+                   interface gets fixed we can remove this special case. */
+                g_warning("%s", message.c_str());
+            }
+            else
+            {
+                throw std::runtime_error(message);
+            }
+        }
+
+        /******************************************/
+        /* Validation complete — build the object */
+        /******************************************/
+
+        auto pkgstruct = std::make_shared<AppInfo>();
+        pkgstruct->name = namestr;
+        pkgstruct->version = json_object_get_string_member(snapobject, "version");
+        pkgstruct->revision = revision;
+
+        auto apparray = json_object_get_array_member(snapobject, "apps");
+        for (unsigned int i = 0; i < json_array_get_length(apparray); i++)
+        {
+            auto appname = json_array_get_string_element(apparray, i);
+            pkgstruct->apps.emplace_back(std::string(appname));
+        }
+
+        return pkgstruct;
+    }
+    catch (std::runtime_error &e)
+    {
+        g_warning("Unable to get snap information for '%s': %s", std::string(appid).c_str(), e.what());
+        return {};
+    }
 }
 
 std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
