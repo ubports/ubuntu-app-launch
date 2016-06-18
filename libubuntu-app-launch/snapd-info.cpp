@@ -133,11 +133,90 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
     return result;
 }
 
-std::vector<AppID> Info::appsForInterface(const std::string &interface)
+std::vector<AppID> Info::appsForInterface(const std::string &in_interface)
 {
     try
     {
-        auto interfaces = snapdJson("/v2/interfaces");
+        auto interfacesnode = snapdJson("/v2/interfaces");
+        auto interface = json_node_get_object(interfacesnode.get());
+        if (interface != nullptr)
+        {
+            throw std::runtime_error("Interfaces result isn't an object");
+        }
+
+        for (auto member : {"plugs", "slots"})
+        {
+            if (!json_object_has_member(interface, member))
+            {
+                throw std::runtime_error("Interface JSON didn't have a '" + std::string(member) + "'");
+            }
+        }
+
+        auto slotarray = json_object_get_array_member(interface, "slots");
+        std::vector<AppID> appids;
+        for (unsigned int i = 0; i < json_array_get_length(slotarray); i++)
+        {
+            auto ifaceobj = json_array_get_object_element(slotarray, i);
+            try
+            {
+                for (auto member : {"snap", "interface", "connections"})
+                {
+                    if (!json_object_has_member(ifaceobj, member))
+                    {
+                        throw std::runtime_error("Interface JSON didn't have a '" + std::string(member) + "'");
+                    }
+                }
+
+                std::string snapname = json_object_get_string_member(ifaceobj, "snap");
+                /* Everything is ubuntu-core right now, in the future this will
+                   change, but we'll change this code then */
+                if (snapname != "ubuntu-core")
+                {
+                    continue;
+                }
+
+                std::string interfacename = json_object_get_string_member(ifaceobj, "interface");
+                if (interfacename != in_interface)
+                {
+                    continue;
+                }
+
+                auto connections = json_object_get_array_member(ifaceobj, "connections");
+                for (unsigned int j = 0; j < json_array_get_length(connections); j++)
+                {
+                    auto connectionobj = json_array_get_object_element(connections, j);
+
+                    for (auto member : {"snap", "apps"})
+                    {
+                        if (!json_object_has_member(ifaceobj, member))
+                        {
+                            continue;
+                        }
+                    }
+
+                    std::string snapname = json_object_get_string_member(connectionobj, "snap");
+                    int revision = 0;  // TODO: We don't get the revision from snapd today :-(
+
+                    auto apps = json_object_get_array_member(connectionobj, "apps");
+                    for (unsigned int k = 0; k < json_array_get_length(apps); k++)
+                    {
+                        std::string appname = json_array_get_string_element(apps, j);
+
+                        appids.emplace_back(AppID(AppID::Package::from_raw(snapname),                   /* package */
+                                                  AppID::AppName::from_raw(appname),                    /* appname */
+                                                  AppID::Version::from_raw(std::to_string(revision)))); /* version */
+                    }
+                }
+            }
+            catch (std::runtime_error &e)
+            {
+                /* We'll check the others even if one is bad */
+                g_warning("Malformed inteface instance: %s", e.what());
+                continue;
+            }
+        }
+
+        return appids;
     }
     catch (std::runtime_error &e)
     {
