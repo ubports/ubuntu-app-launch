@@ -35,7 +35,18 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
 
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
 {
-    return {};
+    std::list<std::shared_ptr<Application>> apps;
+
+    for (auto interface : {"unity7", "unity8"})
+    {
+        for (auto id : registry->impl->snapdInfo.appsForInterface(interface))
+        {
+            auto app = std::make_shared<Snap>(id, registry);
+            apps.push_back(app);
+        }
+    }
+
+    return apps;
 }
 
 AppID Snap::appId()
