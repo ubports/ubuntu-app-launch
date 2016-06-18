@@ -158,6 +158,7 @@ struct AppID
 
 bool operator==(const AppID& a, const AppID& b);
 bool operator!=(const AppID& a, const AppID& b);
+bool operator<(const AppID& a, const AppID& b);
 
 };  // namespace app_launch
 };  // namespace ubuntu

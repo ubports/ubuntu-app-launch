@@ -156,6 +156,11 @@ bool operator!=(const AppID& a, const AppID& b)
            a.version.value() != b.version.value();
 }
 
+bool operator<(const AppID& a, const AppID& b)
+{
+    return std::string(a) < std::string(b);
+}
+
 bool AppID::empty() const
 {
     return package.value().empty() && appname.value().empty() && version.value().empty();

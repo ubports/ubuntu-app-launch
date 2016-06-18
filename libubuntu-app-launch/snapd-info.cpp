@@ -20,6 +20,7 @@
 #include "snapd-info.h"
 
 #include <curl/curl.h>
+#include <vector>
 
 namespace ubuntu
 {
@@ -34,7 +35,9 @@ Info::Info()
 {
 }
 
-std::shared_ptr<Info::AppInfo> Info::appInfo(AppID &appid)
+/** Gets package information out of snapd by using the REST
+    interface and turning the JSON object into a C++ Struct */
+std::shared_ptr<Info::PkgInfo> Info::pkgInfo(AppID &appid)
 {
     try
     {
@@ -45,6 +48,9 @@ std::shared_ptr<Info::AppInfo> Info::appInfo(AppID &appid)
             throw std::runtime_error("Results returned by snapd were not a valid JSON object");
         }
 
+        /******************************************/
+        /* Validation of the object we got        */
+        /******************************************/
         for (auto member : {"name", "status", "revision", "type", "apps", "version"})
         {
             if (!json_object_has_member(snapobject, member))
@@ -96,7 +102,7 @@ std::shared_ptr<Info::AppInfo> Info::appInfo(AppID &appid)
         /* Validation complete — build the object */
         /******************************************/
 
-        auto pkgstruct = std::make_shared<AppInfo>();
+        auto pkgstruct = std::make_shared<PkgInfo>();
         pkgstruct->name = namestr;
         pkgstruct->version = json_object_get_string_member(snapobject, "version");
         pkgstruct->revision = revision;
@@ -108,6 +114,11 @@ std::shared_ptr<Info::AppInfo> Info::appInfo(AppID &appid)
             pkgstruct->apps.emplace_back(std::string(appname));
         }
 
+		/* TODO: Seems like snapd should give this to us */
+        auto gdir = g_build_filename("snap", namestr.c_str(), revisionstr.c_str(), nullptr);
+        pkgstruct->directory = gdir;
+        g_free(gdir);
+
         return pkgstruct;
     }
     catch (std::runtime_error &e)
@@ -117,6 +128,10 @@ std::shared_ptr<Info::AppInfo> Info::appInfo(AppID &appid)
     }
 }
 
+/** Asks the snapd process for some JSON. This function parses the basic
+    response JSON that snapd returns and will error if a return code error
+    is in the JSON. It then passes on the "result" part of the response
+    to the caller. */
 std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
 {
     /* Setup the CURL connection and suck some data */
@@ -128,6 +143,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
 
     std::vector<char> data;
 
+	/* Configure the command */
     curl_easy_setopt(curl, CURLOPT_URL, ("http:" + endpoint).c_str());
     curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, "/run/snapd.socket");
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
@@ -142,6 +158,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
         return i;
     });
 
+	/* Run the actual request (blocking) */
     auto res = curl_easy_perform(curl);
 
     if (res != CURLE_OK)
@@ -211,7 +228,10 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
     return result;
 }
 
-std::vector<AppID> Info::appsForInterface(const std::string &in_interface)
+/** Gets all the apps that are available for a given interface. It asks snapd
+    for the list of interfaces and then finds this one, turning it into a set
+    of AppIDs */
+std::set<AppID> Info::appsForInterface(const std::string &in_interface)
 {
     try
     {
@@ -231,7 +251,7 @@ std::vector<AppID> Info::appsForInterface(const std::string &in_interface)
         }
 
         auto slotarray = json_object_get_array_member(interface, "slots");
-        std::vector<AppID> appids;
+        std::set<AppID> appids;
         for (unsigned int i = 0; i < json_array_get_length(slotarray); i++)
         {
             auto ifaceobj = json_array_get_object_element(slotarray, i);
@@ -280,9 +300,9 @@ std::vector<AppID> Info::appsForInterface(const std::string &in_interface)
                     {
                         std::string appname = json_array_get_string_element(apps, j);
 
-                        appids.emplace_back(AppID(AppID::Package::from_raw(snapname),                   /* package */
-                                                  AppID::AppName::from_raw(appname),                    /* appname */
-                                                  AppID::Version::from_raw(std::to_string(revision)))); /* version */
+                        appids.emplace(AppID(AppID::Package::from_raw(snapname),                   /* package */
+                                             AppID::AppName::from_raw(appname),                    /* appname */
+                                             AppID::Version::from_raw(std::to_string(revision)))); /* version */
                     }
                 }
             }

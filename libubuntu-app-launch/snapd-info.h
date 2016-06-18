@@ -21,7 +21,7 @@
 
 #include <list>
 #include <memory>
-#include <vector>
+#include <set>
 
 #include <json-glib/json-glib.h>
 
@@ -42,16 +42,18 @@ public:
     Info();
     virtual ~Info() = default;
 
-    struct AppInfo
+    /** Information that we can get from snapd about a package */
+    struct PkgInfo
     {
-        std::string name;
-        std::string version;
-        int revision;
-        std::list<std::string> apps;
+        std::string name;            /**< Name of the package */
+        std::string version;         /**< Version string provided by the package */
+        int revision;                /**< Numerical always incrementing revision of the package */
+        std::list<std::string> apps; /**< The list of app names for the package */
+        std::string directory;       /**< Directory that the snap is uncompressed into */
     };
-    std::shared_ptr<AppInfo> appInfo(AppID &appid);
+    std::shared_ptr<PkgInfo> pkgInfo(AppID &appid);
 
-    std::vector<AppID> appsForInterface(const std::string &interface);
+    std::set<AppID> appsForInterface(const std::string &interface);
 
 private:
     std::shared_ptr<JsonNode> snapdJson(const std::string &endpoint);
