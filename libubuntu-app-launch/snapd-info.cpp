@@ -33,12 +33,31 @@ namespace snapd
 
 Info::Info()
 {
+    auto snapdEnv = g_getenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET");
+    if (G_UNLIKELY(snapdEnv != nullptr))
+    {
+        snapdSocket = snapdEnv;
+    }
+    else
+    {
+        snapdSocket = "/run/snapd.socket";
+    }
+
+    if (g_file_test(snapdSocket.c_str(), G_FILE_TEST_EXISTS))
+    {
+        snapdExists = true;
+    }
 }
 
 /** Gets package information out of snapd by using the REST
     interface and turning the JSON object into a C++ Struct */
-std::shared_ptr<Info::PkgInfo> Info::pkgInfo(AppID &appid)
+std::shared_ptr<Info::PkgInfo> Info::pkgInfo(AppID &appid) const
 {
+    if (!snapdExists)
+    {
+        return {};
+    }
+
     try
     {
         auto snapnode = snapdJson("/v2/snap/" + appid.package.value());
@@ -114,7 +133,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(AppID &appid)
             pkgstruct->apps.emplace_back(std::string(appname));
         }
 
-		/* TODO: Seems like snapd should give this to us */
+        /* TODO: Seems like snapd should give this to us */
         auto gdir = g_build_filename("snap", namestr.c_str(), revisionstr.c_str(), nullptr);
         pkgstruct->directory = gdir;
         g_free(gdir);
@@ -132,7 +151,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(AppID &appid)
     response JSON that snapd returns and will error if a return code error
     is in the JSON. It then passes on the "result" part of the response
     to the caller. */
-std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
+std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
 {
     /* Setup the CURL connection and suck some data */
     CURL *curl = curl_easy_init();
@@ -143,9 +162,9 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
 
     std::vector<char> data;
 
-	/* Configure the command */
+    /* Configure the command */
     curl_easy_setopt(curl, CURLOPT_URL, ("http:" + endpoint).c_str());
-    curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, "/run/snapd.socket");
+    curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, snapdSocket.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, [](char *ptr, size_t size, size_t nmemb, void *userdata) -> size_t {
         unsigned int i;
@@ -158,7 +177,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
         return i;
     });
 
-	/* Run the actual request (blocking) */
+    /* Run the actual request (blocking) */
     auto res = curl_easy_perform(curl);
 
     if (res != CURLE_OK)
@@ -231,8 +250,13 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint)
 /** Gets all the apps that are available for a given interface. It asks snapd
     for the list of interfaces and then finds this one, turning it into a set
     of AppIDs */
-std::set<AppID> Info::appsForInterface(const std::string &in_interface)
+std::set<AppID> Info::appsForInterface(const std::string &in_interface) const
 {
+    if (!snapdExists)
+    {
+        return {};
+    }
+
     try
     {
         auto interfacesnode = snapdJson("/v2/interfaces");
