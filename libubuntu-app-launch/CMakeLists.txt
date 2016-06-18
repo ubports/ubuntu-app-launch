@@ -41,6 +41,7 @@ registry-impl.h
 registry-impl.cpp
 application-impl-base.h
 application-impl-base.cpp
+application-impl-click.h
 application-impl-click.cpp
 application-impl-legacy.h
 application-impl-legacy.cpp
@@ -48,7 +49,9 @@ application-impl-libertine.h
 application-impl-libertine.cpp
 application-impl-snap.h
 application-impl-snap.cpp
+application-info-desktop.h
 application-info-desktop.cpp
+application-icon-finder.h
 application-icon-finder.cpp
 helper-impl-click.cpp
 glib-thread.cpp
@@ -65,7 +68,6 @@ click-exec.c
 desktop-exec.c
 ubuntu-app-launch-trace.c
 app-info.c
-${LAUNCHER_CPP_SOURCES}
 )
 
 add_custom_target(format
@@ -77,18 +79,9 @@ set(LAUNCHER_GEN_SOURCES
 
 add_gdbus_codegen_with_namespace(LAUNCHER_GEN_SOURCES proxy-socket-demangler com.canonical.UbuntuAppLaunch. proxy ${CMAKE_SOURCE_DIR}/data/com.canonical.UbuntuAppLaunch.SocketDemangler.xml)
 
+add_library(launcher-static ${LAUNCHER_SOURCES} ${LAUNCHER_CPP_SOURCES} ${LAUNCHER_GEN_SOURCES})
 
-add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES} ${LAUNCHER_GEN_SOURCES})
-
-set_target_properties(ubuntu-launcher PROPERTIES
-	VERSION ${ABI_VERSION}.0.0
-	SOVERSION ${ABI_VERSION}
-	OUTPUT_NAME "ubuntu-app-launch"
-	LINK_FLAGS "${ldflags} -Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libubuntu-app-launch.map"
-	LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/libubuntu-app-launch.map"
-)
-
-target_link_libraries(ubuntu-launcher
+target_link_libraries(launcher-static
 	${GLIB2_LIBARIES}
 	${GOBJECT2_LIBRARIES}
 	${LIBUPSTART_LIBRARIES}
@@ -102,6 +95,21 @@ target_link_libraries(ubuntu-launcher
 	${CURL_LIBRARIES}
 	-lpthread
 	helpers
+	-Wl,--no-undefined
+)
+
+add_library(ubuntu-launcher SHARED null.cpp)
+
+set_target_properties(ubuntu-launcher PROPERTIES
+	VERSION ${ABI_VERSION}.0.0
+	SOVERSION ${ABI_VERSION}
+	OUTPUT_NAME "ubuntu-app-launch"
+	LINK_FLAGS "${ldflags} -Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libubuntu-app-launch.map"
+	LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/libubuntu-app-launch.map"
+)
+
+target_link_libraries(ubuntu-launcher
+	launcher-static
 	-Wl,--no-undefined
 )
 

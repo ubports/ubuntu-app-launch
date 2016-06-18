@@ -31,8 +31,6 @@ namespace ubuntu
 {
 namespace app_launch
 {
-namespace app_impls
-{
 namespace snapd
 {
 
@@ -63,6 +61,5 @@ private:
 };
 
 }  // namespace snapd
-}  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

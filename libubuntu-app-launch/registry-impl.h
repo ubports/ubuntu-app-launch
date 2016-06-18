@@ -19,6 +19,7 @@
 
 #include "glib-thread.h"
 #include "registry.h"
+#include "snapd-info.h"
 #include <click.h>
 #include <gio/gio.h>
 #include <json-glib/json-glib.h>
@@ -59,6 +60,7 @@ public:
 
     GLib::ContextThread thread;
     std::shared_ptr<GDBusConnection> _dbus;
+    snapd::Info snapdInfo;
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 

@@ -17,9 +17,9 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include "application-impl-base.h"
 #include <gio/gdesktopappinfo.h>
 #include <json-glib/json-glib.h>
-#include "application-impl-base.h"
 
 #pragma once
 
@@ -44,8 +44,9 @@ public:
 
     std::vector<std::shared_ptr<Instance>> instances() override;
 
-    std::shared_ptr<Instance> launch(const std::vector<Application::URL> &urls = {}) override;
-    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL> &urls = {}) override;
+    std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
+    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
+
 private:
     AppID _appid;
 
