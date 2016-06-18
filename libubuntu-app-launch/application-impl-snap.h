@@ -18,8 +18,7 @@
  */
 
 #include "application-impl-base.h"
-#include <gio/gdesktopappinfo.h>
-#include <json-glib/json-glib.h>
+#include "snapd-info.h"
 
 #pragma once
 
@@ -33,7 +32,7 @@ namespace app_impls
 class Snap : public Base
 {
 public:
-    Snap(const AppID& appid, const std::shared_ptr<Registry>& registry);
+    Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface);
 
     static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
 
@@ -47,10 +46,10 @@ public:
     std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
 
 private:
-    AppID _appid;
-
-    std::shared_ptr<JsonObject> _manifest;
-    std::shared_ptr<GKeyFile> _keyfile;
+    AppID appid_;
+    std::shared_ptr<Info> info_;
+    std::string interface_;
+    std::shared_ptr<snapd::Info::PkgInfo> pkgInfo_;
 };
 
 }  // namespace app_impls

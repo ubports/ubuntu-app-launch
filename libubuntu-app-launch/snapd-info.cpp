@@ -49,7 +49,7 @@ Info::Info()
 
 /** Gets package information out of snapd by using the REST
     interface and turning the JSON object into a C++ Struct */
-std::shared_ptr<Info::PkgInfo> Info::pkgInfo(AppID &appid) const
+std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
 {
     if (!snapdExists)
     {

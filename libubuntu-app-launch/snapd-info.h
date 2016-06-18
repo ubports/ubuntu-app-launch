@@ -49,7 +49,7 @@ public:
         std::list<std::string> apps; /**< The list of app names for the package */
         std::string directory;       /**< Directory that the snap is uncompressed into */
     };
-    std::shared_ptr<PkgInfo> pkgInfo(AppID &appid) const;
+    std::shared_ptr<PkgInfo> pkgInfo(const AppID &appid) const;
 
     std::set<AppID> appsForInterface(const std::string &interface) const;
 

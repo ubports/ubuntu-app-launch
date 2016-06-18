@@ -28,9 +28,16 @@ namespace app_launch
 namespace app_impls
 {
 
-Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
+Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface)
     : Base(registry)
+    , appid_(appid)
+    , interface_(interface)
 {
+    pkgInfo_ = registry->impl->snapdInfo.pkgInfo(appid);
+    if (pkgInfo_ == nullptr)
+    {
+        throw std::runtime_error("Unable to get snap package info for AppID: " + std::string(appid));
+    }
 }
 
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
@@ -41,7 +48,7 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
     {
         for (auto id : registry->impl->snapdInfo.appsForInterface(interface))
         {
-            auto app = std::make_shared<Snap>(id, registry);
+            auto app = std::make_shared<Snap>(id, registry, interface);
             apps.push_back(app);
         }
     }
@@ -51,12 +58,44 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
 
 AppID Snap::appId()
 {
-    return _appid;
+    return appid_;
 }
+
+class SnapInfo : public app_info::Desktop
+{
+    std::string interface_;
+
+public:
+    SnapInfo(const AppID& appid,
+             const std::shared_ptr<Registry>& registry,
+             const std::string& interface,
+             const std::string& snapDir)
+        : Desktop([appid, snapDir]() -> std::shared_ptr<GKeyFile> { return {}; }(), snapDir, registry, false)
+        , interface_(interface)
+    {
+    }
+
+    UbuntuLifecycle supportsUbuntuLifecycle() override
+    {
+        if (interface_ == "unity8")
+        {
+            return UbuntuLifecycle::from_raw(true);
+        }
+        else
+        {
+            return UbuntuLifecycle::from_raw(false);
+        }
+    }
+};
 
 std::shared_ptr<Application::Info> Snap::info()
 {
-    return {};
+    if (info_ == nullptr)
+    {
+        info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
+    }
+
+    return info_;
 }
 
 std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
