@@ -19,6 +19,8 @@
 
 #include "snapd-info.h"
 
+#include "registry-impl.h"
+
 #include <curl/curl.h>
 #include <vector>
 
@@ -145,6 +147,18 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
     }
 }
 
+static size_t snapd_writefunc(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+    unsigned int i;
+    std::vector<char> *data = static_cast<std::vector<char> *>(userdata);
+    data->reserve(data->size() + (size * nmemb)); /* allocate once */
+    for (i = 0; i < size * nmemb; i++)
+    {
+        data->push_back(ptr[i]);
+    }
+    return i;
+}
+
 /** Asks the snapd process for some JSON. This function parses the basic
     response JSON that snapd returns and will error if a return code error
     is in the JSON. It then passes on the "result" part of the response
@@ -161,19 +175,13 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     std::vector<char> data;
 
     /* Configure the command */
+    // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 100L);
     curl_easy_setopt(curl, CURLOPT_URL, ("http:" + endpoint).c_str());
     curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, snapdSocket.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, [](char *ptr, size_t size, size_t nmemb, void *userdata) -> size_t {
-        unsigned int i;
-        std::vector<char> *data = static_cast<std::vector<char> *>(userdata);
-        data->reserve(data->size() + (size * nmemb)); /* allocate once */
-        for (i = 0; i < size * nmemb; i++)
-        {
-            data->push_back(ptr[i]);
-        }
-        return i;
-    });
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, snapd_writefunc);
 
     /* Run the actual request (blocking) */
     auto res = curl_easy_perform(curl);
@@ -181,7 +189,11 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     if (res != CURLE_OK)
     {
         curl_easy_cleanup(curl);
-        throw std::runtime_error("snapd HTTP server returned an error");
+        throw std::runtime_error("snapd HTTP server returned an error: " + std::string(curl_easy_strerror(res)));
+    }
+    else
+    {
+        g_debug("Got %d bytes from snapd", int(data.size()));
     }
 
     curl_easy_cleanup(curl);
@@ -210,10 +222,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     }
 
     /* Check members */
-    for (auto member : {"status",
-                        "status-code"
-                        "result",
-                        "type"})
+    for (auto member : {"status", "status-code", "result", "type"})
     {
         if (!json_object_has_member(rootobj, member))
         {
@@ -239,8 +248,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
         throw std::runtime_error("We only support 'sync' results right now, but we got a: " + typestr);
     }
 
-    auto result = std::shared_ptr<JsonNode>((JsonNode *)g_object_ref(json_object_get_member(rootobj, "result")),
-                                            [](JsonNode *node) { g_clear_object(&node); });
+    auto result = std::shared_ptr<JsonNode>(json_node_ref(json_object_get_member(rootobj, "result")), json_node_unref);
 
     return result;
 }
@@ -259,9 +267,9 @@ std::set<AppID> Info::appsForInterface(const std::string &in_interface) const
     {
         auto interfacesnode = snapdJson("/v2/interfaces");
         auto interface = json_node_get_object(interfacesnode.get());
-        if (interface != nullptr)
+        if (interface == nullptr)
         {
-            throw std::runtime_error("Interfaces result isn't an object");
+            throw std::runtime_error("Interfaces result isn't an object: " + Registry::Impl::printJson(interfacesnode));
         }
 
         for (auto member : {"plugs", "slots"})
@@ -331,7 +339,7 @@ std::set<AppID> Info::appsForInterface(const std::string &in_interface) const
             catch (std::runtime_error &e)
             {
                 /* We'll check the others even if one is bad */
-                g_warning("Malformed inteface instance: %s", e.what());
+                g_debug("Malformed inteface instance: %s", e.what());
                 continue;
             }
         }
