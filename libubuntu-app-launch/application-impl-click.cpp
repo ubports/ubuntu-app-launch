@@ -31,6 +31,7 @@ namespace app_impls
 AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest);
 std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest);
 std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
+                                             const std::string& package,
                                              const std::string& app,
                                              const std::string& clickDir);
 
@@ -44,7 +45,7 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
     , _appid(appid)
     , _manifest(manifest)
     , _clickDir(registry->impl->getClickDir(appid.package))
-    , _keyfile(manifestAppDesktop(manifest, appid.appname, _clickDir))
+    , _keyfile(manifestAppDesktop(manifest, appid.package, appid.appname, _clickDir))
 {
     if (!_keyfile)
         throw std::runtime_error{"No keyfile found for click application: " + (std::string)appid};
@@ -100,12 +101,19 @@ std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manife
 }
 
 std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
+                                             const std::string& package,
                                              const std::string& app,
                                              const std::string& clickDir)
 {
+    if (manifest)
+    {
+        throw std::runtime_error("No manifest for package '" + package + "'");
+    }
+
     auto hooks = json_object_get_object_member(manifest.get(), "hooks");
     if (hooks == nullptr)
-        throw std::runtime_error("Manifest for application '" + app + "' does not have a 'hooks' field");
+        throw std::runtime_error("Manifest for application '" + app + "' does not have a 'hooks' field: " +
+                                 Registry::Impl::printJson(manifest));
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
@@ -113,11 +121,13 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
 
     auto hooklist = json_object_get_object_member(hooks, app.c_str());
     if (hooklist == nullptr)
-        throw std::runtime_error("Manifest for does not have an application '" + app + "'");
+        throw std::runtime_error("Manifest for does not have an application '" + app + "': " +
+                                 Registry::Impl::printJson(manifest));
 
     auto desktoppath = json_object_get_string_member(hooklist, "desktop");
     if (desktoppath == nullptr)
-        throw std::runtime_error("Manifest for application '" + app + "' does not have a 'desktop' hook");
+        throw std::runtime_error("Manifest for application '" + app + "' does not have a 'desktop' hook: " +
+                                 Registry::Impl::printJson(manifest));
 
     auto path = std::shared_ptr<gchar>(g_build_filename(clickDir.c_str(), desktoppath, nullptr), g_free);
 
