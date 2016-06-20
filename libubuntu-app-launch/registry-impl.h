@@ -72,6 +72,9 @@ public:
     std::list<std::string> upstartInstancesForJob(const std::string& job);
     std::string upstartJobPath(const std::string& job);
 
+    static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
+    static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
+
 private:
     Registry* _registry;
 #if 0

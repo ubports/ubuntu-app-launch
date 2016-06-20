@@ -96,6 +96,26 @@ void Registry::Impl::initClick()
     }
 }
 
+/** Helper function for printing JSON objects to debug output */
+std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
+{
+    auto node = json_node_alloc();
+    json_node_init_object(node, jsonobj.get());
+
+    auto snode = std::shared_ptr<JsonNode>(node, json_node_unref);
+    return printJson(snode);
+}
+
+/** Helper function for printing JSON nodes to debug output */
+std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
+{
+    auto gstr = json_to_string(jsonnode.get(), TRUE);
+    std::string retval = gstr;
+    g_free(gstr);
+
+    return retval;
+}
+
 std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& package)
 {
     initClick();
@@ -121,6 +141,8 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
     if (!retval)
         throw std::runtime_error("Unable to get Click manifest for package: " + package);
+
+    g_debug("Manifest for '%s' is: %s", package.c_str(), printJson(retval).c_str());
 
     return retval;
 }
