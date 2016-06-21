@@ -311,27 +311,39 @@ std::set<AppID> Info::appsForInterface(const std::string &in_interface) const
                 auto connections = json_object_get_array_member(ifaceobj, "connections");
                 for (unsigned int j = 0; j < json_array_get_length(connections); j++)
                 {
-                    auto connectionobj = json_array_get_object_element(connections, j);
-
-                    for (auto member : {"snap", "apps"})
+                    try
                     {
-                        if (!json_object_has_member(ifaceobj, member))
+                        auto connectionobj = json_array_get_object_element(connections, j);
+                        if (connectionobj == nullptr)
                         {
-                            continue;
+                            throw std::runtime_error("Connections item '" + std::to_string(j) + "' isn't an object: " +
+                                                     Registry::Impl::printJson(interfacesnode));
+                        }
+
+                        for (auto member : {"snap", "apps"})
+                        {
+                            if (!json_object_has_member(connectionobj, member))
+                            {
+                                throw std::runtime_error("Connection object has no member: " + std::string(member));
+                            }
+                        }
+
+                        std::string snapname = json_object_get_string_member(connectionobj, "snap");
+                        int revision = 0;  // TODO: We don't get the revision from snapd today :-(
+
+                        auto apps = json_object_get_array_member(connectionobj, "apps");
+                        for (unsigned int k = 0; k < json_array_get_length(apps); k++)
+                        {
+                            std::string appname = json_array_get_string_element(apps, j);
+
+                            appids.emplace(AppID(AppID::Package::from_raw(snapname),                   /* package */
+                                                 AppID::AppName::from_raw(appname),                    /* appname */
+                                                 AppID::Version::from_raw(std::to_string(revision)))); /* version */
                         }
                     }
-
-                    std::string snapname = json_object_get_string_member(connectionobj, "snap");
-                    int revision = 0;  // TODO: We don't get the revision from snapd today :-(
-
-                    auto apps = json_object_get_array_member(connectionobj, "apps");
-                    for (unsigned int k = 0; k < json_array_get_length(apps); k++)
+                    catch (std::runtime_error &e)
                     {
-                        std::string appname = json_array_get_string_element(apps, j);
-
-                        appids.emplace(AppID(AppID::Package::from_raw(snapname),                   /* package */
-                                             AppID::AppName::from_raw(appname),                    /* appname */
-                                             AppID::Version::from_raw(std::to_string(revision)))); /* version */
+                        g_debug("Connection object failed: %s", e.what());
                     }
                 }
             }
