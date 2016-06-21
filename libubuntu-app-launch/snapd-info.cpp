@@ -97,8 +97,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
             throw std::runtime_error("Specified snap is not an application, we only support applications");
         }
 
-        auto revision = json_object_get_int_member(snapobject, "revision");
-        auto revisionstr = std::to_string(revision);
+        std::string revisionstr = json_object_get_string_member(snapobject, "revision");
         if (revisionstr != appid.version.value())
         {
             std::string message = "Revision mismatch in request and info given. Expected: '" + appid.version.value() +
@@ -124,7 +123,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
         auto pkgstruct = std::make_shared<PkgInfo>();
         pkgstruct->name = namestr;
         pkgstruct->version = json_object_get_string_member(snapobject, "version");
-        pkgstruct->revision = revision;
+        pkgstruct->revision = revisionstr;
 
         auto apparray = json_object_get_array_member(snapobject, "apps");
         for (unsigned int i = 0; i < json_array_get_length(apparray); i++)
