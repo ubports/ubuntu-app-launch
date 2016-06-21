@@ -122,13 +122,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
     auto retval = thread.executeOnThread<std::shared_ptr<JsonObject>>([this, package]() {
         GError* error = nullptr;
-        auto retval = std::shared_ptr<JsonObject>(click_user_get_manifest(_clickUser.get(), package.c_str(), &error),
-                                                  [](JsonObject* obj) {
-                                                      if (obj != nullptr)
-                                                      {
-                                                          json_object_unref(obj);
-                                                      }
-                                                  });
+        auto mani = click_user_get_manifest(_clickUser.get(), package.c_str(), &error);
 
         if (error != nullptr)
         {
@@ -136,13 +130,18 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
             throw std::runtime_error(perror->message);
         }
 
+        auto node = json_node_alloc();
+        json_node_init_object(node, mani);
+
+        auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
+
+        json_node_unref(node);
+
         return retval;
     });
 
     if (!retval)
         throw std::runtime_error("Unable to get Click manifest for package: " + package);
-
-    g_debug("Manifest for '%s' is: %s", package.c_str(), printJson(retval).c_str());
 
     return retval;
 }

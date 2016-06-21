@@ -45,7 +45,7 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
     , _appid(appid)
     , _manifest(manifest)
     , _clickDir(registry->impl->getClickDir(appid.package))
-    , _keyfile(manifestAppDesktop(manifest, appid.package, appid.appname, _clickDir))
+    , _keyfile(manifestAppDesktop(_manifest, appid.package, appid.appname, _clickDir))
 {
     if (!_keyfile)
         throw std::runtime_error{"No keyfile found for click application: " + (std::string)appid};
@@ -66,7 +66,7 @@ AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
     auto cstr = json_object_get_string_member(manifest.get(), "version");
 
     if (cstr == nullptr)
-        throw std::runtime_error("Unable to find version number in manifest");
+        throw std::runtime_error("Unable to find version number in manifest: " + Registry::Impl::printJson(manifest));
 
     auto cppstr = AppID::Version::from_raw((const gchar*)cstr);
     return cppstr;
@@ -96,7 +96,7 @@ std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manife
         }
     }
 
-    g_list_free_full(gapps, g_free);
+    g_list_free(gapps);
     return apps;
 }
 
@@ -105,7 +105,7 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
                                              const std::string& app,
                                              const std::string& clickDir)
 {
-    if (manifest)
+    if (!manifest)
     {
         throw std::runtime_error("No manifest for package '" + package + "'");
     }
