@@ -46,7 +46,6 @@ public:
         std::string name;            /**< Name of the package */
         std::string version;         /**< Version string provided by the package */
         std::string revision;        /**< Numerical always incrementing revision of the package */
-        std::list<std::string> apps; /**< The list of app names for the package */
         std::string directory;       /**< Directory that the snap is uncompressed into */
     };
     std::shared_ptr<PkgInfo> pkgInfo(const AppID &appid) const;

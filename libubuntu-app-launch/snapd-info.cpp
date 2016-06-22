@@ -60,7 +60,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
 
     try
     {
-        auto snapnode = snapdJson("/v2/snap/" + appid.package.value());
+        auto snapnode = snapdJson("/v2/snaps/" + appid.package.value());
         auto snapobject = json_node_get_object(snapnode.get());
         if (snapobject == nullptr)
         {
@@ -70,7 +70,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
         /******************************************/
         /* Validation of the object we got        */
         /******************************************/
-        for (auto member : {"name", "status", "revision", "type", "apps", "version"})
+        for (auto member : {"name", "status", "revision", "type", "version"})
         {
             if (!json_object_has_member(snapobject, member))
             {
@@ -124,13 +124,6 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
         pkgstruct->name = namestr;
         pkgstruct->version = json_object_get_string_member(snapobject, "version");
         pkgstruct->revision = revisionstr;
-
-        auto apparray = json_object_get_array_member(snapobject, "apps");
-        for (unsigned int i = 0; i < json_array_get_length(apparray); i++)
-        {
-            auto appname = json_array_get_string_element(apparray, i);
-            pkgstruct->apps.emplace_back(std::string(appname));
-        }
 
         /* TODO: Seems like snapd should give this to us */
         auto gdir = g_build_filename("snap", namestr.c_str(), revisionstr.c_str(), nullptr);
