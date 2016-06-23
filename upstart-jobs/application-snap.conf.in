@@ -1,0 +1,37 @@
+description "Application Launching for Snap Applications"
+author "Ted Gould <ted@canonical.com>"
+
+instance ${APP_ID}
+
+start on application-snap-start
+stop on application-end or desktop-end
+
+env APP_ID
+env APP_EXEC
+env APP_URIS
+env APP_DIR
+env APP_DESKTOP_FILE_PATH
+env APP_XMIR_ENABLE
+
+env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
+export UBUNTU_APP_LAUNCH_ARCH
+
+# apparmor is taken care of by confine
+cgroup freezer
+
+# Initial OOM Score
+oom score 100
+
+# Remember, this is confined
+exec @pkglibexecdir@/exec-line-exec
+
+post-start exec @pkglibexecdir@/zg-report-app open
+post-stop script
+	@pkglibexecdir@/zg-report-app close
+	@pkglibexecdir@/cgroup-reap-all
+
+	DEVELOPER_MODE=`gdbus call --system --dest com.canonical.PropertyService --object-path /com/canonical/PropertyService --method com.canonical.PropertyService.GetProperty adb`
+	if [ "$DEVELOPER_MODE" != "(true,)" ] ; then
+		rm -f ${HOME}/.cache/upstart/application-snap-${APP_ID}.log*
+	fi
+end script
