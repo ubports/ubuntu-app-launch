@@ -496,11 +496,93 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
     launchMode mode,
     std::function<std::list<std::pair<std::string, std::string>>(void)> getenv)
 {
-    auto urlstrv = urlsToStrv(urls);
-    auto start_result = registry->impl->thread.executeOnThread<gboolean>([registry, &appId, &urlstrv, &mode]() {
-        return start_application_core(registry->impl->_dbus.get(), registry->impl->thread.getCancellable().get(),
-                                      std::string(appId).c_str(), urlstrv.get(),
-                                      mode == launchMode::STANDARD ? FALSE : TRUE);
+    auto start_result = registry->impl->thread.executeOnThread<gboolean>([=]() {
+        // ual_tracepoint(libual_start, appid);
+
+        /* Figure out the DBus path for the job */
+        auto jobpath = registry->impl->upstartJobPath(job);
+
+/* Callback data */
+#if 0
+	app_start_t * app_start_data = g_new0(app_start_t, 1);
+	app_start_data->appid = g_strdup(appid);
+	app_start_data->con = G_DBUS_CONNECTION(g_object_ref(con));
+	app_start_data->cancel = cancel ? G_CANCELLABLE(g_object_ref(cancel)) : nullptr;
+#endif
+
+        /* Build up our environment */
+        std::list<std::pair<std::string, std::string>> env{
+            {"APP_ID", std::string(appId)},                 /* Application ID */
+            {"APP_LAUNCHER_PID", std::to_string(getpid())}, /* Who we are, for bugs */
+        };
+
+        if (!urls.empty())
+        {
+            env.emplace_back(std::make_pair(
+                "APP_URIS", std::accumulate(urls.begin(), urls.end(), std::string{},
+                                            [](const std::string& prev, Application::URL thisurl) {
+                                                gchar* gescaped = g_shell_quote(thisurl.value().c_str());
+                                                std::string escaped;
+                                                if (gescaped != nullptr)
+                                                {
+                                                    escaped = gescaped;
+                                                    g_free(gescaped);
+                                                }
+                                                else
+                                                {
+                                                    g_warning("Unable to escape URL: %s", thisurl.value().c_str());
+                                                    return prev;
+                                                }
+
+                                                if (prev.empty())
+                                                {
+                                                    return escaped;
+                                                }
+                                                else
+                                                {
+                                                    return prev + " " + escaped;
+                                                }
+                                            })));
+        }
+
+        if (mode == launchMode::TEST)
+        {
+            env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
+        }
+
+        env.splice(env.end(), getenv());
+
+        /* Convert to GVariant */
+        GVariantBuilder builder;
+        g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+        for (auto envvar : env)
+        {
+            g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
+                                                      "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
+        }
+
+        g_variant_builder_close(&builder);
+        g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+        /* Call the job start function */
+        g_dbus_connection_call(registry->impl->_dbus.get(), DBUS_SERVICE_UPSTART, jobpath.c_str(),
+                               DBUS_INTERFACE_UPSTART_JOB, "Start", g_variant_builder_end(&builder), NULL,
+                               G_DBUS_CALL_FLAGS_NONE, -1,
+                               registry->impl->thread.getCancellable().get(), /* cancelable */
+#if 0
+		                       application_start_cb,
+		                       app_start_data
+#else
+                               nullptr, nullptr
+#endif
+                               );
+
+        // ual_tracepoint(libual_start_message_sent, appid);
+
+        return TRUE;
     });
 
     if (start_result == FALSE)
