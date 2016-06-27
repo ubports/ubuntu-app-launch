@@ -28,6 +28,7 @@
 #include "app-info.h"
 #include "application-impl-base.h"
 #include "registry-impl.h"
+#include "second-exec-core.h"
 
 namespace ubuntu
 {
@@ -469,7 +470,8 @@ UpstartInstance::UpstartInstance(const AppID& appId,
 {
 }
 
-std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls)
+/** Reformat a C++ vector of URLs into a C GStrv of strings */
+std::shared_ptr<gchar*> UpstartInstance::urlsToStrv(const std::vector<Application::URL>& urls)
 {
     if (urls.empty())
     {
@@ -487,6 +489,49 @@ std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls)
     return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
+/** Callback from starting an application. It checks to see whether the
+    app is already running. If it is already running then we need to send
+        the URLs to it via DBus. */
+void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
+{
+    UpstartInstance* data = (UpstartInstance*)user_data;
+    GError* error{nullptr};
+    GVariant* result{nullptr};
+
+    // ual_tracepoint(libual_start_message_callback, std::string(data->appId_).c_str());
+
+    g_debug("Started Message Callback: %s", std::string(data->appId_).c_str());
+
+    result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+
+    if (result != nullptr)
+        g_variant_unref(result);
+
+    if (error != nullptr)
+    {
+        if (g_dbus_error_is_remote_error(error))
+        {
+            gchar* remote_error = g_dbus_error_get_remote_error(error);
+            g_debug("Remote error: %s", remote_error);
+            if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0)
+            {
+                auto urls = urlsToStrv(data->urls_);
+                second_exec(data->registry_->impl->_dbus.get(),                   /* DBus */
+                            data->registry_->impl->thread.getCancellable().get(), /* cancellable */
+                            std::string(data->appId_).c_str(),                    /* appid */
+                            urls.get());                                          /* urls */
+            }
+
+            g_free(remote_error);
+        }
+        else
+        {
+            g_warning("Unable to emit event to start application: %s", error->message);
+        }
+        g_error_free(error);
+    }
+}
+
 std::shared_ptr<UpstartInstance> UpstartInstance::launch(
     const AppID& appId,
     const std::string& job,
@@ -496,101 +541,94 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
     launchMode mode,
     std::function<std::list<std::pair<std::string, std::string>>(void)> getenv)
 {
-    auto start_result = registry->impl->thread.executeOnThread<gboolean>([=]() {
-        // ual_tracepoint(libual_start, appid);
-
-        /* Figure out the DBus path for the job */
-        auto jobpath = registry->impl->upstartJobPath(job);
-
-/* Callback data */
-#if 0
-	app_start_t * app_start_data = g_new0(app_start_t, 1);
-	app_start_data->appid = g_strdup(appid);
-	app_start_data->con = G_DBUS_CONNECTION(g_object_ref(con));
-	app_start_data->cancel = cancel ? G_CANCELLABLE(g_object_ref(cancel)) : nullptr;
-#endif
-
-        /* Build up our environment */
-        std::list<std::pair<std::string, std::string>> env{
-            {"APP_ID", std::string(appId)},                 /* Application ID */
-            {"APP_LAUNCHER_PID", std::to_string(getpid())}, /* Who we are, for bugs */
-        };
-
-        if (!urls.empty())
-        {
-            env.emplace_back(std::make_pair(
-                "APP_URIS", std::accumulate(urls.begin(), urls.end(), std::string{},
-                                            [](const std::string& prev, Application::URL thisurl) {
-                                                gchar* gescaped = g_shell_quote(thisurl.value().c_str());
-                                                std::string escaped;
-                                                if (gescaped != nullptr)
-                                                {
-                                                    escaped = gescaped;
-                                                    g_free(gescaped);
-                                                }
-                                                else
-                                                {
-                                                    g_warning("Unable to escape URL: %s", thisurl.value().c_str());
-                                                    return prev;
-                                                }
-
-                                                if (prev.empty())
-                                                {
-                                                    return escaped;
-                                                }
-                                                else
-                                                {
-                                                    return prev + " " + escaped;
-                                                }
-                                            })));
-        }
-
-        if (mode == launchMode::TEST)
-        {
-            env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
-        }
-
-        env.splice(env.end(), getenv());
-
-        /* Convert to GVariant */
-        GVariantBuilder builder;
-        g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-
-        g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-
-        for (auto envvar : env)
-        {
-            g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
-                                                      "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
-        }
-
-        g_variant_builder_close(&builder);
-        g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-
-        /* Call the job start function */
-        g_dbus_connection_call(registry->impl->_dbus.get(), DBUS_SERVICE_UPSTART, jobpath.c_str(),
-                               DBUS_INTERFACE_UPSTART_JOB, "Start", g_variant_builder_end(&builder), NULL,
-                               G_DBUS_CALL_FLAGS_NONE, -1,
-                               registry->impl->thread.getCancellable().get(), /* cancelable */
-#if 0
-		                       application_start_cb,
-		                       app_start_data
-#else
-                               nullptr, nullptr
-#endif
-                               );
-
-        // ual_tracepoint(libual_start_message_sent, appid);
-
-        return TRUE;
-    });
-
-    if (start_result == FALSE)
-    {
+    if (appId.empty())
         return {};
-    }
 
-    return std::make_shared<UpstartInstance>(appId, job, instance, registry);
+    return registry->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
+        [=]() -> std::shared_ptr<UpstartInstance> {
+            // ual_tracepoint(libual_start, appid);
+
+            /* Figure out the DBus path for the job */
+            auto jobpath = registry->impl->upstartJobPath(job);
+
+            /* Build up our environment */
+            std::list<std::pair<std::string, std::string>> env{
+                {"APP_ID", std::string(appId)},                 /* Application ID */
+                {"APP_LAUNCHER_PID", std::to_string(getpid())}, /* Who we are, for bugs */
+            };
+
+            if (!urls.empty())
+            {
+                env.emplace_back(std::make_pair(
+                    "APP_URIS", std::accumulate(urls.begin(), urls.end(), std::string{},
+                                                [](const std::string& prev, Application::URL thisurl) {
+                                                    gchar* gescaped = g_shell_quote(thisurl.value().c_str());
+                                                    std::string escaped;
+                                                    if (gescaped != nullptr)
+                                                    {
+                                                        escaped = gescaped;
+                                                        g_free(gescaped);
+                                                    }
+                                                    else
+                                                    {
+                                                        g_warning("Unable to escape URL: %s", thisurl.value().c_str());
+                                                        return prev;
+                                                    }
+
+                                                    if (prev.empty())
+                                                    {
+                                                        return escaped;
+                                                    }
+                                                    else
+                                                    {
+                                                        return prev + " " + escaped;
+                                                    }
+                                                })));
+            }
+
+            if (mode == launchMode::TEST)
+            {
+                env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
+            }
+
+            env.splice(env.end(), getenv());
+
+            /* Convert to GVariant */
+            GVariantBuilder builder;
+            g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+            for (auto envvar : env)
+            {
+                g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
+                                                          "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
+            }
+
+            g_variant_builder_close(&builder);
+            g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+            auto retval = std::make_shared<UpstartInstance>(appId, job, instance, registry);
+
+            /* Call the job start function */
+            g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
+                                   DBUS_SERVICE_UPSTART,                          /* service name */
+                                   jobpath.c_str(),                               /* Path */
+                                   DBUS_INTERFACE_UPSTART_JOB,                    /* interface */
+                                   "Start",                                       /* method */
+                                   g_variant_builder_end(&builder),               /* params */
+                                   NULL,                                          /* return */
+                                   G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                   -1,                                            /* default timeout */
+                                   registry->impl->thread.getCancellable().get(), /* cancelable */
+                                   application_start_cb,                          /* callback */
+                                   retval.get()                                   /* object */
+                                   );
+
+            // ual_tracepoint(libual_start_message_sent, appid);
+
+            return retval;
+        });
 }
 
 };  // namespace app_impls

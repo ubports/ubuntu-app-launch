@@ -21,6 +21,7 @@
 
 extern "C" {
 #include "ubuntu-app-launch.h"
+#include <gio/gio.h>
 }
 
 #pragma once
@@ -87,6 +88,7 @@ private:
     const std::string job_;
     const std::string instance_;
     std::shared_ptr<Registry> registry_;
+    std::vector<Application::URL> urls_;
 
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
     void signalToPid(pid_t pid, int signal);
@@ -94,6 +96,9 @@ private:
     void oomValueToPid(pid_t pid, const oom::Score oomvalue);
     void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
     void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal);
+
+    static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
+    static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 };
 
 };  // namespace app_impls

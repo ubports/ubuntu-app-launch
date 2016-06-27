@@ -29,7 +29,7 @@
 typedef struct {
 	GDBusConnection * bus;
 	gchar * appid;
-	gchar * input_uris;
+	gchar ** input_uris;
 	GPid app_pid;
 	guint connections_open;
 	GVariant * app_data;
@@ -107,31 +107,17 @@ parse_uris (second_exec_t * data)
 	}
 
 	GVariant * uris = NULL;
-	gchar ** uri_split = NULL;
-	GError * error = NULL;
 
-	g_shell_parse_argv(data->input_uris, NULL, &uri_split, &error);
-
-	if (uri_split == NULL || uri_split[0] == NULL || error != NULL) {
-		if (error != NULL) {
-			g_warning("Unable to parse URLs '%s': %s", data->input_uris, error->message);
-			g_error_free(error);
-		}
-
+	if (data->input_uris == NULL) {
 		uris = g_variant_new_array(G_VARIANT_TYPE_STRING, NULL, 0);
-
-		if (uri_split != NULL) {
-			g_strfreev(uri_split);
-		}
 	} else {
 		GVariantBuilder builder;
 		g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
 
 		int i;
-		for (i = 0; uri_split[i] != NULL; i++) {
-			g_variant_builder_add_value(&builder, g_variant_new_take_string(uri_split[i]));
+		for (i = 0; data->input_uris[i] != NULL; i++) {
+			g_variant_builder_add_value(&builder, g_variant_new_string(data->input_uris[i]));
 		}
-		g_free(uri_split);
 
 		uris = g_variant_builder_end(&builder);
 	}
@@ -364,15 +350,15 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 }
 
 gboolean
-second_exec (GDBusConnection * session, GCancellable * cancel, const gchar * app_id, const gchar * appuris)
+second_exec (GDBusConnection * session, GCancellable * cancel, const gchar * app_id, gchar ** appuris)
 {
-	ual_tracepoint(second_exec_start, app_id, appuris);
+	ual_tracepoint(second_exec_start, app_id);
 	GError * error = NULL;
 
 	/* Setup our continuation data */
 	second_exec_t * data = g_new0(second_exec_t, 1);
 	data->appid = g_strdup(app_id);
-	data->input_uris = g_strdup(appuris);
+	data->input_uris = g_strdupv(appuris);
 	data->bus = g_object_ref(session);
 
 	/* Set up listening for the unfrozen signal from Unity */
@@ -465,7 +451,7 @@ second_exec_complete (second_exec_t * data)
 	if (data->app_data != NULL)
 		g_variant_unref(data->app_data);
 	g_free(data->appid);
-	g_free(data->input_uris);
+	g_strfreev(data->input_uris);
 	g_free(data->dbus_path);
 	g_free(data);
 

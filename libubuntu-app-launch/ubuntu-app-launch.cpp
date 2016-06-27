@@ -99,7 +99,7 @@ application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
 			gchar * remote_error = g_dbus_error_get_remote_error(error);
 			g_debug("Remote error: %s", remote_error);
 			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
-				second_exec(data->con, data->cancel, data->appid, data->uris);
+				//second_exec(data->con, data->cancel, data->appid, data->uris);
 			}
 
 			g_free(remote_error);

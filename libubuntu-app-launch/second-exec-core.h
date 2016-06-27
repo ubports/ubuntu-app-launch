@@ -20,5 +20,9 @@
 
 #include <gio/gio.h>
 
-gboolean second_exec (GDBusConnection * con, GCancellable * cancel, const gchar * app_id, const gchar * appuris);
+G_BEGIN_DECLS
+
+gboolean second_exec (GDBusConnection * con, GCancellable * cancel, const gchar * app_id, gchar ** appuris);
+
+G_END_DECLS
 
