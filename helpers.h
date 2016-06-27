@@ -19,6 +19,8 @@
 
 #include <gio/gio.h>
 
+G_BEGIN_DECLS
+
 typedef struct _EnvHandle EnvHandle;
 
 gboolean  app_id_to_triplet      (const gchar *   app_id,
@@ -56,3 +58,6 @@ GList *   pids_from_cgroup       (GDBusConnection * cgmanager,
 
 gboolean   verify_keyfile        (GKeyFile *    inkeyfile,
                                   const gchar * desktop);
+
+G_END_DECLS
+

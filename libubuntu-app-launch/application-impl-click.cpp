@@ -187,9 +187,9 @@ std::vector<std::shared_ptr<Application::Instance>> Click::instances()
 
 std::list<std::pair<std::string, std::string>> Click::launchEnv()
 {
-    std::list<std::pair<std::string, std::string>> retval{
-        {"APP_DIR", _clickDir},
-    };
+    auto retval = confinedEnv(_appid.package, _clickDir);
+
+    retval.emplace_back(std::make_pair("APP_DIR", _clickDir));
 
     /* TODO: Not sure how we're gonna get this */
     /* APP_DESKTOP_FILE_PATH */

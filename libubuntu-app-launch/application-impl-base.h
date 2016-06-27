@@ -42,6 +42,9 @@ public:
 
 protected:
     std::shared_ptr<Registry> _registry;
+
+    static std::list<std::pair<std::string, std::string>> confinedEnv(const std::string& package,
+                                                                      const std::string& pkgdir);
 };
 
 class UpstartInstance : public Application::Instance

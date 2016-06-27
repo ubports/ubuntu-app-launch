@@ -27,6 +27,7 @@
 
 #include "app-info.h"
 #include "application-impl-base.h"
+#include "helpers.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
 
@@ -45,6 +46,49 @@ Base::Base(const std::shared_ptr<Registry>& registry)
 bool Base::hasInstances()
 {
     return !instances().empty();
+}
+
+std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::string& package, const std::string& pkgdir)
+{
+    std::list<std::pair<std::string, std::string>> retval{{"UBUNTU_APPLICATION_ISOLATION", "1"}};
+
+    /* C Funcs can return null, which offends std::string */
+    auto cset = [&retval](const gchar* key, const gchar* value) {
+        if (value != nullptr)
+        {
+            g_debug("Setting '%s' to '%s'", key, value);
+            retval.emplace_back(std::make_pair(key, value));
+        }
+    };
+
+    cset("XDG_CACHE_HOME", g_get_user_cache_dir());
+    cset("XDG_CONFIG_HOME", g_get_user_config_dir());
+    cset("XDG_DATA_HOME", g_get_user_data_dir());
+    cset("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
+
+    /* Add the application's dir to the list of sources for data */
+    const gchar* basedatadirs = g_getenv("XDG_DATA_DIRS");
+    if (basedatadirs == NULL || basedatadirs[0] == '\0')
+    {
+        basedatadirs = "/usr/local/share:/usr/share";
+    }
+    gchar* datadirs = g_strjoin(":", pkgdir.c_str(), basedatadirs, NULL);
+    cset("XDG_DATA_DIRS", datadirs);
+    g_free(datadirs);
+
+    /* Set TMPDIR to something sane and application-specific */
+    gchar* tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package.c_str());
+    cset("TMPDIR", tmpdir);
+    g_debug("Creating '%s'", tmpdir);
+    g_mkdir_with_parents(tmpdir, 0700);
+    g_free(tmpdir);
+
+    /* Do the same for nvidia */
+    gchar* nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package.c_str());
+    cset("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
+    g_free(nv_shader_cachedir);
+
+    return retval;
 }
 
 bool UpstartInstance::isRunning()
@@ -547,6 +591,11 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
     return registry->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
         [=]() -> std::shared_ptr<UpstartInstance> {
             // ual_tracepoint(libual_start, appid);
+            handshake_t* handshake = starting_handshake_start(std::string(appId).c_str());
+            if (handshake == NULL)
+            {
+                g_warning("Unable to setup starting handshake");
+            }
 
             /* Figure out the DBus path for the job */
             auto jobpath = registry->impl->upstartJobPath(job);
@@ -609,6 +658,10 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
             auto retval = std::make_shared<UpstartInstance>(appId, job, instance, registry);
+
+            // ual_tracepoint(handshake_wait, app_id);
+            starting_handshake_wait(handshake);
+            // ual_tracepoint(handshake_complete, app_id);
 
             /* Call the job start function */
             g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
