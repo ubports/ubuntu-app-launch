@@ -28,7 +28,6 @@ extern "C" {
 #include <zeitgeist.h>
 
 #include "ubuntu-app-launch-trace.h"
-#include "second-exec-core.h"
 #include "helpers.h"
 #include "ual-tracepoint.h"
 #include "click-exec.h"
@@ -69,51 +68,6 @@ app_uris_string (const gchar * const * uris)
 	g_array_unref(array);
 
 	return urisjoin;
-}
-
-typedef struct {
-	gchar * appid;
-	gchar * uris;
-	GDBusConnection * con;
-	GCancellable * cancel;
-} app_start_t;
-
-static void
-application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
-{
-	app_start_t * data = (app_start_t *)user_data;
-	GError * error = NULL;
-	GVariant * result = NULL;
-
-	ual_tracepoint(libual_start_message_callback, data->appid);
-
-	g_debug("Started Message Callback: %s", data->appid);
-
-	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
-
-	if (result != NULL)
-		g_variant_unref(result);
-	
-	if (error != NULL) {
-		if (g_dbus_error_is_remote_error(error)) {
-			gchar * remote_error = g_dbus_error_get_remote_error(error);
-			g_debug("Remote error: %s", remote_error);
-			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
-				//second_exec(data->con, data->cancel, data->appid, data->uris);
-			}
-
-			g_free(remote_error);
-		} else {
-			g_warning("Unable to emit event to start application: %s", error->message);
-		}
-		g_error_free(error);
-	}
-
-	g_clear_object(&data->con);
-	g_clear_object(&data->cancel);
-	g_free(data->appid);
-	g_free(data->uris);
-	g_free(data);
 }
 
 /* Get the path of the job from Upstart, if we've got it already, we'll just
@@ -231,129 +185,53 @@ is_libertine (const gchar * appid)
 }
 
 gboolean
-start_application_core (GDBusConnection * con, GCancellable * cancel, const gchar * appid, const gchar * const * uris, gboolean test)
-{
-	ual_tracepoint(libual_start, appid);
-
-	g_return_val_if_fail(appid != NULL, FALSE);
-
-	gboolean click = is_click(appid);
-	ual_tracepoint(libual_determine_type, appid, click ? "click" : "legacy");
-
-	/* Figure out if it is libertine */
-	gboolean libertine = FALSE;
-	if (!click) {
-		libertine = is_libertine(appid);
-	}
-
-	ual_tracepoint(libual_determine_libertine, appid, libertine ? "container" : "host");
-
-	/* Figure out the DBus path for the job */
-	const gchar * jobpath = NULL;
-	if (click) {
-		jobpath = get_jobpath(con, "application-click");
-	} else {
-		jobpath = get_jobpath(con, "application-legacy");
-	}
-
-	if (jobpath == NULL) {
-		g_object_unref(con);
-		g_warning("Unable to get job path");
-		return FALSE;
-	}
-
-	ual_tracepoint(libual_job_path_determined, appid, jobpath);
-
-	/* Callback data */
-	app_start_t * app_start_data = g_new0(app_start_t, 1);
-	app_start_data->appid = g_strdup(appid);
-	app_start_data->con = G_DBUS_CONNECTION(g_object_ref(con));
-	app_start_data->cancel = cancel ? G_CANCELLABLE(g_object_ref(cancel)) : nullptr;
-
-	/* Build up our environment */
-	GVariantBuilder builder;
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_LAUNCHER_PID=%d", getpid())));
-
-	if (uris != NULL) {
-		gchar * urisjoin = app_uris_string(uris);
-		gchar * urienv = g_strdup_printf("APP_URIS=%s", urisjoin);
-		app_start_data->uris = urisjoin;
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(urienv));
-	}
-
-	if (!click) {
-		if (libertine || legacy_single_instance(appid)) {
-			g_variant_builder_add_value(&builder, g_variant_new_string("INSTANCE_ID="));
-		} else {
-			gchar * instanceid = g_strdup_printf("INSTANCE_ID=%" G_GUINT64_FORMAT, g_get_real_time());
-			g_variant_builder_add_value(&builder, g_variant_new_take_string(instanceid));
-		}
-	}
-
-	if (test) {
-		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
-	}
-
-	gboolean setup_complete = FALSE;
-	if (click) {
-		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
-	} else {
-		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder, libertine);
-	}
-
-	if (setup_complete) {
-		g_variant_builder_close(&builder);
-		g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-	
-		/* Call the job start function */
-		g_dbus_connection_call(con,
-		                       DBUS_SERVICE_UPSTART,
-		                       jobpath,
-		                       DBUS_INTERFACE_UPSTART_JOB,
-		                       "Start",
-		                       g_variant_builder_end(&builder),
-		                       NULL,
-		                       G_DBUS_CALL_FLAGS_NONE,
-		                       -1,
-		                       cancel, /* cancelable */
-		                       application_start_cb,
-		                       app_start_data);
-
-		ual_tracepoint(libual_start_message_sent, appid);
-	} else {
-		g_variant_builder_clear(&builder);
-	}
-
-	return setup_complete;
-}
-
-gboolean
 ubuntu_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-	auto coreret = start_application_core(con, nullptr, appid, uris, FALSE);
+		std::vector<ubuntu::app_launch::Application::URL> urivect;
+		for (auto i = 0; uris != nullptr && uris[i] != nullptr; i++)
+			urivect.emplace_back(ubuntu::app_launch::Application::URL::from_raw(uris[i]));
 
-	g_object_unref(con);
-	return coreret;
+		auto instance = app->launch(urivect);
+
+		if (instance) {
+			return TRUE;
+		} else {
+			return FALSE;
+		}
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to start app '%s': %s", appid, e.what());
+		return FALSE;
+	}
 }
 
 gboolean
 ubuntu_app_launch_start_application_test (const gchar * appid, const gchar * const * uris)
 {
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-	auto coreret = start_application_core(con, nullptr, appid, uris, TRUE);
+		std::vector<ubuntu::app_launch::Application::URL> urivect;
+		for (auto i = 0; uris != nullptr && uris[i] != nullptr; i++)
+			urivect.emplace_back(ubuntu::app_launch::Application::URL::from_raw(uris[i]));
 
-	g_object_unref(con);
-	return coreret;
+		auto instance = app->launchTest(urivect);
+
+		if (instance) {
+			return TRUE;
+		} else {
+			return FALSE;
+		}
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to start app '%s': %s", appid, e.what());
+		return FALSE;
+	}
 }
 
 static void
