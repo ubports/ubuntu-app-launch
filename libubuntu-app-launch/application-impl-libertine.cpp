@@ -134,7 +134,7 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
 std::shared_ptr<Application::Info> Libertine::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry);
+    return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, false, true);
 }
 
 std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
