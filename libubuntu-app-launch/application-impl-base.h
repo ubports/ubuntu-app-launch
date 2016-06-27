@@ -73,12 +73,14 @@ public:
         STANDARD,
         TEST
     };
-    static std::shared_ptr<UpstartInstance> launch(const AppID& appId,
-                                                   const std::string& job,
-                                                   const std::string& instance,
-                                                   const std::vector<Application::URL>& urls,
-                                                   const std::shared_ptr<Registry>& registry,
-                                                   launchMode mode);
+    static std::shared_ptr<UpstartInstance> launch(
+        const AppID& appId,
+        const std::string& job,
+        const std::string& instance,
+        const std::vector<Application::URL>& urls,
+        const std::shared_ptr<Registry>& registry,
+        launchMode mode,
+        std::function<std::list<std::pair<std::string, std::string>>(void)> getenv);
 
 private:
     const AppID appId_;

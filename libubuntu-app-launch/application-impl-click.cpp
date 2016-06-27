@@ -183,13 +183,15 @@ std::vector<std::shared_ptr<Application::Instance>> Click::instances()
 std::shared_ptr<Application::Instance> Click::launch(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD);
+                                   UpstartInstance::launchMode::STANDARD,
+                                   []() -> std::list<std::pair<std::string, std::string>> { return {}; });
 }
 
 std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
-                                   UpstartInstance::launchMode::TEST);
+                                   UpstartInstance::launchMode::TEST,
+                                   []() -> std::list<std::pair<std::string, std::string>> { return {}; });
 }
 
 };  // namespace app_impls

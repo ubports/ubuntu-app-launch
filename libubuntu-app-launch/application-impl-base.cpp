@@ -487,12 +487,14 @@ std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls)
     return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
-std::shared_ptr<UpstartInstance> UpstartInstance::launch(const AppID& appId,
-                                                         const std::string& job,
-                                                         const std::string& instance,
-                                                         const std::vector<Application::URL>& urls,
-                                                         const std::shared_ptr<Registry>& registry,
-                                                         launchMode mode)
+std::shared_ptr<UpstartInstance> UpstartInstance::launch(
+    const AppID& appId,
+    const std::string& job,
+    const std::string& instance,
+    const std::vector<Application::URL>& urls,
+    const std::shared_ptr<Registry>& registry,
+    launchMode mode,
+    std::function<std::list<std::pair<std::string, std::string>>(void)> getenv)
 {
     auto urlstrv = urlsToStrv(urls);
     auto start_result = registry->impl->thread.executeOnThread<gboolean>([registry, &appId, &urlstrv, &mode]() {
