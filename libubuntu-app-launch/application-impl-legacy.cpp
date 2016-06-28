@@ -107,7 +107,7 @@ std::shared_ptr<Application::Info> Legacy::info()
 {
     if (!appinfo_)
     {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true);
+        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
     }
     return appinfo_;
 }
@@ -186,18 +186,53 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
     return vect;
 }
 
+std::list<std::pair<std::string, std::string>> Legacy::launchEnv()
+{
+    std::list<std::pair<std::string, std::string>> retval;
+
+    /* TODO: Not sure how we're gonna get this */
+    /* APP_DESKTOP_FILE_PATH */
+
+    info();
+
+    retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
+    retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
+
+    /* Honor the 'Path' key if it is in the desktop file */
+    if (g_key_file_has_key(_keyfile.get(), "Desktop Entry", "Path", nullptr))
+    {
+        gchar* path = g_key_file_get_string(_keyfile.get(), "Desktop Entry", "Path", nullptr);
+        retval.emplace_back(std::make_pair("APP_DIR", path));
+        g_free(path);
+    }
+
+    /* If they've asked for an Apparmor profile, let's use it! */
+    gchar* apparmor = g_key_file_get_string(_keyfile.get(), "Desktop Entry", "X-Ubuntu-AppArmor-Profile", nullptr);
+    if (apparmor != nullptr)
+    {
+        retval.emplace_back(std::make_pair("APP_EXEC_POLICY", apparmor));
+        g_free(apparmor);
+
+        retval.splice(retval.end(), confinedEnv(_appname, "/usr/share"));
+    }
+    else
+    {
+        retval.emplace_back(std::make_pair("APP_EXEC_POLICY", "unconfined"));
+    }
+
+    return retval;
+}
+
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD,
-                                   []() -> std::list<std::pair<std::string, std::string>> { return {}; });
+                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
 }
 
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST,
-                                   []() -> std::list<std::pair<std::string, std::string>> { return {}; });
+                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
 }
 
 };  // namespace app_impls
