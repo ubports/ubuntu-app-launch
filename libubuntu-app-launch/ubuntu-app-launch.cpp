@@ -30,7 +30,6 @@ extern "C" {
 #include "ubuntu-app-launch-trace.h"
 #include "helpers.h"
 #include "ual-tracepoint.h"
-#include "desktop-exec.h"
 #include "recoverable-problem.h"
 #include "proxy-socket-demangler.h"
 #include "app-info.h"

@@ -64,7 +64,6 @@ snapd-info.cpp
 set(LAUNCHER_SOURCES
 ubuntu-app-launch.cpp
 second-exec-core.c
-desktop-exec.c
 ubuntu-app-launch-trace.c
 app-info.c
 )
