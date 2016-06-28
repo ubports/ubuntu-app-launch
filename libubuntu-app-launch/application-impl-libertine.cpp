@@ -18,7 +18,6 @@
  */
 
 #include "application-impl-libertine.h"
-#include "application-info-desktop.h"
 #include "libertine.h"
 #include "registry-impl.h"
 
@@ -134,7 +133,11 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
 std::shared_ptr<Application::Info> Libertine::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, false, true);
+    if (!appinfo_)
+    {
+        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, false, true);
+    }
+    return appinfo_;
 }
 
 std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
@@ -152,18 +155,40 @@ std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
     return vect;
 }
 
+std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
+{
+    std::list<std::pair<std::string, std::string>> retval;
+
+    /* TODO: Not sure how we're gonna get this */
+    /* APP_DESKTOP_FILE_PATH */
+
+    info();
+
+    retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
+
+    auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+    if (libertine_launch == nullptr)
+    {
+        libertine_launch = LIBERTINE_LAUNCH;
+    }
+
+    auto desktopexec = appinfo_->execLine().value();
+    auto execline = std::string(libertine_launch) + " \"" + _container.value() + "\" " + desktopexec;
+    retval.emplace_back(std::make_pair("APP_EXEC", execline));
+
+    return retval;
+}
+
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD,
-                                   []() -> std::list<std::pair<std::string, std::string>> { return {}; });
+                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST,
-                                   []() -> std::list<std::pair<std::string, std::string>> { return {}; });
+                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
 }
 
 };  // namespace app_impls
