@@ -74,14 +74,14 @@ public:
 
     struct XMirEnableTag;
     typedef TypeTagger<XMirEnableTag, bool> XMirEnable;
-    XMirEnable xMirEnable()
+    virtual XMirEnable xMirEnable()
     {
         return _xMirEnable;
     }
 
     struct ExecTag;
     typedef TypeTagger<ExecTag, std::string> Exec;
-    Exec execLine()
+    virtual Exec execLine()
     {
         return _exec;
     }

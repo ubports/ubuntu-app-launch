@@ -18,6 +18,7 @@
  */
 
 #include "application-impl-base.h"
+#include "application-info-desktop.h"
 #include "snapd-info.h"
 
 #pragma once
@@ -47,9 +48,11 @@ public:
 
 private:
     AppID appid_;
-    std::shared_ptr<Info> info_;
+    std::shared_ptr<app_info::Desktop> info_;
     std::string interface_;
     std::shared_ptr<snapd::Info::PkgInfo> pkgInfo_;
+
+    std::list<std::pair<std::string, std::string>> launchEnv();
 };
 
 }  // namespace app_impls

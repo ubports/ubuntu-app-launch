@@ -91,6 +91,18 @@ public:
     {
     }
 
+    XMirEnable xMirEnable() override
+    {
+        if (interface_ == "unity7")
+        {
+            return XMirEnable::from_raw(true);
+        }
+        else
+        {
+            return XMirEnable::from_raw(false);
+        }
+    }
+
     UbuntuLifecycle supportsUbuntuLifecycle() override
     {
         if (interface_ == "unity8")
@@ -116,17 +128,45 @@ std::shared_ptr<Application::Info> Snap::info()
 
 std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
 {
-    return {};
+    std::vector<std::shared_ptr<Instance>> vect;
+    auto startsWith = std::string(appId()) + "-";
+
+    for (auto instance : _registry->impl->upstartInstancesForJob("application-snap"))
+    {
+        g_debug("Looking at snap instance: %s", instance.c_str());
+        if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
+        {
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-snap", instance, _registry));
+        }
+    }
+
+    g_debug("Snap app '%s' has %d instances", std::string(appId()).c_str(), int(vect.size()));
+
+    return vect;
+}
+
+std::list<std::pair<std::string, std::string>> Snap::launchEnv()
+{
+    std::list<std::pair<std::string, std::string>> retval;
+
+    info();
+
+    retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", info_->xMirEnable().value() ? "1" : "0"));
+    retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
+
+    return retval;
 }
 
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
-    return {};
+    return UpstartInstance::launch(appId(), "application-snap", std::string(appId()) + "-", urls, _registry,
+                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
 }
 
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
-    return {};
+    return UpstartInstance::launch(appId(), "application-snap", std::string(appId()) + "-", urls, _registry,
+                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
 }
 
 }  // namespace app_impls
