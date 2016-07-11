@@ -96,7 +96,7 @@ target_link_libraries(launcher-static
 	-Wl,--no-undefined
 )
 
-add_library(ubuntu-launcher SHARED null.cpp)
+add_library(ubuntu-launcher SHARED)
 
 set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
