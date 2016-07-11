@@ -51,7 +51,7 @@ Info::Info()
 
 /** Gets package information out of snapd by using the REST
     interface and turning the JSON object into a C++ Struct */
-std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
+std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) const
 {
     if (!snapdExists)
     {
@@ -60,7 +60,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
 
     try
     {
-        auto snapnode = snapdJson("/v2/snaps/" + appid.package.value());
+        auto snapnode = snapdJson("/v2/snaps/" + package.value());
         auto snapobject = json_node_get_object(snapnode.get());
         if (snapobject == nullptr)
         {
@@ -70,7 +70,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
         /******************************************/
         /* Validation of the object we got        */
         /******************************************/
-        for (auto member : {"name", "status", "revision", "type", "version"})
+        for (auto member : {"name", "status", "revision", "type", "version", "apps"})
         {
             if (!json_object_has_member(snapobject, member))
             {
@@ -79,10 +79,10 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
         }
 
         std::string namestr = json_object_get_string_member(snapobject, "name");
-        if (namestr != appid.package.value())
+        if (namestr != package.value())
         {
             throw std::runtime_error("Snapd returned information for snap '" + namestr + "' when we asked for '" +
-                                     appid.package.value() + "'");
+                                     package.value() + "'");
         }
 
         std::string statusstr = json_object_get_string_member(snapobject, "status");
@@ -97,25 +97,6 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
             throw std::runtime_error("Specified snap is not an application, we only support applications");
         }
 
-        std::string revisionstr = json_object_get_string_member(snapobject, "revision");
-        if (revisionstr != appid.version.value())
-        {
-            std::string message = "Revision mismatch in request and info given. Expected: '" + appid.version.value() +
-                                  "'  Given: '" + revisionstr + "'";
-            if (appid.version.value() == "0")
-            {
-                /* We are special casing this to be a wild card for now
-                   because we know that the interface code isn't returning
-                   a revision, so we need to handle that. When the interface
-                   interface gets fixed we can remove this special case. */
-                g_warning("%s", message.c_str());
-            }
-            else
-            {
-                throw std::runtime_error(message);
-            }
-        }
-
         /******************************************/
         /* Validation complete — build the object */
         /******************************************/
@@ -123,6 +104,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
         auto pkgstruct = std::make_shared<PkgInfo>();
         pkgstruct->name = namestr;
         pkgstruct->version = json_object_get_string_member(snapobject, "version");
+        std::string revisionstr = json_object_get_string_member(snapobject, "revision");
         pkgstruct->revision = revisionstr;
 
         /* TODO: Seems like snapd should give this to us */
@@ -130,11 +112,25 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID &appid) const
         pkgstruct->directory = gdir;
         g_free(gdir);
 
+        auto appsarray = json_object_get_array_member(snapobject, "apps");
+        for (unsigned int i = 0; i < json_array_get_length(appsarray); i++)
+        {
+            auto appobj = json_array_get_object_element(appsarray, i);
+            if (json_object_has_member(appobj, "name"))
+            {
+                auto appname = json_object_get_string_member(appobj, "name");
+                if (appname)
+                {
+                    pkgstruct->appnames.insert(appname);
+                }
+            }
+        }
+
         return pkgstruct;
     }
     catch (std::runtime_error &e)
     {
-        g_warning("Unable to get snap information for '%s': %s", std::string(appid).c_str(), e.what());
+        g_warning("Unable to get snap information for '%s': %s", package.value().c_str(), e.what());
         return {};
     }
 }
@@ -245,92 +241,135 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     return result;
 }
 
+/** Looks through all the plugs in the interfaces and runs a function
+    based on them */
+void Info::forAllPlugs(std::function<void(JsonObject *plugobj)> plugfunc) const
+{
+    if (!snapdExists)
+    {
+        return;
+    }
+
+    auto interfacesnode = snapdJson("/v2/interfaces");
+    auto interface = json_node_get_object(interfacesnode.get());
+    if (interface == nullptr)
+    {
+        throw std::runtime_error("Interfaces result isn't an object: " + Registry::Impl::printJson(interfacesnode));
+    }
+
+    for (auto member : {"plugs", "slots"})
+    {
+        if (!json_object_has_member(interface, member))
+        {
+            throw std::runtime_error("Interface JSON didn't have a '" + std::string(member) + "'");
+        }
+    }
+
+    auto plugarray = json_object_get_array_member(interface, "plugs");
+    for (unsigned int i = 0; i < json_array_get_length(plugarray); i++)
+    {
+        auto ifaceobj = json_array_get_object_element(plugarray, i);
+        try
+        {
+            for (auto member : {"snap", "interface", "apps"})
+            {
+                if (!json_object_has_member(ifaceobj, member))
+                {
+                    throw std::runtime_error("Interface JSON didn't have a '" + std::string(member) + "'");
+                }
+            }
+
+            plugfunc(ifaceobj);
+        }
+        catch (std::runtime_error &e)
+        {
+            /* We'll check the others even if one is bad */
+            // g_debug("Malformed inteface instance: %s", e.what());
+            continue;
+        }
+    }
+}
+
 /** Gets all the apps that are available for a given interface. It asks snapd
     for the list of interfaces and then finds this one, turning it into a set
     of AppIDs */
 std::set<AppID> Info::appsForInterface(const std::string &in_interface) const
 {
-    if (!snapdExists)
-    {
-        return {};
-    }
+    bool interfacefound = false;
+    std::set<AppID> appids;
 
     try
     {
-        auto interfacesnode = snapdJson("/v2/interfaces");
-        auto interface = json_node_get_object(interfacesnode.get());
-        if (interface == nullptr)
-        {
-            throw std::runtime_error("Interfaces result isn't an object: " + Registry::Impl::printJson(interfacesnode));
-        }
-
-        for (auto member : {"plugs", "slots"})
-        {
-            if (!json_object_has_member(interface, member))
+        forAllPlugs([this, &interfacefound, &appids, in_interface](JsonObject *ifaceobj) {
+            std::string interfacename = json_object_get_string_member(ifaceobj, "interface");
+            if (interfacename != in_interface)
             {
-                throw std::runtime_error("Interface JSON didn't have a '" + std::string(member) + "'");
+                return;
             }
-        }
 
-        bool interfacefound = false;
-        auto plugarray = json_object_get_array_member(interface, "plugs");
-        std::set<AppID> appids;
-        for (unsigned int i = 0; i < json_array_get_length(plugarray); i++)
-        {
-            auto ifaceobj = json_array_get_object_element(plugarray, i);
-            try
+            interfacefound = true;
+
+            std::string snapname = json_object_get_string_member(ifaceobj, "snap");
+            std::string revision = pkgInfo(AppID::Package::from_raw(snapname))->revision;
+
+            auto apps = json_object_get_array_member(ifaceobj, "apps");
+            for (unsigned int k = 0; k < json_array_get_length(apps); k++)
             {
-                for (auto member : {"snap", "interface", "apps"})
-                {
-                    if (!json_object_has_member(ifaceobj, member))
-                    {
-                        throw std::runtime_error("Interface JSON didn't have a '" + std::string(member) + "'");
-                    }
-                }
+                std::string appname = json_array_get_string_element(apps, k);
 
-                std::string interfacename = json_object_get_string_member(ifaceobj, "interface");
-                if (interfacename != in_interface)
-                {
-                    continue;
-                }
-
-                interfacefound = true;
-
-                std::string snapname = json_object_get_string_member(ifaceobj, "snap");
-                std::string revision = "0";  // TODO: We don't get the revision from snapd today :-(
-
-                auto apps = json_object_get_array_member(ifaceobj, "apps");
-                for (unsigned int k = 0; k < json_array_get_length(apps); k++)
-                {
-                    std::string appname = json_array_get_string_element(apps, k);
-
-                    appids.emplace(AppID(AppID::Package::from_raw(snapname),   /* package */
-                                         AppID::AppName::from_raw(appname),    /* appname */
-                                         AppID::Version::from_raw(revision))); /* version */
-                }
+                appids.emplace(AppID(AppID::Package::from_raw(snapname),   /* package */
+                                     AppID::AppName::from_raw(appname),    /* appname */
+                                     AppID::Version::from_raw(revision))); /* version */
             }
-            catch (std::runtime_error &e)
-            {
-                /* We'll check the others even if one is bad */
-                // g_debug("Malformed inteface instance: %s", e.what());
-                continue;
-            }
-        }
+        });
 
         if (!interfacefound)
         {
             g_debug("Unable to find information on interface '%s'", in_interface.c_str());
         }
-
-        return appids;
     }
     catch (std::runtime_error &e)
     {
         g_warning("Unable to get interface information: %s", e.what());
-        return {};
     }
 
-    return {};
+    return appids;
+}
+
+/** Finds all the interfaces for a specific appid */
+std::set<std::string> Info::interfacesForAppId(const AppID &appid) const
+{
+
+    std::set<std::string> interfaces;
+
+    try
+    {
+        forAllPlugs([&interfaces, appid](JsonObject *ifaceobj) {
+            std::string snapname = json_object_get_string_member(ifaceobj, "snap");
+            if (snapname != appid.package.value())
+            {
+                return;
+            }
+
+            std::string interfacename = json_object_get_string_member(ifaceobj, "interface");
+
+            auto apps = json_object_get_array_member(ifaceobj, "apps");
+            for (unsigned int k = 0; k < json_array_get_length(apps); k++)
+            {
+                std::string appname = json_array_get_string_element(apps, k);
+                if (appname == appid.appname.value())
+                {
+                    interfaces.insert(interfacename);
+                }
+            }
+        });
+    }
+    catch (std::runtime_error &e)
+    {
+        g_warning("Unable to get interface information: %s", e.what());
+    }
+
+    return interfaces;
 }
 
 }  // namespace snapd

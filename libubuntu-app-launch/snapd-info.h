@@ -43,20 +43,24 @@ public:
     /** Information that we can get from snapd about a package */
     struct PkgInfo
     {
-        std::string name;      /**< Name of the package */
-        std::string version;   /**< Version string provided by the package */
-        std::string revision;  /**< Numerical always incrementing revision of the package */
-        std::string directory; /**< Directory that the snap is uncompressed into */
+        std::string name;               /**< Name of the package */
+        std::string version;            /**< Version string provided by the package */
+        std::string revision;           /**< Numerical always incrementing revision of the package */
+        std::string directory;          /**< Directory that the snap is uncompressed into */
+        std::set<std::string> appnames; /**< List of appnames in the snap */
     };
-    std::shared_ptr<PkgInfo> pkgInfo(const AppID &appid) const;
+    std::shared_ptr<PkgInfo> pkgInfo(const AppID::Package &package) const;
 
     std::set<AppID> appsForInterface(const std::string &interface) const;
+
+    std::set<std::string> interfacesForAppId(const AppID &appid) const;
 
 private:
     std::string snapdSocket;
     bool snapdExists = false;
 
     std::shared_ptr<JsonNode> snapdJson(const std::string &endpoint) const;
+    void forAllPlugs(std::function<void(JsonObject *plugobj)> plugfunc) const;
 };
 
 }  // namespace snapd

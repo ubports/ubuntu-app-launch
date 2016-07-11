@@ -18,6 +18,7 @@
  */
 
 #include "application-impl-legacy.h"
+#include "app-info.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
 
@@ -110,6 +111,11 @@ std::shared_ptr<Application::Info> Legacy::info()
         appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
     }
     return appinfo_;
+}
+
+bool Legacy::hasAppId(const AppID& appid)
+{
+    return app_info_legacy(std::string(appid).c_str(), NULL, NULL) == TRUE;
 }
 
 const std::regex desktop_remover("^(.*)\\.desktop$");

@@ -33,11 +33,22 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
     , appid_(appid)
     , interface_(interface)
 {
-    pkgInfo_ = registry->impl->snapdInfo.pkgInfo(appid);
-    if (pkgInfo_ == nullptr)
+    pkgInfo_ = registry->impl->snapdInfo.pkgInfo(appid.package);
+    if (!pkgInfo_)
     {
         throw std::runtime_error("Unable to get snap package info for AppID: " + std::string(appid));
     }
+
+    if (pkgInfo_->revision != appid.version.value() ||
+        pkgInfo_->appnames.find(appid.appname) == pkgInfo_->appnames.end())
+    {
+        throw std::runtime_error("AppID does not match installed package for: " + std::string(appid));
+    }
+}
+
+Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
+    : Snap(appid, registry, findInterface(appid, registry))
+{
 }
 
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
@@ -115,6 +126,36 @@ public:
         }
     }
 };
+
+std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry)
+{
+    auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
+
+    for (auto interface : {"unity8", "unity7"})
+    {
+        if (ifaceset.find(interface) != ifaceset.end())
+        {
+            return interface;
+        }
+    }
+
+    throw std::runtime_error("Interface not found for: " + std::string(appid));
+}
+
+bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry)
+{
+    try
+    {
+        auto pkginfo = registry->impl->snapdInfo.pkgInfo(appId.package);
+
+        return pkginfo->revision == appId.version.value() &&
+               pkginfo->appnames.find(appId.appname) != pkginfo->appnames.end();
+    }
+    catch (std::runtime_error& e)
+    {
+        return false;
+    }
+}
 
 std::shared_ptr<Application::Info> Snap::info()
 {

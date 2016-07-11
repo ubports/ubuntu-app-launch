@@ -49,6 +49,8 @@ public:
     std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
     std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
 
+    static bool hasAppId(const AppID& appId);
+
 private:
     AppID _appid;
 

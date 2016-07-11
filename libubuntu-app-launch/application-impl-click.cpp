@@ -18,6 +18,7 @@
  */
 
 #include "application-impl-click.h"
+#include "app-info.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
 
@@ -54,6 +55,11 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
 AppID Click::appId()
 {
     return _appid;
+}
+
+bool Click::hasAppId(const AppID& appid)
+{
+    return app_info_click(std::string(appid).c_str(), NULL, NULL) == TRUE;
 }
 
 std::shared_ptr<Application::Info> Click::info()

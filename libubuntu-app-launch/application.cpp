@@ -25,6 +25,7 @@ extern "C" {
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
+#include "application-impl-snap.h"
 #include "application.h"
 
 #include <iostream>
@@ -42,22 +43,25 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         throw std::runtime_error("AppID is empty");
     }
 
-    std::string sappid = appid;
-    if (app_info_click(sappid.c_str(), NULL, NULL))
+    if (app_impls::Click::hasAppId(appid))
     {
         return std::make_shared<app_impls::Click>(appid, registry);
     }
-    else if (app_info_libertine(sappid.c_str(), NULL, NULL))
+    else if (app_impls::Snap::hasAppId(appid, registry))
+    {
+        return std::make_shared<app_impls::Snap>(appid, registry);
+    }
+    else if (app_impls::Libertine::hasAppId(appid))
     {
         return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
     }
-    else if (app_info_legacy(sappid.c_str(), NULL, NULL))
+    else if (app_impls::Legacy::hasAppId(appid))
     {
         return std::make_shared<app_impls::Legacy>(appid.appname, registry);
     }
     else
     {
-        throw std::runtime_error("Invalid app ID: " + sappid);
+        throw std::runtime_error("Invalid app ID: " + std::string(appid));
     }
 }
 

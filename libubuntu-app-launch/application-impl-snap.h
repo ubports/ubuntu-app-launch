@@ -33,6 +33,7 @@ namespace app_impls
 class Snap : public Base
 {
 public:
+    Snap(const AppID& appid, const std::shared_ptr<Registry>& registry);
     Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface);
 
     static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
@@ -46,6 +47,8 @@ public:
     std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
     std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
 
+    static bool hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry);
+
 private:
     AppID appid_;
     std::shared_ptr<app_info::Desktop> info_;
@@ -53,6 +56,7 @@ private:
     std::shared_ptr<snapd::Info::PkgInfo> pkgInfo_;
 
     std::list<std::pair<std::string, std::string>> launchEnv();
+    static std::string findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry);
 };
 
 }  // namespace app_impls
