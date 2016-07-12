@@ -28,50 +28,6 @@ namespace app_launch
 namespace app_impls
 {
 
-Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface)
-    : Base(registry)
-    , appid_(appid)
-    , interface_(interface)
-{
-    pkgInfo_ = registry->impl->snapdInfo.pkgInfo(appid.package);
-    if (!pkgInfo_)
-    {
-        throw std::runtime_error("Unable to get snap package info for AppID: " + std::string(appid));
-    }
-
-    if (pkgInfo_->revision != appid.version.value() ||
-        pkgInfo_->appnames.find(appid.appname) == pkgInfo_->appnames.end())
-    {
-        throw std::runtime_error("AppID does not match installed package for: " + std::string(appid));
-    }
-}
-
-Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
-    : Snap(appid, registry, findInterface(appid, registry))
-{
-}
-
-std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
-{
-    std::list<std::shared_ptr<Application>> apps;
-
-    for (auto interface : {"unity7", "unity8"})
-    {
-        for (auto id : registry->impl->snapdInfo.appsForInterface(interface))
-        {
-            auto app = std::make_shared<Snap>(id, registry, interface);
-            apps.push_back(app);
-        }
-    }
-
-    return apps;
-}
-
-AppID Snap::appId()
-{
-    return appid_;
-}
-
 class SnapInfo : public app_info::Desktop
 {
     std::string interface_;
@@ -128,6 +84,59 @@ public:
     }
 };
 
+Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface)
+    : Base(registry)
+    , appid_(appid)
+    , interface_(interface)
+{
+    pkgInfo_ = registry->impl->snapdInfo.pkgInfo(appid.package);
+    if (!pkgInfo_)
+    {
+        throw std::runtime_error("Unable to get snap package info for AppID: " + std::string(appid));
+    }
+
+    if (pkgInfo_->revision != appid.version.value() ||
+        pkgInfo_->appnames.find(appid.appname) == pkgInfo_->appnames.end())
+    {
+        throw std::runtime_error("AppID does not match installed package for: " + std::string(appid));
+    }
+
+    info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
+}
+
+Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
+    : Snap(appid, registry, findInterface(appid, registry))
+{
+}
+
+std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
+{
+    std::list<std::shared_ptr<Application>> apps;
+
+    for (auto interface : {"unity7", "unity8"})
+    {
+        for (auto id : registry->impl->snapdInfo.appsForInterface(interface))
+        {
+            try
+            {
+                auto app = std::make_shared<Snap>(id, registry, interface);
+                apps.push_back(app);
+            }
+            catch (std::runtime_error& e)
+            {
+                g_warning("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
+            }
+        }
+    }
+
+    return apps;
+}
+
+AppID Snap::appId()
+{
+    return appid_;
+}
+
 std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
@@ -160,11 +169,6 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
 
 std::shared_ptr<Application::Info> Snap::info()
 {
-    if (info_ == nullptr)
-    {
-        info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
-    }
-
     return info_;
 }
 
