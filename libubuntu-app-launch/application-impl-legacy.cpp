@@ -31,6 +31,7 @@ namespace app_launch
 namespace app_impls
 {
 
+const std::string snappyDesktopPath{"/var/lib/snapd"};
 std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name);
 
 void clear_keyfile(GKeyFile* keyfile)
@@ -51,7 +52,14 @@ Legacy::Legacy(const AppID::AppName& appname,
     , _keyfile(keyfile)
 {
     if (!_keyfile)
+    {
         throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
+    }
+
+    if (std::equal(snappyDesktopPath.begin(), snappyDesktopPath.end(), _basedir.begin()))
+    {
+        throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
+    }
 }
 
 Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
@@ -61,7 +69,14 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     std::tie(_basedir, _keyfile) = keyfileForApp(appname);
 
     if (!_keyfile)
+    {
         throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
+    }
+
+    if (std::equal(snappyDesktopPath.begin(), snappyDesktopPath.end(), _basedir.begin()))
+    {
+        throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
+    }
 }
 
 std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name)
@@ -164,7 +179,7 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
         }
         catch (std::runtime_error& e)
         {
-            g_debug("Unable to create application for legacy appname: %s", appname.c_str());
+            g_debug("Unable to create application for legacy appname '%s': %s", appname.c_str(), e.what());
         }
     }
 
