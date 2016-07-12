@@ -108,7 +108,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
         pkgstruct->revision = revisionstr;
 
         /* TODO: Seems like snapd should give this to us */
-        auto gdir = g_build_filename("snap", namestr.c_str(), revisionstr.c_str(), nullptr);
+        auto gdir = g_build_filename("/snap", namestr.c_str(), revisionstr.c_str(), nullptr);
         pkgstruct->directory = gdir;
         g_free(gdir);
 

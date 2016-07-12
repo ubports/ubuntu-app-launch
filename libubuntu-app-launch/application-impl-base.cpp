@@ -512,6 +512,7 @@ UpstartInstance::UpstartInstance(const AppID& appId,
     , instance_(instance)
     , registry_(registry)
 {
+    g_debug("Creating a new UpstartInstance for '%s' instance '%s'", std::string(appId_).c_str(), instance.c_str());
 }
 
 /** Reformat a C++ vector of URLs into a C GStrv of strings */
@@ -590,6 +591,8 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
 
     return registry->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
         [=]() -> std::shared_ptr<UpstartInstance> {
+            g_debug("Initializing params for an new UpstartInstance for: %s", std::string(appId).c_str());
+
             // ual_tracepoint(libual_start, appid);
             handshake_t* handshake = starting_handshake_start(std::string(appId).c_str());
             if (handshake == NULL)
@@ -664,6 +667,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             // ual_tracepoint(handshake_complete, app_id);
 
             /* Call the job start function */
+            g_debug("Asking Upstart to start task for: %s", std::string(appId).c_str());
             g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
                                    DBUS_SERVICE_UPSTART,                          /* service name */
                                    jobpath.c_str(),                               /* Path */

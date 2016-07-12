@@ -90,7 +90,8 @@ public:
                   if (error != nullptr)
                   {
                       auto perror = std::shared_ptr<GError>(error, g_error_free);
-                      throw std::runtime_error(perror.get()->message);
+                      throw std::runtime_error("Unable to find keyfile for '" + std::string(appid) + "' at '" + path +
+                                               "' because: " + perror.get()->message);
                   }
 
                   return keyfile;
@@ -188,6 +189,7 @@ std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
 
 std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 {
+    g_debug("Getting snap specific environment");
     std::list<std::pair<std::string, std::string>> retval;
 
     info();
@@ -200,6 +202,7 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
+    g_debug("Launching a snap: %s", std::string(appId()).c_str());
     return UpstartInstance::launch(appId(), "application-snap", std::string(appId()) + "-", urls, _registry,
                                    UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
 }
