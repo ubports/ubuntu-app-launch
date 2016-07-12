@@ -28,6 +28,21 @@ namespace app_launch
 namespace app_impls
 {
 
+/************************
+ ** Interface Lists
+ ************************/
+
+/** All the interfaces that we support running applications with */
+const std::set<std::string> SUPPORTED_INTERFACES{"unity8", "unity7", "x11"};
+/** All the interfaces that we run XMir for by default */
+const std::set<std::string> XMIR_INTERFACES{"unity7", "x11"};
+/** All the interfaces that we tell Unity support lifecycle */
+const std::set<std::string> LIFECYCLE_INTERFACES{"unity8"};
+
+/************************
+ ** Info support
+ ************************/
+
 class SnapInfo : public app_info::Desktop
 {
     std::string interface_;
@@ -61,7 +76,7 @@ public:
 
     XMirEnable xMirEnable() override
     {
-        if (interface_ == "unity7")
+        if (XMIR_INTERFACES.find(interface_) != XMIR_INTERFACES.end())
         {
             return XMirEnable::from_raw(true);
         }
@@ -73,7 +88,7 @@ public:
 
     UbuntuLifecycle supportsUbuntuLifecycle() override
     {
-        if (interface_ == "unity8")
+        if (LIFECYCLE_INTERFACES.find(interface_) != LIFECYCLE_INTERFACES.end())
         {
             return UbuntuLifecycle::from_raw(true);
         }
@@ -83,6 +98,10 @@ public:
         }
     }
 };
+
+/************************
+ ** Snap implementation
+ ************************/
 
 Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface)
     : Base(registry)
@@ -113,7 +132,7 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
 {
     std::list<std::shared_ptr<Application>> apps;
 
-    for (auto interface : {"unity7", "unity8"})
+    for (auto interface : SUPPORTED_INTERFACES)
     {
         for (auto id : registry->impl->snapdInfo.appsForInterface(interface))
         {
@@ -141,7 +160,7 @@ std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Regist
 {
     auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
 
-    for (auto interface : {"unity8", "unity7"})
+    for (auto interface : SUPPORTED_INTERFACES)
     {
         if (ifaceset.find(interface) != ifaceset.end())
         {
@@ -195,8 +214,6 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 {
     g_debug("Getting snap specific environment");
     std::list<std::pair<std::string, std::string>> retval;
-
-    info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", info_->xMirEnable().value() ? "1" : "0"));
     retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
