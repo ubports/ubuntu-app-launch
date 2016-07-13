@@ -57,6 +57,13 @@ add_executable (socket-tool
 add_test (NAME libual-test COMMAND libual-test)
 add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
+# Snapd Info Test
+
+add_executable (snapd-info-test
+	snapd-info-test.cpp)
+target_link_libraries (snapd-info-test gtest ${GTEST_LIBS} launcher-static)
+add_test (NAME snapd-info-test COMMAND snapd-info-test)
+
 # Application Info Desktop
 
 add_executable (application-info-desktop-test
@@ -133,5 +140,5 @@ add_test (xmir-helper-test xmir-helper-test)
 # Formatted code
 
 add_custom_target(format-tests
-	COMMAND clang-format -i -style=file libual-cpp-test.cc
+	COMMAND clang-format -i -style=file libual-cpp-test.cc snapd-mock.h snapd-info-test.cpp
 )
