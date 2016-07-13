@@ -43,8 +43,12 @@ const std::set<std::string> LIFECYCLE_INTERFACES{"unity8"};
  ** Info support
  ************************/
 
+/** Subclassing the desktop info object so that we can override a couple
+    of properties with interface definitions. This may grow as we add more
+        fields to the desktop spec that come from Snappy interfaces. */
 class SnapInfo : public app_info::Desktop
 {
+    /** The core interface for this snap */
     std::string interface_;
 
 public:
@@ -54,6 +58,8 @@ public:
              const std::string& snapDir)
         : Desktop(
               [appid, snapDir]() -> std::shared_ptr<GKeyFile> {
+                  /* This is a function to get the keyfile out of the snap using
+                     the paths that snappy places things inside the dir. */
                   std::string path = snapDir + "/meta/gui/" + appid.appname.value() + ".desktop";
                   std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), g_key_file_free);
                   GError* error = nullptr;
@@ -74,6 +80,8 @@ public:
     {
     }
 
+    /** Return the xMirEnable value based on whether the interface is
+        in the list of interfaces using XMir */
     XMirEnable xMirEnable() override
     {
         if (XMIR_INTERFACES.find(interface_) != XMIR_INTERFACES.end())
@@ -86,6 +94,8 @@ public:
         }
     }
 
+    /** Return the xMirEnable value based on whether the interface is
+        in the list of interfaces supporting the lifecycle */
     UbuntuLifecycle supportsUbuntuLifecycle() override
     {
         if (LIFECYCLE_INTERFACES.find(interface_) != LIFECYCLE_INTERFACES.end())
@@ -103,6 +113,9 @@ public:
  ** Snap implementation
  ************************/
 
+/** Creates a Snap application object. Will throw exceptions if the AppID
+    doesn't resolve into a valid package or that package doesn't have a desktop
+        file that matches the app name. */
 Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface)
     : Base(registry)
     , appid_(appid)
@@ -123,11 +136,15 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
     info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
 }
 
+/** Uses the findInterface() function to find the interface if we don't
+    have one. */
 Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
     : Snap(appid, registry, findInterface(appid, registry))
 {
 }
 
+/** Lists all the Snappy apps that are using one of our supported interfaces.
+    Also makes sure they're valid. */
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> apps;
@@ -151,11 +168,14 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
     return apps;
 }
 
+/** Returns the stored AppID */
 AppID Snap::appId()
 {
     return appid_;
 }
 
+/** Asks Snapd for the interfaces to determine which one the application
+    can support. */
 std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
@@ -171,6 +191,8 @@ std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Regist
     throw std::runtime_error("Interface not found for: " + std::string(appid));
 }
 
+/** Checks if an AppID could be a snap. Note it doesn't look for a desktop
+    file just the package, app and version. */
 bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry)
 {
     try
@@ -186,6 +208,7 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
     }
 }
 
+/** Returns a reference to the info for the snap */
 std::shared_ptr<Application::Info> Snap::info()
 {
     return info_;
