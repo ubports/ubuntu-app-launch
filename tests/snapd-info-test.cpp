@@ -46,9 +46,12 @@ TEST_F(SnapdInfo, Init)
 
 TEST_F(SnapdInfo, PackageInfo)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET,
-                   {{"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-                     "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 4\r\n\r\n{}\r\n\r\n"}}};
+    SnapdMock mock{
+        SNAPD_TEST_SOCKET,
+        {{"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+          SnapdMock::httpJsonResponse("{ 'status': 'OK', 'status-code': 200, 'type': 'sync', 'result': { 'name': "
+                                      "'test-package', 'status': 'active', 'type': 'app', 'version': '1.2.3.4', "
+                                      "'revision': 'x123', 'apps': [ { 'name': 'foo' }, {'name': 'bar'} ] } }")}}};
     auto info = std::make_shared<ubuntu::app_launch::snapd::Info>();
 
     auto pkginfo = info->pkgInfo(ubuntu::app_launch::AppID::Package::from_raw("test-package"));
@@ -59,7 +62,7 @@ TEST_F(SnapdInfo, PackageInfo)
     EXPECT_EQ("test-package", pkginfo->name);
     EXPECT_EQ("1.2.3.4", pkginfo->version);
     EXPECT_EQ("x123", pkginfo->revision);
-    EXPECT_EQ("/snap/test-package/x123/", pkginfo->directory);
+    EXPECT_EQ("/snap/test-package/x123", pkginfo->directory);
     EXPECT_NE(pkginfo->appnames.end(), pkginfo->appnames.find("foo"));
     EXPECT_NE(pkginfo->appnames.end(), pkginfo->appnames.find("bar"));
 }

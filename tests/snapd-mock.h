@@ -273,4 +273,14 @@ private:
             g_io_stream_close(G_IO_STREAM(testcase->connection.get()), nullptr, nullptr);
         }
     }
+
+public:
+    static std::string httpJsonResponse(const std::string &json)
+    {
+        return "HTTP/1.1 200 OK\r\n"                /* okay */
+               "Content-Type: application/json\r\n" /* json stuff */
+               "Content-Length: " +
+               std::to_string(json.size()) + "\r\n\r\n" + /* size of data */
+               json;
+    }
 };
