@@ -59,6 +59,7 @@ add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
 # Snapd Info Test
 
+add_definitions ( -DSNAPD_TEST_SOCKET="${CMAKE_CURRENT_BINARY_DIR}/snapd-test-socket" )
 add_executable (snapd-info-test
 	snapd-info-test.cpp)
 target_link_libraries (snapd-info-test gtest ${GTEST_LIBS} launcher-static)

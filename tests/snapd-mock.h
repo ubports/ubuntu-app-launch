@@ -41,7 +41,7 @@ public:
     {
         for (auto interaction : interactions)
         {
-            TestCase testcase{interaction.first, interaction.first, {}, {}};
+            TestCase testcase{interaction.first, interaction.second, {}, {}};
             testCases.push_back(testcase);
         }
 
@@ -57,7 +57,7 @@ public:
 
             GError *error = nullptr;
             auto socket = g_socket_new(G_SOCKET_FAMILY_UNIX,      /* unix */
-                                       G_SOCKET_TYPE_INVALID,     /* type */
+                                       G_SOCKET_TYPE_STREAM,      /* type */
                                        G_SOCKET_PROTOCOL_DEFAULT, /* protocol */
                                        &error);
 
@@ -74,7 +74,7 @@ public:
                 throw std::runtime_error("Unable to create a socket address for: " + socketPath);
             }
 
-            g_socket_connect(socket, socketaddr, nullptr, &error);
+            g_socket_bind(socket, socketaddr, TRUE, &error);
             if (error != nullptr)
             {
                 std::string message =
@@ -95,8 +95,21 @@ public:
 
             g_socket_service_start(service.get());
 
+            g_socket_listen(socket, &error);
+            if (error != nullptr)
+            {
+                std::string message = "Unable to listen to socket: " + std::string(error->message);
+                g_error_free(error);
+                throw std::runtime_error(message);
+            }
+
             return service;
         });
+    }
+
+    ~SnapdMock()
+    {
+        thread.quit();
     }
 
     /** Check to see if the mock was used successfully */
@@ -110,6 +123,13 @@ public:
         for (auto testcase : testCases)
         {
             EXPECT_EQ(testcase.input, testcase.result);
+        }
+
+        EXPECT_EQ(0, extraCases.size());
+
+        for (auto testcase : extraCases)
+        {
+            EXPECT_EQ(std::string{}, testcase.result);
         }
     }
 
@@ -126,6 +146,7 @@ private:
     };
 
     std::list<TestCase> testCases;
+    std::list<TestCase> extraCases;
 
     static gboolean serviceConnectedStatic(GSocketService *service,
                                            GSocketConnection *connection,
@@ -140,7 +161,7 @@ private:
 
     bool serviceConnected(std::shared_ptr<GSocketConnection> connection)
     {
-        for (auto testcase : testCases)
+        for (auto &testcase : testCases)
         {
             if (testcase.connection)
             {
@@ -156,9 +177,14 @@ private:
                                             G_PRIORITY_DEFAULT,                        /* default priority */
                                             thread.getCancellable().get(),             /* cancel */
                                             caseInputStatic,                           /* callback */
-                                            &(testcase.result));
+                                            &testcase);
 
             auto output = g_io_stream_get_output_stream(G_IO_STREAM(connection.get()));  // transfer: none
+            if (output == nullptr)
+            {
+                g_warning("No output stream avilable with connection!");
+            }
+
             g_output_stream_write_all_async(
                 output,                        /* output stream */
                 testcase.output.c_str(),       /* data */
@@ -166,6 +192,7 @@ private:
                 G_PRIORITY_DEFAULT,            /* priority */
                 thread.getCancellable().get(), /* cancel */
                 [](GObject *obj, GAsyncResult *res, gpointer userdata) -> void {
+                    auto testcase = reinterpret_cast<TestCase *>(userdata);
                     gsize bytesout = 0;
                     GError *error = nullptr;
 
@@ -178,13 +205,16 @@ private:
                         return;
                     }
 
-                    if (bytesout != reinterpret_cast<gsize>(userdata))
+                    if (bytesout != testcase->output.size())
                     {
                         g_warning("Wrote out %d bytes in snapd socket but expected to write out %d", int(bytesout),
-                                  reinterpret_cast<int>(GPOINTER_TO_INT(userdata)));
+                                  int(testcase->output.size()));
                     }
-                },                                        /* callback */
-                GINT_TO_POINTER(testcase.output.size())); /* expected size */
+
+                    g_output_stream_close(G_OUTPUT_STREAM(obj), nullptr, nullptr);
+                    checkConnection(testcase);
+                },          /* callback */
+                &testcase); /* expected size */
 
             /* We got this one */
             return true;
@@ -196,6 +226,7 @@ private:
 
     static void caseInputStatic(GObject *obj, GAsyncResult *res, gpointer userdata) noexcept
     {
+        auto testcase = reinterpret_cast<TestCase *>(userdata);
         GError *error = nullptr;
         auto bytes = g_input_stream_read_bytes_finish(G_INPUT_STREAM(obj), res, &error);
 
@@ -207,14 +238,13 @@ private:
         }
 
         auto bytessize = g_bytes_get_size(bytes);
-        if (bytessize > 0)
+        if (bytessize > 0)  // zero means closed
         {
             auto data = reinterpret_cast<const char *>(g_bytes_get_data(bytes, nullptr));
-            auto input = reinterpret_cast<std::string *>(userdata);
 
             for (unsigned int i = 0; i < bytessize; i++)
             {
-                input->push_back(data[i]);
+                testcase->result.push_back(data[i]);
             }
 
             g_input_stream_read_bytes_async(G_INPUT_STREAM(obj), /* stream */
@@ -224,7 +254,23 @@ private:
                                             caseInputStatic,     /* callback */
                                             userdata);
         }
+        else
+        {
+            g_input_stream_close(G_INPUT_STREAM(obj), nullptr, nullptr);
+            checkConnection(testcase);
+        }
 
         g_bytes_unref(bytes);
+    }
+
+    static void checkConnection(TestCase *testcase)
+    {
+        auto input = g_io_stream_get_input_stream(G_IO_STREAM(testcase->connection.get()));    // transfer: none
+        auto output = g_io_stream_get_output_stream(G_IO_STREAM(testcase->connection.get()));  // transfer: none
+
+        if (g_input_stream_is_closed(input) && g_output_stream_is_closed(output))
+        {
+            g_io_stream_close(G_IO_STREAM(testcase->connection.get()), nullptr, nullptr);
+        }
     }
 };
