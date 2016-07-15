@@ -5,4 +5,5 @@ Exec=single
 NoDisplay=false
 Hidden=false
 Terminal=false
+Icon=single.png
 X-Ubuntu-Single-Instance=true

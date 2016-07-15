@@ -104,6 +104,8 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
+        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", "/this/should/not/exist", TRUE);
+
         service = dbus_test_service_new(NULL);
 
         debugConnection();
