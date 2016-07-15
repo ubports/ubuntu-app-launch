@@ -62,7 +62,8 @@ private:
     std::shared_ptr<GKeyFile> _keyfile;
     std::shared_ptr<app_info::Desktop> appinfo_;
 
-    std::list<std::pair<std::string, std::string>> launchEnv();
+    std::list<std::pair<std::string, std::string>> launchEnv(const std::string& instance);
+    std::string getInstance();
 };
 
 };  // namespace app_impls

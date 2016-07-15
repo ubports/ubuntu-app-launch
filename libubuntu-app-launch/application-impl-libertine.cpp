@@ -172,6 +172,9 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
 
+    /* The container is our confinement */
+    retval.emplace_back(std::make_pair("APP_EXEC_POLICY", "unconfined"));
+
     auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
     if (libertine_launch == nullptr)
     {
@@ -181,6 +184,9 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
     auto desktopexec = appinfo_->execLine().value();
     auto execline = std::string(libertine_launch) + " \"" + _container.value() + "\" " + desktopexec;
     retval.emplace_back(std::make_pair("APP_EXEC", execline));
+
+    /* TODO: Go multi instance */
+    retval.emplace_back(std::make_pair("INSTANCE_ID", ""));
 
     return retval;
 }

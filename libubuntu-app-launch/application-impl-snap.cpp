@@ -198,6 +198,10 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
     try
     {
         auto pkginfo = registry->impl->snapdInfo.pkgInfo(appId.package);
+        if (!pkginfo)
+        {
+            return false;
+        }
 
         return pkginfo->revision == appId.version.value() &&
                pkginfo->appnames.find(appId.appname) != pkginfo->appnames.end();

@@ -534,18 +534,24 @@ std::shared_ptr<gchar*> UpstartInstance::urlsToStrv(const std::vector<Applicatio
     return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
+/** Small helper that we can new/delete to work better with C stuff */
+struct StartCHelper
+{
+    std::shared_ptr<UpstartInstance> ptr;
+};
+
 /** Callback from starting an application. It checks to see whether the
     app is already running. If it is already running then we need to send
-        the URLs to it via DBus. */
+    the URLs to it via DBus. */
 void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
 {
-    UpstartInstance* data = (UpstartInstance*)user_data;
+    StartCHelper* data = reinterpret_cast<StartCHelper*>(user_data);
     GError* error{nullptr};
     GVariant* result{nullptr};
 
     // ual_tracepoint(libual_start_message_callback, std::string(data->appId_).c_str());
 
-    g_debug("Started Message Callback: %s", std::string(data->appId_).c_str());
+    g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
 
     result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
@@ -560,11 +566,11 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
             g_debug("Remote error: %s", remote_error);
             if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0)
             {
-                auto urls = urlsToStrv(data->urls_);
-                second_exec(data->registry_->impl->_dbus.get(),                   /* DBus */
-                            data->registry_->impl->thread.getCancellable().get(), /* cancellable */
-                            std::string(data->appId_).c_str(),                    /* appid */
-                            urls.get());                                          /* urls */
+                auto urls = urlsToStrv(data->ptr->urls_);
+                second_exec(data->ptr->registry_->impl->_dbus.get(),                   /* DBus */
+                            data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
+                            std::string(data->ptr->appId_).c_str(),                    /* appid */
+                            urls.get());                                               /* urls */
             }
 
             g_free(remote_error);
@@ -575,6 +581,8 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
         }
         g_error_free(error);
     }
+
+    delete data;
 }
 
 std::shared_ptr<UpstartInstance> UpstartInstance::launch(
@@ -661,6 +669,8 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
             auto retval = std::make_shared<UpstartInstance>(appId, job, instance, registry);
+            auto chelper = new StartCHelper{};
+            chelper->ptr = retval;
 
             // ual_tracepoint(handshake_wait, app_id);
             starting_handshake_wait(handshake);
@@ -679,7 +689,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
                                    -1,                                            /* default timeout */
                                    registry->impl->thread.getCancellable().get(), /* cancelable */
                                    application_start_cb,                          /* callback */
-                                   retval.get()                                   /* object */
+                                   chelper                                        /* object */
                                    );
 
             // ual_tracepoint(libual_start_message_sent, appid);

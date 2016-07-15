@@ -51,6 +51,8 @@ Legacy::Legacy(const AppID::AppName& appname,
     , _basedir(basedir)
     , _keyfile(keyfile)
 {
+    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
+
     if (!_keyfile)
     {
         throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
@@ -67,6 +69,8 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     , _appname(appname)
 {
     std::tie(_basedir, _keyfile) = keyfileForApp(appname);
+
+    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
 
     if (!_keyfile)
     {
@@ -121,10 +125,6 @@ std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::App
 
 std::shared_ptr<Application::Info> Legacy::info()
 {
-    if (!appinfo_)
-    {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
-    }
     return appinfo_;
 }
 
@@ -207,7 +207,7 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
     return vect;
 }
 
-std::list<std::pair<std::string, std::string>> Legacy::launchEnv()
+std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::string& instance)
 {
     std::list<std::pair<std::string, std::string>> retval;
 
@@ -241,19 +241,42 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv()
         retval.emplace_back(std::make_pair("APP_EXEC_POLICY", "unconfined"));
     }
 
+    /* Check to see if we're single instance */
+    if (!instance.empty())
+    {
+        retval.emplace_back(std::make_pair("INSTANCE_ID", instance));
+    }
+
     return retval;
+}
+
+std::string Legacy::getInstance()
+{
+    auto single = g_key_file_get_boolean(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Single-Instance", nullptr);
+    if (single)
+    {
+        return {};
+    }
+    else
+    {
+        return std::to_string(g_get_real_time());
+    }
 }
 
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
+    std::string instance = getInstance();
+    return UpstartInstance::launch(appId(), "application-legacy", "-" + instance, urls, _registry,
+                                   UpstartInstance::launchMode::STANDARD,
+                                   [this, instance]() { return launchEnv(instance); });
 }
 
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
+    std::string instance = getInstance();
+    return UpstartInstance::launch(appId(), "application-legacy", "-" + instance, urls, _registry,
+                                   UpstartInstance::launchMode::TEST,
+                                   [this, instance]() { return launchEnv(instance); });
 }
 
 };  // namespace app_impls
