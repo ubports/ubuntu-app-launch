@@ -228,7 +228,8 @@ std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
         g_debug("Looking at snap instance: %s", instance.c_str());
         if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
         {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-snap", instance, _registry));
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-snap", instance,
+                                                                std::vector<Application::URL>{}, _registry));
         }
     }
 

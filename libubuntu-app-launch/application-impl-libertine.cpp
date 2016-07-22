@@ -154,8 +154,8 @@ std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
     for (auto instancename : _registry->impl->upstartInstancesForJob("application-legacy"))
     {
         if (std::equal(sappid.begin(), sappid.end(), instancename.begin()))
-            vect.emplace_back(
-                std::make_shared<UpstartInstance>(appId(), "application-legacy", sappid + "-", _registry));
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", sappid + "-",
+                                                                std::vector<Application::URL>{}, _registry));
     }
 
     return vect;

@@ -506,10 +506,12 @@ void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::s
 UpstartInstance::UpstartInstance(const AppID& appId,
                                  const std::string& job,
                                  const std::string& instance,
+                                 const std::vector<Application::URL>& urls,
                                  const std::shared_ptr<Registry>& registry)
     : appId_(appId)
     , job_(job)
     , instance_(instance)
+    , urls_(urls)
     , registry_(registry)
 {
     g_debug("Creating a new UpstartInstance for '%s' instance '%s'", std::string(appId_).c_str(), instance.c_str());
@@ -528,6 +530,7 @@ std::shared_ptr<gchar*> UpstartInstance::urlsToStrv(const std::vector<Applicatio
     for (auto url : urls)
     {
         auto str = g_strdup(url.value().c_str());
+        g_debug("Converting URL: %s", str);
         g_array_append_val(array, str);
     }
 
@@ -598,7 +601,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
         return {};
 
     return registry->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
-        [=]() -> std::shared_ptr<UpstartInstance> {
+        [&]() -> std::shared_ptr<UpstartInstance> {
             g_debug("Initializing params for an new UpstartInstance for: %s", std::string(appId).c_str());
 
             // ual_tracepoint(libual_start, appid);
@@ -668,7 +671,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             g_variant_builder_close(&builder);
             g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
-            auto retval = std::make_shared<UpstartInstance>(appId, job, instance, registry);
+            auto retval = std::make_shared<UpstartInstance>(appId, job, instance, urls, registry);
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
 

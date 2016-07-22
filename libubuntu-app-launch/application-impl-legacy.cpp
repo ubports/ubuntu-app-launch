@@ -198,7 +198,8 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
         g_debug("Looking at legacy instance: %s", instance.c_str());
         if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
         {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", instance, _registry));
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", instance,
+                                                                std::vector<Application::URL>{}, _registry));
         }
     }
 

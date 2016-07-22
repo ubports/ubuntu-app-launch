@@ -184,7 +184,8 @@ std::vector<std::shared_ptr<Application::Instance>> Click::instances()
            there or return an empty vector */
         if (sappid == instancename)
         {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", sappid, _registry));
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", sappid,
+                                                                std::vector<Application::URL>{}, _registry));
             break;
         }
     }

@@ -53,6 +53,7 @@ public:
     explicit UpstartInstance(const AppID& appId,
                              const std::string& job,
                              const std::string& instance,
+                             const std::vector<Application::URL>& urls,
                              const std::shared_ptr<Registry>& registry);
 
     /* Query lifecycle */
@@ -90,8 +91,8 @@ private:
     const AppID appId_;
     const std::string job_;
     const std::string instance_;
-    std::shared_ptr<Registry> registry_;
     std::vector<Application::URL> urls_;
+    std::shared_ptr<Registry> registry_;
 
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
     void signalToPid(pid_t pid, int signal);
