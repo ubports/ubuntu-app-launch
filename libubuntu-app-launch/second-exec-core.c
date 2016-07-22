@@ -61,6 +61,11 @@ timer_cb (gpointer user_data)
 {
 	ual_tracepoint(second_exec_resume_timeout, ((second_exec_t *)user_data)->appid);
 	g_warning("Unity didn't respond in 500ms to resume the app");
+
+	/* We remove ourselves */
+	second_exec_t * data = (second_exec_t *)user_data;
+	data->timer = 0;
+
 	second_exec_complete(user_data);
 	return G_SOURCE_REMOVE;
 }
