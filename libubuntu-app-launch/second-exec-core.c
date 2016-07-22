@@ -41,6 +41,20 @@ typedef struct {
 
 static void second_exec_complete (second_exec_t * data);
 
+static guint
+thread_default_timeout (guint interval, GSourceFunc func, gpointer data)
+{
+	GSource * src = g_timeout_source_new(interval);
+	GMainContext * context = g_main_context_get_thread_default();
+
+	g_source_set_callback(src, func, data, NULL);
+
+	guint attach = g_source_attach(src, context);
+	g_source_unref(src);
+
+	return attach;
+}
+
 /* Unity didn't respond in time, continue on */
 static gboolean
 timer_cb (gpointer user_data)
@@ -67,7 +81,7 @@ connection_count_dec (second_exec_t * data)
 			second_exec_complete(data);
 		} else {
 			g_debug("Timer Set");
-			data->timer = g_timeout_add(500 - (timespent / 1000), timer_cb, data);
+			data->timer = thread_default_timeout(500 - (timespent / 1000), timer_cb, data);
 		}
 	}
 	return;
@@ -400,11 +414,17 @@ second_exec (GDBusConnection * session, GCancellable * cancel, const gchar * app
 	/* If we've got something to give out, start looking for how */
 	if (data->input_uris != NULL) {
 		find_appid_pid(session, data);
+	} else {
+		g_debug("No URIs to send");
 	}
 
 	/* Loop and wait for everything to align */
-	if (data->connections_open == 0 && data->unity_starttime == 0) {
-		second_exec_complete(data);
+	if (data->connections_open == 0) {
+		if (data->unity_starttime == 0) {
+			second_exec_complete(data);
+		} else {
+			data->timer = thread_default_timeout(500, timer_cb, data);
+		}
 	}
 
 	return TRUE;
