@@ -35,13 +35,13 @@ typedef struct {
 	GVariant * app_data;
 	gchar * dbus_path;
 	guint64 unity_starttime;
-	guint timer;
+	GSource * timer;
 	guint signal;
 } second_exec_t;
 
 static void second_exec_complete (second_exec_t * data);
 
-static guint
+static GSource *
 thread_default_timeout (guint interval, GSourceFunc func, gpointer data)
 {
 	GSource * src = g_timeout_source_new(interval);
@@ -49,10 +49,9 @@ thread_default_timeout (guint interval, GSourceFunc func, gpointer data)
 
 	g_source_set_callback(src, func, data, NULL);
 
-	guint attach = g_source_attach(src, context);
-	g_source_unref(src);
+	g_source_attach(src, context);
 
-	return attach;
+	return src;
 }
 
 /* Unity didn't respond in time, continue on */
@@ -61,10 +60,6 @@ timer_cb (gpointer user_data)
 {
 	ual_tracepoint(second_exec_resume_timeout, ((second_exec_t *)user_data)->appid);
 	g_warning("Unity didn't respond in 500ms to resume the app");
-
-	/* We remove ourselves */
-	second_exec_t * data = (second_exec_t *)user_data;
-	data->timer = 0;
 
 	second_exec_complete(user_data);
 	return G_SOURCE_REMOVE;
@@ -101,9 +96,10 @@ unity_resume_cb (GDBusConnection * connection, const gchar * sender, const gchar
 	g_debug("Unity Completed Resume");
 	ual_tracepoint(second_exec_resume_complete, data->appid);
 
-	if (data->timer != 0) {
-		g_source_remove(data->timer);
-		data->timer = 0;
+	if (data->timer != NULL) {
+		g_source_destroy(data->timer);
+		g_source_unref(data->timer);
+		data->timer = NULL;
 	}
 
 	if (data->connections_open == 0) {
@@ -472,6 +468,10 @@ second_exec_complete (second_exec_t * data)
 	if (data->signal != 0)
 		g_dbus_connection_signal_unsubscribe(data->bus, data->signal);
 
+	if (data->timer != NULL) {
+		g_source_destroy(data->timer);
+		g_source_unref(data->timer);
+	}
 	g_object_unref(data->bus);
 	if (data->app_data != NULL)
 		g_variant_unref(data->app_data);
