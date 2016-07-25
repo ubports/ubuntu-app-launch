@@ -242,11 +242,7 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
         retval.emplace_back(std::make_pair("APP_EXEC_POLICY", "unconfined"));
     }
 
-    /* Check to see if we're single instance */
-    if (!instance.empty())
-    {
-        retval.emplace_back(std::make_pair("INSTANCE_ID", instance));
-    }
+    retval.emplace_back(std::make_pair("INSTANCE_ID", instance));
 
     return retval;
 }
