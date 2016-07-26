@@ -65,6 +65,13 @@ add_executable (snapd-info-test
 target_link_libraries (snapd-info-test gtest ${GTEST_LIBS} launcher-static)
 add_test (NAME snapd-info-test COMMAND snapd-info-test)
 
+# List Apps
+
+add_executable (list-apps
+	list-apps.cpp)
+target_link_libraries (list-apps gtest ${GTEST_LIBS} launcher-static)
+add_test (NAME list-apps COMMAND list-apps)
+
 # Application Info Desktop
 
 add_executable (application-info-desktop-test
@@ -141,5 +148,5 @@ add_test (xmir-helper-test xmir-helper-test)
 # Formatted code
 
 add_custom_target(format-tests
-	COMMAND clang-format -i -style=file libual-cpp-test.cc snapd-mock.h snapd-info-test.cpp
+	COMMAND clang-format -i -style=file libual-cpp-test.cc snapd-mock.h snapd-info-test.cpp list-apps.cpp
 )
