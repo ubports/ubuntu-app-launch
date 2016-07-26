@@ -325,4 +325,56 @@ public:
 
         return response + "}";
     }
+
+    struct SnapdPlug
+    {
+        std::string interface;
+        std::string snap;
+        std::list<std::string> apps;
+    };
+
+    static std::string interfacesJson(std::list<SnapdPlug> plugs)
+    {
+        std::string response = "{\n";
+
+        response += "'plugs': [ " +
+                    std::accumulate(plugs.begin(), plugs.end(), std::string{},
+                                    [](const std::string &builder, SnapdPlug plug) {
+                                        std::string json = "\n{\n";
+
+                                        json += "'interface': '" + plug.interface + "',\n";
+                                        json += "'snap': '" + plug.snap + "',\n";
+
+                                        json += "'apps': [ " +
+                                                std::accumulate(plug.apps.begin(), plug.apps.end(), std::string{},
+                                                                [](const std::string &builder, std::string entry) {
+                                                                    std::string json = "'" + entry + "'";
+                                                                    if (builder.empty())
+                                                                    {
+                                                                        return json;
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        return builder + ", " + json;
+                                                                    }
+                                                                }) +
+                                                " ]\n";
+
+                                        json += "}";
+
+                                        if (builder.empty())
+                                        {
+                                            return json;
+                                        }
+                                        else
+                                        {
+                                            return builder + "," + json;
+                                        }
+                                    }) +
+                    "\n],\n";
+
+        response += "'slots': [ { 'foo': 'bar' } ]\n"; /* TODO: For future use */
+
+        return response + "}";
+    }
 };
