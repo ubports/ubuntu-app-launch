@@ -23,6 +23,7 @@
 #include <gio/gunixsocketaddress.h>
 #include <gtest/gtest.h>
 #include <list>
+#include <numeric>
 
 class SnapdMock
 {
@@ -282,5 +283,46 @@ public:
                "Content-Length: " +
                std::to_string(json.size()) + "\r\n\r\n" + /* size of data */
                json;
+    }
+
+    static std::string snapdOkay(const std::string &result)
+    {
+        return "{ 'status': 'OK', 'status-code': 200, " /* all okay */
+               "  'type': 'sync', "                     /* This lib is only sync */
+               "  'result': " +
+               result + /* here is what we were given */
+               "}";
+    }
+
+    static std::string packageJson(const std::string &name,
+                                   const std::string &status,
+                                   const std::string &type,
+                                   const std::string &version,
+                                   const std::string &revision,
+                                   std::list<std::string> apps)
+    {
+        std::string response = "{\n";
+
+        response += "'name': '" + name + "',\n";
+        response += "'status': '" + status + "',\n";
+        response += "'type': '" + type + "',\n";
+        response += "'version': '" + version + "',\n";
+        response += "'revision': '" + revision + "',\n";
+
+        response += "'apps': [ " + std::accumulate(apps.begin(), apps.end(), std::string{},
+                                                   [](const std::string &builder, std::string entry) {
+                                                       std::string json = "\n  { 'name': '" + entry + "' }";
+                                                       if (builder.empty())
+                                                       {
+                                                           return json;
+                                                       }
+                                                       else
+                                                       {
+                                                           return builder + "," + json;
+                                                       }
+                                                   }) +
+                    "\n]\n";
+
+        return response + "}";
     }
 };
