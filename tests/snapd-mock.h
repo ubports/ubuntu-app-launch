@@ -333,7 +333,7 @@ public:
         std::list<std::string> apps;
     };
 
-    static std::string interfacesJson(std::list<SnapdPlug> plugs)
+    static std::string interfacesJson(const std::list<SnapdPlug> &plugs)
     {
         std::string response = "{\n";
 

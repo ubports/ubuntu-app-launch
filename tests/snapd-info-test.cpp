@@ -85,3 +85,26 @@ TEST_F(SnapdInfo, AppsForInterface)
     EXPECT_NE(apps.end(), apps.find(ubuntu::app_launch::AppID::parse("test-package_foo_x123")));
     EXPECT_NE(apps.end(), apps.find(ubuntu::app_launch::AppID::parse("test-package_bar_x123")));
 }
+
+TEST_F(SnapdInfo, InterfacesForAppID)
+{
+    SnapdMock mock{SNAPD_TEST_SOCKET,
+                   {{"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+                     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+                         SnapdMock::interfacesJson({{"unity8", "test-package", {"foo"}},
+                                                    {"noniface", "test-package", {"bar", "bamf", "bunny"}},
+                                                    {"unity7", "test-package", {"bar", "foo"}}})))}
+
+                   }};
+
+    auto info = std::make_shared<ubuntu::app_launch::snapd::Info>();
+    auto appid = ubuntu::app_launch::AppID::parse("test-package_foo_x123");
+
+    auto ifaces = info->interfacesForAppId(appid);
+
+    mock.result();
+
+    EXPECT_EQ(2, ifaces.size());
+    EXPECT_NE(ifaces.end(), ifaces.find("unity7"));
+    EXPECT_NE(ifaces.end(), ifaces.find("unity8"));
+}
