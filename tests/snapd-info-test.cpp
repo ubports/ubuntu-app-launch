@@ -108,3 +108,43 @@ TEST_F(SnapdInfo, InterfacesForAppID)
     EXPECT_NE(ifaces.end(), ifaces.find("unity7"));
     EXPECT_NE(ifaces.end(), ifaces.find("unity8"));
 }
+
+TEST_F(SnapdInfo, BadJson)
+{
+    SnapdMock mock{
+        SNAPD_TEST_SOCKET,
+        {
+            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+             SnapdMock::httpJsonResponse("«This is not valid JSON»")},
+            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+             SnapdMock::httpJsonResponse("{ 'status': 'FAIL', 'status-code': 404, 'type': 'sync', 'result': { } }")},
+            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+             SnapdMock::httpJsonResponse(SnapdMock::snapdOkay("'«This is not an object»'"))},
+
+        }};
+    auto info = std::make_shared<ubuntu::app_launch::snapd::Info>();
+
+    auto badjson = info->pkgInfo(ubuntu::app_launch::AppID::Package::from_raw("test-package"));
+
+    EXPECT_EQ(nullptr, badjson);
+
+    auto err404 = info->pkgInfo(ubuntu::app_launch::AppID::Package::from_raw("test-package"));
+
+    EXPECT_EQ(nullptr, err404);
+
+    auto noobj = info->pkgInfo(ubuntu::app_launch::AppID::Package::from_raw("test-package"));
+
+    EXPECT_EQ(nullptr, noobj);
+
+    /* We should still be getting good requests, so let's check them */
+    mock.result();
+}
+
+TEST_F(SnapdInfo, NoSocket)
+{
+    auto info = std::make_shared<ubuntu::app_launch::snapd::Info>();
+
+    auto nosocket = info->pkgInfo(ubuntu::app_launch::AppID::Package::from_raw("test-package"));
+
+    EXPECT_EQ(nullptr, nosocket);
+}
