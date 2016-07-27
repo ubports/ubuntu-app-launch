@@ -107,7 +107,7 @@ std::shared_ptr<Application::Info> Legacy::info()
     return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true);
 }
 
-const std::regex desktop_remover("^(.*)\\.desktop$");
+static const std::regex desktop_remover("^(.*)\\.desktop$");
 
 std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
 {
