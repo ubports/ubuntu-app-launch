@@ -57,6 +57,7 @@ public:
 
 private:
     std::string snapdSocket;
+    std::string snapBasedir;
     bool snapdExists = false;
 
     std::shared_ptr<JsonNode> snapdJson(const std::string &endpoint) const;

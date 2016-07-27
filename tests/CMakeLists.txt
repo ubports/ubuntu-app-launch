@@ -35,6 +35,7 @@ add_definitions ( -DSESSION_TEMP_FILE="${CMAKE_CURRENT_BINARY_DIR}/libual-test-s
 add_definitions ( -DSOCKET_DEMANGLER="${CMAKE_BINARY_DIR}/socket-demangler" )
 add_definitions ( -DSOCKET_DEMANGLER_INSTALL="${pkglibexecdir}/socket-demangler" )
 add_definitions ( -DSOCKET_TOOL="${CMAKE_CURRENT_BINARY_DIR}/socket-tool" )
+add_definitions ( -DSNAP_BASEDIR="${CMAKE_CURRENT_SOURCE_DIR}/snap-basedir" )
 
 add_executable (libual-test
 	libual-test.cc

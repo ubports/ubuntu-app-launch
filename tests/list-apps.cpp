@@ -29,11 +29,12 @@
 #include "application-impl-libertine.h"
 #include "application-impl-snap.h"
 
+#include "snapd-mock.h"
+
 class ListApps : public ::testing::Test
 {
 protected:
     GDBusConnection* bus = NULL;
-    std::shared_ptr<ubuntu::app_launch::Registry> registry;
 
     virtual void SetUp()
     {
@@ -50,18 +51,15 @@ protected:
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
         g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
-
-        registry = std::make_shared<ubuntu::app_launch::Registry>();
     }
 
     virtual void TearDown()
     {
-        registry.reset();
-
         g_unlink(SNAPD_TEST_SOCKET);
 
         g_object_unref(bus);
@@ -102,6 +100,7 @@ protected:
 
 TEST_F(ListApps, ListClick)
 {
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Click::list(registry);
 
     EXPECT_EQ(0, apps.size());
@@ -109,6 +108,7 @@ TEST_F(ListApps, ListClick)
 
 TEST_F(ListApps, ListLegacy)
 {
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Legacy::list(registry);
 
     EXPECT_EQ(0, apps.size());
@@ -116,6 +116,7 @@ TEST_F(ListApps, ListLegacy)
 
 TEST_F(ListApps, ListLibertine)
 {
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Libertine::list(registry);
 
     EXPECT_EQ(0, apps.size());
@@ -123,13 +124,38 @@ TEST_F(ListApps, ListLibertine)
 
 TEST_F(ListApps, ListSnap)
 {
+    SnapdMock mock{
+        SNAPD_TEST_SOCKET,
+        {{"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+          SnapdMock::httpJsonResponse(
+              SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))},
+         {"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+          SnapdMock::httpJsonResponse(
+              SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))},
+         {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+          SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+              SnapdMock::packageJson("test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))},
+         {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+          SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+              SnapdMock::packageJson("test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))},
+         {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+          SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+              SnapdMock::packageJson("test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))},
+         {"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+          SnapdMock::httpJsonResponse(
+              SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))}}};
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
 
-    EXPECT_EQ(0, apps.size());
+    mock.result();
+
+    EXPECT_EQ(1, apps.size());
 }
 
 TEST_F(ListApps, ListAll)
 {
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
     EXPECT_EQ(0, apps.size());

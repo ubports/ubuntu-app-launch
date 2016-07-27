@@ -43,6 +43,16 @@ Info::Info()
         snapdSocket = "/run/snapd.socket";
     }
 
+    auto snapcBasedir = g_getenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR");
+    if (G_UNLIKELY(snapcBasedir != nullptr))
+    {
+        snapBasedir = snapcBasedir;
+    }
+    else
+    {
+        snapBasedir = "/snap";
+    }
+
     if (g_file_test(snapdSocket.c_str(), G_FILE_TEST_EXISTS))
     {
         snapdExists = true;
@@ -108,7 +118,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
         pkgstruct->revision = revisionstr;
 
         /* TODO: Seems like snapd should give this to us */
-        auto gdir = g_build_filename("/snap", namestr.c_str(), revisionstr.c_str(), nullptr);
+        auto gdir = g_build_filename(snapBasedir.c_str(), namestr.c_str(), revisionstr.c_str(), nullptr);
         pkgstruct->directory = gdir;
         g_free(gdir);
 
@@ -309,8 +319,20 @@ std::set<AppID> Info::appsForInterface(const std::string &in_interface) const
 
             interfacefound = true;
 
-            std::string snapname = json_object_get_string_member(ifaceobj, "snap");
-            std::string revision = pkgInfo(AppID::Package::from_raw(snapname))->revision;
+            auto cname = json_object_get_string_member(ifaceobj, "snap");
+            if (cname == nullptr)
+            {
+                return;
+            }
+            std::string snapname(cname);
+
+            auto pkginfo = pkgInfo(AppID::Package::from_raw(snapname));
+            if (!pkginfo)
+            {
+                return;
+            }
+
+            std::string revision = pkginfo->revision;
 
             auto apps = json_object_get_array_member(ifaceobj, "apps");
             for (unsigned int k = 0; k < json_array_get_length(apps); k++)
