@@ -96,6 +96,21 @@ protected:
             g_main_iteration(TRUE);
         }
     }
+
+    bool findApp(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps, const std::string& appid)
+    {
+        auto appId = ubuntu::app_launch::AppID::parse(appid);
+
+        for (auto app : apps)
+        {
+            if (app->appId() == appId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 };
 
 TEST_F(ListApps, ListClick)
@@ -151,6 +166,8 @@ TEST_F(ListApps, ListSnap)
     mock.result();
 
     EXPECT_EQ(1, apps.size());
+    EXPECT_TRUE(findApp(apps, "test-package_foo_x123"));
+    EXPECT_FALSE(findApp(apps, "test-package_bar_x123"));
 }
 
 TEST_F(ListApps, ListAll)
