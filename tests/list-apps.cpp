@@ -18,10 +18,16 @@
  */
 
 #include <gio/gio.h>
+#include <glib/gstdio.h>
 #include <gtest/gtest.h>
 
 #include "application.h"
 #include "registry.h"
+
+#include "application-impl-click.h"
+#include "application-impl-legacy.h"
+#include "application-impl-libertine.h"
+#include "application-impl-snap.h"
 
 class ListApps : public ::testing::Test
 {
@@ -43,7 +49,7 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
-        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", "/this/should/not/exist", TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
@@ -55,6 +61,8 @@ protected:
     virtual void TearDown()
     {
         registry.reset();
+
+        g_unlink(SNAPD_TEST_SOCKET);
 
         g_object_unref(bus);
 
@@ -92,6 +100,37 @@ protected:
     }
 };
 
-TEST_F(ListApps, Init)
+TEST_F(ListApps, ListClick)
 {
+    auto apps = ubuntu::app_launch::app_impls::Click::list(registry);
+
+    EXPECT_EQ(0, apps.size());
+}
+
+TEST_F(ListApps, ListLegacy)
+{
+    auto apps = ubuntu::app_launch::app_impls::Legacy::list(registry);
+
+    EXPECT_EQ(0, apps.size());
+}
+
+TEST_F(ListApps, ListLibertine)
+{
+    auto apps = ubuntu::app_launch::app_impls::Libertine::list(registry);
+
+    EXPECT_EQ(0, apps.size());
+}
+
+TEST_F(ListApps, ListSnap)
+{
+    auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
+
+    EXPECT_EQ(0, apps.size());
+}
+
+TEST_F(ListApps, ListAll)
+{
+    auto apps = ubuntu::app_launch::Registry::installedApps(registry);
+
+    EXPECT_EQ(0, apps.size());
 }
