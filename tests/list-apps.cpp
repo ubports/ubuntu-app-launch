@@ -154,28 +154,18 @@ TEST_F(ListApps, ListLibertine)
     EXPECT_EQ(0, apps.size());
 }
 
+static std::pair<std::string, std::string> interfaces{
+    "GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(
+        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))};
+static std::pair<std::string, std::string> testPackage{
+    "GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+        SnapdMock::packageJson("test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))};
+
 TEST_F(ListApps, ListSnap)
 {
-    SnapdMock mock{
-        SNAPD_TEST_SOCKET,
-        {{"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-          SnapdMock::httpJsonResponse(
-              SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))},
-         {"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-          SnapdMock::httpJsonResponse(
-              SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))},
-         {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-          SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-              SnapdMock::packageJson("test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))},
-         {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-          SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-              SnapdMock::packageJson("test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))},
-         {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-          SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-              SnapdMock::packageJson("test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))},
-         {"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-          SnapdMock::httpJsonResponse(
-              SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))}}};
+    SnapdMock mock{SNAPD_TEST_SOCKET, {interfaces, interfaces, testPackage, testPackage, testPackage, interfaces}};
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
@@ -189,8 +179,11 @@ TEST_F(ListApps, ListSnap)
 
 TEST_F(ListApps, ListAll)
 {
+    SnapdMock mock{SNAPD_TEST_SOCKET, {interfaces, interfaces, testPackage, testPackage, testPackage, interfaces}};
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    /* Get all the apps */
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
-    EXPECT_EQ(11, apps.size());
+    EXPECT_EQ(12, apps.size());
 }
