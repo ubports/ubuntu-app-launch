@@ -54,6 +54,7 @@ application-info-desktop.cpp
 application-icon-finder.h
 application-icon-finder.cpp
 helper-impl-click.cpp
+glib-thread.h
 glib-thread.cpp
 snapd-info.h
 snapd-info.cpp

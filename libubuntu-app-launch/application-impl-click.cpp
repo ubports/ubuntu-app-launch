@@ -158,16 +158,39 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
 {
     std::list<std::shared_ptr<Application>> applist;
 
-    for (auto pkg : registry->impl->getClickPackages())
+    try
     {
-        auto manifest = registry->impl->getClickManifest(pkg);
-
-        for (auto appname : manifestApps(manifest))
+        for (auto pkg : registry->impl->getClickPackages())
         {
-            AppID appid{package : pkg, appname : appname, version : manifestVersion(manifest)};
-            auto app = std::make_shared<Click>(appid, manifest, registry);
-            applist.push_back(app);
+            try
+            {
+                auto manifest = registry->impl->getClickManifest(pkg);
+
+                for (auto appname : manifestApps(manifest))
+                {
+                    try
+                    {
+                        AppID appid{package : pkg, appname : appname, version : manifestVersion(manifest)};
+                        auto app = std::make_shared<Click>(appid, manifest, registry);
+                        applist.push_back(app);
+                    }
+                    catch (std::runtime_error& e)
+                    {
+                        g_debug("Unable to create Click for application '%s' in package '%s': %s",
+                                appname.value().c_str(), pkg.value().c_str(), e.what());
+                    }
+                }
+            }
+            catch (std::runtime_error& e)
+            {
+                g_debug("Unable to get information to build Click app on package '%s': %s", pkg.value().c_str(),
+                        e.what());
+            }
         }
+    }
+    catch (std::runtime_error& e)
+    {
+        g_debug("Unable to get packages from Click database: %s", e.what());
     }
 
     return applist;

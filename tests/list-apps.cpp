@@ -39,7 +39,7 @@ protected:
     virtual void SetUp()
     {
         /* Click DB test mode */
-        g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+        g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
         gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
@@ -118,7 +118,7 @@ TEST_F(ListApps, ListClick)
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Click::list(registry);
 
-    EXPECT_EQ(0, apps.size());
+    EXPECT_EQ(11, apps.size());
 }
 
 TEST_F(ListApps, ListLegacy)
@@ -175,5 +175,5 @@ TEST_F(ListApps, ListAll)
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
-    EXPECT_EQ(0, apps.size());
+    EXPECT_EQ(11, apps.size());
 }

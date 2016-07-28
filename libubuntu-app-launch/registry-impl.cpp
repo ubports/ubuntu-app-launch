@@ -87,6 +87,7 @@ void Registry::Impl::initClick()
             }
         }
 
+        g_debug("Initialized Click DB");
         return true;
     });
 
@@ -152,7 +153,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
 
     return thread.executeOnThread<std::list<AppID::Package>>([this]() {
         GError* error = nullptr;
-        GList* pkgs = click_db_get_packages(_clickDB.get(), FALSE, &error);
+        GList* pkgs = click_user_get_package_names(_clickUser.get(), &error);
 
         if (error != nullptr)
         {
@@ -163,11 +164,14 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         std::list<AppID::Package> list;
         for (GList* item = pkgs; item != NULL; item = g_list_next(item))
         {
-            auto pkgobj = reinterpret_cast<ClickInstalledPackage*>(item->data);
-            list.emplace_back(AppID::Package::from_raw(click_installed_package_get_package(pkgobj)));
+            auto pkgobj = reinterpret_cast<gchar*>(item->data);
+            if (pkgobj)
+            {
+                list.emplace_back(AppID::Package::from_raw(pkgobj));
+            }
         }
 
-        g_list_free_full(pkgs, g_object_unref);
+        g_list_free_full(pkgs, g_free);
         return list;
     });
 }
