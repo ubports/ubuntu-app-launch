@@ -42,28 +42,6 @@ void clear_keyfile(GKeyFile* keyfile)
     }
 }
 
-Legacy::Legacy(const AppID::AppName& appname,
-               const std::string& basedir,
-               const std::shared_ptr<GKeyFile>& keyfile,
-               const std::shared_ptr<Registry>& registry)
-    : Base(registry)
-    , _appname(appname)
-    , _basedir(basedir)
-    , _keyfile(keyfile)
-{
-    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
-
-    if (!_keyfile)
-    {
-        throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
-    }
-
-    if (std::equal(snappyDesktopPath.begin(), snappyDesktopPath.end(), _basedir.begin()))
-    {
-        throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
-    }
-}
-
 Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _appname(appname)
