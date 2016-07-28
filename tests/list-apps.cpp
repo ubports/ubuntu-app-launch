@@ -119,6 +119,23 @@ TEST_F(ListApps, ListClick)
     auto apps = ubuntu::app_launch::app_impls::Click::list(registry);
 
     EXPECT_EQ(11, apps.size());
+
+    EXPECT_TRUE(findApp(apps, "chatter.robert-ancell_application_2"));
+    EXPECT_TRUE(findApp(apps, "com.test.bad-version_application_4.5.6"));
+    EXPECT_TRUE(findApp(apps, "com.test.good_application_1.2.3"));
+    EXPECT_TRUE(findApp(apps, "com.test.mir_mir_1"));
+    EXPECT_TRUE(findApp(apps, "com.test.mir_nomir_1"));
+    EXPECT_TRUE(findApp(apps, "com.test.multiple_first_1.2.3"));
+    EXPECT_TRUE(findApp(apps, "com.test.multiple_second_1.2.3"));
+    EXPECT_TRUE(findApp(apps, "com.test.multiple_third_1.2.3"));
+    EXPECT_TRUE(findApp(apps, "com.test.multiple_fourth_1.2.3"));
+    EXPECT_TRUE(findApp(apps, "com.test.multiple_fifth_1.2.3"));
+    EXPECT_TRUE(findApp(apps, "com.test.no-app_no-application_1.2.3"));
+
+    EXPECT_FALSE(findApp(apps, "com.test.no-hooks_application_1.2.3"));
+    EXPECT_FALSE(findApp(apps, "com.test.no-json_application_1.2.3"));
+    EXPECT_FALSE(findApp(apps, "com.test.no-object_application_1.2.3"));
+    EXPECT_FALSE(findApp(apps, "com.test.no-version_application_1.2.3"));
 }
 
 TEST_F(ListApps, ListLegacy)
