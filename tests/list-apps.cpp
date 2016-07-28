@@ -157,33 +157,57 @@ TEST_F(ListApps, ListLibertine)
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
-        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))};
-static std::pair<std::string, std::string> testPackage{
-    "GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "bar"}},
+                                                        {"unity7", "unity7-package", {"single", "multiple"}},
+                                                        {"x11", "x11-package", {"multiple", "hidden"}}
+
+        })))};
+static std::pair<std::string, std::string> u8Package{
+    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::packageJson("test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))};
+        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))};
+static std::pair<std::string, std::string> u7Package{
+    "GET /v2/snaps/unity7-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
+        "unity7-package", "active", "app", "1.2.3.4", "x123", {"scope", "single", "multiple"})))};
+static std::pair<std::string, std::string> x11Package{
+    "GET /v2/snaps/x11-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+        SnapdMock::packageJson("x11-package", "active", "app", "1.2.3.4", "x123", {"multiple", "hidden"})))};
 
 TEST_F(ListApps, ListSnap)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET, {interfaces, interfaces, testPackage, testPackage, testPackage, interfaces}};
+    SnapdMock mock{SNAPD_TEST_SOCKET,
+                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
+                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
+                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
 
     mock.result();
 
-    EXPECT_EQ(1, apps.size());
-    EXPECT_TRUE(findApp(apps, "test-package_foo_x123"));
-    EXPECT_FALSE(findApp(apps, "test-package_bar_x123"));
+    EXPECT_EQ(4, apps.size());
+    EXPECT_TRUE(findApp(apps, "unity8-package_foo_x123"));
+    EXPECT_TRUE(findApp(apps, "unity7-package_single_x123"));
+    EXPECT_TRUE(findApp(apps, "unity7-package_multiple_x123"));
+    EXPECT_TRUE(findApp(apps, "x11-package_multiple_x123"));
+
+    EXPECT_FALSE(findApp(apps, "unity8-package_bar_x123"));
+    EXPECT_FALSE(findApp(apps, "unity7-package_scope_x123"));
+    EXPECT_FALSE(findApp(apps, "x11-package_hidden_x123"));
 }
 
 TEST_F(ListApps, ListAll)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET, {interfaces, interfaces, testPackage, testPackage, testPackage, interfaces}};
+    SnapdMock mock{SNAPD_TEST_SOCKET,
+                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
+                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
+                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     /* Get all the apps */
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
-    EXPECT_EQ(12, apps.size());
+    EXPECT_EQ(15, apps.size());
 }
