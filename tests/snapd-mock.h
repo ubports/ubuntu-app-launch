@@ -257,6 +257,7 @@ private:
         }
         else
         {
+            // g_debug("Request: %s", testcase->result.c_str());
             g_input_stream_close(G_INPUT_STREAM(obj), nullptr, nullptr);
             checkConnection(testcase);
         }

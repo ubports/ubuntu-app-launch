@@ -22,6 +22,8 @@
 
 #include <gio/gio.h>
 
+#pragma once
+
 namespace GLib
 {
 
