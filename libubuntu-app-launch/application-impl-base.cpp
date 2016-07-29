@@ -254,7 +254,65 @@ void UpstartInstance::resume()
 
 void UpstartInstance::stop()
 {
-    ubuntu_app_launch_stop_application(std::string(appId_).c_str());
+    if (!registry_->impl->thread.executeOnThread<bool>([this]() {
+
+            g_debug("Stopping job %s app_id %s instance_id %s", job_.c_str(), std::string(appId_).c_str(),
+                    instance_.c_str());
+
+            auto jobpath = registry_->impl->upstartJobPath(job_);
+            if (jobpath.empty())
+            {
+                throw new std::runtime_error("Unable to get job path for Upstart job '" + job_ + "'");
+            }
+
+            GVariantBuilder builder;
+            g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+            g_variant_builder_add_value(
+                &builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", std::string(appId_).c_str())));
+
+            if (!instance_.empty())
+            {
+                g_variant_builder_add_value(
+                    &builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instance_.c_str())));
+            }
+
+            g_variant_builder_close(&builder);
+            g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
+
+            GError* error = NULL;
+            GVariant* stop_variant =
+                g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* Dbus */
+                                            DBUS_SERVICE_UPSTART,                           /* Upstart name */
+                                            jobpath.c_str(),                                /* path */
+                                            DBUS_INTERFACE_UPSTART_JOB,                     /* interface */
+                                            "Stop",                                         /* method */
+                                            g_variant_builder_end(&builder),                /* params */
+                                            NULL,                                           /* return */
+                                            G_DBUS_CALL_FLAGS_NONE,                         /* flags */
+                                            -1,                                             /* timeout: default */
+                                            registry_->impl->thread.getCancellable().get(), /* cancelable */
+                                            &error);                                        /* error (hopefully not) */
+
+            if (stop_variant != nullptr)
+            {
+                g_variant_unref(stop_variant);
+            }
+
+            if (error != NULL)
+            {
+                g_warning("Unable to stop job %s app_id %s instance_id %s: %s", job_.c_str(),
+                          std::string(appId_).c_str(), instance_.c_str(), error->message);
+                g_error_free(error);
+                return false;
+            }
+
+            return true;
+        }))
+    {
+        g_warning("Unable to stop Upstart instance");
+    }
 }
 
 /** Sets the OOM adjustment by getting the list of PIDs and writing

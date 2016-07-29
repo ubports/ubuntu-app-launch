@@ -233,51 +233,6 @@ ubuntu_app_launch_start_application_test (const gchar * appid, const gchar * con
 }
 
 static void
-stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, const gchar * instanceid)
-{
-	g_debug("Stopping job %s app_id %s instance_id %s", jobname, appname, instanceid);
-
-	const gchar * job_path = get_jobpath(con, jobname);
-	if (job_path == NULL)
-		return;
-
-	GVariantBuilder builder;
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-
-	g_variant_builder_add_value(&builder,
-		g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appname)));
-	
-	if (instanceid != NULL) {
-		g_variant_builder_add_value(&builder,
-			g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instanceid)));
-	}
-
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
-
-	GError * error = NULL;
-	GVariant * stop_variant = g_dbus_connection_call_sync(con,
-		DBUS_SERVICE_UPSTART,
-		job_path,
-		DBUS_INTERFACE_UPSTART_JOB,
-		"Stop",
-		g_variant_builder_end(&builder),
-		NULL,
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout: default */
-		NULL, /* cancelable */
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to stop job %s app_id %s instance_id %s: %s", jobname, appname, instanceid, error->message);
-		g_error_free(error);
-	}
-
-	g_variant_unref(stop_variant);
-}
-
-static void
 free_helper (gpointer value)
 {
 	gchar ** strp = (gchar **)value;
@@ -289,49 +244,21 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-	gboolean found = FALSE;
-	unsigned int i;
-
-	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-	g_array_set_clear_func(apps, free_helper);
-
-	/* Look through the click jobs and see if any match.  There can
-	   only be one instance for each ID in the click world */
-	apps_for_job(con, "application-click", apps, FALSE);
-	for (i = 0; i < apps->len; i++) {
-		const gchar * array_id = g_array_index(apps, const gchar *, i);
-		if (g_strcmp0(array_id, appid) == 0) {
-			stop_job(con, "application-click", appid, NULL);
-			found = TRUE;
-			break; /* There can be only one with click */
+		auto instances = app->instances();
+		for (auto instance : instances) {
+			instance->stop();
 		}
+
+		return TRUE;
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to stop app '%s': %s", appid, e.what());
+		return FALSE;
 	}
-
-	if (apps->len > 0)
-		g_array_remove_range(apps, 0, apps->len);
-
-	/* Look through the legacy apps.  Trickier because we know that there
-	   can be many instances of the legacy jobs out there, so we might
-	   have to kill more than one of them. */
-	apps_for_job(con, "application-legacy", apps, FALSE);
-	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
-	for (i = 0; i < apps->len; i++) {
-		const gchar * array_id = g_array_index(apps, const gchar *, i);
-		if (g_str_has_prefix(array_id, appiddash)) {
-			gchar * instanceid = g_strrstr(array_id, "-");
-			stop_job(con, "application-legacy", appid, &(instanceid[1]));
-			found = TRUE;
-		}
-	}
-	g_free(appiddash);
-
-	g_array_free(apps, TRUE);
-	g_object_unref(con);
-
-	return found;
 }
 
 gboolean
