@@ -95,7 +95,7 @@ target_link_libraries(launcher-static
 	-Wl,--no-undefined
 )
 
-add_library(ubuntu-launcher SHARED)
+add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES} ${LAUNCHER_CPP_SOURCES} ${LAUNCHER_GEN_SOURCES})
 
 set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
@@ -106,7 +106,19 @@ set_target_properties(ubuntu-launcher PROPERTIES
 )
 
 target_link_libraries(ubuntu-launcher
-	launcher-static
+	${GLIB2_LIBARIES}
+	${GOBJECT2_LIBRARIES}
+	${LIBUPSTART_LIBRARIES}
+	${GIO2_LIBRARIES}
+	${LTTNG_LIBRARIES}
+	${JSONGLIB_LIBRARIES}
+	${CLICK_LIBRARIES}
+	${ZEITGEIST_LIBRARIES}
+	${MIR_LIBRARIES}
+	${LIBERTINE_LIBRARIES}
+	${CURL_LIBRARIES}
+	-lpthread
+	helpers
 	-Wl,--no-undefined
 )
 
