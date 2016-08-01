@@ -38,6 +38,9 @@ protected:
 
     virtual void SetUp()
     {
+        /* Ensure it is cleared */
+        g_unlink(SNAPD_TEST_SOCKET);
+
         /* Click DB test mode */
         g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);

@@ -31,14 +31,7 @@ public:
     /** Initialize the mock with a list of files to use as
         input and output. Each will be sent in order. */
     SnapdMock(const std::string &socketPath, std::list<std::pair<std::string, std::string>> interactions)
-        : thread([]() {},
-                 [this]() {
-                     for (auto testcase : testCases)
-                     {
-                         testcase.connection.reset(); /* ensure these get dropped on teh thread */
-                     }
-                     socketService.reset();
-                 })
+        : thread()
     {
         for (auto interaction : interactions)
         {
@@ -104,12 +97,22 @@ public:
                 throw std::runtime_error(message);
             }
 
+            g_debug("Initialized snapd-mock with %d test cases", int(testCases.size()));
             return service;
         });
     }
 
     ~SnapdMock()
     {
+        thread.executeOnThread<bool>([this]() {
+            for (auto testcase : testCases)
+            {
+                testcase.connection.reset(); /* ensure these get dropped on teh thread */
+            }
+            socketService.reset();
+
+            return true;
+        });
         thread.quit();
     }
 
