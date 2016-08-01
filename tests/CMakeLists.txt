@@ -60,7 +60,7 @@ add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
 # Snapd Info Test
 
-add_definitions ( -DSNAPD_TEST_SOCKET="${CMAKE_CURRENT_BINARY_DIR}/snapd-test-socket" )
+add_definitions ( -DSNAPD_TEST_SOCKET="/tmp/snapd-test-socket" )
 add_executable (snapd-info-test
 	snapd-info-test.cpp)
 target_link_libraries (snapd-info-test gtest ${GTEST_LIBS} launcher-static)
@@ -71,7 +71,7 @@ add_test (NAME snapd-info-test COMMAND snapd-info-test)
 add_executable (list-apps
 	list-apps.cpp)
 target_link_libraries (list-apps gtest ${GTEST_LIBS} launcher-static)
-add_test (NAME list-apps COMMAND list-apps)
+add_test (NAME list-apps COMMAND ${CMAKE_CURRENT_BINARY_DIR}/list-apps)
 
 # Application Info Desktop
 
