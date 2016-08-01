@@ -282,7 +282,7 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 }
 
 /* Starts to look for the PID and the connections for that PID */
-void
+static void
 find_appid_pid (GDBusConnection * session, second_exec_t * data)
 {
 	GError * error = NULL;
@@ -310,16 +310,6 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 
 	g_debug("Got bus names");
 	ual_tracepoint(second_exec_got_dbus_names, data->appid);
-
-	/* Next figure out what we're looking for (and if there is something to look for) */
-	/* NOTE: We're getting the PID *after* the list of connections so
-	   that some new process can't come in, be the same PID as it's
-	   connection will not be in teh list we just got. */
-	data->app_pid = ubuntu_app_launch_get_primary_pid(data->appid);
-	if (data->app_pid == 0) {
-		g_warning("Unable to find pid for app id '%s'", data->appid);
-		return;
-	}
 
 	g_debug("Primary PID: %d", data->app_pid);
 	ual_tracepoint(second_exec_got_primary_pid, data->appid);
@@ -365,7 +355,7 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 }
 
 gboolean
-second_exec (GDBusConnection * session, GCancellable * cancel, const gchar * app_id, gchar ** appuris)
+second_exec (GDBusConnection * session, GCancellable * cancel, GPid pid, const gchar * app_id, gchar ** appuris)
 {
 	ual_tracepoint(second_exec_start, app_id);
 	GError * error = NULL;
@@ -375,6 +365,7 @@ second_exec (GDBusConnection * session, GCancellable * cancel, const gchar * app
 	data->appid = g_strdup(app_id);
 	data->input_uris = g_strdupv(appuris);
 	data->bus = g_object_ref(session);
+	data->app_pid = pid;
 
 	/* Set up listening for the unfrozen signal from Unity */
 	data->signal = g_dbus_connection_signal_subscribe(session,

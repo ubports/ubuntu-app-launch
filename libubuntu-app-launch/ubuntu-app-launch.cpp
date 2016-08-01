@@ -1011,7 +1011,7 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 	g_return_val_if_fail(appid != NULL, 0);
 
 	try {
-		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		return app->instances()[0]->primaryPid();
@@ -1027,7 +1027,7 @@ GList *
 ubuntu_app_launch_get_pids (const gchar * appid)
 {
 	try {
-		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		auto pids = app->instances()[0]->pids();
@@ -1048,7 +1048,7 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 	try {
-		auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 

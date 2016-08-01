@@ -22,7 +22,7 @@
 
 G_BEGIN_DECLS
 
-gboolean second_exec (GDBusConnection * con, GCancellable * cancel, const gchar * app_id, gchar ** appuris);
+gboolean second_exec (GDBusConnection * con, GCancellable * cancel, GPid pid, const gchar * app_id, gchar ** appuris);
 
 G_END_DECLS
 

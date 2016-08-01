@@ -630,6 +630,7 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
                 auto urls = urlsToStrv(data->ptr->urls_);
                 second_exec(data->ptr->registry_->impl->_dbus.get(),                   /* DBus */
                             data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
+                            data->ptr->primaryPid(),                                   /* primary pid */
                             std::string(data->ptr->appId_).c_str(),                    /* appid */
                             urls.get());                                               /* urls */
             }
