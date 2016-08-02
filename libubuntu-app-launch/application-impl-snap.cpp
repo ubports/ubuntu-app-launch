@@ -288,7 +288,7 @@ AppID::AppName Snap::findAppname(const AppID::Package& package,
         case AppID::ApplicationWildcard::FIRST_LISTED:
             return AppID::AppName::from_raw(*pkgInfo->appnames.begin());
         case AppID::ApplicationWildcard::LAST_LISTED:
-            return AppID::AppName::from_raw(*(pkgInfo->appnames.end()--));
+            return AppID::AppName::from_raw(*pkgInfo->appnames.rbegin());
         case AppID::ApplicationWildcard::ONLY_LISTED:
             if (pkgInfo->appnames.size() != 1)
             {

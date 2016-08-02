@@ -207,15 +207,59 @@ static const std::vector<DiscoverTools> discoverTools{
 
 AppID AppID::discover(const std::string& package, const std::string& appname, const std::string& version)
 {
-    AppID appid{AppID::Package::from_raw(package), AppID::AppName::from_raw(appname),
-                AppID::Version::from_raw(version)};
     auto registry = Registry::getDefault();
+    auto pkg = AppID::Package::from_raw(package);
 
     for (auto tools : discoverTools)
     {
-        if (tools.hasAppId(appid, registry))
+        /* Figure out which type we have */
+        try
         {
-            return appid;
+            if (tools.verifyPackage(pkg, registry))
+            {
+                auto app = AppID::AppName::from_raw({});
+
+                if (appname.empty() || appname == "first-listed-app")
+                {
+                    app = tools.findAppname(pkg, ApplicationWildcard::FIRST_LISTED, registry);
+                }
+                else if (appname == "last-listed-app")
+                {
+                    app = tools.findAppname(pkg, ApplicationWildcard::LAST_LISTED, registry);
+                }
+                else if (appname == "only-listed-app")
+                {
+                    app = tools.findAppname(pkg, ApplicationWildcard::ONLY_LISTED, registry);
+                }
+                else
+                {
+                    app = AppID::AppName::from_raw(appname);
+                    if (!tools.verifyAppname(pkg, app, registry))
+                    {
+                        throw std::runtime_error("App name passed in is not valid for this package type");
+                    }
+                }
+
+                auto ver = AppID::Version::from_raw({});
+                if (version.empty() || version == "current-user-version")
+                {
+                    ver = tools.findVersion(pkg, app, registry);
+                }
+                else
+                {
+                    ver = AppID::Version::from_raw(version);
+                    if (!tools.hasAppId({pkg, app, ver}, registry))
+                    {
+                        throw std::runtime_error("Invalid version passed for this package type");
+                    }
+                }
+
+                return AppID{pkg, app, ver};
+            }
+        }
+        catch (std::runtime_error& e)
+        {
+            continue;
         }
     }
 

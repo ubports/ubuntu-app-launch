@@ -98,7 +98,7 @@ AppID::AppName Click::findAppname(const AppID::Package& package,
         case AppID::ApplicationWildcard::FIRST_LISTED:
             return *apps.begin();
         case AppID::ApplicationWildcard::LAST_LISTED:
-            return *(apps.end()--);
+            return *apps.rbegin();
         case AppID::ApplicationWildcard::ONLY_LISTED:
             if (apps.size() != 1)
             {
