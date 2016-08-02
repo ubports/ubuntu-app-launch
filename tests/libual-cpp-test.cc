@@ -612,7 +612,7 @@ TEST_F(LibUAL, ApplicationLog)
         std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log"),
         app->instances()[0]->logPath());
 
-    appid = ubuntu::app_launch::AppID::find("single");
+    appid = ubuntu::app_launch::AppID::find(registry, "single");
     app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_LT(0, app->instances().size());
@@ -620,7 +620,7 @@ TEST_F(LibUAL, ApplicationLog)
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
               app->instances()[0]->logPath());
 
-    appid = ubuntu::app_launch::AppID::find("multiple");
+    appid = ubuntu::app_launch::AppID::find(registry, "multiple");
     app = ubuntu::app_launch::Application::create(appid, registry);
 
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log"),
@@ -644,7 +644,7 @@ TEST_F(LibUAL, ApplicationPid)
     /* Check primary pid, which comes from Upstart */
     EXPECT_EQ(getpid(), app->instances()[0]->primaryPid());
 
-    auto multiappid = ubuntu::app_launch::AppID::find("multiple");
+    auto multiappid = ubuntu::app_launch::AppID::find(registry, "multiple");
     auto multiapp = ubuntu::app_launch::Application::create(multiappid, registry);
     auto instances = multiapp->instances();
     ASSERT_LT(0, instances.size());
@@ -676,7 +676,7 @@ TEST_F(LibUAL, ApplicationPid)
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
     /* Legacy Single Instance */
-    auto singleappid = ubuntu::app_launch::AppID::find("single");
+    auto singleappid = ubuntu::app_launch::AppID::find(registry, "single");
     auto singleapp = ubuntu::app_launch::Application::create(singleappid, registry);
 
     ASSERT_LT(0, singleapp->instances().size());
@@ -749,9 +749,9 @@ TEST_F(LibUAL, ApplicationId)
 TEST_F(LibUAL, AppIdParse)
 {
     EXPECT_FALSE(ubuntu::app_launch::AppID::parse("com.ubuntu.test_test_123").empty());
-    EXPECT_FALSE(ubuntu::app_launch::AppID::find("inkscape").empty());
+    EXPECT_FALSE(ubuntu::app_launch::AppID::find(registry, "inkscape").empty());
     EXPECT_FALSE(ubuntu::app_launch::AppID::parse("chatter.robert-ancell_chatter_2").empty());
-    EXPECT_FALSE(ubuntu::app_launch::AppID::find("chatter.robert-ancell_chatter").empty());
+    EXPECT_FALSE(ubuntu::app_launch::AppID::find(registry, "chatter.robert-ancell_chatter").empty());
 
     auto id = ubuntu::app_launch::AppID::parse("com.ubuntu.test_test_123");
 
@@ -1119,7 +1119,7 @@ TEST_F(LibUAL, LegacySingleInstance)
         dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
 
     /* Check for a single-instance app */
-    auto singleappid = ubuntu::app_launch::AppID::find("single");
+    auto singleappid = ubuntu::app_launch::AppID::find(registry, "single");
     auto singleapp = ubuntu::app_launch::Application::create(singleappid, registry);
 
     singleapp->launch();
@@ -1144,7 +1144,7 @@ TEST_F(LibUAL, LegacySingleInstance)
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
     /* Check for a multi-instance app */
-    auto multipleappid = ubuntu::app_launch::AppID::find("multiple");
+    auto multipleappid = ubuntu::app_launch::AppID::find(registry, "multiple");
     auto multipleapp = ubuntu::app_launch::Application::create(multipleappid, registry);
 
     multipleapp->launch();
@@ -1621,7 +1621,7 @@ TEST_F(LibUAL, PauseResume)
         signal_increment, &resumed_count, nullptr);
 
     /* Get our app object */
-    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_EQ(1, app->instances().size());
@@ -1731,7 +1731,7 @@ TEST_F(LibUAL, MultiPause)
              dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
 
     /* Get our app object */
-    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_EQ(1, app->instances().size());
@@ -1816,7 +1816,7 @@ TEST_F(LibUAL, OOMSet)
     } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING);
 
     /* Get our app object */
-    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_EQ(1, app->instances().size());
@@ -2027,7 +2027,7 @@ TEST_F(LibUAL, AppInfo)
     EXPECT_EQ("Application", app->info()->name().value());
 
     /* Correct values from a legacy */
-    auto barid = ubuntu::app_launch::AppID::find("bar");
+    auto barid = ubuntu::app_launch::AppID::find(registry, "bar");
     EXPECT_THROW(ubuntu::app_launch::Application::create(barid, registry), std::runtime_error);
 
     /* Correct values for libertine */

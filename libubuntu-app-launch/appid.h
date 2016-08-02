@@ -109,6 +109,8 @@ struct AppID
         \param sappid String with the concatenated AppID
     */
     static AppID find(const std::string& sappid);
+    /** TODO: Docs */
+    static AppID find(const std::shared_ptr<Registry>& registry, const std::string& sappid);
     /** Check to see whether a string is a valid AppID string
 
         \param sappid String with the concatenated AppID

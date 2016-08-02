@@ -112,6 +112,12 @@ bool AppID::valid(const std::string& sappid)
 
 AppID AppID::find(const std::string& sappid)
 {
+    auto registry = Registry::getDefault();
+    return find(registry, sappid);
+}
+
+AppID AppID::find(const std::shared_ptr<Registry>& registry, const std::string& sappid)
+{
     std::smatch match;
 
     if (std::regex_match(sappid, match, full_appid_regex))
@@ -121,7 +127,7 @@ AppID AppID::find(const std::string& sappid)
     }
     else if (std::regex_match(sappid, match, short_appid_regex))
     {
-        return discover(match[1].str(), match[2].str());
+        return discover(registry, match[1].str(), match[2].str());
     }
     else if (std::regex_match(sappid, match, legacy_appid_regex))
     {
