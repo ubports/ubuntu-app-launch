@@ -22,6 +22,8 @@
 #include "application-info-desktop.h"
 #include "registry-impl.h"
 
+#include <algorithm>
+
 namespace ubuntu
 {
 namespace app_launch
@@ -64,32 +66,57 @@ bool Click::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& regist
 
 bool Click::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
-    /*TODO*/
-    return false;
+    return registry->impl->getClickManifest(package) != nullptr;
 }
 
 bool Click::verifyAppname(const AppID::Package& package,
                           const AppID::AppName& appname,
                           const std::shared_ptr<Registry>& registry)
 {
-    /*TODO*/
-    return false;
+    auto manifest = registry->impl->getClickManifest(package);
+    auto apps = manifestApps(manifest);
+
+    return std::find_if(apps.begin(), apps.end(), [&appname](const AppID::AppName& listApp) -> bool {
+               return appname.value() == listApp.value();
+           }) != apps.end();
 }
 
 AppID::AppName Click::findAppname(const AppID::Package& package,
                                   AppID::ApplicationWildcard card,
                                   const std::shared_ptr<Registry>& registry)
 {
-    /*TODO*/
-    return AppID::AppName::from_raw({});
+    auto manifest = registry->impl->getClickManifest(package);
+    auto apps = manifestApps(manifest);
+
+    if (apps.size() == 0)
+    {
+        throw std::runtime_error("No apps in package '" + package.value() + "' to find");
+    }
+
+    switch (card)
+    {
+        case AppID::ApplicationWildcard::FIRST_LISTED:
+            return *apps.begin();
+        case AppID::ApplicationWildcard::LAST_LISTED:
+            return *(apps.end()--);
+        case AppID::ApplicationWildcard::ONLY_LISTED:
+            if (apps.size() != 1)
+            {
+                throw std::runtime_error("More than a single app in package '" + package.value() +
+                                         "' when requested to find only app");
+            }
+            return *apps.begin();
+    }
+
+    throw std::logic_error("Got a value of the app wildcard enum that can't exist");
 }
 
 AppID::Version Click::findVersion(const AppID::Package& package,
                                   const AppID::AppName& appname,
                                   const std::shared_ptr<Registry>& registry)
 {
-    /*TODO*/
-    return AppID::Version::from_raw({});
+    auto manifest = registry->impl->getClickManifest(package);
+    return manifestVersion(manifest);
 }
 
 std::shared_ptr<Application::Info> Click::info()
