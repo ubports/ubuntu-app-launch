@@ -86,7 +86,7 @@ public:
         return _exec;
     }
 
-private:
+protected:
     std::shared_ptr<GKeyFile> _keyfile;
     std::string _basePath;
 

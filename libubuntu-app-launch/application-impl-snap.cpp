@@ -50,6 +50,8 @@ class SnapInfo : public app_info::Desktop
 {
     /** The core interface for this snap */
     std::string interface_;
+    /** AppID of snap */
+    AppID appId_;
 
 public:
     SnapInfo(const AppID& appid,
@@ -77,6 +79,7 @@ public:
               registry,
               false)
         , interface_(interface)
+        , appId_(appid)
     {
     }
 
@@ -106,6 +109,49 @@ public:
         {
             return UbuntuLifecycle::from_raw(false);
         }
+    }
+
+    Exec execLine() override
+    {
+        std::string keyfile = _exec.value();
+        gchar** parsed = nullptr;
+        GError* error = nullptr;
+
+        g_shell_parse_argv(keyfile.c_str(), nullptr, &parsed, &error);
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to parse exec line: %s", keyfile.c_str());
+            return Exec::from_raw({});
+        }
+
+        if (g_strv_length(parsed) < 1)
+        {
+            g_warning("Parse resulted in a blank line");
+            g_strfreev(parsed);
+            return Exec::from_raw({});
+        }
+
+        /* Skip the first entry */
+        gchar** parsedpp = &(parsed[1]);
+
+        gchar* params = g_strjoinv(" ", parsedpp);
+        g_strfreev(parsed);
+
+        std::string binname;
+        if (appId_.package.value() == appId_.appname.value())
+        {
+            binname = appId_.package.value();
+        }
+        else
+        {
+            binname = appId_.package.value() + " " + appId_.appname.value();
+        }
+
+        binname = "/snap/bin/" + binname + " " + params;
+        g_free(params);
+
+        return Exec::from_raw(binname);
     }
 };
 
@@ -248,7 +294,10 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     {
         /* If we're setting up XMir we also need the other helpers
            that libertine is helping with */
-        retval.emplace_back(std::make_pair("APP_EXEC", "libertine-launch --no-container " + info_->execLine().value()));
+        /* retval.emplace_back(std::make_pair("APP_EXEC", "libertine-launch --no-container " +
+         * info_->execLine().value())); */
+        /* Not yet */
+        retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
     }
     else
     {
