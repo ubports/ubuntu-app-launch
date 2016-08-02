@@ -205,9 +205,11 @@ static const std::vector<DiscoverTools> discoverTools{
     {app_impls::Legacy::verifyPackage, app_impls::Legacy::verifyAppname, app_impls::Legacy::findAppname,
      app_impls::Legacy::findVersion, app_impls::Legacy::hasAppId}};
 
-AppID AppID::discover(const std::string& package, const std::string& appname, const std::string& version)
+AppID AppID::discover(const std::shared_ptr<Registry>& registry,
+                      const std::string& package,
+                      const std::string& appname,
+                      const std::string& version)
 {
-    auto registry = Registry::getDefault();
     auto pkg = AppID::Package::from_raw(package);
 
     for (auto tools : discoverTools)
@@ -266,9 +268,11 @@ AppID AppID::discover(const std::string& package, const std::string& appname, co
     return {};
 }
 
-AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
+AppID AppID::discover(const std::shared_ptr<Registry>& registry,
+                      const std::string& package,
+                      ApplicationWildcard appwildcard,
+                      VersionWildcard versionwildcard)
 {
-    auto registry = Registry::getDefault();
     auto pkg = AppID::Package::from_raw(package);
 
     for (auto tools : discoverTools)
@@ -291,9 +295,11 @@ AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcar
     return {};
 }
 
-AppID AppID::discover(const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
+AppID AppID::discover(const std::shared_ptr<Registry>& registry,
+                      const std::string& package,
+                      const std::string& appname,
+                      VersionWildcard versionwildcard)
 {
-    auto registry = Registry::getDefault();
     auto pkg = AppID::Package::from_raw(package);
     auto app = AppID::AppName::from_raw(appname);
 
@@ -314,6 +320,24 @@ AppID AppID::discover(const std::string& package, const std::string& appname, Ve
     }
 
     return {};
+}
+
+AppID AppID::discover(const std::string& package, const std::string& appname, const std::string& version)
+{
+    auto registry = Registry::getDefault();
+    return discover(registry, package, appname, version);
+}
+
+AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
+{
+    auto registry = Registry::getDefault();
+    return discover(registry, package, appwildcard, versionwildcard);
+}
+
+AppID AppID::discover(const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
+{
+    auto registry = Registry::getDefault();
+    return discover(registry, package, appname, versionwildcard);
 }
 
 enum class oom::Score : std::int32_t

@@ -29,6 +29,8 @@ namespace ubuntu
 namespace app_launch
 {
 
+class Registry;
+
 /** \brief The set of information that is used to uniquely identify an
            application in Ubuntu.
 
@@ -154,6 +156,22 @@ struct AppID
         \param version Version of the package
     */
     static AppID discover(const std::string& package, const std::string& appname, const std::string& version);
+
+    /* TODO DOCS */
+    static AppID discover(const std::shared_ptr<Registry>& registry,
+                          const std::string& package,
+                          ApplicationWildcard appwildcard = ApplicationWildcard::FIRST_LISTED,
+                          VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
+    /* TODO DOCS */
+    static AppID discover(const std::shared_ptr<Registry>& registry,
+                          const std::string& package,
+                          const std::string& appname,
+                          VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
+    /* TODO DOCS */
+    static AppID discover(const std::shared_ptr<Registry>& registry,
+                          const std::string& package,
+                          const std::string& appname,
+                          const std::string& version);
 };
 
 bool operator==(const AppID& a, const AppID& b);
