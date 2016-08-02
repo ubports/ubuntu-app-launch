@@ -112,7 +112,7 @@ bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& re
     return app_info_libertine(std::string(appid).c_str(), NULL, NULL) == TRUE;
 }
 
-bool Libertine::verifyPackage(const AppID::Package& package)
+bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
     auto containers = std::shared_ptr<gchar*>(libertine_list_containers(), g_strfreev);
 
@@ -128,7 +128,9 @@ bool Libertine::verifyPackage(const AppID::Package& package)
     return false;
 }
 
-bool Libertine::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
+bool Libertine::verifyAppname(const AppID::Package& package,
+                              const AppID::AppName& appname,
+                              const std::shared_ptr<Registry>& registry)
 {
     auto apps = std::shared_ptr<gchar*>(libertine_list_apps_for_container(package.value().c_str()), g_strfreev);
 
@@ -144,12 +146,16 @@ bool Libertine::verifyAppname(const AppID::Package& package, const AppID::AppNam
     return false;
 }
 
-AppID::AppName Libertine::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
+AppID::AppName Libertine::findAppname(const AppID::Package& package,
+                                      AppID::ApplicationWildcard card,
+                                      const std::shared_ptr<Registry>& registry)
 {
     throw std::runtime_error("Legacy apps can't be discovered by package");
 }
 
-AppID::Version Libertine::findVersion(const AppID::Package& package, const AppID::AppName& appname)
+AppID::Version Libertine::findVersion(const AppID::Package& package,
+                                      const AppID::AppName& appname,
+                                      const std::shared_ptr<Registry>& registry)
 {
     return AppID::Version::from_raw("0.0");
 }

@@ -111,14 +111,16 @@ bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& regis
     return app_info_legacy(std::string(appid).c_str(), NULL, NULL) == TRUE;
 }
 
-bool Legacy::verifyPackage(const AppID::Package& package)
+bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
     return package.value().empty();
 }
 
-bool Legacy::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
+bool Legacy::verifyAppname(const AppID::Package& package,
+                           const AppID::AppName& appname,
+                           const std::shared_ptr<Registry>& registry)
 {
-    if (!verifyPackage(package))
+    if (!verifyPackage(package, registry))
     {
         throw std::runtime_error{"Invalide Legacy package: " + std::string(package)};
     }
@@ -148,12 +150,16 @@ bool Legacy::verifyAppname(const AppID::Package& package, const AppID::AppName& 
     return false;
 }
 
-AppID::AppName Legacy::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
+AppID::AppName Legacy::findAppname(const AppID::Package& package,
+                                   AppID::ApplicationWildcard card,
+                                   const std::shared_ptr<Registry>& registry)
 {
     throw std::runtime_error("Legacy apps can't be discovered by package");
 }
 
-AppID::Version Legacy::findVersion(const AppID::Package& package, const AppID::AppName& appname)
+AppID::Version Legacy::findVersion(const AppID::Package& package,
+                                   const AppID::AppName& appname,
+                                   const std::shared_ptr<Registry>& registry)
 {
     return AppID::Version::from_raw({});
 }

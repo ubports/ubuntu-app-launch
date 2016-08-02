@@ -178,14 +178,20 @@ bool AppID::empty() const
    a data structure and itterating over it. */
 struct DiscoverTools
 {
-    std::function<bool(const AppID::Package& package)> verifyPackage;
-    std::function<bool(const AppID::Package& package, const AppID::AppName& appname)> verifyAppname;
-    std::function<AppID::AppName(const AppID::Package& package, AppID::ApplicationWildcard card)> findAppname;
-    std::function<AppID::Version(const AppID::Package& package, const AppID::AppName& appname)> findVersion;
+    std::function<bool(const AppID::Package& package, const std::shared_ptr<Registry>& registry)> verifyPackage;
+    std::function<bool(
+        const AppID::Package& package, const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)>
+        verifyAppname;
+    std::function<AppID::AppName(
+        const AppID::Package& package, AppID::ApplicationWildcard card, const std::shared_ptr<Registry>& registry)>
+        findAppname;
+    std::function<AppID::Version(
+        const AppID::Package& package, const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)>
+        findVersion;
     std::function<bool(const AppID& appid, const std::shared_ptr<Registry>& registry)> hasAppId;
 };
 
-static std::vector<DiscoverTools> discoverTools{
+static const std::vector<DiscoverTools> discoverTools{
     /* Click */
     {app_impls::Click::verifyPackage, app_impls::Click::verifyAppname, app_impls::Click::findAppname,
      app_impls::Click::findVersion, app_impls::Click::hasAppId},
@@ -218,16 +224,17 @@ AppID AppID::discover(const std::string& package, const std::string& appname, co
 
 AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
 {
+    auto registry = Registry::getDefault();
     auto pkg = AppID::Package::from_raw(package);
 
     for (auto tools : discoverTools)
     {
-        if (tools.verifyPackage(pkg))
+        if (tools.verifyPackage(pkg, registry))
         {
             try
             {
-                auto app = tools.findAppname(pkg, appwildcard);
-                auto ver = tools.findVersion(pkg, app);
+                auto app = tools.findAppname(pkg, appwildcard, registry);
+                auto ver = tools.findVersion(pkg, app, registry);
                 return AppID{pkg, app, ver};
             }
             catch (...)
@@ -242,16 +249,17 @@ AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcar
 
 AppID AppID::discover(const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
 {
+    auto registry = Registry::getDefault();
     auto pkg = AppID::Package::from_raw(package);
     auto app = AppID::AppName::from_raw(appname);
 
     for (auto tools : discoverTools)
     {
-        if (tools.verifyPackage(pkg) && tools.verifyAppname(pkg, app))
+        if (tools.verifyPackage(pkg, registry) && tools.verifyAppname(pkg, app, registry))
         {
             try
             {
-                auto ver = tools.findVersion(pkg, app);
+                auto ver = tools.findVersion(pkg, app, registry);
                 return AppID{pkg, app, ver};
             }
             catch (...)

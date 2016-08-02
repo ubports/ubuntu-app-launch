@@ -258,25 +258,31 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
     }
 }
 
-bool Snap::verifyPackage(const AppID::Package& package)
+bool Snap::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
     /*TODO*/
     return false;
 }
 
-bool Snap::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
+bool Snap::verifyAppname(const AppID::Package& package,
+                         const AppID::AppName& appname,
+                         const std::shared_ptr<Registry>& registry)
 {
     /*TODO*/
     return false;
 }
 
-AppID::AppName Snap::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
+AppID::AppName Snap::findAppname(const AppID::Package& package,
+                                 AppID::ApplicationWildcard card,
+                                 const std::shared_ptr<Registry>& registry)
 {
     /*TODO*/
     return AppID::AppName::from_raw({});
 }
 
-AppID::Version Snap::findVersion(const AppID::Package& package, const AppID::AppName& appname)
+AppID::Version Snap::findVersion(const AppID::Package& package,
+                                 const AppID::AppName& appname,
+                                 const std::shared_ptr<Registry>& registry)
 {
     /*TODO*/
     return AppID::Version::from_raw({});
