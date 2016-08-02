@@ -106,9 +106,56 @@ std::shared_ptr<Application::Info> Legacy::info()
     return appinfo_;
 }
 
-bool Legacy::hasAppId(const AppID& appid)
+bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     return app_info_legacy(std::string(appid).c_str(), NULL, NULL) == TRUE;
+}
+
+bool Legacy::verifyPackage(const AppID::Package& package)
+{
+    return package.value().empty();
+}
+
+bool Legacy::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
+{
+    if (!verifyPackage(package))
+    {
+        throw std::runtime_error{"Invalide Legacy package: " + std::string(package)};
+    }
+
+    std::string desktop = std::string(appname) + ".desktop";
+    std::function<bool(const gchar* dir)> evaldir = [&desktop](const gchar* dir) {
+        char* fulldir = g_build_filename(dir, "applications", desktop.c_str(), nullptr);
+        gboolean found = g_file_test(fulldir, G_FILE_TEST_EXISTS);
+        g_free(fulldir);
+        return found == TRUE;
+    };
+
+    if (evaldir(g_get_user_data_dir()))
+    {
+        return true;
+    }
+
+    const char* const* data_dirs = g_get_system_data_dirs();
+    for (int i = 0; data_dirs[i] != nullptr; i++)
+    {
+        if (evaldir(data_dirs[i]))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+AppID::AppName Legacy::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
+{
+    throw std::runtime_error("Legacy apps can't be discovered by package");
+}
+
+AppID::Version Legacy::findVersion(const AppID::Package& package, const AppID::AppName& appname)
+{
+    return AppID::Version::from_raw({});
 }
 
 const std::regex desktop_remover("^(.*)\\.desktop$");

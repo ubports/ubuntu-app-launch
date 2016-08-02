@@ -50,7 +50,12 @@ public:
     std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
     std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
 
-    static bool hasAppId(const AppID& appId);
+    static bool hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry);
+
+    static bool verifyPackage(const AppID::Package& package);
+    static bool verifyAppname(const AppID::Package& package, const AppID::AppName& appname);
+    static AppID::AppName findAppname(const AppID::Package& package, AppID::ApplicationWildcard card);
+    static AppID::Version findVersion(const AppID::Package& package, const AppID::AppName& appname);
 
 private:
     AppID::AppName _appname;

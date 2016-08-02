@@ -258,6 +258,30 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
     }
 }
 
+bool Snap::verifyPackage(const AppID::Package& package)
+{
+    /*TODO*/
+    return false;
+}
+
+bool Snap::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
+{
+    /*TODO*/
+    return false;
+}
+
+AppID::AppName Snap::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
+{
+    /*TODO*/
+    return AppID::AppName::from_raw({});
+}
+
+AppID::Version Snap::findVersion(const AppID::Package& package, const AppID::AppName& appname)
+{
+    /*TODO*/
+    return AppID::Version::from_raw({});
+}
+
 /** Returns a reference to the info for the snap */
 std::shared_ptr<Application::Info> Snap::info()
 {

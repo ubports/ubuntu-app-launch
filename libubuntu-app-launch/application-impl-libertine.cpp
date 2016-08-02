@@ -107,32 +107,71 @@ std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname)
     return keyfile;
 }
 
-bool Libertine::hasAppId(const AppID& appid)
+bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     return app_info_libertine(std::string(appid).c_str(), NULL, NULL) == TRUE;
+}
+
+bool Libertine::verifyPackage(const AppID::Package& package)
+{
+    auto containers = std::shared_ptr<gchar*>(libertine_list_containers(), g_strfreev);
+
+    for (int i = 0; containers.get()[i] != nullptr; i++)
+    {
+        auto container = containers.get()[i];
+        if (std::string(container) == package.value())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Libertine::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
+{
+    auto apps = std::shared_ptr<gchar*>(libertine_list_apps_for_container(package.value().c_str()), g_strfreev);
+
+    for (int i = 0; apps.get()[i] != nullptr; i++)
+    {
+        auto appid = AppID::parse(apps.get()[i]);
+        if (appid.appname.value() == appname.value())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+AppID::AppName Libertine::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
+{
+    throw std::runtime_error("Legacy apps can't be discovered by package");
+}
+
+AppID::Version Libertine::findVersion(const AppID::Package& package, const AppID::AppName& appname)
+{
+    return AppID::Version::from_raw("0.0");
 }
 
 std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> applist;
 
-    auto containers = libertine_list_containers();
+    auto containers = std::shared_ptr<gchar*>(libertine_list_containers(), g_strfreev);
 
-    for (int i = 0; containers[i] != nullptr; i++)
+    for (int i = 0; containers.get()[i] != nullptr; i++)
     {
-        auto container = containers[i];
-        auto apps = libertine_list_apps_for_container(container);
+        auto container = containers.get()[i];
+        auto apps = std::shared_ptr<gchar*>(libertine_list_apps_for_container(container), g_strfreev);
 
-        for (int i = 0; apps[i] != nullptr; i++)
+        for (int i = 0; apps.get()[i] != nullptr; i++)
         {
-            auto appid = AppID::parse(apps[i]);
+            auto appid = AppID::parse(apps.get()[i]);
             auto sapp = std::make_shared<Libertine>(appid.package, appid.appname, registry);
             applist.push_back(sapp);
         }
-
-        g_strfreev(apps);
     }
-    g_strfreev(containers);
 
     return applist;
 }

@@ -27,7 +27,9 @@ extern "C" {
 #include "application-impl-libertine.h"
 #include "application-impl-snap.h"
 #include "application.h"
+#include "registry.h"
 
+#include <functional>
 #include <iostream>
 #include <regex>
 
@@ -43,7 +45,7 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         throw std::runtime_error("AppID is empty");
     }
 
-    if (app_impls::Click::hasAppId(appid))
+    if (app_impls::Click::hasAppId(appid, registry))
     {
         return std::make_shared<app_impls::Click>(appid, registry);
     }
@@ -51,11 +53,11 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
     {
         return std::make_shared<app_impls::Snap>(appid, registry);
     }
-    else if (app_impls::Libertine::hasAppId(appid))
+    else if (app_impls::Libertine::hasAppId(appid, registry))
     {
         return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
     }
-    else if (app_impls::Legacy::hasAppId(appid))
+    else if (app_impls::Legacy::hasAppId(appid, registry))
     {
         return std::make_shared<app_impls::Legacy>(appid.appname, registry);
     }
@@ -170,62 +172,96 @@ bool AppID::empty() const
     return package.value().empty() && appname.value().empty() && version.value().empty();
 }
 
-std::string app_wildcard(AppID::ApplicationWildcard card)
+/* Basically we're making our own VTable of static functions. Static
+   functions don't go in the normal VTables, so we can't use our class
+   inheritance here to help. So we're just packing these puppies into
+   a data structure and itterating over it. */
+struct DiscoverTools
 {
-    switch (card)
-    {
-        case AppID::ApplicationWildcard::FIRST_LISTED:
-            return "first-listed-app";
-        case AppID::ApplicationWildcard::LAST_LISTED:
-            return "last-listed-app";
-        case AppID::ApplicationWildcard::ONLY_LISTED:
-            return "only-listed-app";
-    }
+    std::function<bool(const AppID::Package& package)> verifyPackage;
+    std::function<bool(const AppID::Package& package, const AppID::AppName& appname)> verifyAppname;
+    std::function<AppID::AppName(const AppID::Package& package, AppID::ApplicationWildcard card)> findAppname;
+    std::function<AppID::Version(const AppID::Package& package, const AppID::AppName& appname)> findVersion;
+    std::function<bool(const AppID& appid, const std::shared_ptr<Registry>& registry)> hasAppId;
+};
 
-    return "";
-}
-
-std::string ver_wildcard(AppID::VersionWildcard card)
-{
-    switch (card)
-    {
-        case AppID::VersionWildcard::CURRENT_USER_VERSION:
-            return "current-user-version";
-    }
-
-    return "";
-}
+static std::vector<DiscoverTools> discoverTools{
+    /* Click */
+    {app_impls::Click::verifyPackage, app_impls::Click::verifyAppname, app_impls::Click::findAppname,
+     app_impls::Click::findVersion, app_impls::Click::hasAppId},
+    /* Snap */
+    {app_impls::Snap::verifyPackage, app_impls::Snap::verifyAppname, app_impls::Snap::findAppname,
+     app_impls::Snap::findVersion, app_impls::Snap::hasAppId},
+    /* Libertine */
+    {app_impls::Libertine::verifyPackage, app_impls::Libertine::verifyAppname, app_impls::Libertine::findAppname,
+     app_impls::Libertine::findVersion, app_impls::Libertine::hasAppId},
+    /* Legacy */
+    {app_impls::Legacy::verifyPackage, app_impls::Legacy::verifyAppname, app_impls::Legacy::findAppname,
+     app_impls::Legacy::findVersion, app_impls::Legacy::hasAppId}};
 
 AppID AppID::discover(const std::string& package, const std::string& appname, const std::string& version)
 {
-    auto cappid = ubuntu_app_launch_triplet_to_app_id(package.c_str(), appname.c_str(), version.c_str());
+    AppID appid{AppID::Package::from_raw(package), AppID::AppName::from_raw(appname),
+                AppID::Version::from_raw(version)};
+    auto registry = Registry::getDefault();
 
-    auto appid = cappid != nullptr ? AppID::parse(cappid) : AppID::parse("");
+    for (auto tools : discoverTools)
+    {
+        if (tools.hasAppId(appid, registry))
+        {
+            return appid;
+        }
+    }
 
-    g_free(cappid);
-
-    return appid;
+    return {};
 }
 
 AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
 {
-    return discover(package, app_wildcard(appwildcard), ver_wildcard(versionwildcard));
+    auto pkg = AppID::Package::from_raw(package);
+
+    for (auto tools : discoverTools)
+    {
+        if (tools.verifyPackage(pkg))
+        {
+            try
+            {
+                auto app = tools.findAppname(pkg, appwildcard);
+                auto ver = tools.findVersion(pkg, app);
+                return AppID{pkg, app, ver};
+            }
+            catch (...)
+            {
+                /* Normal, try another */
+            }
+        }
+    }
+
+    return {};
 }
 
 AppID AppID::discover(const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
 {
-    auto appid = discover(package, appname, ver_wildcard(versionwildcard));
+    auto pkg = AppID::Package::from_raw(package);
+    auto app = AppID::AppName::from_raw(appname);
 
-    if (appid.empty())
+    for (auto tools : discoverTools)
     {
-        /* If we weren't able to go that route, we can see if it's libertine */
-        if (app_info_libertine((package + "_" + appname + "_0.0").c_str(), nullptr, nullptr))
+        if (tools.verifyPackage(pkg) && tools.verifyAppname(pkg, app))
         {
-            appid = AppID(Package::from_raw(package), AppName::from_raw(appname), Version::from_raw("0.0"));
+            try
+            {
+                auto ver = tools.findVersion(pkg, app);
+                return AppID{pkg, app, ver};
+            }
+            catch (...)
+            {
+                /* Normal, try another */
+            }
         }
     }
 
-    return appid;
+    return {};
 }
 
 enum class oom::Score : std::int32_t

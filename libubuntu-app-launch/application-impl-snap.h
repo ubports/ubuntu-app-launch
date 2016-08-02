@@ -49,6 +49,11 @@ public:
 
     static bool hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry);
 
+    static bool verifyPackage(const AppID::Package& package);
+    static bool verifyAppname(const AppID::Package& package, const AppID::AppName& appname);
+    static AppID::AppName findAppname(const AppID::Package& package, AppID::ApplicationWildcard card);
+    static AppID::Version findVersion(const AppID::Package& package, const AppID::AppName& appname);
+
 private:
     AppID appid_;
     std::shared_ptr<app_info::Desktop> info_;

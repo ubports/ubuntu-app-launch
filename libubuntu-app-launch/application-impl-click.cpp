@@ -57,9 +57,33 @@ AppID Click::appId()
     return _appid;
 }
 
-bool Click::hasAppId(const AppID& appid)
+bool Click::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     return app_info_click(std::string(appid).c_str(), NULL, NULL) == TRUE;
+}
+
+bool Click::verifyPackage(const AppID::Package& package)
+{
+    /*TODO*/
+    return false;
+}
+
+bool Click::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
+{
+    /*TODO*/
+    return false;
+}
+
+AppID::AppName Click::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
+{
+    /*TODO*/
+    return AppID::AppName::from_raw({});
+}
+
+AppID::Version Click::findVersion(const AppID::Package& package, const AppID::AppName& appname)
+{
+    /*TODO*/
+    return AppID::Version::from_raw({});
 }
 
 std::shared_ptr<Application::Info> Click::info()
