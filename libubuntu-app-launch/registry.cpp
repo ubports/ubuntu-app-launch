@@ -92,10 +92,12 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
     std::list<std::shared_ptr<Application>> apps;
     for (auto instance : instanceset)
     {
-        auto appid = AppID::find(instance);
+        auto appid = AppID::find(connection, instance);
         auto app = Application::create(appid, connection);
         apps.push_back(app);
     }
+
+    /* TODO: Add Snap */
 
     return apps;
 }
