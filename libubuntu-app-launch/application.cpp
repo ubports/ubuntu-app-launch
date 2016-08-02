@@ -277,18 +277,19 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 
     for (auto tools : discoverTools)
     {
-        if (tools.verifyPackage(pkg, registry))
+        try
         {
-            try
+            if (tools.verifyPackage(pkg, registry))
             {
                 auto app = tools.findAppname(pkg, appwildcard, registry);
                 auto ver = tools.findVersion(pkg, app, registry);
                 return AppID{pkg, app, ver};
             }
-            catch (...)
-            {
-                /* Normal, try another */
-            }
+        }
+        catch (std::runtime_error& e)
+        {
+            /* Normal, try another */
+            continue;
         }
     }
 
@@ -305,17 +306,18 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 
     for (auto tools : discoverTools)
     {
-        if (tools.verifyPackage(pkg, registry) && tools.verifyAppname(pkg, app, registry))
+        try
         {
-            try
+            if (tools.verifyPackage(pkg, registry) && tools.verifyAppname(pkg, app, registry))
             {
                 auto ver = tools.findVersion(pkg, app, registry);
                 return AppID{pkg, app, ver};
             }
-            catch (...)
-            {
-                /* Normal, try another */
-            }
+        }
+        catch (std::runtime_error& e)
+        {
+            /* Normal, try another */
+            continue;
         }
     }
 
