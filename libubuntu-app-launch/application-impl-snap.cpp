@@ -260,32 +260,53 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
 
 bool Snap::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
-    /*TODO*/
-    return false;
+    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+    return pkgInfo != nullptr;
 }
 
 bool Snap::verifyAppname(const AppID::Package& package,
                          const AppID::AppName& appname,
                          const std::shared_ptr<Registry>& registry)
 {
-    /*TODO*/
-    return false;
+    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+    return pkgInfo->appnames.find(appname) != pkgInfo->appnames.end();
 }
 
 AppID::AppName Snap::findAppname(const AppID::Package& package,
                                  AppID::ApplicationWildcard card,
                                  const std::shared_ptr<Registry>& registry)
 {
-    /*TODO*/
-    return AppID::AppName::from_raw({});
+    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+
+    if (pkgInfo->appnames.size() == 0)
+    {
+        throw std::runtime_error("No apps in package '" + package.value() + "' to find");
+    }
+
+    switch (card)
+    {
+        case AppID::ApplicationWildcard::FIRST_LISTED:
+            return AppID::AppName::from_raw(*pkgInfo->appnames.begin());
+        case AppID::ApplicationWildcard::LAST_LISTED:
+            return AppID::AppName::from_raw(*(pkgInfo->appnames.end()--));
+        case AppID::ApplicationWildcard::ONLY_LISTED:
+            if (pkgInfo->appnames.size() != 1)
+            {
+                throw std::runtime_error("More than a single app in package '" + package.value() +
+                                         "' when requested to find only app");
+            }
+            return AppID::AppName::from_raw(*pkgInfo->appnames.begin());
+    }
+
+    throw std::logic_error("Got a value of the app wildcard enum that can't exist");
 }
 
 AppID::Version Snap::findVersion(const AppID::Package& package,
                                  const AppID::AppName& appname,
                                  const std::shared_ptr<Registry>& registry)
 {
-    /*TODO*/
-    return AppID::Version::from_raw({});
+    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+    return AppID::Version::from_raw(pkgInfo->revision);
 }
 
 /** Returns a reference to the info for the snap */
