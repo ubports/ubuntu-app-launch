@@ -96,30 +96,10 @@ Application Implementation Libertine
    :private-members:
    :undoc-members:
 
-Application Implementation Snappy
----------------------------------
-
-.. doxygenclass:: ubuntu::app_launch::app_impls::Snap
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
 Application Info Desktop
 ------------------------
 
 .. doxygenclass:: ubuntu::app_launch::app_info::Desktop
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Application Info Snap
-------------------------
-
-.. doxygenclass:: ubuntu::app_launch::app_impls::SnapInfo
    :project: libubuntu-app-launch
    :members:
    :protected-members:
@@ -150,16 +130,6 @@ Registry Implementation
 -----------------------
 
 .. doxygenclass:: ubuntu::app_launch::Registry::Impl
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Snapd Info
-----------
-
-.. doxygenclass:: ubuntu::app_launch::snapd::Info
    :project: libubuntu-app-launch
    :members:
    :protected-members:
