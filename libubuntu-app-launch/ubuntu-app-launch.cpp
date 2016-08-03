@@ -315,6 +315,9 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 		} else if (g_strcmp0(env, "JOB=application-legacy") == 0) {
 			job_found = TRUE;
 			job_legacy = TRUE;
+		} else if (g_strcmp0(env, "JOB=application-snap") == 0) {
+			job_found = TRUE;
+			job_legacy = TRUE;
 		} else if (g_str_has_prefix(env, "INSTANCE=")) {
 			instance = g_strdup(env + strlen("INSTANCE="));
 		}
