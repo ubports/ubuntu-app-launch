@@ -201,17 +201,20 @@ bool UpstartInstance::hasPid(pid_t pid)
 
 std::string UpstartInstance::logPath()
 {
-    auto cpath = ubuntu_app_launch_application_log_path(std::string(appId_).c_str());
-    if (cpath != nullptr)
+    std::string logfile = job_;
+    if (!instance_.empty())
     {
-        std::string retval(cpath);
-        g_free(cpath);
-        return retval;
+        logfile += "-";
+        logfile += instance_;
     }
-    else
-    {
-        return {};
-    }
+
+    logfile += ".log";
+
+    gchar* cpath = g_build_filename(g_get_user_cache_dir(), "upstart", logfile.c_str(), nullptr);
+    std::string path(cpath);
+    g_free(cpath);
+
+    return path;
 }
 
 std::vector<pid_t> UpstartInstance::pids()

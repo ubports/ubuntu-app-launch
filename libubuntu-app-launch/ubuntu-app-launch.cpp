@@ -40,7 +40,6 @@ extern "C" {
 #include "appid.h"
 #include "registry.h"
 
-static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
 int kill (pid_t pid, int signal);
 static gchar * escape_dbus_string (const gchar * input);
@@ -109,44 +108,6 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 	g_free(cachepath);
 
 	return job_path;
-}
-
-/* Check to see if a legacy app wants us to manage whether they're
-   single instance or not */
-static gboolean
-legacy_single_instance (const gchar * appid)
-{
-	ual_tracepoint(desktop_single_start, appid);
-
-	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
-
-	if (keyfile == NULL) {
-		g_warning("Unable to find keyfile for application '%s'", appid);
-		return FALSE;
-	}
-
-	ual_tracepoint(desktop_single_found, appid);
-
-	gboolean singleinstance = FALSE;
-
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", NULL)) {
-		GError * error = NULL;
-
-		singleinstance = g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", &error);
-
-		if (error != NULL) {
-			g_warning("Unable to get single instance key for app '%s': %s", appid, error->message);
-			g_error_free(error);
-			/* Ensure that if we got an error, we assume standard case */
-			singleinstance = FALSE;
-		}
-	}
-	
-	g_key_file_free(keyfile);
-
-	ual_tracepoint(desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
-
-	return singleinstance;
 }
 
 /* Determine whether it's a click package by looking for the symlink
@@ -292,48 +253,15 @@ ubuntu_app_launch_resume_application (const gchar * appid)
 gchar *
 ubuntu_app_launch_application_log_path (const gchar * appid)
 {
-	gchar * path = NULL;
-	g_return_val_if_fail(appid != NULL, NULL);
-
-	if (is_click(appid)) {
-		gchar * appfile = g_strdup_printf("application-click-%s.log", appid);
-		path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
-		g_free(appfile);
-		return path;
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		auto log = app->instances()[0]->logPath();
+		return g_strdup(log.c_str());
+	} catch (...) {
+		return NULL;
 	}
-
-	if (!is_libertine(appid) && legacy_single_instance(appid)) {
-		gchar * appfile = g_strdup_printf("application-legacy-%s-.log", appid);
-		path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
-		g_free(appfile);
-		return path;
-	}
-
-	/* If we're not single instance, we can't recreate the instance ID
-	   but if it's running we can grab it. */
-	unsigned int i;
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, NULL);
-
-	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-	g_array_set_clear_func(apps, free_helper);
-
-	apps_for_job(con, "application-legacy", apps, FALSE);
-	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
-	for (i = 0; i < apps->len && path == NULL; i++) {
-		const gchar * array_id = g_array_index(apps, const gchar *, i);
-		if (g_str_has_prefix(array_id, appiddash)) {
-			gchar * appfile = g_strdup_printf("application-legacy-%s.log", array_id);
-			path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
-			g_free(appfile);
-		}
-	}
-	g_free(appiddash);
-
-	g_array_free(apps, TRUE);
-	g_object_unref(con);
-
-	return path;
 }
 
 gboolean
@@ -948,43 +876,6 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 	}
 
 	g_variant_unref(instance_list);
-}
-
-typedef struct {
-	GArray * apps;
-	gboolean truncate_legacy;
-	const gchar * jobname;
-} apps_for_job_t;
-
-static void
-apps_for_job_instance (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
-{
-	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
-	if (namev == NULL) {
-		return;
-	}
-
-	apps_for_job_t * data = (apps_for_job_t *)user_data;
-	gchar * instance_name = g_variant_dup_string(namev, NULL);
-	g_variant_unref(namev);
-
-	if (data->truncate_legacy && g_strcmp0(data->jobname, "application-legacy") == 0) {
-		gchar * last_dash = g_strrstr(instance_name, "-");
-		if (last_dash != NULL) {
-			last_dash[0] = '\0';
-		}
-	}
-
-	g_array_append_val(data->apps, instance_name);
-}
-
-/* Get all the instances for a given job name */
-static void
-apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gboolean truncate_legacy)
-{
-	apps_for_job_t data = {apps, truncate_legacy, jobname};
-
-	foreach_job_instance(con, jobname, apps_for_job_instance, &data);
 }
 
 gchar **
