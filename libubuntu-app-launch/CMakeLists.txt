@@ -85,7 +85,6 @@ target_link_libraries(launcher-static
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
 	${LIBERTINE_LIBRARIES}
-	${CURL_LIBRARIES}
 	-lpthread
 	helpers
 	-Wl,--no-undefined
@@ -112,7 +111,6 @@ target_link_libraries(ubuntu-launcher
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
 	${LIBERTINE_LIBRARIES}
-	${CURL_LIBRARIES}
 	-lpthread
 	helpers
 	-Wl,--no-undefined
