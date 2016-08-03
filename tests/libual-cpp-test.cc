@@ -664,6 +664,7 @@ TEST_F(LibUAL, ApplicationPid)
     EXPECT_TRUE(app->instances()[0]->hasPid(300));
 
     /* Check primary pid, which comes from Upstart */
+    EXPECT_TRUE(app->instances()[0]->isRunning());
     EXPECT_EQ(getpid(), app->instances()[0]->primaryPid());
 
     auto multiappid = ubuntu::app_launch::AppID::find(registry, "multiple");
