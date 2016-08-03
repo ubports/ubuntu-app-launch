@@ -18,7 +18,6 @@
  */
 
 #include "application-impl-legacy.h"
-#include "app-info.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
 
@@ -108,7 +107,19 @@ std::shared_ptr<Application::Info> Legacy::info()
 
 bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
-    return app_info_legacy(std::string(appid).c_str(), NULL, NULL) == TRUE;
+    try
+    {
+        if (!appid.version.value().empty())
+        {
+            return false;
+        }
+
+        return verifyAppname(appid.package, appid.appname, registry);
+    }
+    catch (std::runtime_error& e)
+    {
+        return false;
+    }
 }
 
 bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
@@ -122,7 +133,7 @@ bool Legacy::verifyAppname(const AppID::Package& package,
 {
     if (!verifyPackage(package, registry))
     {
-        throw std::runtime_error{"Invalide Legacy package: " + std::string(package)};
+        throw std::runtime_error{"Invalid Legacy package: " + std::string(package)};
     }
 
     std::string desktop = std::string(appname) + ".desktop";

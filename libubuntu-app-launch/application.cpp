@@ -18,7 +18,6 @@
  */
 
 extern "C" {
-#include "app-info.h"
 #include "ubuntu-app-launch.h"
 }
 

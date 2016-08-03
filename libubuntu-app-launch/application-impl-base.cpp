@@ -25,7 +25,6 @@
 
 #include <upstart.h>
 
-#include "app-info.h"
 #include "application-impl-base.h"
 #include "helpers.h"
 #include "registry-impl.h"
