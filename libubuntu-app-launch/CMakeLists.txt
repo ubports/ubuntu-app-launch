@@ -47,8 +47,6 @@ application-impl-legacy.h
 application-impl-legacy.cpp
 application-impl-libertine.h
 application-impl-libertine.cpp
-application-impl-snap.h
-application-impl-snap.cpp
 application-info-desktop.h
 application-info-desktop.cpp
 application-icon-finder.h
@@ -56,8 +54,6 @@ application-icon-finder.cpp
 helper-impl-click.cpp
 glib-thread.h
 glib-thread.cpp
-snapd-info.h
-snapd-info.cpp
 )
 
 set(LAUNCHER_SOURCES

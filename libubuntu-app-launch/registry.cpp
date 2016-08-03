@@ -27,7 +27,6 @@
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
-#include "application-impl-snap.h"
 
 #include "helper-impl-click.h"
 
@@ -51,8 +50,6 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
 
     /* Get all the legacy instances */
     instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-legacy"));
-    /* Get all the snap instances */
-    instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-snap"));
 
     /* Remove the instance ID */
     std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string &instancename) -> std::string {
@@ -109,7 +106,6 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
     list.splice(list.begin(), app_impls::Click::list(connection));
     list.splice(list.begin(), app_impls::Legacy::list(connection));
     list.splice(list.begin(), app_impls::Libertine::list(connection));
-    list.splice(list.begin(), app_impls::Snap::list(connection));
 
     return list;
 }

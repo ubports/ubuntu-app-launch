@@ -70,10 +70,7 @@ struct AppID
         under the "hooks" key in the JSON manifest. */
     AppName appname;
     /** Version of the package that is installed. This is always resolved when
-        creating the struct.
-
-        \note For snaps this is actually the 'revision' instead of the version
-              since that is unique where 'version' is not. */
+        creating the struct. */
     Version version;
 
     /** Turn the structure into a string. This is required for many older C based

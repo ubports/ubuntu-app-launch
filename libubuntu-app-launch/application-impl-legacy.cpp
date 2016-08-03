@@ -30,7 +30,6 @@ namespace app_launch
 namespace app_impls
 {
 
-const std::string snappyDesktopPath{"/var/lib/snapd"};
 std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name);
 
 void clear_keyfile(GKeyFile* keyfile)
@@ -52,11 +51,6 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     if (!_keyfile)
     {
         throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
-    }
-
-    if (std::equal(snappyDesktopPath.begin(), snappyDesktopPath.end(), _basedir.begin()))
-    {
-        throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
     }
 }
 
