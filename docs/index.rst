@@ -116,6 +116,16 @@ Application Info Desktop
    :private-members:
    :undoc-members:
 
+Application Info Snap
+------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_impls::SnapInfo
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
 Application Icon Finder
 ------------------------
 
