@@ -40,8 +40,6 @@ extern "C" {
 #include <fcntl.h>
 }
 
-#include "snapd-mock.h"
-
 class LibUAL : public ::testing::Test
 {
 protected:
@@ -107,11 +105,6 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
-        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
-        g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
-        g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
-        g_unlink(SNAPD_TEST_SOCKET);
-
         service = dbus_test_service_new(NULL);
 
         debugConnection();
@@ -126,8 +119,6 @@ protected:
         dbus_test_dbus_mock_object_add_method(mock, obj, "GetJobByName", G_VARIANT_TYPE("s"), G_VARIANT_TYPE("o"),
                                               "if args[0] == 'application-click':\n"
                                               "	ret = dbus.ObjectPath('/com/test/application_click')\n"
-                                              "elif args[0] == 'application-snap':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/application_snap')\n"
                                               "elif args[0] == 'application-legacy':\n"
                                               "	ret = dbus.ObjectPath('/com/test/application_legacy')\n"
                                               "elif args[0] == 'untrusted-helper':\n"
@@ -163,34 +154,6 @@ protected:
         dbus_test_dbus_mock_object_add_property(mock, instobj, "processes", G_VARIANT_TYPE("a(si)"),
                                                 g_variant_new_parsed(process_var), NULL);
         g_free(process_var);
-
-        /* Snap App */
-        auto snapjobobj =
-            dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
-
-        dbus_test_dbus_mock_object_add_method(
-            mock, snapjobobj, "Start", G_VARIANT_TYPE("(asb)"), NULL,
-            "if args[0][0] == 'APP_ID=unity8-package_foo_x123':"
-            "    raise dbus.exceptions.DBusException('Foo running', name='com.ubuntu.Upstart0_6.Error.AlreadyStarted')",
-            NULL);
-
-        dbus_test_dbus_mock_object_add_method(mock, snapjobobj, "Stop", G_VARIANT_TYPE("(asb)"), NULL, "", NULL);
-
-        dbus_test_dbus_mock_object_add_method(mock, snapjobobj, "GetAllInstances", NULL, G_VARIANT_TYPE("ao"),
-                                              "ret = [ dbus.ObjectPath('/com/test/snapp_instance') ]", NULL);
-
-        dbus_test_dbus_mock_object_add_method(mock, snapjobobj, "GetInstanceByName", G_VARIANT_TYPE_STRING,
-                                              G_VARIANT_TYPE("o"), "ret = dbus.ObjectPath('/com/test/snapp_instance')",
-                                              NULL);
-
-        auto snapinstobj =
-            dbus_test_dbus_mock_get_object(mock, "/com/test/snapp_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
-        dbus_test_dbus_mock_object_add_property(mock, snapinstobj, "name", G_VARIANT_TYPE_STRING,
-                                                g_variant_new_string("unity8-package_foo_x123-"), NULL);
-        gchar* snapprocess_var = g_strdup_printf("[('main', %d)]", getpid());
-        dbus_test_dbus_mock_object_add_property(mock, snapinstobj, "processes", G_VARIANT_TYPE("a(si)"),
-                                                g_variant_new_parsed(snapprocess_var), NULL);
-        g_free(snapprocess_var);
 
         /*  Legacy App */
         DbusTestDbusMockObject* ljobobj =
@@ -294,8 +257,6 @@ protected:
             cleartry++;
         }
         ASSERT_EQ(nullptr, bus);
-
-        g_unlink(SNAPD_TEST_SOCKET);
     }
 
     GVariant* find_env(GVariant* env_array, const gchar* var)
@@ -473,144 +434,6 @@ TEST_F(LibUAL, StopClickApplication)
         dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
     auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
-    auto app = ubuntu::app_launch::Application::create(appid, registry);
-
-    ASSERT_TRUE(app->hasInstances());
-    EXPECT_EQ(1, app->instances().size());
-
-    app->instances()[0]->stop();
-
-    ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
-}
-
-/* Snapd mock data */
-static std::pair<std::string, std::string> interfaces{
-    "GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-    SnapdMock::httpJsonResponse(
-        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single"}}})))};
-static std::pair<std::string, std::string> u8Package{
-    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
-
-TEST_F(LibUAL, ApplicationIdSnap)
-{
-    SnapdMock snapd{SNAPD_TEST_SOCKET,
-                    {u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package,
-                     u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package}};
-    registry = std::make_shared<ubuntu::app_launch::Registry>();
-
-    EXPECT_EQ("unity8-package_foo_x123", (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package"));
-    EXPECT_EQ("unity8-package_foo_x123",
-              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo"));
-    EXPECT_EQ("unity8-package_single_x123",
-              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "single"));
-    EXPECT_EQ("unity8-package_single_x123",
-              (std::string)ubuntu::app_launch::AppID::discover(
-                  registry, "unity8-package", ubuntu::app_launch::AppID::ApplicationWildcard::LAST_LISTED));
-    EXPECT_EQ("unity8-package_foo_x123",
-              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo", "x123"));
-
-    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "unity7-package"));
-}
-
-TEST_F(LibUAL, StartSnapApplication)
-{
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
-    registry = std::make_shared<ubuntu::app_launch::Registry>();
-
-    auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
-
-    /* Basic make sure we can send the event */
-    auto appid = ubuntu::app_launch::AppID::parse("unity8-package_single_x123");
-    auto app = ubuntu::app_launch::Application::create(appid, registry);
-    app->launch();
-
-    EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
-
-    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
-
-    /* Now look at the details of the call */
-    app->launch();
-
-    guint len = 0;
-    const DbusTestDbusMockCall* calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-    EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
-
-    EXPECT_STREQ("Start", calls->name);
-    EXPECT_EQ(2, g_variant_n_children(calls->params));
-
-    GVariant* block = g_variant_get_child_value(calls->params, 1);
-    EXPECT_TRUE(g_variant_get_boolean(block));
-    g_variant_unref(block);
-
-    GVariant* env = g_variant_get_child_value(calls->params, 0);
-    EXPECT_TRUE(check_env(env, "APP_ID", "unity8-package_single_x123"));
-    g_variant_unref(env);
-
-    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
-
-    /* Let's pass some URLs */
-    std::vector<ubuntu::app_launch::Application::URL> urls{
-        ubuntu::app_launch::Application::URL::from_raw("http://ubuntu.com/"),
-        ubuntu::app_launch::Application::URL::from_raw("https://ubuntu.com/"),
-        ubuntu::app_launch::Application::URL::from_raw("file:///home/phablet/test.txt")};
-
-    app->launch(urls);
-
-    len = 0;
-    calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-    EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
-
-    env = g_variant_get_child_value(calls->params, 0);
-    EXPECT_TRUE(check_env(env, "APP_ID", "unity8-package_single_x123"));
-    EXPECT_TRUE(
-        check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
-    g_variant_unref(env);
-
-    return;
-}
-
-TEST_F(LibUAL, StartSnapApplicationTest)
-{
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
-    registry = std::make_shared<ubuntu::app_launch::Registry>();
-
-    auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
-
-    /* Basic make sure we can send the event */
-    auto appid = ubuntu::app_launch::AppID::parse("unity8-package_single_x123");
-    auto app = ubuntu::app_launch::Application::create(appid, registry);
-    app->launchTest();
-
-    guint len = 0;
-    auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-    EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
-
-    EXPECT_STREQ("Start", calls->name);
-    EXPECT_EQ(2, g_variant_n_children(calls->params));
-
-    GVariant* block = g_variant_get_child_value(calls->params, 1);
-    EXPECT_TRUE(g_variant_get_boolean(block));
-    g_variant_unref(block);
-
-    GVariant* env = g_variant_get_child_value(calls->params, 0);
-    EXPECT_TRUE(check_env(env, "APP_ID", "unity8-package_single_x123"));
-    EXPECT_TRUE(check_env(env, "QT_LOAD_TESTABILITY", "1"));
-    g_variant_unref(env);
-}
-
-TEST_F(LibUAL, StopSnapApplication)
-{
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
-    registry = std::make_shared<ubuntu::app_launch::Registry>();
-
-    auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
-
-    auto appid = ubuntu::app_launch::AppID::parse("unity8-package_foo_x123");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_TRUE(app->hasInstances());

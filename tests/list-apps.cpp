@@ -27,9 +27,6 @@
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
-#include "application-impl-snap.h"
-
-#include "snapd-mock.h"
 
 class ListApps : public ::testing::Test
 {
@@ -38,9 +35,6 @@ protected:
 
     virtual void SetUp()
     {
-        /* Ensure it is cleared */
-        g_unlink(SNAPD_TEST_SOCKET);
-
         /* Click DB test mode */
         g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);
@@ -53,10 +47,6 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
-        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
-        g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
-        g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
-
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
@@ -64,8 +54,6 @@ protected:
 
     virtual void TearDown()
     {
-        g_unlink(SNAPD_TEST_SOCKET);
-
         g_object_unref(bus);
 
         unsigned int cleartry = 0;
@@ -161,60 +149,12 @@ TEST_F(ListApps, ListLibertine)
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
 }
 
-static std::pair<std::string, std::string> interfaces{
-    "GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-    SnapdMock::httpJsonResponse(
-        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "bar"}},
-                                                        {"unity7", "unity7-package", {"single", "multiple"}},
-                                                        {"x11", "x11-package", {"multiple", "hidden"}}
-
-        })))};
-static std::pair<std::string, std::string> u8Package{
-    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))};
-static std::pair<std::string, std::string> u7Package{
-    "GET /v2/snaps/unity7-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
-        "unity7-package", "active", "app", "1.2.3.4", "x123", {"scope", "single", "multiple"})))};
-static std::pair<std::string, std::string> x11Package{
-    "GET /v2/snaps/x11-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
-    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::packageJson("x11-package", "active", "app", "1.2.3.4", "x123", {"multiple", "hidden"})))};
-
-TEST_F(ListApps, ListSnap)
-{
-    SnapdMock mock{SNAPD_TEST_SOCKET,
-                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
-                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
-                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
-    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
-
-    auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
-
-    mock.result();
-
-    EXPECT_EQ(4, apps.size());
-    EXPECT_TRUE(findApp(apps, "unity8-package_foo_x123"));
-    EXPECT_TRUE(findApp(apps, "unity7-package_single_x123"));
-    EXPECT_TRUE(findApp(apps, "unity7-package_multiple_x123"));
-    EXPECT_TRUE(findApp(apps, "x11-package_multiple_x123"));
-
-    EXPECT_FALSE(findApp(apps, "unity8-package_bar_x123"));
-    EXPECT_FALSE(findApp(apps, "unity7-package_scope_x123"));
-    EXPECT_FALSE(findApp(apps, "x11-package_hidden_x123"));
-}
-
 TEST_F(ListApps, ListAll)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET,
-                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
-                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
-                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     /* Get all the apps */
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
-    EXPECT_EQ(17, apps.size());
+    EXPECT_EQ(13, apps.size());
 }

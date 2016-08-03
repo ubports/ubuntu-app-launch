@@ -35,7 +35,6 @@ add_definitions ( -DSESSION_TEMP_FILE="${CMAKE_CURRENT_BINARY_DIR}/libual-test-s
 add_definitions ( -DSOCKET_DEMANGLER="${CMAKE_BINARY_DIR}/socket-demangler" )
 add_definitions ( -DSOCKET_DEMANGLER_INSTALL="${pkglibexecdir}/socket-demangler" )
 add_definitions ( -DSOCKET_TOOL="${CMAKE_CURRENT_BINARY_DIR}/socket-tool" )
-add_definitions ( -DSNAP_BASEDIR="${CMAKE_CURRENT_SOURCE_DIR}/snap-basedir" )
 
 add_executable (libual-test
 	libual-test.cc
@@ -57,14 +56,6 @@ add_executable (socket-tool
 
 add_test (NAME libual-test COMMAND libual-test)
 add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
-
-# Snapd Info Test
-
-add_definitions ( -DSNAPD_TEST_SOCKET="/tmp/snapd-test-socket" )
-add_executable (snapd-info-test
-	snapd-info-test.cpp)
-target_link_libraries (snapd-info-test gtest ${GTEST_LIBS} launcher-static)
-add_test (NAME snapd-info-test COMMAND snapd-info-test)
 
 # List Apps
 
@@ -149,5 +140,5 @@ add_test (xmir-helper-test xmir-helper-test)
 # Formatted code
 
 add_custom_target(format-tests
-	COMMAND clang-format -i -style=file libual-cpp-test.cc snapd-mock.h snapd-info-test.cpp list-apps.cpp
+	COMMAND clang-format -i -style=file libual-cpp-test.cc list-apps.cpp
 )
