@@ -51,6 +51,8 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
 
     /* Get all the legacy instances */
     instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-legacy"));
+    /* Get all the snap instances */
+    instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-snap"));
 
     /* Remove the instance ID */
     std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string &instancename) -> std::string {
@@ -96,8 +98,6 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
         auto app = Application::create(appid, connection);
         apps.push_back(app);
     }
-
-    /* TODO: Add Snap */
 
     return apps;
 }
