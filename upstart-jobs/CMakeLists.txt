@@ -24,14 +24,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" DESTINATION "
 add_test(application-click.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
 
 ####################
-# application-snap.conf
-####################
-
-configure_file("application-snap.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-snap.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-snap.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application-snap.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-snap.conf")
-
-####################
 # application-failed.conf
 ####################
 
