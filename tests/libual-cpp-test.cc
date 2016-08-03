@@ -110,6 +110,7 @@ protected:
         g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
+        g_unlink(SNAPD_TEST_SOCKET);
 
         service = dbus_test_service_new(NULL);
 
@@ -491,6 +492,27 @@ static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
         SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
+
+TEST_F(LibUAL, ApplicationIdSnap)
+{
+    SnapdMock snapd{SNAPD_TEST_SOCKET,
+                    {u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package,
+                     u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package}};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    EXPECT_EQ("unity8-package_foo_x123", (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package"));
+    EXPECT_EQ("unity8-package_foo_x123",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo"));
+    EXPECT_EQ("unity8-package_single_x123",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "single"));
+    EXPECT_EQ("unity8-package_single_x123",
+              (std::string)ubuntu::app_launch::AppID::discover(
+                  registry, "unity8-package", ubuntu::app_launch::AppID::ApplicationWildcard::LAST_LISTED));
+    EXPECT_EQ("unity8-package_foo_x123",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo", "x123"));
+
+    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "unity7-package"));
+}
 
 TEST_F(LibUAL, StartSnapApplication)
 {
