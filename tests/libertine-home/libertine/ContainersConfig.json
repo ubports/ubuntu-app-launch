@@ -1,0 +1,16 @@
+
+{
+    "containerList": [
+        {
+            "distro": "xenial",
+            "id": "container-name",
+            "installStatus": "ready",
+            "installedApps": [
+            ],
+            "multiarch": "disabled",
+            "name": "Container Name",
+            "type": "lxc"
+        }
+    ],
+    "defaultContainer": "container-name"
+}

@@ -21,6 +21,8 @@
 #include "application-info-desktop.h"
 #include "registry-impl.h"
 
+#include <algorithm>
+
 namespace ubuntu
 {
 namespace app_launch
@@ -31,6 +33,7 @@ namespace app_impls
 AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest);
 std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest);
 std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
+                                             const std::string& package,
                                              const std::string& app,
                                              const std::string& clickDir);
 
@@ -44,7 +47,7 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
     , _appid(appid)
     , _manifest(manifest)
     , _clickDir(registry->impl->getClickDir(appid.package))
-    , _keyfile(manifestAppDesktop(manifest, appid.appname, _clickDir))
+    , _keyfile(manifestAppDesktop(manifest, appid.package, appid.appname, _clickDir))
 {
     if (!_keyfile)
         throw std::runtime_error{"No keyfile found for click application: " + (std::string)appid};
@@ -65,7 +68,7 @@ AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
     auto cstr = json_object_get_string_member(manifest.get(), "version");
 
     if (cstr == nullptr)
-        throw std::runtime_error("Unable to find version number in manifest");
+        throw std::runtime_error("Unable to find version number in manifest: " + Registry::Impl::printJson(manifest));
 
     auto cppstr = AppID::Version::from_raw((const gchar*)cstr);
     return cppstr;
@@ -95,17 +98,24 @@ std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manife
         }
     }
 
-    g_list_free_full(gapps, g_free);
+    g_list_free(gapps);
     return apps;
 }
 
 std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
+                                             const std::string& package,
                                              const std::string& app,
                                              const std::string& clickDir)
 {
+    if (!manifest)
+    {
+        throw std::runtime_error("No manifest for package '" + package + "'");
+    }
+
     auto hooks = json_object_get_object_member(manifest.get(), "hooks");
     if (hooks == nullptr)
-        throw std::runtime_error("Manifest for application '" + app + "' does not have a 'hooks' field");
+        throw std::runtime_error("Manifest for application '" + app + "' does not have a 'hooks' field: " +
+                                 Registry::Impl::printJson(manifest));
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
@@ -113,11 +123,13 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
 
     auto hooklist = json_object_get_object_member(hooks, app.c_str());
     if (hooklist == nullptr)
-        throw std::runtime_error("Manifest for does not have an application '" + app + "'");
+        throw std::runtime_error("Manifest for does not have an application '" + app + "': " +
+                                 Registry::Impl::printJson(manifest));
 
     auto desktoppath = json_object_get_string_member(hooklist, "desktop");
     if (desktoppath == nullptr)
-        throw std::runtime_error("Manifest for application '" + app + "' does not have a 'desktop' hook");
+        throw std::runtime_error("Manifest for application '" + app + "' does not have a 'desktop' hook: " +
+                                 Registry::Impl::printJson(manifest));
 
     auto path = std::shared_ptr<gchar>(g_build_filename(clickDir.c_str(), desktoppath, nullptr), g_free);
 
@@ -137,16 +149,39 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
 {
     std::list<std::shared_ptr<Application>> applist;
 
-    for (auto pkg : registry->impl->getClickPackages())
+    try
     {
-        auto manifest = registry->impl->getClickManifest(pkg);
-
-        for (auto appname : manifestApps(manifest))
+        for (auto pkg : registry->impl->getClickPackages())
         {
-            AppID appid{package : pkg, appname : appname, version : manifestVersion(manifest)};
-            auto app = std::make_shared<Click>(appid, manifest, registry);
-            applist.push_back(app);
+            try
+            {
+                auto manifest = registry->impl->getClickManifest(pkg);
+
+                for (auto appname : manifestApps(manifest))
+                {
+                    try
+                    {
+                        AppID appid{package : pkg, appname : appname, version : manifestVersion(manifest)};
+                        auto app = std::make_shared<Click>(appid, manifest, registry);
+                        applist.push_back(app);
+                    }
+                    catch (std::runtime_error& e)
+                    {
+                        g_debug("Unable to create Click for application '%s' in package '%s': %s",
+                                appname.value().c_str(), pkg.value().c_str(), e.what());
+                    }
+                }
+            }
+            catch (std::runtime_error& e)
+            {
+                g_debug("Unable to get information to build Click app on package '%s': %s", pkg.value().c_str(),
+                        e.what());
+            }
         }
+    }
+    catch (std::runtime_error& e)
+    {
+        g_debug("Unable to get packages from Click database: %s", e.what());
     }
 
     return applist;

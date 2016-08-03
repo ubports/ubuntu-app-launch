@@ -17,10 +17,12 @@
  *   Ted Gould <ted.gould@canonical.com>
  */
 
-#include <thread>
 #include <future>
+#include <thread>
 
 #include <gio/gio.h>
+
+#pragma once
 
 namespace GLib
 {
@@ -33,14 +35,7 @@ class ContextThread
     std::shared_ptr<GCancellable> _cancel;
 
 public:
-    ContextThread(std::function<void()> beforeLoop =
-                      []
-                  {
-                  },
-                  std::function<void()> afterLoop =
-                      []
-                  {
-                  });
+    ContextThread(std::function<void()> beforeLoop = [] {}, std::function<void()> afterLoop = [] {});
     ~ContextThread();
 
     void quit();
@@ -58,9 +53,15 @@ public:
         }
 
         std::promise<T> promise;
-        std::function<void()> magicFunc = [&promise, &work]()
-        {
-            promise.set_value(work());
+        std::function<void()> magicFunc = [&promise, &work]() {
+            try
+            {
+                promise.set_value(work());
+            }
+            catch (...)
+            {
+                promise.set_exception(std::current_exception());
+            }
         };
 
         executeOnThread(magicFunc);

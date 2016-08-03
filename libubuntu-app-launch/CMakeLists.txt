@@ -71,8 +71,25 @@ set(LAUNCHER_GEN_SOURCES
 
 add_gdbus_codegen_with_namespace(LAUNCHER_GEN_SOURCES proxy-socket-demangler com.canonical.UbuntuAppLaunch. proxy ${CMAKE_SOURCE_DIR}/data/com.canonical.UbuntuAppLaunch.SocketDemangler.xml)
 
+add_library(launcher-static ${LAUNCHER_SOURCES} ${LAUNCHER_CPP_SOURCES} ${LAUNCHER_GEN_SOURCES})
 
-add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES} ${LAUNCHER_GEN_SOURCES})
+target_link_libraries(launcher-static
+	${GLIB2_LIBARIES}
+	${GOBJECT2_LIBRARIES}
+	${LIBUPSTART_LIBRARIES}
+	${GIO2_LIBRARIES}
+	${LTTNG_LIBRARIES}
+	${JSONGLIB_LIBRARIES}
+	${CLICK_LIBRARIES}
+	${ZEITGEIST_LIBRARIES}
+	${MIR_LIBRARIES}
+	${LIBERTINE_LIBRARIES}
+	-lpthread
+	helpers
+	-Wl,--no-undefined
+)
+
+add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES} ${LAUNCHER_CPP_SOURCES} ${LAUNCHER_GEN_SOURCES})
 
 set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
