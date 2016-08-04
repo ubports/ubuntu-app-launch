@@ -291,8 +291,15 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
 */
 bool Snap::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
-    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
-    return pkgInfo != nullptr;
+    try
+    {
+        auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+        return pkgInfo != nullptr;
+    }
+    catch (std::runtime_error& e)
+    {
+        return false;
+    }
 }
 
 /** Look to see if an appname is a valid for a Snap package

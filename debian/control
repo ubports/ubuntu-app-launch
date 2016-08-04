@@ -85,6 +85,7 @@ Depends: ${misc:Depends},
          ${shlibs:Depends},
          libglib2.0-dev,
          libmirclient-dev (>= 0.5),
+         libproperties-cpp-dev,
          libubuntu-app-launch2 (= ${binary:Version}),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same

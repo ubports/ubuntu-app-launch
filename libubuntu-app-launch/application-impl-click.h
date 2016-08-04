@@ -75,6 +75,6 @@ private:
     std::list<std::pair<std::string, std::string>> launchEnv();
 };
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

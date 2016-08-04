@@ -99,5 +99,5 @@ private:
     std::map<std::string, std::string> upstartJobPathCache_;
 };
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu

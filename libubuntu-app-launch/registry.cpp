@@ -139,5 +139,5 @@ void Registry::clearDefault()
     defaultRegistry.reset();
 }
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu
