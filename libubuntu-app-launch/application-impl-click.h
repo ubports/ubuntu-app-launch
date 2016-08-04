@@ -55,6 +55,6 @@ private:
     std::shared_ptr<GKeyFile> _keyfile;
 };
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

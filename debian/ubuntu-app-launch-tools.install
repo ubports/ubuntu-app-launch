@@ -1,1 +1,2 @@
-usr/bin/ubuntu-app*
+usr/bin/ubuntu-app-*
+usr/bin/ubuntu-helper-*
