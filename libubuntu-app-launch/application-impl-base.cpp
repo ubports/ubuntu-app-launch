@@ -30,6 +30,10 @@
 #include "registry-impl.h"
 #include "second-exec-core.h"
 
+extern "C" {
+#include "ubuntu-app-launch-trace.h"
+}
+
 namespace ubuntu
 {
 namespace app_launch
@@ -676,7 +680,7 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
     GError* error{nullptr};
     GVariant* result{nullptr};
 
-    // ual_tracepoint(libual_start_message_callback, std::string(data->appId_).c_str());
+    tracepoint(ubuntu_app_launch, libual_start_message_callback, std::string(data->ptr->appId_).c_str());
 
     g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
 
@@ -740,7 +744,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
         [&]() -> std::shared_ptr<UpstartInstance> {
             g_debug("Initializing params for an new UpstartInstance for: %s", std::string(appId).c_str());
 
-            // ual_tracepoint(libual_start, appid);
+            tracepoint(ubuntu_app_launch, libual_start, std::string(appId).c_str());
             handshake_t* handshake = starting_handshake_start(std::string(appId).c_str());
             if (handshake == NULL)
             {
@@ -811,9 +815,9 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
 
-            // ual_tracepoint(handshake_wait, app_id);
+            tracepoint(ubuntu_app_launch, handshake_wait, std::string(appId).c_str());
             starting_handshake_wait(handshake);
-            // ual_tracepoint(handshake_complete, app_id);
+            tracepoint(ubuntu_app_launch, handshake_complete, std::string(appId).c_str());
 
             /* Call the job start function */
             g_debug("Asking Upstart to start task for: %s", std::string(appId).c_str());
@@ -831,7 +835,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
                                    chelper                                        /* object */
                                    );
 
-            // ual_tracepoint(libual_start_message_sent, appid);
+            tracepoint(ubuntu_app_launch, libual_start_message_sent, std::string(appId).c_str());
 
             return retval;
         });
