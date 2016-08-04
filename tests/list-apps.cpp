@@ -135,7 +135,7 @@ TEST_F(ListApps, ListLegacy)
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Legacy::list(registry);
 
-    EXPECT_EQ(1, apps.size());
+    EXPECT_EQ(0, apps.size());
 }
 
 TEST_F(ListApps, ListLibertine)
@@ -156,5 +156,5 @@ TEST_F(ListApps, ListAll)
     /* Get all the apps */
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
-    EXPECT_EQ(14, apps.size());
+    EXPECT_EQ(13, apps.size());
 }

@@ -47,7 +47,7 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
     , _appid(appid)
     , _manifest(manifest)
     , _clickDir(registry->impl->getClickDir(appid.package))
-    , _keyfile(manifestAppDesktop(manifest, appid.package, appid.appname, _clickDir))
+    , _keyfile(manifestAppDesktop(_manifest, appid.package, appid.appname, _clickDir))
 {
     if (!_keyfile)
         throw std::runtime_error{"No keyfile found for click application: " + (std::string)appid};
@@ -60,7 +60,12 @@ AppID Click::appId()
 
 std::shared_ptr<Application::Info> Click::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
+    if (!_info)
+    {
+        _info = std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
+    }
+
+    return _info;
 }
 
 AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
@@ -198,23 +203,41 @@ std::vector<std::shared_ptr<Application::Instance>> Click::instances()
            there or return an empty vector */
         if (sappid == instancename)
         {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", sappid, _registry));
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", sappid,
+                                                                std::vector<Application::URL>{}, _registry));
             break;
         }
     }
     return vect;
 }
 
+std::list<std::pair<std::string, std::string>> Click::launchEnv()
+{
+    auto retval = confinedEnv(_appid.package, _clickDir);
+
+    retval.emplace_back(std::make_pair("APP_DIR", _clickDir));
+
+    /* TODO: Not sure how we're gonna get this */
+    /* APP_DESKTOP_FILE_PATH */
+
+    info();
+
+    retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", _info->xMirEnable().value() ? "1" : "0"));
+    retval.emplace_back(std::make_pair("APP_EXEC", _info->execLine().value()));
+
+    return retval;
+}
+
 std::shared_ptr<Application::Instance> Click::launch(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD);
+                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
 }
 
 std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
-                                   UpstartInstance::launchMode::TEST);
+                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
 }
 
 };  // namespace app_impls

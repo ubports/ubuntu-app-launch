@@ -35,10 +35,6 @@ class Legacy : public Base
 {
 public:
     Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry);
-    Legacy(const AppID::AppName& appname,
-           const std::string& basedir,
-           const std::shared_ptr<GKeyFile>& keyfile,
-           const std::shared_ptr<Registry>& registry);
 
     AppID appId() override
     {
@@ -59,6 +55,9 @@ private:
     std::string _basedir;
     std::shared_ptr<GKeyFile> _keyfile;
     std::shared_ptr<app_info::Desktop> appinfo_;
+
+    std::list<std::pair<std::string, std::string>> launchEnv(const std::string& instance);
+    std::string getInstance();
 };
 
 };  // namespace app_impls

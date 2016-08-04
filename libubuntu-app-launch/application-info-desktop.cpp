@@ -157,7 +157,8 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
                  const std::string& basePath,
                  std::shared_ptr<Registry> registry,
-                 bool allowNoDisplay)
+                 bool allowNoDisplay,
+                 bool xMirDefault)
     : _keyfile([keyfile, allowNoDisplay]() {
         if (!keyfile)
         {
@@ -269,6 +270,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
     , _rotatesWindow(
           boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Contents", false))
     , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
+    , _xMirEnable(boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", xMirDefault))
+    , _exec(stringFromKeyfile<Exec>(keyfile, "Exec"))
 {
 }
 

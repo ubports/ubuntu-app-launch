@@ -24,7 +24,7 @@
 #include "app-info.h"
 
 /* Try and get a manifest and do a couple sanity checks on it */
-JsonObject *
+static JsonObject *
 get_manifest (const gchar * pkg, gchar ** pkgpath)
 {
 	/* Get the directory from click */
@@ -350,5 +350,50 @@ app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 	json_object_unref(manifest);
 
 	return TRUE;
+}
+
+/* Determine whether it's a click package by looking for the symlink
+   that is created by the desktop hook */
+static gboolean
+is_click (const gchar * appid)
+{
+	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
+	gchar * click_link = NULL;
+	const gchar * link_farm_dir = g_getenv("UBUNTU_APP_LAUNCH_LINK_FARM");
+	if (G_LIKELY(link_farm_dir == NULL)) {
+		click_link = g_build_filename(g_get_home_dir(), ".cache", "ubuntu-app-launch", "desktop", appiddesktop, NULL);
+	} else {
+		click_link = g_build_filename(link_farm_dir, appiddesktop, NULL);
+	}
+	g_free(appiddesktop);
+	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
+	g_free(click_link);
+
+	return click;
+}
+
+/* Determine whether an AppId is realated to a Libertine container by
+   checking the container and program name. */
+static gboolean
+is_libertine (const gchar * appid)
+{
+	if (app_info_libertine(appid, NULL, NULL)) {
+		g_debug("Libertine application detected: %s", appid);
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
+gboolean
+ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+	if (is_click(appid)) {
+		return app_info_click(appid, appdir, appdesktop);
+	} else if (is_libertine(appid)) {
+		return app_info_libertine(appid, appdir, appdesktop);
+	} else {
+		return app_info_legacy(appid, appdir, appdesktop);
+	}
 }
 

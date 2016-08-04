@@ -17,9 +17,11 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include "application-impl-base.h"
+#include "application-info-desktop.h"
+
 #include <gio/gdesktopappinfo.h>
 #include <json-glib/json-glib.h>
-#include "application-impl-base.h"
 
 #pragma once
 
@@ -53,6 +55,10 @@ private:
 
     std::string _clickDir;
     std::shared_ptr<GKeyFile> _keyfile;
+
+    std::shared_ptr<app_info::Desktop> _info;
+
+    std::list<std::pair<std::string, std::string>> launchEnv();
 };
 
 };  // namespace app_impls
