@@ -200,17 +200,15 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         }
         return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
     }())
-    , _splashInfo({
-        title : stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
-        image : fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
-        backgroundColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color"),
-        headerColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Header"),
-        footerColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
-        showHeader :
-            boolFromKeyfile<Application::Info::Splash::ShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)
-    })
+    , _splashInfo(
+          {stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
+           fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
+           stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color"),
+           stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Header"),
+           stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
+           boolFromKeyfile<Application::Info::Splash::ShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)})
     , _supportedOrientations([keyfile]() {
-        Orientations all = {portrait : true, landscape : true, invertedPortrait : true, invertedLandscape : true};
+        Orientations all = {true, true, true, true};
 
         GError* error = nullptr;
         auto orientationStrv = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP,
@@ -222,8 +220,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
             return all;
         }
 
-        Orientations retval =
-            {portrait : false, landscape : false, invertedPortrait : false, invertedLandscape : false};
+        Orientations retval = {false, false, false, false};
 
         try
         {
@@ -271,6 +268,6 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
 {
 }
 
-};  // namespace app_info
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_info
+}  // namespace app_launch
+}  // namespace ubuntu

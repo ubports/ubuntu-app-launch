@@ -143,7 +143,7 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
 
         for (auto appname : manifestApps(manifest))
         {
-            AppID appid{package : pkg, appname : appname, version : manifestVersion(manifest)};
+            AppID appid{pkg, appname, manifestVersion(manifest)};
             auto app = std::make_shared<Click>(appid, manifest, registry);
             applist.push_back(app);
         }
@@ -152,6 +152,6 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
     return applist;
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

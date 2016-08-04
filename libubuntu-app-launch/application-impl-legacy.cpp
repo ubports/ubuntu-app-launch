@@ -20,6 +20,8 @@
 #include "application-impl-legacy.h"
 #include "application-info-desktop.h"
 
+#include <regex>
+
 namespace ubuntu
 {
 namespace app_launch
@@ -105,6 +107,8 @@ std::shared_ptr<Application::Info> Legacy::info()
     return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true);
 }
 
+static const std::regex desktop_remover("^(.*)\\.desktop$");
+
 std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> list;
@@ -123,8 +127,27 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
             continue;
         }
 
-        auto app = std::make_shared<Legacy>(AppID::AppName::from_raw(g_app_info_get_id(G_APP_INFO(appinfo))), registry);
-        list.push_back(app);
+        auto desktopappid = std::string(g_app_info_get_id(G_APP_INFO(appinfo)));
+        std::string appname;
+        std::smatch match;
+        if (std::regex_match(desktopappid, match, desktop_remover))
+        {
+            appname = match[1].str();
+        }
+        else
+        {
+            continue;
+        }
+
+        try
+        {
+            auto app = std::make_shared<Legacy>(AppID::AppName::from_raw(appname), registry);
+            list.push_back(app);
+        }
+        catch (std::runtime_error& e)
+        {
+            g_debug("Unable to create application for legacy appname '%s': %s", appname.c_str(), e.what());
+        }
     }
 
     g_list_free_full(head, g_object_unref);
@@ -132,6 +155,6 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
     return list;
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu
