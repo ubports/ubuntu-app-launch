@@ -17,6 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <regex>
+
 #include "application-impl-snap.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
@@ -38,6 +40,8 @@ const std::set<std::string> SUPPORTED_INTERFACES{"unity8", "unity7", "x11"};
 const std::set<std::string> XMIR_INTERFACES{"unity7", "x11"};
 /** All the interfaces that we tell Unity support lifecycle */
 const std::set<std::string> LIFECYCLE_INTERFACES{"unity8"};
+/** Snappy has more restrictive appnames than everyone else */
+const std::regex appnameRegex{"^[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$"};
 
 /************************
  ** Info support
@@ -269,6 +273,11 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
 {
     try
     {
+        if (!std::regex_match(appId.appname.value(), appnameRegex))
+        {
+            return false;
+        }
+
         auto pkginfo = registry->impl->snapdInfo.pkgInfo(appId.package);
         if (!pkginfo)
         {
@@ -312,6 +321,11 @@ bool Snap::verifyAppname(const AppID::Package& package,
                          const AppID::AppName& appname,
                          const std::shared_ptr<Registry>& registry)
 {
+    if (!std::regex_match(appname.value(), appnameRegex))
+    {
+        return false;
+    }
+
     auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
     return pkgInfo->appnames.find(appname) != pkgInfo->appnames.end();
 }
