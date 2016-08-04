@@ -762,6 +762,6 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
         });
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

@@ -40,11 +40,11 @@ extern "C" {
 #include "registry.h"
 
 static void free_helper (gpointer value);
-int kill (pid_t pid, int signal);
+int kill (pid_t pid, int signal) noexcept;
 static gchar * escape_dbus_string (const gchar * input);
 
-G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path);
-G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd);
+G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path)
+G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd)
 
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
@@ -1439,9 +1439,9 @@ ubuntu_app_launch_list_helpers (const gchar * type)
 	g_return_val_if_fail(con != NULL, FALSE);
 
 	helpers_helper_t helpers_helper_data = {
-		.type_prefix = g_strdup_printf("%s:", type),
-		.type_len = strlen(type) + 1, /* 1 for the colon */
-		.retappids = g_array_new(TRUE, TRUE, sizeof(gchar *))
+		g_strdup_printf("%s:", type),
+		strlen(type) + 1, /* 1 for the colon */
+		g_array_new(TRUE, TRUE, sizeof(gchar *))
 	};
 
 	foreach_job_instance(con, "untrusted-helper", list_helpers_helper, &helpers_helper_data);
@@ -1498,10 +1498,10 @@ ubuntu_app_launch_list_helper_instances (const gchar * type, const gchar * appid
 	g_return_val_if_fail(con != NULL, FALSE);
 
 	helper_instances_t helper_instances_data = {
-		.type_prefix = g_strdup_printf("%s:", type),
-		.type_len = strlen(type) + 1, /* 1 for the colon */
-		.retappids = g_array_new(TRUE, TRUE, sizeof(gchar *)),
-		.appid_suffix = g_strdup_printf(":%s", appid)
+		g_strdup_printf("%s:", type),
+		strlen(type) + 1, /* 1 for the colon */
+		g_array_new(TRUE, TRUE, sizeof(gchar *)),
+		g_strdup_printf(":%s", appid)
 	};
 
 	foreach_job_instance(con, "untrusted-helper", list_helper_instances, &helper_instances_data);

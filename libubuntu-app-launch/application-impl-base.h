@@ -119,6 +119,6 @@ private:
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 };
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

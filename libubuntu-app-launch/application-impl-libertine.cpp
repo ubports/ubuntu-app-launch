@@ -259,6 +259,6 @@ std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<A
                                    UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

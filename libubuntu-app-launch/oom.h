@@ -47,8 +47,8 @@ const Score paused();
 */
 const Score fromLabelAndValue(std::int32_t value, const std::string& label);
 
-};  // namespace oom
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace oom
+}  // namespace app_launch
+}  // namespace ubuntu
 
 #pragma GCC visibility pop
