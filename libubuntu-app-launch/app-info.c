@@ -77,12 +77,12 @@ get_manifest (const gchar * pkg, gchar ** pkgpath)
 }
 
 /* Types of search we can do for an app name */
-typedef enum _app_name_t app_name_t;
 enum _app_name_t {
 	APP_NAME_ONLY,
 	APP_NAME_FIRST,
 	APP_NAME_LAST
 };
+typedef enum _app_name_t app_name_t;
 
 /* Figure out the app name if it's one of the keywords */
 static const gchar *
