@@ -149,7 +149,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
             }
         }
 
-        g_list_free_full(pkgs, g_free);
+        g_list_free_full(pkgs, g_object_unref);
         return list;
     });
 }
@@ -202,5 +202,5 @@ Registry::Impl::clearManager ()
 }
 #endif
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu

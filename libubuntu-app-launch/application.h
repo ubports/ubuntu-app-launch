@@ -238,7 +238,7 @@ public:
     virtual std::shared_ptr<Instance> launchTest(const std::vector<URL>& urls = {}) = 0;
 };
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu
 
 #pragma GCC visibility pop
