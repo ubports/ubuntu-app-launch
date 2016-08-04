@@ -211,6 +211,9 @@ std::vector<std::shared_ptr<Application::Instance>> Click::instances()
     return vect;
 }
 
+/** Grabs all the environment variables for the application to
+    launch in. It sets up the confinement ones and then adds in
+    the APP_EXEC line and whether to use XMir */
 std::list<std::pair<std::string, std::string>> Click::launchEnv()
 {
     auto retval = confinedEnv(_appid.package, _clickDir);
