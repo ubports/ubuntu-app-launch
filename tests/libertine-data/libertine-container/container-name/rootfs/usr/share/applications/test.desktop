@@ -2,3 +2,4 @@
 Name=Test
 Type=Application
 Exec=test
+Icon=test

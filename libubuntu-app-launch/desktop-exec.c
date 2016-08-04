@@ -186,7 +186,7 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 	/* This string is quoted using desktop file quoting:
 	   http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#exec-variables */
 	gchar * execline = desktop_to_exec(keyfile, app_id);
-	g_return_val_if_fail(execline != NULL, 1);
+	g_return_val_if_fail(execline != NULL, FALSE);
 
 	if (is_libertine) {
 		static const gchar * libertine_launch = NULL;

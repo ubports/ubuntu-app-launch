@@ -103,6 +103,7 @@ two_second_reached (gpointer user_data)
 {
 	bool * reached = static_cast<bool *>(user_data);
 	*reached = true;
+	return true;
 }
 
 TEST_F(HelperHandshakeTest, HandshakeTimeout)
@@ -113,6 +114,8 @@ TEST_F(HelperHandshakeTest, HandshakeTimeout)
 	guint outertimeout = g_timeout_add_seconds(2, two_second_reached, &timeout_reached);
 
 	starting_handshake_wait(handshake);
+
+	g_source_remove(outertimeout);
 
 	ASSERT_FALSE(timeout_reached);
 

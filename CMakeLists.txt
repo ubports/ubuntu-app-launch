@@ -38,6 +38,7 @@ set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 
 # Deprecated needed for g_atexit() in libual
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -Wno-error=deprecated-declarations -std=gnu99")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -std=c++11 -pthread")
 
 enable_testing()
 
@@ -79,6 +80,9 @@ include_directories(${MIR_INCLUDE_DIRS})
 
 pkg_check_modules(WHOOPSIE libwhoopsie)
 include_directories(${WHOOPSIE_INCLUDE_DIRS})
+
+pkg_check_modules(LIBERTINE libertine)
+include_directories(${LIBERTINE_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 

@@ -1,4 +1,3 @@
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 configure_file ("click-db-dir/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-db-dir/test.conf" @ONLY)
@@ -42,6 +41,11 @@ add_executable (libual-test
 	mir-mock.cpp)
 target_link_libraries (libual-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
 
+add_executable (libual-cpp-test
+	libual-cpp-test.cc
+	mir-mock.cpp)
+target_link_libraries (libual-cpp-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+
 add_executable (data-spew
 	data-spew.c)
 target_link_libraries (data-spew ${GLIB2_LIBRARIES})
@@ -50,6 +54,36 @@ add_executable (socket-tool
 	socket-tool.c)
 
 add_test (NAME libual-test COMMAND libual-test)
+add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
+
+# Application Info Desktop
+
+add_executable (application-info-desktop-test
+  # test
+  application-info-desktop.cpp
+
+  # sources
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-info-desktop.cpp
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-icon-finder.cpp
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/glib-thread.cpp
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/registry-impl.cpp)
+target_link_libraries (application-info-desktop-test gtest ${GTEST_LIBS} ubuntu-launcher)
+
+add_test (NAME application-info-desktop-test COMMAND application-info-desktop-test)
+
+# Application Icon Finder
+
+add_executable (application-icon-finder-test
+  # test
+  application-icon-finder.cpp
+
+  #sources
+  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-icon-finder.cpp)
+target_link_libraries (application-icon-finder-test gtest ${GTEST_LIBS} ubuntu-launcher)
+
+add_test (NAME application-icon-finder-test COMMAND application-icon-finder-test)
+
+file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # Failure Test
 
@@ -101,3 +135,8 @@ add_test (desktop-hook-test desktop-hook-test.sh)
 configure_file ("xmir-helper-test.in" "${CMAKE_CURRENT_BINARY_DIR}/xmir-helper-test" @ONLY)
 add_test (xmir-helper-test xmir-helper-test)
 
+# Formatted code
+
+add_custom_target(format-tests
+	COMMAND clang-format -i -style=file libual-cpp-test.cc
+)

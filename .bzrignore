@@ -5,3 +5,9 @@ Makefile
 cmake_install.cmake
 *-trace.[ch]
 cgroup-reap-all
+libubuntu-app-launch/UbuntuAppLaunch-2.gir
+libubuntu-app-launch/UbuntuAppLaunch-2.typelib
+libubuntu-app-launch/libubuntu-app-launch.so.2*
+libubuntu-app-launch/proxy-socket-demangler.c
+libubuntu-app-launch/proxy-socket-demangler.h
+libubuntu-app-launch/ubuntu-app-launch-2.pc

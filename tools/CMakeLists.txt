@@ -3,10 +3,28 @@
 # ubuntu-app-list
 ########################
 
-add_executable(ubuntu-app-list ubuntu-app-list.c)
+add_executable(ubuntu-app-list ubuntu-app-list.cpp)
 set_target_properties(ubuntu-app-list PROPERTIES OUTPUT_NAME "ubuntu-app-list")
 target_link_libraries(ubuntu-app-list ubuntu-launcher)
 install(TARGETS ubuntu-app-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+########################
+# ubuntu-app-list-pids
+########################
+
+add_executable(ubuntu-app-list-pids ubuntu-app-list-pids.cpp)
+set_target_properties(ubuntu-app-list-pids PROPERTIES OUTPUT_NAME "ubuntu-app-list-pids")
+target_link_libraries(ubuntu-app-list-pids ubuntu-launcher)
+install(TARGETS ubuntu-app-list-pids RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+########################
+# ubuntu-app-info
+########################
+
+add_executable(ubuntu-app-info ubuntu-app-info.cpp)
+set_target_properties(ubuntu-app-info PROPERTIES OUTPUT_NAME "ubuntu-app-info")
+target_link_libraries(ubuntu-app-info ubuntu-launcher)
+install(TARGETS ubuntu-app-info RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ########################
 # ubuntu-app-launch
@@ -30,7 +48,7 @@ install(TARGETS ubuntu-app-watch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDI
 # ubuntu-app-pid
 ########################
 
-add_executable(ubuntu-app-pid ubuntu-app-pid.c)
+add_executable(ubuntu-app-pid ubuntu-app-pid.cpp)
 set_target_properties(ubuntu-app-pid PROPERTIES OUTPUT_NAME "ubuntu-app-pid")
 target_link_libraries(ubuntu-app-pid ubuntu-launcher)
 install(TARGETS ubuntu-app-pid RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
@@ -39,7 +57,7 @@ install(TARGETS ubuntu-app-pid RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}
 # ubuntu-app-stop
 ########################
 
-add_executable(ubuntu-app-stop ubuntu-app-stop.c)
+add_executable(ubuntu-app-stop ubuntu-app-stop.cpp)
 set_target_properties(ubuntu-app-stop PROPERTIES OUTPUT_NAME "ubuntu-app-stop")
 target_link_libraries(ubuntu-app-stop ubuntu-launcher)
 install(TARGETS ubuntu-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
@@ -48,7 +66,7 @@ install(TARGETS ubuntu-app-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR
 # ubuntu-app-triplet
 ########################
 
-add_executable(ubuntu-app-triplet ubuntu-app-triplet.c)
+add_executable(ubuntu-app-triplet ubuntu-app-triplet.cpp)
 set_target_properties(ubuntu-app-triplet PROPERTIES OUTPUT_NAME "ubuntu-app-triplet")
 target_link_libraries(ubuntu-app-triplet ubuntu-launcher)
 install(TARGETS ubuntu-app-triplet RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
@@ -57,7 +75,7 @@ install(TARGETS ubuntu-app-triplet RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BIN
 # ubuntu-helper-start
 ########################
 
-add_executable(ubuntu-helper-start ubuntu-helper-start.c)
+add_executable(ubuntu-helper-start ubuntu-helper-start.cpp)
 set_target_properties(ubuntu-helper-start PROPERTIES OUTPUT_NAME "ubuntu-helper-start")
 target_link_libraries(ubuntu-helper-start ubuntu-launcher)
 install(TARGETS ubuntu-helper-start RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
@@ -66,7 +84,7 @@ install(TARGETS ubuntu-helper-start RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BI
 # ubuntu-helper-stop
 ########################
 
-add_executable(ubuntu-helper-stop ubuntu-helper-stop.c)
+add_executable(ubuntu-helper-stop ubuntu-helper-stop.cpp)
 set_target_properties(ubuntu-helper-stop PROPERTIES OUTPUT_NAME "ubuntu-helper-stop")
 target_link_libraries(ubuntu-helper-stop ubuntu-launcher)
 install(TARGETS ubuntu-helper-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
@@ -75,7 +93,7 @@ install(TARGETS ubuntu-helper-stop RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BIN
 # ubuntu-helper-list
 ########################
 
-add_executable(ubuntu-helper-list ubuntu-helper-list.c)
+add_executable(ubuntu-helper-list ubuntu-helper-list.cpp)
 set_target_properties(ubuntu-helper-list PROPERTIES OUTPUT_NAME "ubuntu-helper-list")
 target_link_libraries(ubuntu-helper-list ubuntu-launcher)
 install(TARGETS ubuntu-helper-list RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")

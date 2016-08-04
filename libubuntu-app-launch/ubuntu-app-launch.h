@@ -151,7 +151,7 @@ gchar *    ubuntu_app_launch_application_log_path     (const gchar *            
  * directory that it was found in. So this should be used to find icons
  * relating to that desktop file.
  *
- * Return value: Path to a log file or NULL if unavailable
+ * Return value: Whether @appid could be found
  */
 gboolean   ubuntu_app_launch_application_info         (const gchar *                     appid,
                                                        gchar **                          appdir,
@@ -386,6 +386,18 @@ gchar **   ubuntu_app_launch_list_running_apps         (void);
  *     is not running.
  */
 GPid       ubuntu_app_launch_get_primary_pid           (const gchar *                     appid);
+
+/**
+ * ubuntu_app_launch_get_pids:
+ * @appid: ID of the application to look for
+ *
+ * Checks to see if an application is running and returns
+ * the PIDs associated with it.
+ *
+ * Return Value: (transfer full) (element-type GLib.Pid): A list
+ *   of PIDs associated with @appid, empty if not running.
+ */
+GList *     ubuntu_app_launch_get_pids                 (const gchar *                     appid);
 
 /**
  * ubuntu_app_launch_pid_in_app_id:

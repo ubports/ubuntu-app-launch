@@ -1,0 +1,13 @@
+[Icon Theme]
+Directories=16x16/actions,16x16/apps
+
+[16x16/actions]
+Size=16
+Context=Actions
+Type=Threshold
+
+[16x16/apps]
+Size=16
+Context=Applications
+Type=Threshold
+

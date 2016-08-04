@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Canonical Ltd.
+ * Copyright © 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,30 +17,20 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/ubuntu-app-launch.h"
-#include <gio/gio.h>
+#include "helper.h"
 
-int
-main (int argc, gchar * argv[]) {
-	if (argc != 3) {
-		g_printerr("Usage: %s <helper type> <app id>\n", argv[0]);
-		return 1;
-	}
+#include "helper-impl-click.h"
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, -1);
+namespace ubuntu
+{
+namespace app_launch
+{
 
-	int retval = -1;
-
-	/* TODO: Allow URIs */
-	if (ubuntu_app_launch_start_helper(argv[1], argv[2], NULL)) {
-		retval = 0;
-	} else {
-		g_debug("Unable to start app id '%s' of type '%s'", argv[2], argv[1]);
-	}
-
-	g_dbus_connection_flush_sync(con, NULL, NULL);
-	g_object_unref(con);
-
-	return retval; 
+std::shared_ptr<Helper> Helper::create(Type type, AppID appid, std::shared_ptr<Registry> registry)
+{
+    /* Only one type today */
+    return std::make_shared<helper_impls::Click>(type, appid, registry);
 }
+
+}  // namespace AppLaunch
+}  // namespace Ubuntu
