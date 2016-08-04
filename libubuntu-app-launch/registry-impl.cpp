@@ -142,10 +142,11 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         std::list<AppID::Package> list;
         for (GList* item = pkgs; item != NULL; item = g_list_next(item))
         {
-            list.emplace_back(AppID::Package::from_raw((gchar*)item->data));
+            auto pkgobj = reinterpret_cast<ClickInstalledPackage*>(item->data);
+            list.emplace_back(AppID::Package::from_raw(click_installed_package_get_package(pkgobj)));
         }
 
-        g_list_free_full(pkgs, g_free);
+        g_list_free_full(pkgs, g_object_unref);
         return list;
     });
 }
@@ -511,5 +512,5 @@ Registry::Impl::clearManager ()
 }
 #endif
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu

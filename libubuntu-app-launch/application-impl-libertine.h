@@ -40,7 +40,7 @@ public:
 
     AppID appId() override
     {
-        return {package : _container, appname : _appname, version : AppID::Version::from_raw("0.0")};
+        return {_container, _appname, AppID::Version::from_raw("0.0")};
     }
 
     std::shared_ptr<Info> info() override;
@@ -57,6 +57,6 @@ private:
     std::string _basedir;
 };
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

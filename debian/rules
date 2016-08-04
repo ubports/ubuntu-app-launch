@@ -6,9 +6,10 @@ export G_MESSAGES_DEBUG=all
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
+export DPKG_GENSYMBOLS_CHECK_LEVEL=4
 
 %:
-	dh $@ --with click,gir
+	dh $@ --with click,gir --parallel --fail-missing
 
 override_dh_click:
 	dh_click --name ubuntu-app-launch-desktop

@@ -509,6 +509,6 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(const AppID& appId,
     return std::make_shared<UpstartInstance>(appId, job, instance, registry);
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

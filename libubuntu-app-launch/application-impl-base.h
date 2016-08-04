@@ -94,6 +94,6 @@ private:
     void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal);
 };
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu
