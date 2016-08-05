@@ -62,23 +62,25 @@ std::shared_ptr<Application::Info> Click::info()
 
 AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
 {
-    if (!json_object_has_member(manifest.get(), "version"))
+    const gchar* cstr;
+    if (!json_object_has_member(manifest.get(), "version") ||
+        (cstr = json_object_get_string_member(manifest.get(), "version")) == nullptr)
     {
         throw std::runtime_error("Unable to find version number in manifest");
     }
 
-    auto cstr = json_object_get_string_member(manifest.get(), "version");
-    auto cppstr = AppID::Version::from_raw((const gchar*)cstr);
+    auto cppstr = AppID::Version::from_raw(cstr);
     return cppstr;
 }
 
 std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest)
 {
-    if (!json_object_has_member(manifest.get(), "hooks"))
+    JsonObject *hooks = nullptr;
+    if (!json_object_has_member(manifest.get(), "hooks") ||
+        (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
     {
         throw std::runtime_error("Manifest does not have a 'hooks' field");
     }
-    auto hooks = json_object_get_object_member(manifest.get(), "hooks");
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
@@ -106,19 +108,20 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
                                              const std::string& app,
                                              const std::string& clickDir)
 {
-    if (!json_object_has_member(manifest.get(), "hooks"))
+    JsonObject *hooks = nullptr;
+    if (!json_object_has_member(manifest.get(), "hooks") ||
+        (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
     {
         throw std::runtime_error("Manifest for application '" + app + "' does not have a 'hooks' field");
     }
 
-    auto hooks = json_object_get_object_member(manifest.get(), "hooks");
-
-    if (!json_object_has_member(hooks, app.c_str()))
+    JsonObject *hooklist = nullptr;
+    if (!json_object_has_member(hooks, app.c_str()) ||
+        (hooklist = json_object_get_object_member(hooks, app.c_str())) == nullptr)
     {
         throw std::runtime_error("Manifest does not have an application '" + app + "'");
     }
 
-    auto hooklist = json_object_get_object_member(hooks, app.c_str());
     auto desktoppath = json_object_get_string_member(hooklist, "desktop");
     if (desktoppath == nullptr)
         throw std::runtime_error("Manifest for application '" + app + "' does not have a 'desktop' hook");
