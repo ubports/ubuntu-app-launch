@@ -222,4 +222,3 @@ if (${enable_tests})
   add_subdirectory(tests)
 endif ()
 
-add_subdirectory(abi-check)
