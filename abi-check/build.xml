@@ -1,0 +1,14 @@
+<version>
+2
+</version>
+<headers>
+../libubuntu-app-launch/ubuntu-app-launch.h
+../libubuntu-app-launch/appid.h
+../libubuntu-app-launch/application.h
+../libubuntu-app-launch/helper.h
+../libubuntu-app-launch/registry.h
+../libubuntu-app-launch/type-tagger.h
+</headers>
+<libs>
+../libubuntu-app-launch/libubuntu-app-launch.so.2.0.0
+</libs>
