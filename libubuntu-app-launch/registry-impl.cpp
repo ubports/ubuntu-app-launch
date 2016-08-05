@@ -149,7 +149,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
             }
         }
 
-        g_list_free_full(pkgs, g_object_unref);
+        g_list_free_full(pkgs, g_free);
         return list;
     });
 }
