@@ -138,5 +138,5 @@ add_test (xmir-helper-test xmir-helper-test)
 # Formatted code
 
 add_custom_target(format-tests
-	COMMAND clang-format -i -style=file libual-cpp-test.cc
+	COMMAND clang-format -i -style=file libual-cpp-test.cc eventually-fixture.h
 )
