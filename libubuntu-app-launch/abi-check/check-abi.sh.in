@@ -2,6 +2,10 @@
 
 set -e
 
+if [ ! -e "/usr/lib/@UBUNTU_APP_LAUNCH_ARCH@/libubuntu-app-launch.so.@ABI_VERSION@" ] ; then
+	exit 0
+fi
+
 cd @CMAKE_CURRENT_BINARY_DIR@
 
 LIBRARY_NAME=@CMAKE_PROJECT_NAME@

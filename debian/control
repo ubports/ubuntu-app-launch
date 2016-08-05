@@ -23,7 +23,8 @@ Build-Depends: abi-compliance-checker,
                libnih-dev,
                libproperties-cpp-dev,
 # For ABI check to distro version
-               libubuntu-app-launch2-dev | base-files,
+# Shouldn't need valgrind, but for bootstrapping
+               libubuntu-app-launch2-dev | valgrind,
                libupstart-dev,
                libzeitgeist-2.0-dev,
                gobject-introspection,

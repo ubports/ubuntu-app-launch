@@ -5,5 +5,5 @@
 /usr/include/libubuntu-app-launch-@API_VERSION@/
 </headers>
 <libs>
-/usr/lib/x86_64-linux-gnu/libubuntu-app-launch.so.@ABI_VERSION@
+/usr/lib/@UBUNTU_APP_LAUNCH_ARCH@/libubuntu-app-launch.so.@ABI_VERSION@
 </libs>
