@@ -112,7 +112,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
         auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
 
 #if JSON_CHECK_VERSION(1,1,2)
-        // Not available in json-glib 1.0, so must leek there.
+        // Not available in json-glib 1.0, so must leak there.
         json_node_unref(node);
 #endif
 
