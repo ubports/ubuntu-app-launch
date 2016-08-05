@@ -1,12 +1,27 @@
 project(ubuntu-app-launch C CXX)
 cmake_minimum_required(VERSION 2.8.9)
 
+##########################
+# Version Info
+##########################
+
+set(API_VERSION 2)
+set(ABI_VERSION 2)
+
+##########################
+# Options
+##########################
+
 option (enable_tests "Build tests" ON)
 option (enable_lcov "Generate Coverage Reports" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
 
 set(PACKAGE ${CMAKE_PROJECT_NAME})
+
+##########################
+# Dependent Packages
+##########################
 
 find_package(PkgConfig REQUIRED)
 find_package(GObjectIntrospection REQUIRED)
@@ -207,3 +222,4 @@ if (${enable_tests})
   add_subdirectory(tests)
 endif ()
 
+add_subdirectory(abi-check)

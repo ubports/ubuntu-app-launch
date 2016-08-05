@@ -21,6 +21,8 @@ Build-Depends: click-dev (>= 0.2.2),
                libnih-dbus-dev,
                libnih-dev,
                libproperties-cpp-dev,
+# For ABI check to distro version
+               libubuntu-app-launch2-dev | base-files,
                libupstart-dev,
                libzeitgeist-2.0-dev,
                gobject-introspection,

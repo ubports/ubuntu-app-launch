@@ -1,0 +1,14 @@
+<version>
+@ABI_VERSION@
+</version>
+<headers>
+@CMAKE_SOURCE_DIR@/libubuntu-app-launch/ubuntu-app-launch.h
+@CMAKE_SOURCE_DIR@/libubuntu-app-launch/appid.h
+@CMAKE_SOURCE_DIR@/libubuntu-app-launch/application.h
+@CMAKE_SOURCE_DIR@/libubuntu-app-launch/helper.h
+@CMAKE_SOURCE_DIR@/libubuntu-app-launch/registry.h
+@CMAKE_SOURCE_DIR@/libubuntu-app-launch/type-tagger.h
+</headers>
+<libs>
+@CMAKE_BINARY_DIR@/libubuntu-app-launch/libubuntu-app-launch.so.@ABI_VERSION@
+</libs>

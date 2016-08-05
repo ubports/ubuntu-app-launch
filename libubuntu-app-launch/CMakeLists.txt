@@ -1,13 +1,6 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-##########################
-# Version Info
-##########################
-
-set(API_VERSION 2)
-set(ABI_VERSION 2)
-
 
 ##########################
 # Library

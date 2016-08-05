@@ -1,9 +1,0 @@
-<version>
-2
-</version>
-<headers>
-/usr/include/libubuntu-app-launch-2/
-</headers>
-<libs>
-/usr/lib/x86_64-linux-gnu/libubuntu-app-launch.so.2.0.0
-</libs>
