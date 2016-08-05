@@ -99,6 +99,12 @@ std::shared_ptr<Application::Info> Legacy::info()
     return appinfo_;
 }
 
+/** Checks the AppID by ensuring the version and package are empty
+    then looks for the application.
+
+    \param appid AppID to check
+    \param registry persistent connections to use
+*/
 bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     try
@@ -116,11 +122,23 @@ bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& regis
     }
 }
 
+/** Ensure the package is empty
+
+    \param package Container name
+    \param registry persistent connections to use
+*/
 bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
     return package.value().empty();
 }
 
+/** Looks for an application by looking through the system and user
+    application directories to find the desktop file.
+
+    \param package Container name
+    \param appname Application name to look for
+    \param registry persistent connections to use
+*/
 bool Legacy::verifyAppname(const AppID::Package& package,
                            const AppID::AppName& appname,
                            const std::shared_ptr<Registry>& registry)
@@ -155,6 +173,13 @@ bool Legacy::verifyAppname(const AppID::Package& package,
     return false;
 }
 
+/** We don't really have a way to implement this for Legacy, any
+    search wouldn't really make sense. We just throw an error.
+
+    \param package Container name
+    \param card Application search paths
+    \param registry persistent connections to use
+*/
 AppID::AppName Legacy::findAppname(const AppID::Package& package,
                                    AppID::ApplicationWildcard card,
                                    const std::shared_ptr<Registry>& registry)
@@ -162,6 +187,12 @@ AppID::AppName Legacy::findAppname(const AppID::Package& package,
     throw std::runtime_error("Legacy apps can't be discovered by package");
 }
 
+/** Function to return an empty string
+
+    \param package Container name (unused)
+    \param appname Application name (unused)
+    \param registry persistent connections to use (unused)
+*/
 AppID::Version Legacy::findVersion(const AppID::Package& package,
                                    const AppID::AppName& appname,
                                    const std::shared_ptr<Registry>& registry)
