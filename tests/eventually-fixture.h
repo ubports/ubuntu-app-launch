@@ -56,28 +56,27 @@ protected:
 
         /* The core of the idle function as an object so we can use the C++-isms
            of attaching the variables and make this code reasonably readable */
-        std::function<void(void)> idlefunc = [&loop, &retpromise, &testfunc, &start, this]() -> void {
+        std::function<int(void)> idlefunc = [&loop, &retpromise, &testfunc, &start, this]() -> int {
             auto result = testfunc();
 
             if (result == false && _eventuallyTime > (std::chrono::steady_clock::now() - start))
             {
-                return;
+                return G_SOURCE_CONTINUE;
             }
 
             retpromise.set_value(result);
             g_main_loop_quit(loop.get());
+            return G_SOURCE_REMOVE;
         };
 
-        auto idlesrc = g_idle_add(
+        g_idle_add(
             [](gpointer data) -> gboolean {
-                auto func = reinterpret_cast<std::function<void(void)> *>(data);
-                (*func)();
-                return G_SOURCE_CONTINUE;
+                auto func = reinterpret_cast<std::function<int(void)> *>(data);
+                return (*func)();
             },
             &idlefunc);
 
         g_main_loop_run(loop.get());
-        g_source_remove(idlesrc);
 
         return retfuture.get();
     }

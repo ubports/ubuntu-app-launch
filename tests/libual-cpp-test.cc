@@ -753,9 +753,7 @@ TEST_F(LibUAL, StartingResponses)
                                   g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
                                   NULL);
 
-    pause(100);
-
-    EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
     EXPECT_EQ(1, starting_count);
 
     EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
@@ -770,9 +768,8 @@ TEST_F(LibUAL, AppIdTest)
     auto app = ubuntu::app_launch::Application::create(appid, registry);
     app->launch();
 
-    pause(50); /* Ensure all the events come through */
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 GDBusMessage* filter_func_good(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -806,10 +803,8 @@ TEST_F(LibUAL, UrlSendTest)
 
     app->launch(uris);
 
-    pause(100); /* Ensure all the events come through */
-
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 
     g_dbus_connection_remove_filter(session, filter);
 
@@ -841,10 +836,8 @@ TEST_F(LibUAL, UrlSendNoObjectTest)
 
     app->launch(uris);
 
-    pause(100); /* Ensure all the events come through */
-
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 TEST_F(LibUAL, UnityTimeoutTest)
@@ -856,9 +849,8 @@ TEST_F(LibUAL, UnityTimeoutTest)
 
     app->launch();
 
-    pause(1000); /* Ensure all the events come through */
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
 }
 
 TEST_F(LibUAL, UnityTimeoutUriTest)
@@ -872,9 +864,8 @@ TEST_F(LibUAL, UnityTimeoutUriTest)
 
     app->launch(uris);
 
-    pause(1000); /* Ensure all the events come through */
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 GDBusMessage* filter_respawn(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -907,10 +898,8 @@ TEST_F(LibUAL, UnityLostTest)
     g_debug("Start call time: %d ms", (end - start) / 1000);
     EXPECT_LT(end - start, 2000 * 1000);
 
-    pause(1000); /* Ensure all the events come through */
-
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 
     g_dbus_connection_remove_filter(session, filter);
     g_object_unref(session);
@@ -995,9 +984,7 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "crash"), /* params, the same */
         NULL);
 
-    pause(100);
-
-    EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
 
     last_observer.clear();
 
@@ -1009,9 +996,7 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "blahblah"), /* params, the same */
         NULL);
 
-    pause(100);
-
-    EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
+    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
 
     last_observer.clear();
 
@@ -1023,9 +1008,7 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "start-failure"), /* params, the same */
         NULL);
 
-    pause(100);
-
-    EXPECT_TRUE(last_observer.empty());
+    EXPECT_EVENTUALLY_EQ(true, last_observer.empty());
 
     EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
@@ -1326,12 +1309,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
     g_object_unref(G_OBJECT(zgmock));
 
     /* Give things a chance to start */
-    do
-    {
-        g_debug("Giving mocks a chance to start");
-        pause(200);
-    } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING &&
-             dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
+    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_RUNNING, dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)));
+    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_RUNNING, dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)));
 
     /* Setup signal handling */
     guint paused_count = 0;
@@ -1353,10 +1332,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
     pause(0);    /* Flush queued events */
     datacnt = 0; /* clear it */
 
-    pause(200);
-
     /* Check data coming out */
-    EXPECT_EQ(1, paused_count);
+    EXPECT_EVENTUALLY_EQ(1, paused_count);
     EXPECT_EQ(0, datacnt);
 
     /* Check to make sure we sent the event to ZG */
@@ -1379,10 +1356,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
     /* Now Resume the App */
     EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
 
-    pause(200);
-
+    EXPECT_EVENTUALLY_EQ(1, resumed_count);
     EXPECT_NE(0, datacnt);
-    EXPECT_EQ(1, resumed_count);
 
     /* Check to make sure we sent the event to ZG */
     numcalls = 0;
