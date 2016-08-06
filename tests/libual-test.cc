@@ -1054,6 +1054,8 @@ TEST_F(LibUAL, StartHelper)
 	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
 	g_variant_unref(env);
 
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
 	return;
 }
 
