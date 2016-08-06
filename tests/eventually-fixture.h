@@ -64,6 +64,14 @@ protected:
                 return G_SOURCE_CONTINUE;
             }
 
+            if (result == false)
+            {
+                g_warning(
+                    "Eventually time out after: %d ms",
+                    int(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+                            .count()));
+            }
+
             retpromise.set_value(result);
             g_main_loop_quit(loop.get());
             return G_SOURCE_REMOVE;
