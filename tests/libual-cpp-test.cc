@@ -597,13 +597,7 @@ TEST_F(LibUAL, StartStopObserver)
         g_variant_new_parsed("('started', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
         NULL);
 
-    g_usleep(100000);
-    while (g_main_pending())
-    {
-        g_main_iteration(TRUE);
-    }
-
-    ASSERT_EQ(start_data.count, 1);
+    EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
     /* Basic stop */
     dbus_test_dbus_mock_object_emit_signal(
@@ -611,13 +605,7 @@ TEST_F(LibUAL, StartStopObserver)
         g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
         NULL);
 
-    g_usleep(100000);
-    while (g_main_pending())
-    {
-        g_main_iteration(TRUE);
-    }
-
-    ASSERT_EQ(stop_data.count, 1);
+    EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
     /* Start legacy */
     start_data.count = 0;
@@ -627,13 +615,7 @@ TEST_F(LibUAL, StartStopObserver)
         mock, obj, "EventEmitted", G_VARIANT_TYPE("(sas)"),
         g_variant_new_parsed("('started', ['JOB=application-legacy', 'INSTANCE=multiple-234235'])"), NULL);
 
-    g_usleep(100000);
-    while (g_main_pending())
-    {
-        g_main_iteration(TRUE);
-    }
-
-    ASSERT_EQ(start_data.count, 1);
+    EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
     /* Legacy stop */
     stop_data.count = 0;
@@ -643,13 +625,7 @@ TEST_F(LibUAL, StartStopObserver)
         mock, obj, "EventEmitted", G_VARIANT_TYPE("(sas)"),
         g_variant_new_parsed("('stopped', ['JOB=application-legacy', 'INSTANCE=bar-9344321'])"), NULL);
 
-    g_usleep(100000);
-    while (g_main_pending())
-    {
-        g_main_iteration(TRUE);
-    }
-
-    ASSERT_EQ(stop_data.count, 1);
+    EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
     /* Test Noise Start */
     start_data.count = 0;
@@ -675,15 +651,9 @@ TEST_F(LibUAL, StartStopObserver)
         g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
         NULL);
 
-    g_usleep(100000);
-    while (g_main_pending())
-    {
-        g_main_iteration(TRUE);
-    }
-
     /* Ensure we just signaled once for each */
-    ASSERT_EQ(start_data.count, 1);
-    ASSERT_EQ(stop_data.count, 1);
+    EXPECT_EVENTUALLY_EQ(1, start_data.count);
+    EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
     /* Remove */
     ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_started(observer_cb, &start_data));
@@ -1012,8 +982,8 @@ TEST_F(LibUAL, StartHelper)
     helper->launch();
 
     guint len = 0;
-    auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-    EXPECT_NE(nullptr, calls);
+    const DbusTestDbusMockCall* calls = nullptr;
+    EXPECT_EVENTUALLY_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
     EXPECT_EQ(1, len);
 
     EXPECT_STREQ("Start", calls->name);
@@ -1038,8 +1008,7 @@ TEST_F(LibUAL, StartHelper)
     helper->launch(urls);
 
     len = 0;
-    calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-    EXPECT_NE(nullptr, calls);
+    EXPECT_EVENTUALLY_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
     EXPECT_EQ(1, len);
 
     env = g_variant_get_child_value(calls->params, 0);
@@ -1168,13 +1137,7 @@ TEST_F(LibUAL, StartStopHelperObserver)
         g_variant_new_parsed("('started', ['JOB=untrusted-helper', 'INSTANCE=my-type-is-scorpio::com.foo_foo_1.2.3'])"),
         NULL);
 
-    g_usleep(100000);
-    while (g_main_pending())
-    {
-        g_main_iteration(TRUE);
-    }
-
-    ASSERT_EQ(start_data.count, 1);
+    EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
     /* Basic stop */
     dbus_test_dbus_mock_object_emit_signal(
@@ -1183,13 +1146,7 @@ TEST_F(LibUAL, StartStopHelperObserver)
             "('stopped', ['JOB=untrusted-helper', 'INSTANCE=my-type-is-libra:1234:com.bar_bar_44.32'])"),
         NULL);
 
-    g_usleep(100000);
-    while (g_main_pending())
-    {
-        g_main_iteration(TRUE);
-    }
-
-    ASSERT_EQ(stop_data.count, 1);
+    EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
     /* Remove */
     ASSERT_TRUE(

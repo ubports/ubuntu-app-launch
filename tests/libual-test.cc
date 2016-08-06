@@ -601,11 +601,7 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(start_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
 	/* Basic stop */
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
@@ -615,11 +611,7 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(stop_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
 	/* Start legacy */
 	start_data.count = 0;
@@ -632,11 +624,7 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(start_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
 	/* Legacy stop */
 	stop_data.count = 0;
@@ -649,11 +637,7 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(stop_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
 	/* Test Noise Start */
 	start_data.count = 0;
@@ -687,14 +671,9 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
 	/* Ensure we just signaled once for each */
-	ASSERT_EQ(start_data.count, 1);
-	ASSERT_EQ(stop_data.count, 1);
-
+	EXPECT_EVENTUALLY_EQ(1, start_data.count);
+	EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
 	/* Remove */
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_started(observer_cb, &start_data));
@@ -1009,8 +988,8 @@ TEST_F(LibUAL, StartHelper)
 	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL));
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-	EXPECT_NE(nullptr, calls);
+	const DbusTestDbusMockCall * calls = nullptr;
+	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
 	EXPECT_EQ(1, len);
 
 	EXPECT_STREQ("Start", calls->name);
@@ -1065,7 +1044,7 @@ TEST_F(LibUAL, StartHelper)
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-	EXPECT_NE(nullptr, calls);
+	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
 	EXPECT_EQ(1, len);
 
 	env = g_variant_get_child_value(calls->params, 0);
@@ -1226,11 +1205,7 @@ TEST_F(LibUAL, StartStopHelperObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(start_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
 	/* Basic stop */
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
@@ -1240,11 +1215,7 @@ TEST_F(LibUAL, StartStopHelperObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(stop_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
 	/* Remove */
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
