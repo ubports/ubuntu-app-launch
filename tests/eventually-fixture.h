@@ -35,7 +35,7 @@ protected:
         return G_SOURCE_REMOVE;
     }
 
-    void pause(unsigned int ms)
+    void pause(unsigned int ms = 0)
     {
         GMainLoop *loop = g_main_loop_new(NULL, FALSE);
         g_timeout_add(ms, timeout_cb, loop);

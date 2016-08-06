@@ -290,30 +290,6 @@ protected:
 
         return found;
     }
-
-    void pause(guint time = 0)
-    {
-        if (time > 0)
-        {
-            GMainLoop* mainloop = g_main_loop_new(NULL, FALSE);
-
-            g_timeout_add(time,
-                          [](gpointer pmainloop) -> gboolean {
-                              g_main_loop_quit(static_cast<GMainLoop*>(pmainloop));
-                              return G_SOURCE_REMOVE;
-                          },
-                          mainloop);
-
-            g_main_loop_run(mainloop);
-
-            g_main_loop_unref(mainloop);
-        }
-
-        while (g_main_pending())
-        {
-            g_main_iteration(TRUE);
-        }
-    }
 };
 
 TEST_F(LibUAL, StartApplication)
