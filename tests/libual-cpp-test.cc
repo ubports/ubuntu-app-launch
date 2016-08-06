@@ -730,7 +730,7 @@ TEST_F(LibUAL, StartingResponses)
                                   NULL);
 
     EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
-    EXPECT_EQ(1, starting_count);
+    EXPECT_EVENTUALLY_EQ(1, starting_count);
 
     EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
 
