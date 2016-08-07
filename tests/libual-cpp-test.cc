@@ -430,7 +430,7 @@ TEST_F(LibUAL, ApplicationLog)
     appid = ubuntu::app_launch::AppID::find("single");
     app = ubuntu::app_launch::Application::create(appid, registry);
 
-	ASSERT_LT(0, app->instances().size());
+    ASSERT_LT(0, app->instances().size());
 
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
               app->instances()[0]->logPath());
@@ -1565,11 +1565,7 @@ TEST_F(LibUAL, OOMSet)
     g_object_unref(G_OBJECT(cgmock2));
 
     /* Give things a chance to start */
-    do
-    {
-        g_debug("Giving mocks a chance to start");
-        pause(200);
-    } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING);
+    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_RUNNING, dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)));
 
     /* Get our app object */
     auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
