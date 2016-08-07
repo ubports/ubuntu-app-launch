@@ -982,8 +982,8 @@ TEST_F(LibUAL, StartHelper)
     helper->launch();
 
     guint len = 0;
-    const DbusTestDbusMockCall* calls = nullptr;
-    EXPECT_EVENTUALLY_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
+    auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+    EXPECT_NE(nullptr, calls);
     EXPECT_EQ(1, len);
 
     EXPECT_STREQ("Start", calls->name);
@@ -1008,7 +1008,8 @@ TEST_F(LibUAL, StartHelper)
     helper->launch(urls);
 
     len = 0;
-    EXPECT_EVENTUALLY_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
+    calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+    EXPECT_NE(nullptr, calls);
     EXPECT_EQ(1, len);
 
     env = g_variant_get_child_value(calls->params, 0);
@@ -1046,8 +1047,8 @@ TEST_F(LibUAL, StopHelper)
     ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
     guint len = 0;
-    const DbusTestDbusMockCall* calls;
-    EXPECT_EVENTUALLY_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL));
+    auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
+    EXPECT_NE(nullptr, calls);
     EXPECT_EQ(1, len);
 
     EXPECT_STREQ("Stop", calls->name);
@@ -1078,7 +1079,7 @@ TEST_F(LibUAL, HelperList)
     auto goodhelper = ubuntu::app_launch::Helper::Type::from_raw("untrusted-type");
     auto goodlist = ubuntu::app_launch::Registry::runningHelpers(goodhelper, registry);
 
-    EXPECT_EQ(2, goodlist.size());
+    ASSERT_EQ(2, goodlist.size());
 
     goodlist.sort(
         [](const std::shared_ptr<ubuntu::app_launch::Helper>& a, const std::shared_ptr<ubuntu::app_launch::Helper>& b) {
