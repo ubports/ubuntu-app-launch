@@ -1022,6 +1022,10 @@ TEST_F(LibUAL, StartHelper)
 
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
+	/* Not sure why, but this makes this test better, hopefully we can
+	   clean this up when we move to the C++ API can use a cancellable */
+	pause(100);
+
     return;
 }
 
@@ -1065,6 +1069,10 @@ TEST_F(LibUAL, StopHelper)
     g_variant_unref(env);
 
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Not sure why, but this makes this test better, hopefully we can
+	   clean this up when we move to the C++ API can use a cancellable */
+	pause(100);
 
     return;
 }
