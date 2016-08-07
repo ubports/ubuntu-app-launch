@@ -2,7 +2,8 @@ Source: ubuntu-app-launch
 Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: click-dev (>= 0.2.2),
+Build-Depends: abi-compliance-checker,
+               click-dev (>= 0.2.2),
                cmake,
                dbus-x11,
                dbus-test-runner,
@@ -21,6 +22,9 @@ Build-Depends: click-dev (>= 0.2.2),
                libnih-dbus-dev,
                libnih-dev,
                libproperties-cpp-dev,
+# For ABI check to distro version
+# Shouldn't need valgrind, but for bootstrapping
+               libubuntu-app-launch2-dev | valgrind,
                libupstart-dev,
                libzeitgeist-2.0-dev,
                gobject-introspection,

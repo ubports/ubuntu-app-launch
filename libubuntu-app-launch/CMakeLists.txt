@@ -1,13 +1,6 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-##########################
-# Version Info
-##########################
-
-set(API_VERSION 2)
-set(ABI_VERSION 2)
-
 
 ##########################
 # Library
@@ -152,3 +145,4 @@ set(UbuntuAppLaunch_2_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
 list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-2.gir)
 gir_add_introspections(INTROSPECTION_GIRS)
 
+add_subdirectory(abi-check)
