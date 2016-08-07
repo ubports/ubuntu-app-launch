@@ -1019,7 +1019,7 @@ TEST_F(LibUAL, StartHelper)
     EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
     g_variant_unref(env);
 
-	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
     return;
 }
@@ -1046,8 +1046,8 @@ TEST_F(LibUAL, StopHelper)
     ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
     guint len = 0;
-    auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
-    EXPECT_NE(nullptr, calls);
+    const DbusTestDbusMockCall* calls;
+    EXPECT_EVENTUALLY_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL));
     EXPECT_EQ(1, len);
 
     EXPECT_STREQ("Stop", calls->name);

@@ -1069,8 +1069,8 @@ TEST_F(LibUAL, StopHelper)
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
-	EXPECT_NE(nullptr, calls);
+	const DbusTestDbusMockCall * calls = nullptr;
+	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL));
 	EXPECT_EQ(1, len);
 
 	EXPECT_STREQ("Stop", calls->name);
@@ -1094,8 +1094,7 @@ TEST_F(LibUAL, StopHelper)
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
 	len = 0;
-	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
-	EXPECT_NE(nullptr, calls);
+	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL));
 	EXPECT_EQ(1, len);
 
 	EXPECT_STREQ("Stop", calls->name);
