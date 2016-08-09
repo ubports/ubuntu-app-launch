@@ -50,6 +50,18 @@ public:
     {
         return _iconPath;
     }
+    const Application::Info::DefaultDepartment& defaultDepartment() override
+    {
+        return _defaultDepartment;
+    }
+    const Application::Info::IconPath& screenshotPath() override
+    {
+        return _screenshotPath;
+    }
+    const Application::Info::Keywords& keywords() override
+    {
+        return _keywords;
+    }
 
     Application::Info::Splash splash() override
     {
@@ -78,6 +90,9 @@ private:
     Application::Info::Name _name;
     Application::Info::Description _description;
     Application::Info::IconPath _iconPath;
+    Application::Info::DefaultDepartment _defaultDepartment;
+    Application::Info::IconPath _screenshotPath;
+    Application::Info::Keywords _keywords;
 
     Application::Info::Splash _splashInfo;
     Application::Info::Orientations _supportedOrientations;
