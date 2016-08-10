@@ -49,6 +49,8 @@ protected:
 
     static std::list<std::pair<std::string, std::string>> confinedEnv(const std::string& package,
                                                                       const std::string& pkgdir);
+    static std::shared_ptr<GKeyFile> keyfileFromPath(const std::string& pathname);
+    static std::string find_desktop_file(const std::string& basepath, const std::string& subpath, const std::string& filename);
 };
 
 /** An object that represents an instance of a job on Upstart. This

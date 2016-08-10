@@ -34,25 +34,28 @@ namespace app_impls
     in the Legacy backend. We want to use the snap backend. */
 const std::string snappyDesktopPath{"/var/lib/snapd"};
 
-/***********************************
-   Prototypes
- ***********************************/
-std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name);
-
-/** Helper function to put on shared_ptr's for keyfiles */
-void clear_keyfile(GKeyFile* keyfile)
-{
-    if (keyfile != nullptr)
-    {
-        g_key_file_free(keyfile);
-    }
-}
-
 Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
     : Base(registry)
     , _appname(appname)
 {
-    std::tie(_basedir, _keyfile) = keyfileForApp(appname);
+    _basedir = g_get_user_data_dir();
+    auto keyfile_path = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
+    _keyfile = keyfileFromPath(keyfile_path);
+
+    if (!_keyfile)
+    {
+        auto systemDirs = g_get_system_data_dirs();
+        for (auto i = 0; systemDirs[i] != nullptr; i++)
+        {
+            _basedir = systemDirs[i];
+            auto keyfile_path = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
+            _keyfile = keyfileFromPath(keyfile_path);
+            if (_keyfile)
+            {
+                break;
+            }
+        }
+    }
 
     appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
 
@@ -65,46 +68,6 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     {
         throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
     }
-}
-
-std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name)
-{
-    std::string desktopName = name.value() + ".desktop";
-    auto keyfilecheck = [desktopName](const std::string& dir) -> std::shared_ptr<GKeyFile> {
-        auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
-        if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
-        {
-            g_free(fullname);
-            return {};
-        }
-
-        auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), clear_keyfile);
-
-        GError* error = nullptr;
-        g_key_file_load_from_file(keyfile.get(), fullname, G_KEY_FILE_NONE, &error);
-        g_free(fullname);
-
-        if (error != nullptr)
-        {
-            g_debug("Unable to load keyfile '%s' becuase: %s", desktopName.c_str(), error->message);
-            g_error_free(error);
-            return {};
-        }
-
-        return keyfile;
-    };
-
-    std::string basedir = g_get_user_data_dir();
-    auto retval = keyfilecheck(basedir);
-
-    auto systemDirs = g_get_system_data_dirs();
-    for (auto i = 0; !retval && systemDirs[i] != nullptr; i++)
-    {
-        basedir = systemDirs[i];
-        retval = keyfilecheck(basedir);
-    }
-
-    return std::make_pair(basedir, retval);
 }
 
 std::shared_ptr<Application::Info> Legacy::info()
