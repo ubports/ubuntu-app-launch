@@ -39,8 +39,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     , _appname(appname)
 {
     _basedir = g_get_user_data_dir();
-    auto keyfile_path = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
-    _keyfile = keyfileFromPath(keyfile_path);
+    _keyfile = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
 
     if (!_keyfile)
     {
@@ -48,8 +47,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
         for (auto i = 0; systemDirs[i] != nullptr; i++)
         {
             _basedir = systemDirs[i];
-            auto keyfile_path = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
-            _keyfile = keyfileFromPath(keyfile_path);
+            _keyfile = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
             if (_keyfile)
             {
                 break;

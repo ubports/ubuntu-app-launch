@@ -39,27 +39,22 @@ Libertine::Libertine(const AppID::Package& container,
     {
         auto container_path = libertine_container_path(container.value().c_str());
         auto system_app_path = g_build_filename(container_path, "usr", "share", nullptr);
-        auto keyfile_path = find_desktop_file(system_app_path, "applications", appname.value() + ".desktop");
-        _keyfile = keyfileFromPath(keyfile_path);
-
-        if (_keyfile)
-        {
-            _basedir = system_app_path;
-        }
-        else
-        {
-            auto local_app_path = g_build_filename(container_path, ".local", "share", nullptr);
-            keyfile_path = find_desktop_file(system_app_path, "applications", appname.value() + ".desktop");
-            _keyfile = keyfileFromPath(keyfile_path);
-
-            if (_keyfile)
-            {
-                _basedir = local_app_path;
-            }
-            g_free(local_app_path);
-        }
+        _basedir = system_app_path;
         g_free(system_app_path);
         g_free(container_path);
+
+        _keyfile = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
+    }
+
+    if (!_keyfile)
+    {
+        auto container_home_path = libertine_container_home_path(container.value().c_str());
+        auto local_app_path = g_build_filename(container_home_path, ".local", "share", nullptr);
+        _basedir = local_app_path;
+        g_free(local_app_path);
+        g_free(container_home_path);
+
+        _keyfile = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
     }
 
     if (!_keyfile)
