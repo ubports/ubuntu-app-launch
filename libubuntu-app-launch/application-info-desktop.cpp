@@ -128,9 +128,8 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto stringlistFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
-                           const gchar* key,
-                           const std::string& exceptionText = {}) -> T
+auto stringlistFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const gchar* key, const std::string& exceptionText = {})
+    -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_locale_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, nullptr, &error);
@@ -233,7 +232,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         }
         return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
     }())
-    , _defaultDepartment(stringFromKeyfile<Application::Info::DefaultDepartment>(keyfile, "X-Ubuntu-Default-Department-ID"))
+    , _defaultDepartment(
+          stringFromKeyfile<Application::Info::DefaultDepartment>(keyfile, "X-Ubuntu-Default-Department-ID"))
     , _screenshotPath([keyfile, basePath]() {
         return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "X-Screenshot");
     }())
