@@ -125,27 +125,33 @@ std::shared_ptr<GKeyFile> Base::find_desktop_file(const std::string& basepath, c
     }
 
     GError* error = nullptr;
-    GDir* dir = g_dir_open(sfullpath.c_str(), 0, &error);
+    auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
+    GDir* dir = g_dir_open(dirpath, 0, &error);
     if (error != NULL) {
         g_error_free(error);
+        g_free(dirpath);
         return {};
     }
+    g_free(dirpath);
 
     const gchar* file;
     while ((file = g_dir_read_name(dir)) != NULL)
     {
         auto new_subpath = g_build_filename(subpath.c_str(), file, nullptr);
-        if (g_file_test(new_subpath, G_FILE_TEST_IS_DIR))
+        auto new_fullpath = g_build_filename(basepath.c_str(), new_subpath, nullptr);
+        if (g_file_test(new_fullpath, G_FILE_TEST_IS_DIR))
         {
             auto desktop_file = find_desktop_file(basepath, new_subpath, filename);
             g_free(new_subpath);
 
             if (desktop_file)
             {
+                g_free(new_fullpath);
                 g_free(dir);
                 return desktop_file;
             }
         }
+        g_free(new_fullpath);
         g_free(new_subpath);
     }
     g_free(dir);
