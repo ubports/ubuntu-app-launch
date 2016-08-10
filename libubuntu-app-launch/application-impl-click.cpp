@@ -18,7 +18,6 @@
  */
 
 #include "application-impl-click.h"
-#include "app-info.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
 
@@ -61,7 +60,23 @@ AppID Click::appId()
 
 bool Click::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
-    return app_info_click(std::string(appid).c_str(), NULL, NULL) == TRUE;
+    std::string appiddesktop = std::string(appid) + ".desktop";
+    gchar* click_link = nullptr;
+    const gchar* link_farm_dir = g_getenv("UBUNTU_APP_LAUNCH_LINK_FARM");
+    if (G_LIKELY(link_farm_dir == nullptr))
+    {
+        click_link =
+            g_build_filename(g_get_user_cache_dir(), "ubuntu-app-launch", "desktop", appiddesktop.c_str(), NULL);
+    }
+    else
+    {
+        click_link = g_build_filename(link_farm_dir, appiddesktop.c_str(), NULL);
+    }
+
+    bool click = g_file_test(click_link, G_FILE_TEST_EXISTS);
+    g_free(click_link);
+
+    return click;
 }
 
 bool Click::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
@@ -227,7 +242,7 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
                 {
                     try
                     {
-                        AppID appid{package : pkg, appname : appname, version : manifestVersion(manifest)};
+                        AppID appid{pkg, appname, manifestVersion(manifest)};
                         auto app = std::make_shared<Click>(appid, manifest, registry);
                         applist.push_back(app);
                     }
@@ -301,6 +316,6 @@ std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Appli
                                    UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

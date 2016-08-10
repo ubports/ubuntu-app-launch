@@ -17,6 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <regex>
+
 #include "application-impl-snap.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
@@ -38,6 +40,8 @@ const std::set<std::string> SUPPORTED_INTERFACES{"unity8", "unity7", "x11"};
 const std::set<std::string> XMIR_INTERFACES{"unity7", "x11"};
 /** All the interfaces that we tell Unity support lifecycle */
 const std::set<std::string> LIFECYCLE_INTERFACES{"unity8"};
+/** Snappy has more restrictive appnames than everyone else */
+const std::regex appnameRegex{"^[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$"};
 
 /************************
  ** Info support
@@ -45,7 +49,7 @@ const std::set<std::string> LIFECYCLE_INTERFACES{"unity8"};
 
 /** Subclassing the desktop info object so that we can override a couple
     of properties with interface definitions. This may grow as we add more
-        fields to the desktop spec that come from Snappy interfaces. */
+    fields to the desktop spec that come from Snappy interfaces. */
 class SnapInfo : public app_info::Desktop
 {
     /** The core interface for this snap */
@@ -111,6 +115,12 @@ public:
         }
     }
 
+    /** Figures out the exec line for a snappy command. We're not using
+        the Exec in the desktop file exactly, but assuming that it is kinda
+        what we want to be run. So we're replacing that with the script, which
+        we have to use as we can't get the command that is in the snap
+        metadata as Snapd won't give it to us. So we're parsing the Exec line
+        and replacing the first entry. Then putting it back together again. */
     Exec execLine() override
     {
         std::string keyfile = _exec.value();
@@ -161,7 +171,12 @@ public:
 
 /** Creates a Snap application object. Will throw exceptions if the AppID
     doesn't resolve into a valid package or that package doesn't have a desktop
-        file that matches the app name. */
+    file that matches the app name.
+
+    \param appid Application ID of the snap
+    \param registry Registry to use for persistant connections
+    \param interface Primary interface that we found this snap for
+*/
 Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface)
     : Base(registry)
     , appid_(appid)
@@ -183,14 +198,21 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
 }
 
 /** Uses the findInterface() function to find the interface if we don't
-    have one. */
+    have one.
+
+    \param appid Application ID of the snap
+    \param registry Registry to use for persistant connections
+*/
 Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
     : Snap(appid, registry, findInterface(appid, registry))
 {
 }
 
 /** Lists all the Snappy apps that are using one of our supported interfaces.
-    Also makes sure they're valid. */
+    Also makes sure they're valid.
+
+    \param registry Registry to use for persistant connections
+*/
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> apps;
@@ -221,7 +243,11 @@ AppID Snap::appId()
 }
 
 /** Asks Snapd for the interfaces to determine which one the application
-    can support. */
+    can support.
+
+    \param appid Application ID of the snap
+    \param registry Registry to use for persistant connections
+*/
 std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
@@ -238,11 +264,20 @@ std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Regist
 }
 
 /** Checks if an AppID could be a snap. Note it doesn't look for a desktop
-    file just the package, app and version. */
+    file just the package, app and version.
+
+    \param appid Application ID of the snap
+    \param registry Registry to use for persistant connections
+*/
 bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry)
 {
     try
     {
+        if (!std::regex_match(appId.appname.value(), appnameRegex))
+        {
+            return false;
+        }
+
         auto pkginfo = registry->impl->snapdInfo.pkgInfo(appId.package);
         if (!pkginfo)
         {
@@ -258,20 +293,50 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
     }
 }
 
+/** Look to see if a package is a valid Snap package name
+
+    \param package Package name
+    \param registry Registry to use for persistant connections
+*/
 bool Snap::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
-    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
-    return pkgInfo != nullptr;
+    try
+    {
+        auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+        return pkgInfo != nullptr;
+    }
+    catch (std::runtime_error& e)
+    {
+        return false;
+    }
 }
 
+/** Look to see if an appname is a valid for a Snap package
+
+    \param package Package name
+    \param appname Command name
+    \param registry Registry to use for persistant connections
+*/
 bool Snap::verifyAppname(const AppID::Package& package,
                          const AppID::AppName& appname,
                          const std::shared_ptr<Registry>& registry)
 {
+    if (!std::regex_match(appname.value(), appnameRegex))
+    {
+        return false;
+    }
+
     auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
     return pkgInfo->appnames.find(appname) != pkgInfo->appnames.end();
 }
 
+/** Look for an application name on a Snap package based on a
+    wildcard type.
+
+    \param package Package name
+    \param card Wildcard to use for finding the appname
+    \param registry Registry to use for persistant connections
+*/
 AppID::AppName Snap::findAppname(const AppID::Package& package,
                                  AppID::ApplicationWildcard card,
                                  const std::shared_ptr<Registry>& registry)
@@ -301,6 +366,12 @@ AppID::AppName Snap::findAppname(const AppID::Package& package,
     throw std::logic_error("Got a value of the app wildcard enum that can't exist");
 }
 
+/** Look for a version of a Snap package
+
+    \param package Package name
+    \param appname Not used for snaps
+    \param registry Registry to use for persistant connections
+*/
 AppID::Version Snap::findVersion(const AppID::Package& package,
                                  const AppID::AppName& appname,
                                  const std::shared_ptr<Registry>& registry)
@@ -315,6 +386,7 @@ std::shared_ptr<Application::Info> Snap::info()
     return info_;
 }
 
+/** Get all of the instances of this snap package that are running */
 std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
 {
     std::vector<std::shared_ptr<Instance>> vect;
@@ -335,6 +407,9 @@ std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
     return vect;
 }
 
+/** Return the launch environment for this snap. That includes whether
+    or not it needs help from XMir (including Libertine helpers)
+*/
 std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 {
     g_debug("Getting snap specific environment");
@@ -358,6 +433,10 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     return retval;
 }
 
+/** Create a new instance of this Snap
+
+    \param urls URLs to pass to the command
+*/
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
     g_debug("Launching a snap: %s", std::string(appId()).c_str());
@@ -365,6 +444,11 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
                                    UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
 }
 
+/** Create a new instance of this Snap with a testing environment
+    setup for it.
+
+    \param urls URLs to pass to the command
+*/
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
     return UpstartInstance::launch(appId(), "application-snap", std::string(appId()) + "-", urls, _registry,

@@ -30,6 +30,12 @@ namespace app_launch
 namespace app_impls
 {
 
+/** Class implementing a Applications that are installed in the
+    system as Snaps. This class connects to snapd to get information
+    on the interfaces of the installed snaps and sees if any of them
+    are applicable to the user session. Currently that means if the
+    command has the unity8, unity7 or x11 interface.
+*/
 class Snap : public Base
 {
 public:
@@ -61,9 +67,16 @@ public:
                                       const std::shared_ptr<Registry>& registry);
 
 private:
+    /** AppID of the Snap. Should be the name of the snap package.
+        The name of the command. And then the revision. */
     AppID appid_;
+    /** The app's displayed information. Should be from a desktop
+        file that is put in ${SNAP_DIR}/meta/gui/${command}.desktop */
     std::shared_ptr<app_info::Desktop> info_;
+    /** Which interface we thing we're coming from. Depends on how
+        we handle setting up the environment for the command. */
     std::string interface_;
+    /** Information that we get from Snapd on the package */
     std::shared_ptr<snapd::Info::PkgInfo> pkgInfo_;
 
     std::list<std::pair<std::string, std::string>> launchEnv();

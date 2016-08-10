@@ -18,7 +18,6 @@
  */
 
 #include "application-impl-libertine.h"
-#include "app-info.h"
 #include "libertine.h"
 #include "registry-impl.h"
 
@@ -109,7 +108,19 @@ std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname)
 
 bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
-    return app_info_libertine(std::string(appid).c_str(), NULL, NULL) == TRUE;
+    try
+    {
+        if (appid.version.value() != "0.0")
+        {
+            return false;
+        }
+
+        return verifyAppname(appid.package, appid.appname, registry);
+    }
+    catch (std::runtime_error& e)
+    {
+        return false;
+    }
 }
 
 bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
@@ -248,6 +259,6 @@ std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<A
                                    UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
 }
 
-};  // namespace app_impls
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_impls
+}  // namespace app_launch
+}  // namespace ubuntu

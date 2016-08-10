@@ -18,7 +18,6 @@
  */
 
 extern "C" {
-#include "app-info.h"
 #include "ubuntu-app-launch.h"
 }
 
@@ -387,5 +386,5 @@ const oom::Score oom::fromLabelAndValue(std::int32_t value, const std::string& l
     return static_cast<oom::Score>(value);
 }
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu

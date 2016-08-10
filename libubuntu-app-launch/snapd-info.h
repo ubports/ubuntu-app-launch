@@ -34,6 +34,8 @@ namespace app_launch
 namespace snapd
 {
 
+/** Class that implements the connection to Snapd allowing us to get info
+    from it in a C++ friendly way. */
 class Info
 {
 public:
@@ -56,8 +58,13 @@ public:
     std::set<std::string> interfacesForAppId(const AppID &appid) const;
 
 private:
+    /** Path to the socket of snapd */
     std::string snapdSocket;
+    /** Directory to use as the base for all snap packages when making paths. This
+        can be overridden with UBUNTU_APP_LAUNCH_SNAP_BASEDIR */
     std::string snapBasedir;
+    /** Result of a check at init to see if the socket is available. If
+        not all functions will return null results. */
     bool snapdExists = false;
 
     std::shared_ptr<JsonNode> snapdJson(const std::string &endpoint) const;

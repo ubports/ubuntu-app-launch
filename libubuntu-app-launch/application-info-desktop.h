@@ -103,6 +103,6 @@ protected:
     Exec _exec;
 };
 
-};  // namespace AppInfo
-};  // namespace AppLaunch
-};  // namespace Ubuntu
+}  // namespace AppInfo
+}  // namespace AppLaunch
+}  // namespace Ubuntu

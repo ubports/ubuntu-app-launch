@@ -1,7 +1,7 @@
 description "Application Launching for Snap Applications"
 author "Ted Gould <ted@canonical.com>"
 
-instance ${APP_ID}
+instance ${APP_ID}-${INSTANCE_ID}
 
 start on application-snap-start
 stop on application-end or desktop-end
@@ -12,6 +12,7 @@ env APP_URIS
 env APP_DIR
 env APP_DESKTOP_FILE_PATH
 env APP_XMIR_ENABLE
+evn INSTANCE_ID=""
 
 env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
 export UBUNTU_APP_LAUNCH_ARCH
@@ -32,6 +33,6 @@ post-stop script
 
 	DEVELOPER_MODE=`gdbus call --system --dest com.canonical.PropertyService --object-path /com/canonical/PropertyService --method com.canonical.PropertyService.GetProperty adb`
 	if [ "$DEVELOPER_MODE" != "(true,)" ] ; then
-		rm -f ${HOME}/.cache/upstart/application-snap-${APP_ID}.log*
+		rm -f ${HOME}/.cache/upstart/application-snap-${APP_ID}-${INSTANCE_ID}.log*
 	fi
 end script

@@ -58,8 +58,12 @@ public:
     void clearManager ();
 #endif
 
+    /** Shared context thread for events and background tasks
+        that UAL subtasks are doing */
     GLib::ContextThread thread;
+    /** DBus shared connection for the session bus */
     std::shared_ptr<GDBusConnection> _dbus;
+    /** Snapd information object */
     snapd::Info snapdInfo;
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
@@ -99,5 +103,5 @@ private:
     std::map<std::string, std::string> upstartJobPathCache_;
 };
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu
