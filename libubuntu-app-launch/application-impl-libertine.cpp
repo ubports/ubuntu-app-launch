@@ -27,76 +27,7 @@ namespace app_launch
 {
 namespace app_impls
 {
-namespace
-{
-static std::shared_ptr<GKeyFile> keyfileFromPath(const std::string& pathname)
-{
-    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile* keyfile) {
-        if (keyfile != nullptr)
-        {
-            g_key_file_free(keyfile);
-        }
-    });
-    GError* error = nullptr;
-
-    g_key_file_load_from_file(keyfile.get(), pathname.c_str(), G_KEY_FILE_NONE, &error);
-
-    if (error != nullptr)
-    {
-        g_error_free(error);
-        return {};
-    }
-
-    return keyfile;
-}
-
-std::shared_ptr<GKeyFile> find_desktop_file(const std::string& basepath, const std::string& subpath, const std::string& filename)
-{
-    auto fullpath = g_build_filename(basepath.c_str(), subpath.c_str(), filename.c_str(), nullptr);
-    std::string sfullpath(fullpath);
-    g_free(fullpath);
-
-    if (g_file_test(sfullpath.c_str(), G_FILE_TEST_IS_REGULAR))
-    {
-        return keyfileFromPath(sfullpath);
-    }
-
-    GError* error = nullptr;
-    auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
-    GDir* dir = g_dir_open(dirpath, 0, &error);
-    if (error != NULL) {
-        g_error_free(error);
-        g_free(dirpath);
-        return {};
-    }
-    g_free(dirpath);
-
-    const gchar* file;
-    while ((file = g_dir_read_name(dir)) != NULL)
-    {
-        auto new_subpath = g_build_filename(subpath.c_str(), file, nullptr);
-        auto new_fullpath = g_build_filename(basepath.c_str(), new_subpath, nullptr);
-        if (g_file_test(new_fullpath, G_FILE_TEST_IS_DIR))
-        {
-            auto desktop_file = find_desktop_file(basepath, new_subpath, filename);
-
-            if (desktop_file)
-            {
-                g_free(new_fullpath);
-                g_free(new_subpath);
-                g_free(dir);
-                return desktop_file;
-            }
-        }
-        g_free(new_fullpath);
-        g_free(new_subpath);
-    }
-    g_free(dir);
-
-    return {};
-}
-}
-
+    
 Libertine::Libertine(const AppID::Package& container,
                      const AppID::AppName& appname,
                      const std::shared_ptr<Registry>& registry)
@@ -129,6 +60,73 @@ Libertine::Libertine(const AppID::Package& container,
     if (!_keyfile)
         throw std::runtime_error{"Unable to find a keyfile for application '" + appname.value() + "' in container '" +
                                  container.value() + "'"};
+}
+
+std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname)
+{
+    std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile* keyfile) {
+        if (keyfile != nullptr)
+        {
+            g_key_file_free(keyfile);
+        }
+    });
+    GError* error = nullptr;
+
+    g_key_file_load_from_file(keyfile.get(), pathname.c_str(), G_KEY_FILE_NONE, &error);
+
+    if (error != nullptr)
+    {
+        g_error_free(error);
+        return {};
+    }
+
+    return keyfile;
+}
+
+std::shared_ptr<GKeyFile> Libertine::find_desktop_file(const std::string& basepath, const std::string& subpath, const std::string& filename)
+{
+    auto fullpath = g_build_filename(basepath.c_str(), subpath.c_str(), filename.c_str(), nullptr);
+    std::string sfullpath(fullpath);
+    g_free(fullpath);
+
+    if (g_file_test(sfullpath.c_str(), G_FILE_TEST_IS_REGULAR))
+    {
+        return keyfileFromPath(sfullpath);
+    }
+
+    GError* error = nullptr;
+    auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
+    GDir* dir = g_dir_open(dirpath, 0, &error);
+    if (error != NULL) {
+        g_error_free(error);
+        g_free(dirpath);
+        return {};
+    }
+    g_free(dirpath);
+
+    const gchar* file;
+    while ((file = g_dir_read_name(dir)) != nullptr)
+    {
+        auto new_subpath = g_build_filename(subpath.c_str(), file, nullptr);
+        auto new_fullpath = g_build_filename(basepath.c_str(), new_subpath, nullptr);
+        if (g_file_test(new_fullpath, G_FILE_TEST_IS_DIR))
+        {
+            auto desktop_file = find_desktop_file(basepath, new_subpath, filename);
+
+            if (desktop_file)
+            {
+                g_free(new_fullpath);
+                g_free(new_subpath);
+                g_dir_close(dir);
+                return desktop_file;
+            }
+        }
+        g_free(new_fullpath);
+        g_free(new_subpath);
+    }
+    g_dir_close(dir);
+
+    return {};
 }
 
 bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)

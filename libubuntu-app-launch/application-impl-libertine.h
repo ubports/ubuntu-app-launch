@@ -72,6 +72,8 @@ private:
     std::shared_ptr<app_info::Desktop> appinfo_;
 
     std::list<std::pair<std::string, std::string>> launchEnv();
+    static std::shared_ptr<GKeyFile> keyfileFromPath(const std::string& pathname);
+    static std::shared_ptr<GKeyFile> find_desktop_file(const std::string& basepath, const std::string& subpath, const std::string& filename);
 };
 
 }  // namespace app_impls
