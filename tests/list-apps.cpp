@@ -155,10 +155,11 @@ TEST_F(ListApps, ListLibertine)
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Libertine::list(registry);
 
-    EXPECT_EQ(2, apps.size());
+    EXPECT_EQ(3, apps.size());
 
     EXPECT_TRUE(findApp(apps, "container-name_test_0.0"));
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
+    EXPECT_TRUE(findApp(apps, "container-name_test-nested_0.0"));
 }
 
 static std::pair<std::string, std::string> interfaces{
@@ -216,5 +217,5 @@ TEST_F(ListApps, ListAll)
     /* Get all the apps */
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
-    EXPECT_EQ(17, apps.size());
+    EXPECT_EQ(18, apps.size());
 }

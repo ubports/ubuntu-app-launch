@@ -2061,17 +2061,13 @@ TEST_F(LibUAL, AppInfo)
     auto libertineid = ubuntu::app_launch::AppID::parse("container-name_test_0.0");
     auto libertine = ubuntu::app_launch::Application::create(libertineid, registry);
 
-    auto info = libertine->info();
-    EXPECT_TRUE((bool)info);
-
-    EXPECT_EQ("Test", info->name().value());
+    EXPECT_TRUE((bool)libertine->info());
+    EXPECT_EQ("Test", libertine->info()->name().value());
 
     /* Correct values for nested libertine */
     auto nestedlibertineid = ubuntu::app_launch::AppID::parse("container-name_test-nested_0.0");
     auto nestedlibertine = ubuntu::app_launch::Application::create(nestedlibertineid, registry);
 
-    auto nestedinfo = nestedlibertine->info();
-    EXPECT_TRUE((bool)nestedinfo);
-
-    EXPECT_EQ("Test Nested", nestedinfo->name().value());
+    EXPECT_TRUE((bool)nestedlibertine->info());
+    EXPECT_EQ("Test Nested", nestedlibertine->info()->name().value());
 }

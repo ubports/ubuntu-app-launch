@@ -142,11 +142,11 @@ std::shared_ptr<GKeyFile> Base::find_desktop_file(const std::string& basepath, c
         if (g_file_test(new_fullpath, G_FILE_TEST_IS_DIR))
         {
             auto desktop_file = find_desktop_file(basepath, new_subpath, filename);
-            g_free(new_subpath);
 
             if (desktop_file)
             {
                 g_free(new_fullpath);
+                g_free(new_subpath);
                 g_free(dir);
                 return desktop_file;
             }

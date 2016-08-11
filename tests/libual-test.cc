@@ -311,7 +311,7 @@ class LibUAL : public ::testing::Test
 			}
 			ASSERT_EQ(nullptr, bus);
 		}
-		
+
 		GVariant * find_env (GVariant * env_array, const gchar * var) {
 			unsigned int i;
 			GVariant * retval = nullptr;
@@ -1097,7 +1097,7 @@ TEST_F(LibUAL, StartHelper)
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
-	/* Now check a multi out */ 
+	/* Now check a multi out */
 	gchar * instance_id = ubuntu_app_launch_start_multiple_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL);
 	ASSERT_NE(nullptr, instance_id);
 	g_debug("Multi-instance ID: %s", instance_id);
@@ -1397,7 +1397,7 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock2));
 	dbus_test_task_run(DBUS_TEST_TASK(cgmock2));
 	g_object_unref(G_OBJECT(cgmock2));
-	
+
 	/* Setup ZG Mock */
 	DbusTestDbusMock * zgmock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
 	DbusTestDbusMockObject * zgobj = dbus_test_dbus_mock_get_object(zgmock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", NULL);
@@ -1408,7 +1408,7 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 		G_VARIANT_TYPE("au"),
 		"ret = [ 0 ]",
 		NULL);
-	
+
 	dbus_test_dbus_mock_object_add_property(zgmock, zgobj,
 		"version",
 		G_VARIANT_TYPE("(iii)"),
@@ -1484,7 +1484,7 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	EXPECT_EQ(1, numcalls);
 
 	dbus_test_dbus_mock_object_clear_method_calls(zgmock, zgobj, NULL);
-	
+
 	/* Check to ensure we set the OOM score */
 	gchar * pauseoomscore = NULL;
 	ASSERT_TRUE(g_file_get_contents(oomadjfile, &pauseoomscore, NULL, NULL));
