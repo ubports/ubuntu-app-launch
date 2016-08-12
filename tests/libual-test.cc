@@ -24,6 +24,7 @@
 #include <gio/gio.h>
 #include <zeitgeist.h>
 #include "mir-mock.h"
+#include "eventually-fixture.h"
 
 #include "registry.h"
 
@@ -33,7 +34,7 @@ extern "C" {
 #include <fcntl.h>
 }
 
-class LibUAL : public ::testing::Test
+class LibUAL : public EventuallyFixture
 {
 	protected:
 		DbusTestService * service = NULL;
@@ -304,12 +305,7 @@ class LibUAL : public ::testing::Test
 
 			g_object_unref(bus);
 
-			unsigned int cleartry = 0;
-			while (bus != NULL && cleartry < 100) {
-				pause(100);
-				cleartry++;
-			}
-			ASSERT_EQ(nullptr, bus);
+			EXPECT_EVENTUALLY_EQ(nullptr, bus);
 		}
 		
 		GVariant * find_env (GVariant * env_array, const gchar * var) {
@@ -358,25 +354,6 @@ class LibUAL : public ::testing::Test
 			g_variant_unref(val);
 
 			return found;
-		}
-
-		void pause (guint time = 0) {
-			if (time > 0) {
-				GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
-
-				g_timeout_add(time, [](gpointer pmainloop) -> gboolean {
-					g_main_loop_quit(static_cast<GMainLoop *>(pmainloop));
-					return G_SOURCE_REMOVE;
-				}, mainloop);
-
-				g_main_loop_run(mainloop);
-
-				g_main_loop_unref(mainloop);
-			}
-
-			while (g_main_pending()) {
-				g_main_iteration(TRUE);
-			}
 		}
 };
 
@@ -657,11 +634,7 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(start_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
 	/* Basic stop */
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
@@ -671,11 +644,7 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(stop_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
 	/* Start legacy */
 	start_data.count = 0;
@@ -688,11 +657,7 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(start_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
 	/* Legacy stop */
 	stop_data.count = 0;
@@ -705,11 +670,7 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(stop_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
 	/* Test Noise Start */
 	start_data.count = 0;
@@ -743,14 +704,9 @@ TEST_F(LibUAL, StartStopObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
 	/* Ensure we just signaled once for each */
-	ASSERT_EQ(start_data.count, 1);
-	ASSERT_EQ(stop_data.count, 1);
-
+	EXPECT_EVENTUALLY_EQ(1, start_data.count);
+	EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
 	/* Remove */
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_started(observer_cb, &start_data));
@@ -798,10 +754,8 @@ TEST_F(LibUAL, StartingResponses)
 		g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
 		NULL);
 
-	pause(100);
-
-	EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
-	EXPECT_EQ(1, starting_count);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
+	EXPECT_EVENTUALLY_EQ(1, starting_count);
 
 	EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
 
@@ -812,8 +766,7 @@ TEST_F(LibUAL, StartingResponses)
 TEST_F(LibUAL, AppIdTest)
 {
 	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", NULL));
-	pause(50); /* Ensure all the events come through */
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
 	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
@@ -847,10 +800,9 @@ TEST_F(LibUAL, UrlSendTest)
 		NULL
 	};
 	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
-	pause(100); /* Ensure all the events come through */
 
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
 
 	g_dbus_connection_remove_filter(session, filter);
 
@@ -881,10 +833,9 @@ TEST_F(LibUAL, UrlSendNoObjectTest)
 	};
 
 	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
-	pause(100); /* Ensure all the events come through */
 
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 TEST_F(LibUAL, UnityTimeoutTest)
@@ -892,9 +843,9 @@ TEST_F(LibUAL, UnityTimeoutTest)
 	this->resume_timeout = 100;
 
 	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", NULL));
-	pause(1000); /* Ensure all the events come through */
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
 }
 
 TEST_F(LibUAL, UnityTimeoutUriTest)
@@ -907,9 +858,9 @@ TEST_F(LibUAL, UnityTimeoutUriTest)
 	};
 
 	ASSERT_TRUE(ubuntu_app_launch_start_application("com.test.good_application_1.2.3", uris));
-	pause(1000); /* Ensure all the events come through */
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 }
 
 GDBusMessage *
@@ -945,10 +896,8 @@ TEST_F(LibUAL, UnityLostTest)
 	g_debug("Start call time: %d ms", (end - start) / 1000);
 	EXPECT_LT(end - start, 2000 * 1000);
 
-	pause(1000); /* Ensure all the events come through */
-
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-	EXPECT_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
 
 	g_dbus_connection_remove_filter(session, filter);
 	g_object_unref(session);
@@ -1027,9 +976,7 @@ TEST_F(LibUAL, FailingObserver)
 		g_variant_new("(ss)", "com.test.good_application_1.2.3", "crash"), /* params, the same */
 		NULL);
 
-	pause(100);
-
-	EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
 
 	last_observer.clear();
 
@@ -1041,9 +988,7 @@ TEST_F(LibUAL, FailingObserver)
 		g_variant_new("(ss)", "com.test.good_application_1.2.3", "blahblah"), /* params, the same */
 		NULL);
 
-	pause(100);
-
-	EXPECT_EQ("com.test.good_application_1.2.3", last_observer);
+	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
 
 	last_observer.clear();
 
@@ -1055,9 +1000,7 @@ TEST_F(LibUAL, FailingObserver)
 		g_variant_new("(ss)", "com.test.good_application_1.2.3", "start-failure"), /* params, the same */
 		NULL);
 
-	pause(100);
-
-	EXPECT_TRUE(last_observer.empty());
+	EXPECT_EVENTUALLY_EQ(true, last_observer.empty());
 
 	EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
@@ -1078,8 +1021,8 @@ TEST_F(LibUAL, StartHelper)
 	ASSERT_TRUE(ubuntu_app_launch_start_helper("untrusted-type", "com.test.multiple_first_1.2.3", NULL));
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-	EXPECT_NE(nullptr, calls);
+	const DbusTestDbusMockCall * calls = nullptr;
+	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
 	EXPECT_EQ(1, len);
 
 	EXPECT_STREQ("Start", calls->name);
@@ -1134,7 +1077,7 @@ TEST_F(LibUAL, StartHelper)
 
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
-	EXPECT_NE(nullptr, calls);
+	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
 	EXPECT_EQ(1, len);
 
 	env = g_variant_get_child_value(calls->params, 0);
@@ -1143,6 +1086,12 @@ TEST_F(LibUAL, StartHelper)
 	EXPECT_TRUE(check_env(env, "HELPER_TYPE", "untrusted-type"));
 	EXPECT_FALSE(check_env(env, "INSTANCE_ID", NULL));
 	g_variant_unref(env);
+
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Not sure why, but this makes this test better, hopefully we can
+	   clean this up when we move to the C++ API can use a cancellable */
+	pause(100);
 
 	return;
 }
@@ -1157,8 +1106,8 @@ TEST_F(LibUAL, StopHelper)
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
 	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
-	EXPECT_NE(nullptr, calls);
+	const DbusTestDbusMockCall * calls = nullptr;
+	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL));
 	EXPECT_EQ(1, len);
 
 	EXPECT_STREQ("Stop", calls->name);
@@ -1182,8 +1131,7 @@ TEST_F(LibUAL, StopHelper)
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
 	len = 0;
-	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
-	EXPECT_NE(nullptr, calls);
+	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL));
 	EXPECT_EQ(1, len);
 
 	EXPECT_STREQ("Stop", calls->name);
@@ -1200,6 +1148,10 @@ TEST_F(LibUAL, StopHelper)
 	g_variant_unref(env);
 
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+	/* Not sure why, but this makes this test better, hopefully we can
+	   clean this up when we move to the C++ API can use a cancellable */
+	pause(100);
 
 	return;
 }
@@ -1295,11 +1247,7 @@ TEST_F(LibUAL, StartStopHelperObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(start_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, start_data.count);
 
 	/* Basic stop */
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
@@ -1309,11 +1257,7 @@ TEST_F(LibUAL, StartStopHelperObserver)
 		NULL
 	);
 
-	g_usleep(100000);
-	while (g_main_pending())
-		g_main_iteration(TRUE);
-
-	ASSERT_EQ(stop_data.count, 1);
+	EXPECT_EVENTUALLY_EQ(1, stop_data.count);
 
 	/* Remove */
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
@@ -1430,11 +1374,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	g_object_unref(G_OBJECT(zgmock));
 
 	/* Give things a chance to start */
-	do {
-		g_debug("Giving mocks a chance to start");
-		pause(200);
-	} while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING &&
-		dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
+    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_RUNNING, dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)));
+    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_RUNNING, dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)));
 
 	/* Setup signal handling */
 	guint paused_count = 0;
@@ -1470,10 +1411,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	pause(0); /* Flush queued events */
 	datacnt = 0; /* clear it */
 
-	pause(200);
-
 	/* Check data coming out */
-	EXPECT_EQ(1, paused_count);
+	EXPECT_EVENTUALLY_EQ(1, paused_count);
 	EXPECT_EQ(0, datacnt);
 
 	/* Check to make sure we sent the event to ZG */
@@ -1495,9 +1434,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	/* Now Resume the App */
 	EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
 
-	pause(200);
-
 	/* Ensure we started getting some data */
+	EXPECT_EVENTUALLY_EQ(1, resumed_count);
 	EXPECT_NE(0, datacnt);
 
 	/* Check to make sure we sent the event to ZG */

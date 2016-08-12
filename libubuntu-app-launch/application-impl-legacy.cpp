@@ -112,6 +112,12 @@ std::shared_ptr<Application::Info> Legacy::info()
     return appinfo_;
 }
 
+/** Checks the AppID by ensuring the version and package are empty
+    then looks for the application.
+
+    \param appid AppID to check
+    \param registry persistent connections to use
+*/
 bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     try
@@ -129,11 +135,23 @@ bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& regis
     }
 }
 
+/** Ensure the package is empty
+
+    \param package Container name
+    \param registry persistent connections to use
+*/
 bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
     return package.value().empty();
 }
 
+/** Looks for an application by looking through the system and user
+    application directories to find the desktop file.
+
+    \param package Container name
+    \param appname Application name to look for
+    \param registry persistent connections to use
+*/
 bool Legacy::verifyAppname(const AppID::Package& package,
                            const AppID::AppName& appname,
                            const std::shared_ptr<Registry>& registry)
@@ -168,6 +186,13 @@ bool Legacy::verifyAppname(const AppID::Package& package,
     return false;
 }
 
+/** We don't really have a way to implement this for Legacy, any
+    search wouldn't really make sense. We just throw an error.
+
+    \param package Container name
+    \param card Application search paths
+    \param registry persistent connections to use
+*/
 AppID::AppName Legacy::findAppname(const AppID::Package& package,
                                    AppID::ApplicationWildcard card,
                                    const std::shared_ptr<Registry>& registry)
@@ -175,6 +200,12 @@ AppID::AppName Legacy::findAppname(const AppID::Package& package,
     throw std::runtime_error("Legacy apps can't be discovered by package");
 }
 
+/** Function to return an empty string
+
+    \param package Container name (unused)
+    \param appname Application name (unused)
+    \param registry persistent connections to use (unused)
+*/
 AppID::Version Legacy::findVersion(const AppID::Package& package,
                                    const AppID::AppName& appname,
                                    const std::shared_ptr<Registry>& registry)
@@ -258,6 +289,10 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
     return vect;
 }
 
+/** Grabs all the environment for a legacy app. Mostly this consists of
+    the exec line and whether it needs XMir. Also we set the path if that
+    is specified in the desktop file. We can also set an AppArmor profile
+    if requested. */
 std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::string& instance)
 {
     std::list<std::pair<std::string, std::string>> retval;
@@ -297,6 +332,8 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     return retval;
 }
 
+/** Generates an instance string based on the clock if we're a multi-instance
+    application. */
 std::string Legacy::getInstance()
 {
     auto single = g_key_file_get_boolean(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Single-Instance", nullptr);
@@ -310,6 +347,11 @@ std::string Legacy::getInstance()
     }
 }
 
+/** Create an UpstartInstance for this AppID using the UpstartInstance launch
+    function.
+
+    \param urls URLs to pass to the application
+*/
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
     std::string instance = getInstance();
@@ -318,6 +360,11 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
                                    [this, instance]() { return launchEnv(instance); });
 }
 
+/** Create an UpstartInstance for this AppID using the UpstartInstance launch
+    function with a testing environment.
+
+    \param urls URLs to pass to the application
+*/
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
     std::string instance = getInstance();

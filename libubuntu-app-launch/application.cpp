@@ -167,6 +167,7 @@ bool operator!=(const AppID& a, const AppID& b)
            a.version.value() != b.version.value();
 }
 
+/** Convert each AppID to a string and then compare the strings */
 bool operator<(const AppID& a, const AppID& b)
 {
     return std::string(a) < std::string(b);
@@ -177,10 +178,10 @@ bool AppID::empty() const
     return package.value().empty() && appname.value().empty() && version.value().empty();
 }
 
-/* Basically we're making our own VTable of static functions. Static
-   functions don't go in the normal VTables, so we can't use our class
-   inheritance here to help. So we're just packing these puppies into
-   a data structure and itterating over it. */
+/** Basically we're making our own VTable of static functions. Static
+    functions don't go in the normal VTables, so we can't use our class
+    inheritance here to help. So we're just packing these puppies into
+    a data structure and itterating over it. */
 struct DiscoverTools
 {
     std::function<bool(const AppID::Package& package, const std::shared_ptr<Registry>& registry)> verifyPackage;
@@ -196,6 +197,7 @@ struct DiscoverTools
     std::function<bool(const AppID& appid, const std::shared_ptr<Registry>& registry)> hasAppId;
 };
 
+/** The tools in order that they should be used */
 static const std::vector<DiscoverTools> discoverTools{
     /* Click */
     {app_impls::Click::verifyPackage, app_impls::Click::verifyAppname, app_impls::Click::findAppname,

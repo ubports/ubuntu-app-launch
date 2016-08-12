@@ -58,6 +58,13 @@ AppID Click::appId()
     return _appid;
 }
 
+/** Check to see if this AppID has a desktop file that is in our link
+    farm built by Click. Click puts a symoblic link there for every
+    valid AppID.
+
+    \param appid Application ID to check
+    \param registry Persistent connections to use
+*/
 bool Click::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     std::string appiddesktop = std::string(appid) + ".desktop";
@@ -79,11 +86,24 @@ bool Click::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& regist
     return click;
 }
 
+/** Tries to get the Click manifest for a package. If it can successfully
+    get the manifest returns true.
+
+    \param package Name of the package
+    \param registry Persistent connections to use
+*/
 bool Click::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
     return registry->impl->getClickManifest(package) != nullptr;
 }
 
+/** Verifies the applicaiton name by getting the list of applications
+    in the package manifest and seeing if the appname is in the list.
+
+    \param package Name of the package
+    \param appname Name of the application
+    \param registry Persistent connections to use
+*/
 bool Click::verifyAppname(const AppID::Package& package,
                           const AppID::AppName& appname,
                           const std::shared_ptr<Registry>& registry)
@@ -96,6 +116,13 @@ bool Click::verifyAppname(const AppID::Package& package,
            }) != apps.end();
 }
 
+/** Finds an application name based on a wildcard search. Gets the list
+    from the manifest, and then returns a value from that list.
+
+    \param package Name of the package
+    \param card Wildcard to search as
+    \param registry Persistent connections to use
+*/
 AppID::AppName Click::findAppname(const AppID::Package& package,
                                   AppID::ApplicationWildcard card,
                                   const std::shared_ptr<Registry>& registry)
@@ -126,6 +153,12 @@ AppID::AppName Click::findAppname(const AppID::Package& package,
     throw std::logic_error("Got a value of the app wildcard enum that can't exist");
 }
 
+/** Find the version of a package that that is requested
+
+    \param package Name of the package
+    \param appname Name of the application (not used)
+    \param registry Persistent connections to use
+*/
 AppID::Version Click::findVersion(const AppID::Package& package,
                                   const AppID::AppName& appname,
                                   const std::shared_ptr<Registry>& registry)
@@ -287,6 +320,9 @@ std::vector<std::shared_ptr<Application::Instance>> Click::instances()
     return vect;
 }
 
+/** Grabs all the environment variables for the application to
+    launch in. It sets up the confinement ones and then adds in
+    the APP_EXEC line and whether to use XMir */
 std::list<std::pair<std::string, std::string>> Click::launchEnv()
 {
     auto retval = confinedEnv(_appid.package, _clickDir);
