@@ -140,5 +140,9 @@ add_test (xmir-helper-test xmir-helper-test)
 # Formatted code
 
 add_custom_target(format-tests
-	COMMAND clang-format -i -style=file libual-cpp-test.cc list-apps.cpp
+	COMMAND clang-format -i -style=file
+	libual-cpp-test.cc
+	list-apps.cpp
+	eventually-fixture.h
+	zg-test.cc
 )
