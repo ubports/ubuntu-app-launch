@@ -30,6 +30,10 @@
 #include "registry-impl.h"
 #include "second-exec-core.h"
 
+extern "C" {
+#include "ubuntu-app-launch-trace.h"
+}
+
 namespace ubuntu
 {
 namespace app_launch
@@ -47,6 +51,12 @@ bool Base::hasInstances()
     return !instances().empty();
 }
 
+/** Function to create all the standard environment variables that we're
+    building for everyone. Mostly stuff involving paths.
+
+    \param package Name of the package
+    \param pkgdir Directory that the package lives in
+*/
 std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::string& package, const std::string& pkgdir)
 {
     std::list<std::pair<std::string, std::string>> retval{{"UBUNTU_APPLICATION_ISOLATION", "1"}};
@@ -90,11 +100,14 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
     return retval;
 }
 
+/** Checks to see if we have a primary PID for the instance */
 bool UpstartInstance::isRunning()
 {
     return primaryPid() != 0;
 }
 
+/** Uses Upstart to get the primary PID of the instance using Upstart's
+    DBus interface */
 pid_t UpstartInstance::primaryPid()
 {
     auto jobpath = registry_->impl->upstartJobPath(job_);
@@ -191,6 +204,11 @@ pid_t UpstartInstance::primaryPid()
     });
 }
 
+/** Looks at the PIDs in the instance cgroup and checks to see if @pid
+    is in the set.
+
+    @param pid PID to look for
+*/
 bool UpstartInstance::hasPid(pid_t pid)
 {
     for (auto testpid : registry_->impl->pidsFromCgroup(job_, instance_))
@@ -199,6 +217,7 @@ bool UpstartInstance::hasPid(pid_t pid)
     return false;
 }
 
+/** Gets the path to the log file for this instance */
 std::string UpstartInstance::logPath()
 {
     std::string logfile = job_;
@@ -217,6 +236,7 @@ std::string UpstartInstance::logPath()
     return path;
 }
 
+/** Returns all the PIDs that are in the cgroup for this application */
 std::vector<pid_t> UpstartInstance::pids()
 {
     auto pids = registry_->impl->pidsFromCgroup(job_, instance_);
@@ -224,6 +244,8 @@ std::vector<pid_t> UpstartInstance::pids()
     return pids;
 }
 
+/** Pauses this application by sending SIGSTOP to all the PIDs in the
+    cgroup and tells Zeitgeist that we've left the application. */
 void UpstartInstance::pause()
 {
     g_debug("Pausing application: %s", std::string(appId_).c_str());
@@ -239,6 +261,8 @@ void UpstartInstance::pause()
     pidListToDbus(pids, "ApplicationPaused");
 }
 
+/** Resumes this application by sending SIGCONT to all the PIDs in the
+    cgroup and tells Zeitgeist that we're accessing the application. */
 void UpstartInstance::resume()
 {
     g_debug("Resuming application: %s", std::string(appId_).c_str());
@@ -254,6 +278,8 @@ void UpstartInstance::resume()
     pidListToDbus(pids, "ApplicationResumed");
 }
 
+/** Stops this instance by asking Upstart to stop it. Upstart will then
+    send a SIGTERM and five seconds later start killing things. */
 void UpstartInstance::stop()
 {
     if (!registry_->impl->thread.executeOnThread<bool>([this]() {
@@ -318,7 +344,10 @@ void UpstartInstance::stop()
 }
 
 /** Sets the OOM adjustment by getting the list of PIDs and writing
-    the value to each of their files in proc */
+    the value to each of their files in proc
+
+    \param score OOM Score to set
+*/
 void UpstartInstance::setOomAdjustment(const oom::Score score)
 {
     forAllPids([this, &score](pid_t pid) { oomValueToPid(pid, score); });
@@ -356,7 +385,10 @@ const oom::Score UpstartInstance::getOomAdjustment()
 }
 
 /** Go through the list of PIDs calling a function and handling
-    the issue with getting PIDs being a racey condition. */
+    the issue with getting PIDs being a racey condition.
+
+    \param eachPid Function to run on each PID
+*/
 std::vector<pid_t> UpstartInstance::forAllPids(std::function<void(pid_t)> eachPid)
 {
     std::set<pid_t> seenPids;
@@ -380,7 +412,11 @@ std::vector<pid_t> UpstartInstance::forAllPids(std::function<void(pid_t)> eachPi
 }
 
 /** Sends a signal to a PID with a warning if we can't send it.
-    We could throw an exception, but we can't handle it usefully anyway */
+    We could throw an exception, but we can't handle it usefully anyway
+
+    \param pid PID to send the signal to
+    \param signal signal to send
+*/
 void UpstartInstance::signalToPid(pid_t pid, int signal)
 {
     if (-1 == kill(pid, signal))
@@ -392,7 +428,10 @@ void UpstartInstance::signalToPid(pid_t pid, int signal)
 
 /** Get the path to the PID's OOM adjust path, with allowing for an
     override for testing using the environment variable
-    UBUNTU_APP_LAUNCH_OOM_PROC_PATH */
+    UBUNTU_APP_LAUNCH_OOM_PROC_PATH
+
+    \param pid PID to build path for
+*/
 std::string UpstartInstance::pidToOomPath(pid_t pid)
 {
     static std::string procpath;
@@ -413,7 +452,11 @@ std::string UpstartInstance::pidToOomPath(pid_t pid)
 }
 
 /** Writes an OOM value to proc, assuming we have a string
-    in the outer loop */
+    in the outer loop
+
+    \param pid PID to change the OOM value of
+    \param oomvalue OOM value to set
+*/
 void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
 {
     auto oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
@@ -461,7 +504,11 @@ void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
 }
 
 /** Use a setuid root helper for setting the oom value of
-    Chromium instances */
+    Chromium instances
+
+    \param pid PID to change the OOM value of
+    \param oomvalue OOM value to set
+*/
 void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
 {
     GError* error = nullptr;
@@ -505,7 +552,11 @@ void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
 }
 
 /** Send a signal that we've change the application. Do this on the
-    registry thread in an idle so that we don't block anyone. */
+    registry thread in an idle so that we don't block anyone.
+
+    \param pids List of PIDs to turn into variants to send
+    \param signal Name of the DBus signal to send
+*/
 void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal)
 {
     auto registry = registry_;
@@ -563,6 +614,15 @@ void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::s
     });
 }
 
+/** Create a new Upstart Instance object that can track the job and
+    get information about it.
+
+    \param appId Application ID
+    \param job Upstart job name
+    \param instance Upstart instance name
+    \param urls URLs sent to the application (only on launch today)
+    \param registry Registry of persistent connections to use
+*/
 UpstartInstance::UpstartInstance(const AppID& appId,
                                  const std::string& job,
                                  const std::string& instance,
@@ -577,7 +637,10 @@ UpstartInstance::UpstartInstance(const AppID& appId,
     g_debug("Creating a new UpstartInstance for '%s' instance '%s'", std::string(appId_).c_str(), instance.c_str());
 }
 
-/** Reformat a C++ vector of URLs into a C GStrv of strings */
+/** Reformat a C++ vector of URLs into a C GStrv of strings
+
+    \param urls Vector of URLs to make into C strings
+*/
 std::shared_ptr<gchar*> UpstartInstance::urlsToStrv(const std::vector<Application::URL>& urls)
 {
     if (urls.empty())
@@ -605,14 +668,19 @@ struct StartCHelper
 
 /** Callback from starting an application. It checks to see whether the
     app is already running. If it is already running then we need to send
-    the URLs to it via DBus. */
+    the URLs to it via DBus.
+
+    \param obj The GDBusConnection object
+    \param res Async result object
+    \param user_data A pointer to a StartCHelper structure
+*/
 void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
 {
     StartCHelper* data = reinterpret_cast<StartCHelper*>(user_data);
     GError* error{nullptr};
     GVariant* result{nullptr};
 
-    // ual_tracepoint(libual_start_message_callback, std::string(data->appId_).c_str());
+    tracepoint(ubuntu_app_launch, libual_start_message_callback, std::string(data->ptr->appId_).c_str());
 
     g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
 
@@ -649,6 +717,17 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
     delete data;
 }
 
+/** Launch an application and create a new UpstartInstance object to track
+    its progress.
+
+    \param appId Application ID
+    \param job Upstart job name
+    \param instance Upstart instance name
+    \param urls URLs sent to the application (only on launch today)
+    \param registry Registry of persistent connections to use
+    \param mode Whether or not to setup the environment for testing
+    \param getenv A function to get additional environment variable when appropriate
+*/
 std::shared_ptr<UpstartInstance> UpstartInstance::launch(
     const AppID& appId,
     const std::string& job,
@@ -665,7 +744,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
         [&]() -> std::shared_ptr<UpstartInstance> {
             g_debug("Initializing params for an new UpstartInstance for: %s", std::string(appId).c_str());
 
-            // ual_tracepoint(libual_start, appid);
+            tracepoint(ubuntu_app_launch, libual_start, std::string(appId).c_str());
             handshake_t* handshake = starting_handshake_start(std::string(appId).c_str());
             if (handshake == NULL)
             {
@@ -736,9 +815,9 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
 
-            // ual_tracepoint(handshake_wait, app_id);
+            tracepoint(ubuntu_app_launch, handshake_wait, std::string(appId).c_str());
             starting_handshake_wait(handshake);
-            // ual_tracepoint(handshake_complete, app_id);
+            tracepoint(ubuntu_app_launch, handshake_complete, std::string(appId).c_str());
 
             /* Call the job start function */
             g_debug("Asking Upstart to start task for: %s", std::string(appId).c_str());
@@ -756,7 +835,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
                                    chelper                                        /* object */
                                    );
 
-            // ual_tracepoint(libual_start_message_sent, appid);
+            tracepoint(ubuntu_app_launch, libual_start_message_sent, std::string(appId).c_str());
 
             return retval;
         });

@@ -276,6 +276,10 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
     return vect;
 }
 
+/** Grabs all the environment for a legacy app. Mostly this consists of
+    the exec line and whether it needs XMir. Also we set the path if that
+    is specified in the desktop file. We can also set an AppArmor profile
+    if requested. */
 std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::string& instance)
 {
     std::list<std::pair<std::string, std::string>> retval;
@@ -315,6 +319,8 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     return retval;
 }
 
+/** Generates an instance string based on the clock if we're a multi-instance
+    application. */
 std::string Legacy::getInstance()
 {
     auto single = g_key_file_get_boolean(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Single-Instance", nullptr);
@@ -328,6 +334,11 @@ std::string Legacy::getInstance()
     }
 }
 
+/** Create an UpstartInstance for this AppID using the UpstartInstance launch
+    function.
+
+    \param urls URLs to pass to the application
+*/
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
     std::string instance = getInstance();
@@ -336,6 +347,11 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
                                    [this, instance]() { return launchEnv(instance); });
 }
 
+/** Create an UpstartInstance for this AppID using the UpstartInstance launch
+    function with a testing environment.
+
+    \param urls URLs to pass to the application
+*/
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
     std::string instance = getInstance();

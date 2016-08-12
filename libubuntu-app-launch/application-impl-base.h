@@ -35,7 +35,7 @@ namespace app_impls
 
 /** Provides some helper functions that can be used by all
     implementations of application. Stores the registry pointer
-        which everyone wants anyway. */
+    which everyone wants anyway. */
 class Base : public ubuntu::app_launch::Application
 {
 public:

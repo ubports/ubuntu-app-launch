@@ -249,6 +249,15 @@ std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
     return vect;
 }
 
+/** Grabs all the environment variables for the application to
+    launch in. It sets up the confinement ones and then adds in
+    the APP_EXEC line and whether to use XMir.
+
+    This function adds 'libertine-launch' at the beginning of the
+    Exec line with the container name as a parameter. The command
+    can be overridden with the UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH
+    environment variable.
+*/
 std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 {
     std::list<std::pair<std::string, std::string>> retval;
