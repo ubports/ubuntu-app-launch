@@ -76,7 +76,7 @@ protected:
 
         g_idle_add(
             [](gpointer data) -> gboolean {
-                auto func = reinterpret_cast<std::function<int(void)> *>(data);
+                auto func = reinterpret_cast<std::function<gboolean(void)> *>(data);
                 return (*func)();
             },
             &idlefunc);
