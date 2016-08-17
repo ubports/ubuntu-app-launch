@@ -87,8 +87,8 @@ TEST_F(ZGEvent, OpenTest)
     const DbusTestDbusMockCall* calls =
         dbus_test_dbus_mock_object_get_method_calls(mock, obj, "InsertEvents", &numcalls, NULL);
 
-    ASSERT_NE(calls, nullptr);
-    ASSERT_EQ(numcalls, 1);
+    ASSERT_NE(nullptr, calls);
+    ASSERT_EQ(1, numcalls);
 
     g_object_unref(zgevent);
     g_object_unref(mock);
