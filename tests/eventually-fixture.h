@@ -45,10 +45,8 @@ protected:
 
     testing::AssertionResult eventuallyLoop(std::function<testing::AssertionResult(void)> &testfunc)
     {
-        auto loop = std::shared_ptr<GMainLoop>(g_main_loop_new(nullptr, FALSE), [](GMainLoop *loop) {
-            if (loop != nullptr)
-                g_main_loop_unref(loop);
-        });
+        auto loop = std::shared_ptr<GMainLoop>(g_main_loop_new(nullptr, FALSE),
+                                               [](GMainLoop *loop) { g_clear_pointer(&loop, g_main_loop_unref); });
 
         std::promise<testing::AssertionResult> retpromise;
         auto retfuture = retpromise.get_future();
