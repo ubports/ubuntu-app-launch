@@ -43,7 +43,7 @@ protected:
         g_main_loop_unref(loop);
     }
 
-    testing::AssertionResult expectEventually(std::function<testing::AssertionResult(void)> &testfunc)
+    testing::AssertionResult eventuallyLoop(std::function<testing::AssertionResult(void)> &testfunc)
     {
         auto loop = std::shared_ptr<GMainLoop>(g_main_loop_new(nullptr, FALSE), [](GMainLoop *loop) {
             if (loop != nullptr)
@@ -97,7 +97,7 @@ protected:
         std::function<testing::AssertionResult(void)> func = [&]() {                \
             return testing::internal::CmpHelper##oper(std::forward<Args>(args)...); \
         };                                                                          \
-        return expectEventually(func);                                              \
+        return eventuallyLoop(func);                                                \
     }
 
     _EVENTUALLY_HELPER(EQ);
