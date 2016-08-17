@@ -54,7 +54,7 @@ protected:
 
         /* The core of the idle function as an object so we can use the C++-isms
            of attaching the variables and make this code reasonably readable */
-        std::function<int(void)> idlefunc = [&loop, &retpromise, &testfunc, &start, this]() -> int {
+        std::function<gboolean(void)> idlefunc = [&loop, &retpromise, &testfunc, &start, this]() -> gboolean {
             auto result = testfunc();
 
             if (result == false && _eventuallyTime > (std::chrono::steady_clock::now() - start))
