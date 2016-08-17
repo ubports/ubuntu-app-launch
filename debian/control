@@ -2,7 +2,8 @@ Source: ubuntu-app-launch
 Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: click-dev (>= 0.2.2),
+Build-Depends: abi-compliance-checker,
+               click-dev (>= 0.2.2),
                cmake,
                cmake-extras,
                dbus-x11,
@@ -22,6 +23,9 @@ Build-Depends: click-dev (>= 0.2.2),
                libnih-dbus-dev,
                libnih-dev,
                libproperties-cpp-dev,
+# For ABI check to distro version
+# Make sure to set DEB_BUILD_PROFILES when bootstrapping
+               libubuntu-app-launch2-dev <!stage1>,
                libupstart-dev,
                libzeitgeist-2.0-dev,
                gobject-introspection,

@@ -1,0 +1,28 @@
+#!/bin/sh
+
+set -e
+
+if [ ! -e "/usr/lib/@UBUNTU_APP_LAUNCH_ARCH@/libubuntu-app-launch.so.@ABI_VERSION@" ] ; then
+	exit 0
+fi
+
+cd @CMAKE_CURRENT_BINARY_DIR@
+
+LIBRARY_NAME=@CMAKE_PROJECT_NAME@
+LIBRARY_VERSION=@ABI_VERSION@
+
+rm -rf abi_dumps
+rm -rf installed_dumps
+rm -rf build_dumps
+
+abi-compliance-checker -l ${LIBRARY_NAME} -dump @CMAKE_CURRENT_BINARY_DIR@/installed.xml
+mv abi_dumps installed_dumps
+
+abi-compliance-checker -l ${LIBRARY_NAME} -dump @CMAKE_CURRENT_BINARY_DIR@/build.xml
+mv abi_dumps build_dumps
+
+abi-compliance-checker \
+	-l ${LIBRARY_NAME} \
+	-old installed_dumps/${LIBRARY_NAME}/${LIBRARY_NAME}_${LIBRARY_VERSION}.abi.tar.gz \
+	-new build_dumps/${LIBRARY_NAME}/${LIBRARY_NAME}_${LIBRARY_VERSION}.abi.tar.gz
+
