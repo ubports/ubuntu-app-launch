@@ -17,24 +17,21 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <fcntl.h>
 #include <future>
-#include <thread>
-
-#include "eventually-fixture.h"
-#include "mir-mock.h"
 #include <gio/gio.h>
 #include <gtest/gtest.h>
+#include <libdbustest/dbus-test.h>
+#include <thread>
 #include <zeitgeist.h>
 
 #include "application.h"
 #include "helper.h"
 #include "registry.h"
-
-extern "C" {
-#include "libdbustest/dbus-test.h"
 #include "ubuntu-app-launch.h"
-#include <fcntl.h>
-}
+
+#include "eventually-fixture.h"
+#include "mir-mock.h"
 
 class LibUAL : public EventuallyFixture
 {
