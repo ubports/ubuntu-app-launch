@@ -68,7 +68,7 @@ TEST_F(ZGEvent, OpenTest)
 
     DbusTestProcess* zgevent = dbus_test_process_new(ZG_EVENT_TOOL);
     dbus_test_process_append_param(zgevent, "open");
-    g_setenv("APP_ID", "foo", 1);
+    g_setenv("APP_ID", "foo", TRUE);
     dbus_test_task_set_wait_for(DBUS_TEST_TASK(zgevent), "org.gnome.zeitgeist.Engine");
     dbus_test_task_set_name(DBUS_TEST_TASK(zgevent), "ZGEvent");
     DbusTestTaskState zgevent_state = DBUS_TEST_TASK_STATE_INIT;
@@ -112,7 +112,7 @@ TEST_F(ZGEvent, TimeoutTest)
 
     DbusTestProcess* zgevent = dbus_test_process_new(ZG_EVENT_TOOL);
     dbus_test_process_append_param(zgevent, "close");
-    g_setenv("APP_ID", "foo", 1);
+    g_setenv("APP_ID", "foo", TRUE);
     dbus_test_task_set_wait_for(DBUS_TEST_TASK(zgevent), "org.gnome.zeitgeist.Engine");
     dbus_test_task_set_name(DBUS_TEST_TASK(zgevent), "ZGEvent");
     DbusTestTaskState zgevent_state = DBUS_TEST_TASK_STATE_INIT;
