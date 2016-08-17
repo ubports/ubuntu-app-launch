@@ -56,18 +56,17 @@ protected:
            of attaching the variables and make this code reasonably readable */
         std::function<gboolean(void)> idlefunc = [&loop, &retpromise, &testfunc, &start, this]() -> gboolean {
             auto result = testfunc();
-
-            if (result == false && _eventuallyTime > (std::chrono::steady_clock::now() - start))
-            {
-                return G_SOURCE_CONTINUE;
-            }
+            auto elapsed = std::chrono::steady_clock::now() - start;
 
             if (result == false)
             {
-                g_warning(
-                    "Eventually time out after: %d ms",
-                    int(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
-                            .count()));
+                if (_eventuallyTime > elapsed)
+                {
+                    return G_SOURCE_CONTINUE;
+                }
+
+                g_warning("Eventually time out after: %d ms",
+                          int(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count()));
             }
 
             retpromise.set_value(result);
