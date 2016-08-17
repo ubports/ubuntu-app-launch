@@ -97,19 +97,24 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
     auto retval = thread.executeOnThread<std::shared_ptr<JsonObject>>([this, package]() {
         GError* error = nullptr;
-        auto retval = std::shared_ptr<JsonObject>(click_user_get_manifest(_clickUser.get(), package.c_str(), &error),
-                                                  [](JsonObject* obj) {
-                                                      if (obj != nullptr)
-                                                      {
-                                                          json_object_unref(obj);
-                                                      }
-                                                  });
+        auto mani = click_user_get_manifest(_clickUser.get(), package.c_str(), &error);
 
         if (error != nullptr)
         {
             auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            throw std::runtime_error(perror->message);
+            g_critical("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
+            return std::shared_ptr<JsonObject>();
         }
+
+        auto node = json_node_alloc();
+        json_node_init_object(node, mani);
+
+        auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
+
+#if JSON_CHECK_VERSION(1,1,2)
+        // Not available in json-glib 1.0, so must leak there.
+        json_node_unref(node);
+#endif
 
         return retval;
     });
@@ -126,7 +131,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
 
     return thread.executeOnThread<std::list<AppID::Package>>([this]() {
         GError* error = nullptr;
-        GList* pkgs = click_db_get_packages(_clickDB.get(), FALSE, &error);
+        GList* pkgs = click_user_get_package_names(_clickUser.get(), &error);
 
         if (error != nullptr)
         {
@@ -137,11 +142,14 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         std::list<AppID::Package> list;
         for (GList* item = pkgs; item != NULL; item = g_list_next(item))
         {
-            auto pkgobj = reinterpret_cast<ClickInstalledPackage*>(item->data);
-            list.emplace_back(AppID::Package::from_raw(click_installed_package_get_package(pkgobj)));
+            auto pkgobj = reinterpret_cast<char*>(item->data);
+            if (pkgobj)
+            {
+                list.emplace_back(AppID::Package::from_raw(pkgobj));
+            }
         }
 
-        g_list_free_full(pkgs, g_object_unref);
+        g_list_free_full(pkgs, g_free);
         return list;
     });
 }
