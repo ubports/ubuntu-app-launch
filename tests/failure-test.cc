@@ -98,6 +98,25 @@ TEST_F(FailureTest, LegacyTest)
 	return;
 }
 
+TEST_F(FailureTest, SnapTest)
+{
+	g_setenv("EXIT_STATUS", "-100", TRUE);
+	g_setenv("JOB", "application-snap", TRUE);
+	g_setenv("INSTANCE", "foo_bar_x123-1234", TRUE);
+
+	std::string last_observer;
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+
+	/* Status based */
+	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
+
+	EXPECT_EVENTUALLY_EQ("foo_bar_x123", last_observer);
+
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+
+	return;
+}
+
 static void
 failed_start_observer (const gchar * appid, UbuntuAppLaunchAppFailed reason, gpointer user_data)
 {
