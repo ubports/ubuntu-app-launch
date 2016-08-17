@@ -22,7 +22,9 @@
 #include <click.h>
 #include <gio/gio.h>
 #include <json-glib/json-glib.h>
+#include <map>
 #include <unordered_map>
+#include <zeitgeist.h>
 
 #pragma once
 
@@ -56,8 +58,17 @@ public:
 #endif
 
     GLib::ContextThread thread;
+    std::shared_ptr<GDBusConnection> _dbus;
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
+
+    void zgSendEvent(AppID appid, const std::string& eventtype);
+
+    std::vector<pid_t> pidsFromCgroup(const std::string& job, const std::string& instance);
+
+    /* Upstart Jobs */
+    std::list<std::string> upstartInstancesForJob(const std::string& job);
+    std::string upstartJobPath(const std::string& job);
 
 private:
     Registry* _registry;
@@ -68,11 +79,19 @@ private:
     std::shared_ptr<ClickDB> _clickDB;
     std::shared_ptr<ClickUser> _clickUser;
 
-    std::shared_ptr<GDBusConnection> _dbus;
-
     void initClick();
 
+    std::shared_ptr<ZeitgeistLog> zgLog_;
+
+    std::shared_ptr<GDBusConnection> cgManager_;
+
+    void initCGManager();
+
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
+
+    /** Getting the Upstart job path is relatively expensive in
+        that it requires a DBus call. Worth keeping a cache of. */
+    std::map<std::string, std::string> upstartJobPathCache_;
 };
 
 }  // namespace app_launch

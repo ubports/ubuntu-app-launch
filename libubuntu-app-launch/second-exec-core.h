@@ -18,7 +18,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <glib.h>
+#include <gio/gio.h>
 
-gboolean second_exec (const gchar * app_id, const gchar * appuris);
+gboolean second_exec (GDBusConnection * con, GCancellable * cancel, const gchar * app_id, const gchar * appuris);
 

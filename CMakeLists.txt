@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.8.9)
 ##########################
 
 set(API_VERSION 2)
-set(ABI_VERSION 2)
+set(ABI_VERSION 3)
 
 ##########################
 # Options
@@ -49,9 +49,17 @@ execute_process(COMMAND dpkg-architecture -qDEB_BUILD_MULTIARCH
 )
 set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 
+add_compile_options(
+# Because we believe in quality
+	-Wall -Werror
 # Deprecated needed for g_atexit() in libual
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-error=unused-function -Wno-error=deprecated-declarations -std=gnu99")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -std=c++11 -pthread")
+	-Wno-error=deprecated-declarations
+	-g
+	-pthread
+)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 enable_testing()
 

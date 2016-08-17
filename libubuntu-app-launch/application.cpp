@@ -219,5 +219,44 @@ AppID AppID::discover(const std::string& package, const std::string& appname, Ve
     return appid;
 }
 
+enum class oom::Score : std::int32_t
+{
+    FOCUSED = 100,
+    UNTRUSTED_HELPER = 200,
+    PAUSED = 900,
+};
+
+const oom::Score oom::focused()
+{
+    return oom::Score::FOCUSED;
+}
+
+const oom::Score oom::paused()
+{
+    return oom::Score::PAUSED;
+}
+
+const oom::Score oom::fromLabelAndValue(std::int32_t value, const std::string& label)
+{
+    g_debug("Creating new OOM value type '%s' with a value of: '%d'", label.c_str(), value);
+
+    if (value < static_cast<std::int32_t>(oom::Score::FOCUSED))
+    {
+        g_warning("The new OOM type '%s' is giving higher priority than focused apps!", label.c_str());
+    }
+    if (value > static_cast<std::int32_t>(oom::Score::PAUSED))
+    {
+        g_warning("The new OOM type '%s' is giving lower priority than paused apps!", label.c_str());
+    }
+
+    if (value < -1000 || value > 1000)
+    {
+        throw std::runtime_error("OOM type '" + label + "' is not in the valid range of [-1000, 1000] at " +
+                                 std::to_string(value));
+    }
+
+    return static_cast<oom::Score>(value);
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -20,6 +20,7 @@
 #include "application-impl-libertine.h"
 #include "application-info-desktop.h"
 #include "libertine.h"
+#include "registry-impl.h"
 
 namespace ubuntu
 {
@@ -134,6 +135,33 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 std::shared_ptr<Application::Info> Libertine::info()
 {
     return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry);
+}
+
+std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
+{
+    std::vector<std::shared_ptr<Instance>> vect;
+    std::string sappid = appId();
+
+    for (auto instancename : _registry->impl->upstartInstancesForJob("application-legacy"))
+    {
+        if (std::equal(sappid.begin(), sappid.end(), instancename.begin()))
+            vect.emplace_back(
+                std::make_shared<UpstartInstance>(appId(), "application-legacy", sappid + "-", _registry));
+    }
+
+    return vect;
+}
+
+std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
+{
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
+                                   UpstartInstance::launchMode::STANDARD);
+}
+
+std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
+{
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
+                                   UpstartInstance::launchMode::TEST);
 }
 
 }  // namespace app_impls

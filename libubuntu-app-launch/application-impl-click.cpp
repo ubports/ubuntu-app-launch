@@ -181,6 +181,36 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
     return applist;
 }
 
+std::vector<std::shared_ptr<Application::Instance>> Click::instances()
+{
+    std::vector<std::shared_ptr<Instance>> vect;
+    std::string sappid = appId();
+
+    for (auto instancename : _registry->impl->upstartInstancesForJob("application-click"))
+    {
+        /* There an be only one, but we want to make sure it is
+           there or return an empty vector */
+        if (sappid == instancename)
+        {
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", sappid, _registry));
+            break;
+        }
+    }
+    return vect;
+}
+
+std::shared_ptr<Application::Instance> Click::launch(const std::vector<Application::URL>& urls)
+{
+    return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
+                                   UpstartInstance::launchMode::STANDARD);
+}
+
+std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
+{
+    return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
+                                   UpstartInstance::launchMode::TEST);
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

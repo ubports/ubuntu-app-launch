@@ -148,6 +148,14 @@ class LibUAL : public EventuallyFixture
 				"ret = [ dbus.ObjectPath('/com/test/app_instance') ]",
 				NULL);
 
+			dbus_test_dbus_mock_object_add_method(mock,
+				jobobj,
+				"GetInstanceByName",
+				G_VARIANT_TYPE_STRING,
+				G_VARIANT_TYPE("o"),
+				"ret = dbus.ObjectPath('/com/test/app_instance')",
+				NULL);
+
 			DbusTestDbusMockObject * instobj = dbus_test_dbus_mock_get_object(mock, "/com/test/app_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
 			dbus_test_dbus_mock_object_add_property(mock, instobj,
 				"name",
@@ -183,20 +191,38 @@ class LibUAL : public EventuallyFixture
 				"GetAllInstances",
 				NULL,
 				G_VARIANT_TYPE("ao"),
-				"ret = [ dbus.ObjectPath('/com/test/legacy_app_instance') ]",
+				"ret = [ dbus.ObjectPath('/com/test/legacy_app_instance'), dbus.ObjectPath('/com/test/legacy_app_instance2')]",
+				NULL);
+
+			dbus_test_dbus_mock_object_add_method(mock,
+				ljobobj,
+				"GetInstanceByName",
+				G_VARIANT_TYPE_STRING,
+				G_VARIANT_TYPE("o"),
+				"if args[0] == 'multiple-2342345':\n"
+				"  ret = dbus.ObjectPath('/com/test/legacy_app_instance')\n"
+				"elif args[0] == 'single-':\n"
+				"  ret = dbus.ObjectPath('/com/test/legacy_app_instance2')",
 				NULL);
 
 			DbusTestDbusMockObject * linstobj = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
 			dbus_test_dbus_mock_object_add_property(mock, linstobj,
 				"name",
 				G_VARIANT_TYPE_STRING,
-				g_variant_new_string("bar-2342345"),
+				g_variant_new_string("multiple-2342345"),
 				NULL);
 			dbus_test_dbus_mock_object_add_property(mock, linstobj,
 				"processes",
 				G_VARIANT_TYPE("a(si)"),
 				g_variant_new_parsed("[('main', 5678)]"),
 				NULL);
+
+			DbusTestDbusMockObject* linstobj2 = dbus_test_dbus_mock_get_object(mock, "/com/test/legacy_app_instance2",
+																			   "com.ubuntu.Upstart0_6.Instance", NULL);
+			dbus_test_dbus_mock_object_add_property(mock, linstobj2, "name", G_VARIANT_TYPE_STRING,
+													g_variant_new_string("single-"), NULL);
+			dbus_test_dbus_mock_object_add_property(mock, linstobj2, "processes", G_VARIANT_TYPE("a(si)"),
+													g_variant_new_parsed("[('main', 5678)]"), NULL);
 
 			/*  Untrusted Helper */
 			DbusTestDbusMockObject * uhelperobj = dbus_test_dbus_mock_get_object(mock, "/com/test/untrusted/helper", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -267,6 +293,8 @@ class LibUAL : public EventuallyFixture
 		virtual void TearDown() {
 			ubuntu_app_launch_observer_delete_app_focus(focus_cb, this);
 			ubuntu_app_launch_observer_delete_app_resume(resume_cb, this);
+
+			ubuntu::app_launch::Registry::clearDefault();
 
 			g_clear_object(&mock);
 			g_clear_object(&cgmock);
@@ -427,8 +455,8 @@ TEST_F(LibUAL, ApplicationLog)
 	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log", legacy_single);
 	g_free(legacy_single);
 
-	gchar * legacy_multiple = ubuntu_app_launch_application_log_path("bar");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-bar-2342345.log", legacy_multiple);
+	gchar * legacy_multiple = ubuntu_app_launch_application_log_path("multiple");
+	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log", legacy_multiple);
 	g_free(legacy_multiple);
 }
 
@@ -440,8 +468,8 @@ TEST_F(LibUAL, ApplicationPid)
 	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(100, NULL));
 
 	/* Check primary pid, which comes from Upstart */
-	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("com.test.good_application_1.2.3"), getpid());
-	EXPECT_EQ(ubuntu_app_launch_get_primary_pid("bar"), 5678);
+	EXPECT_EQ(getpid(), ubuntu_app_launch_get_primary_pid("com.test.good_application_1.2.3"));
+	EXPECT_EQ(5678, ubuntu_app_launch_get_primary_pid("multiple"));
 
 	/* Look at the full PID list from CG Manager */
 	DbusTestDbusMockObject * cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager", "org.linuxcontainers.cgmanager0_0", NULL);
@@ -449,6 +477,7 @@ TEST_F(LibUAL, ApplicationPid)
 	guint len = 0;
 
 	/* Click in the set */
+	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "com.test.good_application_1.2.3"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
@@ -473,11 +502,11 @@ TEST_F(LibUAL, ApplicationPid)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 	/* Legacy Multi Instance */
-	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "bar"));
+	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "multiple"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
 	EXPECT_EQ(1, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
-	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-bar-2342345")));
+	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-multiple-2342345")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
 }
@@ -546,15 +575,15 @@ TEST_F(LibUAL, ApplicationList)
 	gchar ** apps = ubuntu_app_launch_list_running_apps();
 
 	ASSERT_NE(apps, nullptr);
-	ASSERT_EQ(g_strv_length(apps), 2);
+	ASSERT_EQ(3, g_strv_length(apps));
 
 	/* Not enforcing order, but wanting to use the GTest functions
 	   for "actually testing" so the errors look right. */
 	if (g_strcmp0(apps[0], "com.test.good_application_1.2.3") == 0) {
 		ASSERT_STREQ("com.test.good_application_1.2.3", apps[0]);
-		ASSERT_STREQ("bar", apps[1]);
+		ASSERT_STREQ("multiple", apps[1]);
 	} else {
-		ASSERT_STREQ("bar", apps[0]);
+		ASSERT_STREQ("multiple", apps[0]);
 		ASSERT_STREQ("com.test.good_application_1.2.3", apps[1]);
 	}
 
@@ -616,12 +645,12 @@ TEST_F(LibUAL, StartStopObserver)
 
 	/* Start legacy */
 	start_data.count = 0;
-	start_data.name = "bar";
+	start_data.name = "multiple";
 
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('started', ['JOB=application-legacy', 'INSTANCE=bar-234235'])"),
+		g_variant_new_parsed("('started', ['JOB=application-legacy', 'INSTANCE=multiple-234235'])"),
 		NULL
 	);
 
@@ -629,12 +658,12 @@ TEST_F(LibUAL, StartStopObserver)
 
 	/* Legacy stop */
 	stop_data.count = 0;
-	stop_data.name = "bar";
+	stop_data.name = "multiple";
 
 	dbus_test_dbus_mock_object_emit_signal(mock, obj,
 		"EventEmitted",
 		G_VARIANT_TYPE("(sas)"),
-		g_variant_new_parsed("('stopped', ['JOB=application-legacy', 'INSTANCE=bar-9344321'])"),
+		g_variant_new_parsed("('stopped', ['JOB=application-legacy', 'INSTANCE=multiple-9344321'])"),
 		NULL
 	);
 
@@ -1320,6 +1349,22 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 		G_VARIANT_TYPE("au"),
 		"ret = [ 0 ]",
 		NULL);
+	
+	dbus_test_dbus_mock_object_add_property(zgmock, zgobj,
+		"version",
+		G_VARIANT_TYPE("(iii)"),
+		g_variant_new("(iii)", 0, 9, 16),
+		nullptr);
+	dbus_test_dbus_mock_object_add_property(zgmock, zgobj,
+		"extensions",
+		G_VARIANT_TYPE("as"),
+		g_variant_new_array(G_VARIANT_TYPE_STRING, nullptr, 0),
+		nullptr);
+	dbus_test_dbus_mock_object_add_property(zgmock, zgobj,
+		"datapath",
+		G_VARIANT_TYPE("s"),
+		g_variant_new_string(CMAKE_BINARY_DIR "/zg/activity.sqlite"),
+		nullptr);
 
 	dbus_test_service_add_task(service, DBUS_TEST_TASK(zgmock));
 	dbus_test_task_run(DBUS_TEST_TASK(zgmock));
@@ -1386,6 +1431,7 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	/* Now Resume the App */
 	EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
 
+	/* Ensure we started getting some data */
 	EXPECT_EVENTUALLY_EQ(1, resumed_count);
 	EXPECT_NE(0, datacnt);
 
@@ -1402,6 +1448,9 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	EXPECT_STREQ("100", resumeoomscore);
 	g_free(resumeoomscore);
 
+	/* Check to see if we got the resume dbus signal */
+	EXPECT_EQ(1, resumed_count);
+
 	/* Clean up */
 	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
 	ASSERT_TRUE(g_spawn_command_line_sync(killstr, NULL, NULL, NULL, NULL));
@@ -1414,11 +1463,6 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	g_dbus_connection_signal_unsubscribe(bus, paused_signal);
 	g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
 
-	/* Kill ZG default instance :-( */
-	ZeitgeistLog * log = zeitgeist_log_get_default();
-	g_object_unref(log);
-	g_object_unref(log);
-	
 	g_free(oomadjfile);
 }
 
