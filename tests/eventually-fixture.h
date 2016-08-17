@@ -30,7 +30,7 @@ protected:
 
     static gboolean timeout_cb(gpointer user_data)
     {
-        GMainLoop *loop = static_cast<GMainLoop *>(user_data);
+        auto loop = static_cast<GMainLoop *>(user_data);
         g_main_loop_quit(loop);
         return G_SOURCE_REMOVE;
     }
