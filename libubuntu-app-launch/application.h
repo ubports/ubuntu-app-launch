@@ -86,6 +86,10 @@ public:
         struct DescriptionTag;
         /** \private */
         struct IconPathTag;
+        /** \private */
+        struct DefaultDepartmentTag;
+        /** \private */
+        struct KeywordsTag;
 
         /** \private */
         typedef TypeTagger<NameTag, std::string> Name;
@@ -93,6 +97,10 @@ public:
         typedef TypeTagger<DescriptionTag, std::string> Description;
         /** \private */
         typedef TypeTagger<IconPathTag, std::string> IconPath;
+        /** \private */
+        typedef TypeTagger<DefaultDepartmentTag, std::string> DefaultDepartment;
+        /** \private */
+        typedef TypeTagger<KeywordsTag, std::vector<std::string>> Keywords;
 
         virtual ~Info() = default;
 
@@ -102,6 +110,12 @@ public:
         virtual const Description& description() = 0;
         /** Path to the icon that represents the application */
         virtual const IconPath& iconPath() = 0;
+        /** Default department of the application */
+        virtual const DefaultDepartment& defaultDepartment() = 0;
+        /** Path to the screenshot of the application */
+        virtual const IconPath& screenshotPath() = 0;
+        /** List of keywords for the application */
+        virtual const Keywords& keywords() = 0;
 
         /** Information to be shown on the app splash screen */
         struct Splash
