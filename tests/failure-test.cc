@@ -21,8 +21,9 @@
 #include <glib/gstdio.h>
 #include <gio/gio.h>
 #include <ubuntu-app-launch.h>
+#include "eventually-fixture.h"
 
-class FailureTest : public ::testing::Test
+class FailureTest : public EventuallyFixture
 {
 	private:
 		GTestDBus * testbus = NULL;
@@ -37,26 +38,6 @@ class FailureTest : public ::testing::Test
 			g_test_dbus_down(testbus);
 			g_clear_object(&testbus);
 			return;
-		}
-
-		static gboolean pause_helper (gpointer pmainloop) {
-			g_main_loop_quit(static_cast<GMainLoop *>(pmainloop));
-			return G_SOURCE_REMOVE;
-		}
-
-		void pause (guint time) {
-			if (time > 0) {
-				GMainLoop * mainloop = g_main_loop_new(NULL, FALSE);
-				g_timeout_add(time, pause_helper, mainloop);
-
-				g_main_loop_run(mainloop);
-
-				g_main_loop_unref(mainloop);
-			}
-
-			while (g_main_pending()) {
-				g_main_iteration(TRUE);
-			}
 		}
 };
 
@@ -81,9 +62,8 @@ TEST_F(FailureTest, CrashTest)
 
 	/* Status based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
-	pause(100);
 
-	EXPECT_EQ("foo", last_observer);
+	EXPECT_EVENTUALLY_EQ("foo", last_observer);
 
 	last_observer.clear();
 	g_unsetenv("EXIT_STATUS");
@@ -91,9 +71,8 @@ TEST_F(FailureTest, CrashTest)
 
 	/* Signal based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
-	pause(100);
 
-	EXPECT_EQ("foo", last_observer);
+	EXPECT_EVENTUALLY_EQ("foo", last_observer);
 
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
@@ -111,9 +90,8 @@ TEST_F(FailureTest, LegacyTest)
 
 	/* Status based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
-	pause(100);
 
-	EXPECT_EQ("foo", last_observer);
+	EXPECT_EVENTUALLY_EQ("foo", last_observer);
 
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 
@@ -141,9 +119,8 @@ TEST_F(FailureTest, StartTest)
 	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_start_observer, &last_observer));
 
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
-	pause(100);
 
-	EXPECT_EQ("foo", last_observer);
+	EXPECT_EVENTUALLY_EQ("foo", last_observer);
 
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_start_observer, &last_observer));
 
