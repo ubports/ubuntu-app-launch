@@ -61,6 +61,8 @@ public:
     */
     static std::shared_ptr<Application> create(const AppID& appid, const std::shared_ptr<Registry>& registry);
 
+    virtual ~Application() = default;
+
     /* System level info */
     /** Get the Application ID of this Application */
     virtual AppID appId() = 0;
@@ -90,6 +92,8 @@ public:
         typedef TypeTagger<DescriptionTag, std::string> Description;
         /** \private */
         typedef TypeTagger<IconPathTag, std::string> IconPath;
+
+        virtual ~Info() = default;
 
         /** Name of the application */
         virtual const Name& name() = 0;
@@ -188,6 +192,8 @@ public:
     class Instance
     {
     public:
+        virtual ~Instance() = default;
+
         /* Query lifecycle */
         /** Check to see if the instance is currently running. The object can
             exist even after the instance has stopped running. */
