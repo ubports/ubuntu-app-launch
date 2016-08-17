@@ -49,7 +49,7 @@ protected:
 
 static void zg_state_changed(DbusTestTask* task, DbusTestTaskState state, gpointer user_data)
 {
-    DbusTestTaskState* outstate = (DbusTestTaskState*)user_data;
+    auto outstate = reinterpret_cast<DbusTestTaskState*>(user_data);
     *outstate = state;
 }
 
@@ -68,7 +68,7 @@ TEST_F(ZGEvent, OpenTest)
 
     DbusTestProcess* zgevent = dbus_test_process_new(ZG_EVENT_TOOL);
     dbus_test_process_append_param(zgevent, "open");
-    g_setenv("APP_ID", "foo", 1);
+    g_setenv("APP_ID", "foo", TRUE);
     dbus_test_task_set_wait_for(DBUS_TEST_TASK(zgevent), "org.gnome.zeitgeist.Engine");
     dbus_test_task_set_name(DBUS_TEST_TASK(zgevent), "ZGEvent");
     DbusTestTaskState zgevent_state = DBUS_TEST_TASK_STATE_INIT;
@@ -87,8 +87,8 @@ TEST_F(ZGEvent, OpenTest)
     const DbusTestDbusMockCall* calls =
         dbus_test_dbus_mock_object_get_method_calls(mock, obj, "InsertEvents", &numcalls, NULL);
 
-    ASSERT_NE(calls, nullptr);
-    ASSERT_EQ(numcalls, 1);
+    ASSERT_NE(nullptr, calls);
+    ASSERT_EQ(1, numcalls);
 
     g_object_unref(zgevent);
     g_object_unref(mock);
@@ -112,7 +112,7 @@ TEST_F(ZGEvent, TimeoutTest)
 
     DbusTestProcess* zgevent = dbus_test_process_new(ZG_EVENT_TOOL);
     dbus_test_process_append_param(zgevent, "close");
-    g_setenv("APP_ID", "foo", 1);
+    g_setenv("APP_ID", "foo", TRUE);
     dbus_test_task_set_wait_for(DBUS_TEST_TASK(zgevent), "org.gnome.zeitgeist.Engine");
     dbus_test_task_set_name(DBUS_TEST_TASK(zgevent), "ZGEvent");
     DbusTestTaskState zgevent_state = DBUS_TEST_TASK_STATE_INIT;
@@ -121,17 +121,10 @@ TEST_F(ZGEvent, TimeoutTest)
 
     dbus_test_service_add_task(service, DBUS_TEST_TASK(zgevent));
 
-    guint64 start = g_get_monotonic_time();
-
     dbus_test_service_start_tasks(service);
     grabBus();
 
     EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_FINISHED, zgevent_state);
-
-    guint64 end = g_get_monotonic_time();
-
-    /* Fourteen seconds to do a two second op -- Jenkins is slow */
-    EXPECT_LT(end - start, 14 * 1000 * 1000);
 
     g_object_unref(zgevent);
     g_object_unref(mock);
