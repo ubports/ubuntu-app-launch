@@ -89,7 +89,7 @@ protected:
 /* Eventually Helpers */
 #define _EVENTUALLY_HELPER(oper)                                                    \
     template <typename... Args>                                                     \
-    testing::AssertionResult expectEventually##oper(Args &&... args)                \
+    testing::AssertionResult eventuallyHelper##oper(Args &&... args)                \
     {                                                                               \
         std::function<testing::AssertionResult(void)> func = [&]() {                \
             return testing::internal::CmpHelper##oper(std::forward<Args>(args)...); \
@@ -109,19 +109,37 @@ protected:
 
 /* Helpers */
 #define EXPECT_EVENTUALLY_EQ(expected, actual) \
-    EXPECT_PRED_FORMAT2(EventuallyFixture::expectEventuallyEQ, expected, actual)
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperEQ, expected, actual)
 
 #define EXPECT_EVENTUALLY_NE(expected, actual) \
-    EXPECT_PRED_FORMAT2(EventuallyFixture::expectEventuallyNE, expected, actual)
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperNE, expected, actual)
 
 #define EXPECT_EVENTUALLY_LT(expected, actual) \
-    EXPECT_PRED_FORMAT2(EventuallyFixture::expectEventuallyLT, expected, actual)
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperLT, expected, actual)
 
 #define EXPECT_EVENTUALLY_GT(expected, actual) \
-    EXPECT_PRED_FORMAT2(EventuallyFixture::expectEventuallyGT, expected, actual)
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperGT, expected, actual)
 
 #define EXPECT_EVENTUALLY_STREQ(expected, actual) \
-    EXPECT_PRED_FORMAT2(EventuallyFixture::expectEventuallySTREQ, expected, actual)
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperSTREQ, expected, actual)
 
 #define EXPECT_EVENTUALLY_STRNE(expected, actual) \
-    EXPECT_PRED_FORMAT2(EventuallyFixture::expectEventuallySTRNE, expected, actual)
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperSTRNE, expected, actual)
+
+#define ASSERT_EVENTUALLY_EQ(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperEQ, expected, actual)
+
+#define ASSERT_EVENTUALLY_NE(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperNE, expected, actual)
+
+#define ASSERT_EVENTUALLY_LT(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperLT, expected, actual)
+
+#define ASSERT_EVENTUALLY_GT(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperGT, expected, actual)
+
+#define ASSERT_EVENTUALLY_STREQ(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperSTREQ, expected, actual)
+
+#define ASSERT_EVENTUALLY_STRNE(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyHelperSTRNE, expected, actual)
