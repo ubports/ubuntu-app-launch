@@ -49,7 +49,7 @@ protected:
 
 static void zg_state_changed(DbusTestTask* task, DbusTestTaskState state, gpointer user_data)
 {
-    DbusTestTaskState* outstate = (DbusTestTaskState*)user_data;
+    auto outstate = reinterpret_cast<DbusTestTaskState*>(user_data);
     *outstate = state;
 }
 
