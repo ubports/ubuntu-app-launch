@@ -121,17 +121,10 @@ TEST_F(ZGEvent, TimeoutTest)
 
     dbus_test_service_add_task(service, DBUS_TEST_TASK(zgevent));
 
-    guint64 start = g_get_monotonic_time();
-
     dbus_test_service_start_tasks(service);
     grabBus();
 
     EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_FINISHED, zgevent_state);
-
-    guint64 end = g_get_monotonic_time();
-
-    /* Fourteen seconds to do a two second op -- Jenkins is slow */
-    EXPECT_LT(end - start, 14 * 1000 * 1000);
 
     g_object_unref(zgevent);
     g_object_unref(mock);
