@@ -133,12 +133,12 @@ struct AppID
     {
         FIRST_LISTED, /**< First application listed in the manifest */
         LAST_LISTED,  /**< Last application listed in the manifest */
-        ONLY_LISTED,  /**< Only application listed in the manifest */
+        ONLY_LISTED   /**< Only application listed in the manifest */
     };
     /** Control how the versions are searched in the discover() set of functions */
     enum class VersionWildcard
     {
-        CURRENT_USER_VERSION, /**< The current installed version */
+        CURRENT_USER_VERSION /**< The current installed version */
     };
 
     /** Find the AppID for an application where you only know the package
