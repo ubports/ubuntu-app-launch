@@ -78,16 +78,18 @@ AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
 
 std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest)
 {
-    JsonObject *hooks = nullptr;
+    JsonObject* hooks = nullptr;
     if (!json_object_has_member(manifest.get(), "hooks") ||
         (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
     {
-        throw std::runtime_error("Manifest does not have a 'hooks' field");
+        throw std::runtime_error("Manifest does not have a 'hooks' field: " + Registry::Impl::printJson(manifest));
     }
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
+    {
         throw std::runtime_error("GLib JSON confusion, please talk to your library vendor");
+    }
 
     std::list<AppID::AppName> apps;
 
@@ -117,7 +119,7 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
         throw std::runtime_error("No manifest for package '" + package + "'");
     }
 
-    JsonObject *hooks = nullptr;
+    JsonObject* hooks = nullptr;
     if (!json_object_has_member(manifest.get(), "hooks") ||
         (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
     {
@@ -129,7 +131,7 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
     if (gapps == nullptr)
         throw std::runtime_error("GLib JSON confusion, please talk to your library vendor");
 
-    JsonObject *hooklist = nullptr;
+    JsonObject* hooklist = nullptr;
     if (!json_object_has_member(hooks, app.c_str()) ||
         (hooklist = json_object_get_object_member(hooks, app.c_str())) == nullptr)
     {
