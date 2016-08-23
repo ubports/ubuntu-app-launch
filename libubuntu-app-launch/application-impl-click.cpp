@@ -70,20 +70,25 @@ std::shared_ptr<Application::Info> Click::info()
 
 AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
 {
-    auto cstr = json_object_get_string_member(manifest.get(), "version");
-
-    if (cstr == nullptr)
+    const gchar* cstr = nullptr;
+    if (!json_object_has_member(manifest.get(), "version") ||
+        (cstr = json_object_get_string_member(manifest.get(), "version")) == nullptr)
+    {
         throw std::runtime_error("Unable to find version number in manifest: " + Registry::Impl::printJson(manifest));
+    }
 
-    auto cppstr = AppID::Version::from_raw((const gchar*)cstr);
+    auto cppstr = AppID::Version::from_raw(cstr);
     return cppstr;
 }
 
 std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest)
 {
-    auto hooks = json_object_get_object_member(manifest.get(), "hooks");
-    if (hooks == nullptr)
-        throw std::runtime_error("Manifest for application does not have a 'hooks' field");
+    JsonObject *hooks = nullptr;
+    if (!json_object_has_member(manifest.get(), "hooks") ||
+        (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
+    {
+        throw std::runtime_error("Manifest does not have a 'hooks' field");
+    }
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
@@ -117,19 +122,25 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
         throw std::runtime_error("No manifest for package '" + package + "'");
     }
 
-    auto hooks = json_object_get_object_member(manifest.get(), "hooks");
-    if (hooks == nullptr)
+    JsonObject *hooks = nullptr;
+    if (!json_object_has_member(manifest.get(), "hooks") ||
+        (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
+    {
         throw std::runtime_error("Manifest for application '" + app + "' does not have a 'hooks' field: " +
                                  Registry::Impl::printJson(manifest));
+    }
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
         throw std::runtime_error("GLib JSON confusion, please talk to your library vendor");
 
-    auto hooklist = json_object_get_object_member(hooks, app.c_str());
-    if (hooklist == nullptr)
+    JsonObject *hooklist = nullptr;
+    if (!json_object_has_member(hooks, app.c_str()) ||
+        (hooklist = json_object_get_object_member(hooks, app.c_str())) == nullptr)
+    {
         throw std::runtime_error("Manifest for does not have an application '" + app + "': " +
                                  Registry::Impl::printJson(manifest));
+    }
 
     auto desktoppath = json_object_get_string_member(hooklist, "desktop");
     if (desktoppath == nullptr)
@@ -168,7 +179,7 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
                     {
                         AppID appid{pkg, appname, manifestVersion(manifest)};
                         auto app = std::make_shared<Click>(appid, manifest, registry);
-                        applist.push_back(app);
+                        applist.emplace_back(app);
                     }
                     catch (std::runtime_error& e)
                     {

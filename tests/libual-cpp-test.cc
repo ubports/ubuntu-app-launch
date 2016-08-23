@@ -19,26 +19,24 @@
 
 #include <algorithm>
 #include <functional>
+#include <fcntl.h>
 #include <future>
 #include <numeric>
 #include <thread>
-
-#include "eventually-fixture.h"
-#include "mir-mock.h"
 #include <gio/gio.h>
 #include <gtest/gtest.h>
+#include <libdbustest/dbus-test.h>
+#include <thread>
 #include <zeitgeist.h>
 
 #include "application.h"
 #include "glib-thread.h"
 #include "helper.h"
 #include "registry.h"
-
-extern "C" {
-#include "libdbustest/dbus-test.h"
 #include "ubuntu-app-launch.h"
-#include <fcntl.h>
-}
+
+#include "eventually-fixture.h"
+#include "mir-mock.h"
 
 class LibUAL : public EventuallyFixture
 {
@@ -1055,8 +1053,10 @@ TEST_F(LibUAL, StartHelper)
 
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
-    /* Not sure why, but this makes this test better, hopefully we can
-       clean this up when we move to the C++ API can use a cancellable */
+    /* Needed as we still haven't ported second-exec.c to use the registry
+       thread and inherit its cancellable, we need to ensure all the extra
+       DBus messages error out before ending the test, or otherwise they'll
+       keep a reference to the DBus bus object. */
     pause(100);
 
     return;
@@ -1103,8 +1103,10 @@ TEST_F(LibUAL, StopHelper)
 
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
-    /* Not sure why, but this makes this test better, hopefully we can
-       clean this up when we move to the C++ API can use a cancellable */
+    /* Needed as we still haven't ported second-exec.c to use the registry
+       thread and inherit its cancellable, we need to ensure all the extra
+       DBus messages error out before ending the test, or otherwise they'll
+       keep a reference to the DBus bus object. */
     pause(100);
 
     return;

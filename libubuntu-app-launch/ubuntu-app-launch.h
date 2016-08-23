@@ -35,8 +35,8 @@ extern "C" {
  * Types of failure that we report.
  */
 typedef enum { /*< prefix=UBUNTU_APP_LAUNCH_APP_FAILED */
-	UBUNTU_APP_LAUNCH_APP_FAILED_CRASH,          /*< nick=crash */
-	UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE,  /*< nick=start-failure */
+	UBUNTU_APP_LAUNCH_APP_FAILED_CRASH,         /*< nick=crash */
+	UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE  /*< nick=start-failure */
 } UbuntuAppLaunchAppFailed;
 
 /**
