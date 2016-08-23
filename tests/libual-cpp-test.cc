@@ -591,14 +591,6 @@ TEST_F(LibUAL, ApplicationList)
     EXPECT_EQ("single", (std::string)apps.back()->appId());
 }
 
-
-TEST_F(LibUAL, InstalledApplicationList)
-{
-    auto apps = ubuntu::app_launch::Registry::installedApps(registry);
-
-    ASSERT_EQ(12, apps.size());
-}
-
 typedef struct
 {
     unsigned int count;
