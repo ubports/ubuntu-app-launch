@@ -128,7 +128,8 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
         if (error != nullptr)
         {
             auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            throw std::runtime_error(perror->message);
+            g_critical("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
+            return std::shared_ptr<JsonObject>();
         }
 
         auto node = json_node_alloc();
@@ -136,7 +137,10 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
         auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
 
+#if JSON_CHECK_VERSION(1,1,2)
+        // Not available in json-glib 1.0, so must leak there.
         json_node_unref(node);
+#endif
 
         return retval;
     });
