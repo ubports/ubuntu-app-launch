@@ -129,7 +129,13 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
+    {
         throw std::runtime_error("GLib JSON confusion, please talk to your library vendor");
+    }
+    else
+    {
+        g_list_free(gapps);
+    }
 
     JsonObject* hooklist = nullptr;
     if (!json_object_has_member(hooks, app.c_str()) ||
