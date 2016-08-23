@@ -5,6 +5,7 @@ Maintainer: Ted Gould <ted@ubuntu.com>
 Build-Depends: abi-compliance-checker,
                click-dev (>= 0.2.2),
                cmake,
+               cmake-extras,
                dbus-x11,
                dbus-test-runner,
                debhelper (>= 9),
@@ -24,8 +25,8 @@ Build-Depends: abi-compliance-checker,
                libnih-dev,
                libproperties-cpp-dev,
 # For ABI check to distro version
-# Shouldn't need valgrind, but for bootstrapping
-               libubuntu-app-launch2-dev | valgrind,
+# Make sure to set DEB_BUILD_PROFILES when bootstrapping
+               libubuntu-app-launch2-dev <!stage1>,
                libupstart-dev,
                libzeitgeist-2.0-dev,
                gobject-introspection,
