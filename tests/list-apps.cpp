@@ -31,7 +31,7 @@
 class ListApps : public ::testing::Test
 {
 protected:
-    GDBusConnection* bus = NULL;
+    GDBusConnection* bus = nullptr;
 
     virtual void SetUp()
     {
@@ -39,7 +39,7 @@ protected:
         g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
-        gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
+        gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", nullptr);
         g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
         g_free(linkfarmpath);
 
@@ -47,7 +47,7 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
-        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
     }
@@ -57,7 +57,7 @@ protected:
         g_object_unref(bus);
 
         unsigned int cleartry = 0;
-        while (bus != NULL && cleartry < 100)
+        while (bus != nullptr && cleartry < 100)
         {
             pause(100);
             cleartry++;
@@ -69,7 +69,7 @@ protected:
     {
         if (time > 0)
         {
-            GMainLoop* mainloop = g_main_loop_new(NULL, FALSE);
+            GMainLoop* mainloop = g_main_loop_new(nullptr, FALSE);
 
             g_timeout_add(time,
                           [](gpointer pmainloop) -> gboolean {
