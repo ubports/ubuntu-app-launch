@@ -130,7 +130,7 @@ AppID::AppName Click::findAppname(const AppID::Package& package,
     auto manifest = registry->impl->getClickManifest(package);
     auto apps = manifestApps(manifest);
 
-    if (apps.size() == 0)
+    if (apps.empty())
     {
         throw std::runtime_error("No apps in package '" + package.value() + "' to find");
     }
