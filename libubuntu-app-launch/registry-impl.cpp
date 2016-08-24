@@ -333,7 +333,7 @@ std::string Registry::Impl::upstartJobPath(const std::string& job)
                                                                      G_VARIANT_TYPE("(o)"),             /* return */
                                                                      G_DBUS_CALL_FLAGS_NONE,            /* flags */
                                                                      -1, /* timeout: default */
-                                                                     thread.getCancellable().get(), /* cancelable */
+                                                                     thread.getCancellable().get(), /* cancellable */
                                                                      &error);                       /* error */
 
             if (error != nullptr)
@@ -386,7 +386,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
                                                                G_VARIANT_TYPE("(ao)"),        /* return type */
                                                                G_DBUS_CALL_FLAGS_NONE,        /* flags */
                                                                -1,                            /* timeout: default */
-                                                               thread.getCancellable().get(), /* cancelable */
+                                                               thread.getCancellable().get(), /* cancellable */
                                                                &error);
 
         if (error != nullptr)
@@ -421,7 +421,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
                                             G_VARIANT_TYPE("(a{sv})"),                             /* return type */
                                             G_DBUS_CALL_FLAGS_NONE,                                /* flags */
                                             -1,                            /* timeout: default */
-                                            thread.getCancellable().get(), /* cancelable */
+                                            thread.getCancellable().get(), /* cancellable */
                                             &error);
 
             if (error != nullptr)

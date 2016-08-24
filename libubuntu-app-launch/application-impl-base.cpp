@@ -127,7 +127,7 @@ pid_t UpstartInstance::primaryPid()
                                         G_VARIANT_TYPE("(o)"),                          /* return type */
                                         G_DBUS_CALL_FLAGS_NONE,                         /* flags */
                                         -1,                                             /* timeout: default */
-                                        registry_->impl->thread.getCancellable().get(), /* cancelable */
+                                        registry_->impl->thread.getCancellable().get(), /* cancellable */
                                         &error);
 
         if (error != nullptr)
@@ -164,7 +164,7 @@ pid_t UpstartInstance::primaryPid()
                                         G_VARIANT_TYPE("(a{sv})"),                             /* return type */
                                         G_DBUS_CALL_FLAGS_NONE,                                /* flags */
                                         -1,                                                    /* timeout: default */
-                                        registry_->impl->thread.getCancellable().get(),        /* cancelable */
+                                        registry_->impl->thread.getCancellable().get(),        /* cancellable */
                                         &error);
 
         if (error != nullptr)
@@ -317,7 +317,7 @@ void UpstartInstance::stop()
                                             NULL,                                           /* return */
                                             G_DBUS_CALL_FLAGS_NONE,                         /* flags */
                                             -1,                                             /* timeout: default */
-                                            registry_->impl->thread.getCancellable().get(), /* cancelable */
+                                            registry_->impl->thread.getCancellable().get(), /* cancellable */
                                             &error);                                        /* error (hopefully not) */
 
             if (stop_variant != nullptr)
@@ -827,7 +827,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
                                    NULL,                                          /* return */
                                    G_DBUS_CALL_FLAGS_NONE,                        /* flags */
                                    -1,                                            /* default timeout */
-                                   registry->impl->thread.getCancellable().get(), /* cancelable */
+                                   registry->impl->thread.getCancellable().get(), /* cancellable */
                                    application_start_cb,                          /* callback */
                                    chelper                                        /* object */
                                    );
