@@ -18,6 +18,7 @@
  */
 
 #include "application.h"
+#include <bitset>
 #include <glib.h>
 #include <mutex>
 
@@ -30,14 +31,20 @@ namespace app_launch
 namespace app_info
 {
 
+namespace DesktopFlags
+{
+static const std::bitset<2> NONE{"00"};
+static const std::bitset<2> ALLOW_NO_DISPLAY{"01"};
+static const std::bitset<2> XMIR_DEFAULT{"10"};
+}
+
 class Desktop : public Application::Info
 {
 public:
     Desktop(std::shared_ptr<GKeyFile> keyfile,
             const std::string& basePath,
-            std::shared_ptr<Registry> registry = nullptr,
-            bool allowNoDisplay = false,
-            bool xMirDefault = false);
+            std::bitset<2> flags,
+            std::shared_ptr<Registry> registry);
 
     const Application::Info::Name& name() override
     {

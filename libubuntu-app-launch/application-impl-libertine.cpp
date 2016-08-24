@@ -132,7 +132,8 @@ std::shared_ptr<Application::Info> Libertine::info()
 {
     if (!appinfo_)
     {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, false, true);
+        appinfo_ =
+            std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::XMIR_DEFAULT, _registry);
     }
     return appinfo_;
 }

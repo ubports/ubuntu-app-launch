@@ -46,7 +46,8 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 {
     std::tie(_basedir, _keyfile) = keyfileForApp(appname);
 
-    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
+    appinfo_ =
+        std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
 
     if (!_keyfile)
     {
@@ -98,7 +99,8 @@ std::shared_ptr<Application::Info> Legacy::info()
 {
     if (!appinfo_)
     {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true);
+        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::ALLOW_NO_DISPLAY,
+                                                       _registry);
     }
     return appinfo_;
 }
