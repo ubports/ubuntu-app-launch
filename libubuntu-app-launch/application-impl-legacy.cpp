@@ -243,8 +243,8 @@ std::string Legacy::getInstance()
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
     std::string instance = getInstance();
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD,
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls,
+                                   _registry, UpstartInstance::launchMode::STANDARD,
                                    [this, instance]() { return launchEnv(instance); });
 }
 
@@ -256,8 +256,8 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
     std::string instance = getInstance();
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls, _registry,
-                                   UpstartInstance::launchMode::TEST,
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls,
+                                   _registry, UpstartInstance::launchMode::TEST,
                                    [this, instance]() { return launchEnv(instance); });
 }
 
