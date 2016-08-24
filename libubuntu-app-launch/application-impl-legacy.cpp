@@ -113,6 +113,7 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
 {
     std::list<std::shared_ptr<Application>> list;
     GList* head = g_app_info_get_all();
+	g_debug("Got %d apps from g_app_info*", g_list_length(head));
     for (GList* item = head; item != nullptr; item = g_list_next(item))
     {
         GDesktopAppInfo* appinfo = G_DESKTOP_APP_INFO(item->data);
