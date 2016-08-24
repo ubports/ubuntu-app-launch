@@ -728,7 +728,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
     const std::vector<Application::URL>& urls,
     const std::shared_ptr<Registry>& registry,
     launchMode mode,
-    std::function<std::list<std::pair<std::string, std::string>>(void)> getenv)
+    std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv)
 {
     if (appId.empty())
         return {};
