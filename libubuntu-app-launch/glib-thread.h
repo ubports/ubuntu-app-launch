@@ -17,12 +17,12 @@
  *   Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include <future>
 #include <thread>
 
 #include <gio/gio.h>
-
-#pragma once
 
 namespace GLib
 {
