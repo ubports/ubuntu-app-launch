@@ -670,7 +670,7 @@ struct StartCHelper
 */
 void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
 {
-    StartCHelper* data = reinterpret_cast<StartCHelper*>(user_data);
+    auto data = static_cast<StartCHelper*>(user_data);
     GError* error{nullptr};
     GVariant* result{nullptr};
 
