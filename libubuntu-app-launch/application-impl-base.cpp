@@ -306,7 +306,7 @@ void UpstartInstance::stop()
             g_variant_builder_close(&builder);
             g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
 
-            GError* error = NULL;
+            GError* error = nullptr;
             GVariant* stop_variant =
                 g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* Dbus */
                                             DBUS_SERVICE_UPSTART,                           /* Upstart name */
@@ -314,7 +314,7 @@ void UpstartInstance::stop()
                                             DBUS_INTERFACE_UPSTART_JOB,                     /* interface */
                                             "Stop",                                         /* method */
                                             g_variant_builder_end(&builder),                /* params */
-                                            NULL,                                           /* return */
+                                            nullptr,                                        /* return */
                                             G_DBUS_CALL_FLAGS_NONE,                         /* flags */
                                             -1,                                             /* timeout: default */
                                             registry_->impl->thread.getCancellable().get(), /* cancellable */
@@ -322,7 +322,7 @@ void UpstartInstance::stop()
 
             g_clear_pointer(&stop_variant, g_variant_unref);
 
-            if (error != NULL)
+            if (error != nullptr)
             {
                 g_warning("Unable to stop job %s app_id %s instance_id %s: %s", job_.c_str(),
                           std::string(appId_).c_str(), instance_.c_str(), error->message);
@@ -739,8 +739,8 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             g_debug("Initializing params for an new UpstartInstance for: %s", appIdStr.c_str());
 
             tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
-            handshake_t* handshake = starting_handshake_start(appIdStr.c_str());
-            if (handshake == NULL)
+            auto handshake = starting_handshake_start(appIdStr.c_str());
+            if (handshake == nullptr)
             {
                 g_warning("Unable to setup starting handshake");
             }
@@ -821,7 +821,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
                                    DBUS_INTERFACE_UPSTART_JOB,                    /* interface */
                                    "Start",                                       /* method */
                                    g_variant_builder_end(&builder),               /* params */
-                                   NULL,                                          /* return */
+                                   nullptr,                                       /* return */
                                    G_DBUS_CALL_FLAGS_NONE,                        /* flags */
                                    -1,                                            /* default timeout */
                                    registry->impl->thread.getCancellable().get(), /* cancellable */
