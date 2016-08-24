@@ -93,7 +93,7 @@ public:
         const std::vector<Application::URL>& urls,
         const std::shared_ptr<Registry>& registry,
         launchMode mode,
-        std::function<std::list<std::pair<std::string, std::string>>(void)> getenv);
+        std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv);
 
 private:
     /** Application ID */

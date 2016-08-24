@@ -239,7 +239,7 @@ is_click (const gchar * appid)
 	gchar * click_link = NULL;
 	const gchar * link_farm_dir = g_getenv("UBUNTU_APP_LAUNCH_LINK_FARM");
 	if (G_LIKELY(link_farm_dir == NULL)) {
-		click_link = g_build_filename(g_get_home_dir(), ".cache", "ubuntu-app-launch", "desktop", appiddesktop, NULL);
+		click_link = g_build_filename(g_get_user_cache_dir(), "ubuntu-app-launch", "desktop", appiddesktop, NULL);
 	} else {
 		click_link = g_build_filename(link_farm_dir, appiddesktop, NULL);
 	}

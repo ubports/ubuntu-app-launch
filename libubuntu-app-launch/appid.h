@@ -17,6 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <memory>
 #include <string>
 
 #include "type-tagger.h"

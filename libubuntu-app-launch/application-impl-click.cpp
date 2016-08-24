@@ -32,10 +32,10 @@ namespace app_impls
 
 AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest);
 std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest);
-std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
-                                             const std::string& package,
-                                             const std::string& app,
-                                             const std::string& clickDir);
+std::pair<std::shared_ptr<GKeyFile>, std::string> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
+                                                                     const std::string& package,
+                                                                     const std::string& app,
+                                                                     const std::string& clickDir);
 
 Click::Click(const AppID& appid, const std::shared_ptr<Registry>& registry)
     : Click(appid, registry->impl->getClickManifest(appid.package), registry)
@@ -47,10 +47,10 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
     , _appid(appid)
     , _manifest(manifest)
     , _clickDir(registry->impl->getClickDir(appid.package))
-    , _keyfile(manifestAppDesktop(_manifest, appid.package, appid.appname, _clickDir))
 {
+    std::tie(_keyfile, desktopPath_) = manifestAppDesktop(_manifest, appid.package, appid.appname, _clickDir);
     if (!_keyfile)
-        throw std::runtime_error{"No keyfile found for click application: " + (std::string)appid};
+        throw std::runtime_error{"No keyfile found for click application: " + std::string(appid)};
 }
 
 AppID Click::appId()
@@ -130,7 +130,7 @@ AppID::AppName Click::findAppname(const AppID::Package& package,
     auto manifest = registry->impl->getClickManifest(package);
     auto apps = manifestApps(manifest);
 
-    if (apps.size() == 0)
+    if (apps.empty())
     {
         throw std::runtime_error("No apps in package '" + package.value() + "' to find");
     }
@@ -171,7 +171,7 @@ std::shared_ptr<Application::Info> Click::info()
 {
     if (!_info)
     {
-        _info = std::make_shared<app_info::Desktop>(_keyfile, _clickDir);
+        _info = std::make_shared<app_info::Desktop>(_keyfile, _clickDir, app_info::DesktopFlags::NONE, nullptr);
     }
 
     return _info;
@@ -192,16 +192,18 @@ AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
 
 std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest)
 {
-    JsonObject *hooks = nullptr;
+    JsonObject* hooks = nullptr;
     if (!json_object_has_member(manifest.get(), "hooks") ||
         (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
     {
-        throw std::runtime_error("Manifest does not have a 'hooks' field");
+        throw std::runtime_error("Manifest does not have a 'hooks' field: " + Registry::Impl::printJson(manifest));
     }
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
+    {
         throw std::runtime_error("GLib JSON confusion, please talk to your library vendor");
+    }
 
     std::list<AppID::AppName> apps;
 
@@ -221,17 +223,17 @@ std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manife
     return apps;
 }
 
-std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
-                                             const std::string& package,
-                                             const std::string& app,
-                                             const std::string& clickDir)
+std::pair<std::shared_ptr<GKeyFile>, std::string> manifestAppDesktop(const std::shared_ptr<JsonObject>& manifest,
+                                                                     const std::string& package,
+                                                                     const std::string& app,
+                                                                     const std::string& clickDir)
 {
     if (!manifest)
     {
         throw std::runtime_error("No manifest for package '" + package + "'");
     }
 
-    JsonObject *hooks = nullptr;
+    JsonObject* hooks = nullptr;
     if (!json_object_has_member(manifest.get(), "hooks") ||
         (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
     {
@@ -241,9 +243,15 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
 
     auto gapps = json_object_get_members(hooks);
     if (gapps == nullptr)
+    {
         throw std::runtime_error("GLib JSON confusion, please talk to your library vendor");
+    }
+    else
+    {
+        g_list_free(gapps);
+    }
 
-    JsonObject *hooklist = nullptr;
+    JsonObject* hooklist = nullptr;
     if (!json_object_has_member(hooks, app.c_str()) ||
         (hooklist = json_object_get_object_member(hooks, app.c_str())) == nullptr)
     {
@@ -267,7 +275,7 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
         throw std::runtime_error(perror.get()->message);
     }
 
-    return keyfile;
+    return std::make_pair(keyfile, std::string(path.get()));
 }
 
 std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Registry>& registry)
@@ -339,9 +347,7 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
     auto retval = confinedEnv(_appid.package, _clickDir);
 
     retval.emplace_back(std::make_pair("APP_DIR", _clickDir));
-
-    /* TODO: Not sure how we're gonna get this */
-    /* APP_DESKTOP_FILE_PATH */
+    retval.emplace_back(std::make_pair("APP_DESKTOP_FILE_PATH", desktopPath_));
 
     info();
 
@@ -353,14 +359,16 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
 
 std::shared_ptr<Application::Instance> Click::launch(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
+                                   UpstartInstance::launchMode::STANDARD, envfunc);
 }
 
 std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
-                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
+                                   UpstartInstance::launchMode::TEST, envfunc);
 }
 
 }  // namespace app_impls

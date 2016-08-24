@@ -181,7 +181,7 @@ bool AppID::empty() const
 /** Basically we're making our own VTable of static functions. Static
     functions don't go in the normal VTables, so we can't use our class
     inheritance here to help. So we're just packing these puppies into
-    a data structure and itterating over it. */
+    a data structure and iterating over it. */
 struct DiscoverTools
 {
     std::function<bool(const AppID::Package& package, const std::shared_ptr<Registry>& registry)> verifyPackage;
@@ -219,7 +219,7 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 {
     auto pkg = AppID::Package::from_raw(package);
 
-    for (auto tools : discoverTools)
+    for (const auto& tools : discoverTools)
     {
         /* Figure out which type we have */
         try
@@ -282,7 +282,7 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 {
     auto pkg = AppID::Package::from_raw(package);
 
-    for (auto tools : discoverTools)
+    for (const auto& tools : discoverTools)
     {
         try
         {
@@ -311,7 +311,7 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
     auto pkg = AppID::Package::from_raw(package);
     auto app = AppID::AppName::from_raw(appname);
 
-    for (auto tools : discoverTools)
+    for (const auto& tools : discoverTools)
     {
         try
         {
