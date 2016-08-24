@@ -57,7 +57,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 
 std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name)
 {
-    std::string desktopName = name.value() + ".desktop";
+    auto desktopName = name.value() + ".desktop";
     std::string desktopPath;
     auto keyfilecheck = [desktopName, &desktopPath](const std::string& dir) -> std::shared_ptr<GKeyFile> {
         auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
@@ -151,8 +151,8 @@ bool Legacy::verifyAppname(const AppID::Package& package,
         throw std::runtime_error{"Invalid Legacy package: " + std::string(package)};
     }
 
-    std::string desktop = std::string(appname) + ".desktop";
-    std::function<bool(const gchar* dir)> evaldir = [&desktop](const gchar* dir) {
+    auto desktop = std::string(appname) + ".desktop";
+    auto evaldir = [&desktop](const gchar* dir) -> bool {
         char* fulldir = g_build_filename(dir, "applications", desktop.c_str(), nullptr);
         gboolean found = g_file_test(fulldir, G_FILE_TEST_EXISTS);
         g_free(fulldir);

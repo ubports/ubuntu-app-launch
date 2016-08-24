@@ -33,7 +33,7 @@ namespace app_impls
 
 /** Application Implementation for Legacy applications. These are applications
     that are typically installed as Debian packages on the base system. The
-    standard place for them to put their desktop files is in /usr/share/applications 
+    standard place for them to put their desktop files is in /usr/share/applications
     though other directories may be used by setting the appropriate XDG environment
     variables. This implementation makes use of the GIO Desktop Appinfo functions
     which do caching of those files to make access faster.
