@@ -211,7 +211,7 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 {
     auto pkg = AppID::Package::from_raw(package);
 
-    for (auto tools : discoverTools)
+    for (const auto& tools : discoverTools)
     {
         /* Figure out which type we have */
         try
@@ -274,7 +274,7 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 {
     auto pkg = AppID::Package::from_raw(package);
 
-    for (auto tools : discoverTools)
+    for (const auto& tools : discoverTools)
     {
         try
         {
@@ -303,7 +303,7 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
     auto pkg = AppID::Package::from_raw(package);
     auto app = AppID::AppName::from_raw(appname);
 
-    for (auto tools : discoverTools)
+    for (const auto& tools : discoverTools)
     {
         try
         {
