@@ -794,7 +794,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
 
             g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 
-            for (auto envvar : env)
+            for (const auto& envvar : env)
             {
                 g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
                                                           "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
