@@ -320,10 +320,7 @@ void UpstartInstance::stop()
                                             registry_->impl->thread.getCancellable().get(), /* cancellable */
                                             &error);                                        /* error (hopefully not) */
 
-            if (stop_variant != nullptr)
-            {
-                g_variant_unref(stop_variant);
-            }
+            g_clear_pointer(&stop_variant, g_variant_unref);
 
             if (error != NULL)
             {
