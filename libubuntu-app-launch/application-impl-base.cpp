@@ -680,8 +680,7 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
 
     result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
-    if (result != nullptr)
-        g_variant_unref(result);
+    g_clear_pointer(&result, g_variant_unref);
 
     if (error != nullptr)
     {
