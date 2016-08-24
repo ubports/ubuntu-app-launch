@@ -756,31 +756,31 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
 
             if (!urls.empty())
             {
-                env.emplace_back(std::make_pair(
-                    "APP_URIS", std::accumulate(urls.begin(), urls.end(), std::string{},
-                                                [](const std::string& prev, Application::URL thisurl) {
-                                                    gchar* gescaped = g_shell_quote(thisurl.value().c_str());
-                                                    std::string escaped;
-                                                    if (gescaped != nullptr)
-                                                    {
-                                                        escaped = gescaped;
-                                                        g_free(gescaped);
-                                                    }
-                                                    else
-                                                    {
-                                                        g_warning("Unable to escape URL: %s", thisurl.value().c_str());
-                                                        return prev;
-                                                    }
+                auto accumfunc = [](const std::string& prev, Application::URL thisurl) -> std::string {
+                    gchar* gescaped = g_shell_quote(thisurl.value().c_str());
+                    std::string escaped;
+                    if (gescaped != nullptr)
+                    {
+                        escaped = gescaped;
+                        g_free(gescaped);
+                    }
+                    else
+                    {
+                        g_warning("Unable to escape URL: %s", thisurl.value().c_str());
+                        return prev;
+                    }
 
-                                                    if (prev.empty())
-                                                    {
-                                                        return escaped;
-                                                    }
-                                                    else
-                                                    {
-                                                        return prev + " " + escaped;
-                                                    }
-                                                })));
+                    if (prev.empty())
+                    {
+                        return escaped;
+                    }
+                    else
+                    {
+                        return prev + " " + escaped;
+                    }
+                };
+                auto urlstring = std::accumulate(urls.begin(), urls.end(), std::string{}, accumfunc);
+                env.emplace_back(std::make_pair("APP_URIS", urlstring));
             }
 
             if (mode == launchMode::TEST)
