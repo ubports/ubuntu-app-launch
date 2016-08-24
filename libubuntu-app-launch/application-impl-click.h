@@ -32,6 +32,20 @@ namespace app_launch
 namespace app_impls
 {
 
+/** Application Implmentation for Click packages. Click packages
+    are installed via the click tool and have information avaialable
+    on them via libclick. There is one version per-user on the system
+    and a Ubuntu App Launch hook makes a link to each of those versions
+    in the user's cache directory. Click ensures this is up-to-date.
+
+    Application IDs for Click packages are the standard it was built on.
+    Typically a package name is "$(application).$(developer id)" though
+    there isn't a requirement in the local Click tools to require that. The
+    appname element is gotten from the JSON manifest in the Click package and
+    should reference a desktop file. All Click packages also have a version.
+
+    More info: http://click.readthedocs.io/
+*/
 class Click : public Base
 {
 public:

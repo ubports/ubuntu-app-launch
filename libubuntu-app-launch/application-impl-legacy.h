@@ -31,6 +31,19 @@ namespace app_launch
 namespace app_impls
 {
 
+/** Application Implementation for Legacy applications. These are applications
+    that are typically installed as Debian packages on the base system. The
+    standard place for them to put their desktop files is in /usr/share/applications 
+    though other directories may be used by setting the appropriate XDG environment
+    variables. This implementation makes use of the GIO Desktop Appinfo functions
+    which do caching of those files to make access faster.
+
+    AppIDs for legacy applications only include the Appname variable. Both the package
+    and the version entries are empty strings. The appname variable is the filename
+    of the desktop file describing the application with the ".desktop" suffix.
+
+    More info: https://specifications.freedesktop.org/desktop-entry-spec/latest/
+*/
 class Legacy : public Base
 {
 public:
