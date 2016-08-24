@@ -110,9 +110,14 @@ std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
 /** Helper function for printing JSON nodes to debug output */
 std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
 {
+    std::string retval;
     auto gstr = json_to_string(jsonnode.get(), TRUE);
-    std::string retval = gstr;
-    g_free(gstr);
+
+    if (gstr != nullptr)
+    {
+        retval = gstr;
+        g_free(gstr);
+    }
 
     return retval;
 }
