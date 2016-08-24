@@ -76,14 +76,11 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
     cset("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
 
     /* Add the application's dir to the list of sources for data */
-    const gchar* basedatadirs = g_getenv("XDG_DATA_DIRS");
-    if (basedatadirs == NULL || basedatadirs[0] == '\0')
-    {
-        basedatadirs = "/usr/local/share:/usr/share";
-    }
-    gchar* datadirs = g_strjoin(":", pkgdir.c_str(), basedatadirs, NULL);
+    gchar* basedatadirs = g_strjoinv(":", (gchar**)g_get_system_data_dirs());
+    gchar* datadirs = g_strjoin(":", pkgdir.c_str(), basedatadirs, nullptr);
     cset("XDG_DATA_DIRS", datadirs);
     g_free(datadirs);
+    g_free(basedatadirs);
 
     /* Set TMPDIR to something sane and application-specific */
     gchar* tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package.c_str());
