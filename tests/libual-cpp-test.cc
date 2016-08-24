@@ -131,7 +131,7 @@ protected:
 
         dbus_test_dbus_mock_object_add_method(
             mock, jobobj, "Start", G_VARIANT_TYPE("(asb)"), NULL,
-            "if args[0][0] == 'APP_ID=com.test.good_application_1.2.3':"
+            "if 'APP_ID=com.test.good_application_1.2.3' in args[0]:"
             "    raise dbus.exceptions.DBusException('Foo running', name='com.ubuntu.Upstart0_6.Error.AlreadyStarted')",
             NULL);
 
