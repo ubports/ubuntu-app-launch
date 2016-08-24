@@ -227,7 +227,7 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 		auto log = app->instances()[0]->logPath();
 		return g_strdup(log.c_str());
 	} catch (...) {
-		return NULL;
+		return nullptr;
 	}
 }
 
