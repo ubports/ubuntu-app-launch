@@ -80,8 +80,8 @@ public:
                   return keyfile;
               }(),
               snapDir,
-              registry,
-              false)
+              app_info::DesktopFlags::NONE,
+              registry)
         , interface_(interface)
         , appId_(appid)
     {
@@ -440,8 +440,9 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
     g_debug("Launching a snap: %s", std::string(appId()).c_str());
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-snap", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
+                                   UpstartInstance::launchMode::STANDARD, envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -451,8 +452,9 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 */
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-snap", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
+                                   UpstartInstance::launchMode::TEST, envfunc);
 }
 
 }  // namespace app_impls
