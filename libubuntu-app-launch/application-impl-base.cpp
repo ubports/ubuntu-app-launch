@@ -749,10 +749,10 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             auto jobpath = registry->impl->upstartJobPath(job);
 
             /* Build up our environment */
-            std::list<std::pair<std::string, std::string>> env{
-                {"APP_ID", appIdStr},                           /* Application ID */
-                {"APP_LAUNCHER_PID", std::to_string(getpid())}, /* Who we are, for bugs */
-            };
+            auto env = getenv();
+
+            env.emplace_back(std::make_pair("APP_ID", appIdStr));                           /* Application ID */
+            env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
 
             if (!urls.empty())
             {
@@ -787,8 +787,6 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             {
                 env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
             }
-
-            env.splice(env.end(), getenv());
 
             /* Convert to GVariant */
             GVariantBuilder builder;
