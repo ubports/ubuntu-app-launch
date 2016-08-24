@@ -35,6 +35,15 @@ namespace app_impls
     on the interfaces of the installed snaps and sees if any of them
     are applicable to the user session. Currently that means if the
     command has the unity8, unity7 or x11 interface.
+
+    For Application IDs snaps use a very similar scheme to Click
+    packages. The package field is the name of the snap package, typically
+    this is the overall application name. The appname is the command
+    in the snap package, which needs to be associated with one of our
+    supported interfaces and have a desktop file. Lastly the version
+    field is actually the snap revision, this value changes even on
+    updates between channels of the same version so it provides a
+    greater amount of uniqueness.
 */
 class Snap : public Base
 {
