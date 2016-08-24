@@ -224,7 +224,7 @@ TEST_F(ListApps, ListSnap)
 
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
 
-	printApps(apps);
+    printApps(apps);
 
     mock.result();
 
@@ -252,5 +252,5 @@ TEST_F(ListApps, ListAll)
 
     printApps(apps);
 
-    EXPECT_EQ(17, apps.size());
+    EXPECT_EQ(18, apps.size());
 }
