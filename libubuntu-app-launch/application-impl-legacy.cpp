@@ -30,7 +30,7 @@ namespace app_launch
 namespace app_impls
 {
 
-std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name);
+std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name);
 
 void clear_keyfile(GKeyFile* keyfile)
 {
@@ -44,7 +44,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     : Base(registry)
     , _appname(appname)
 {
-    std::tie(_basedir, _keyfile) = keyfileForApp(appname);
+    std::tie(_basedir, _keyfile, desktopPath_) = keyfileForApp(appname);
 
     appinfo_ =
         std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
@@ -55,16 +55,18 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     }
 }
 
-std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name)
+std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name)
 {
     std::string desktopName = name.value() + ".desktop";
-    auto keyfilecheck = [desktopName](const std::string& dir) -> std::shared_ptr<GKeyFile> {
+    std::string desktopPath;
+    auto keyfilecheck = [desktopName, &desktopPath](const std::string& dir) -> std::shared_ptr<GKeyFile> {
         auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
         if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
         {
             g_free(fullname);
             return {};
         }
+		desktopPath = fullname;
 
         auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), clear_keyfile);
 
@@ -92,7 +94,7 @@ std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::App
         retval = keyfilecheck(basedir);
     }
 
-    return std::make_pair(basedir, retval);
+    return std::make_tuple(basedir, retval, desktopPath);
 }
 
 std::shared_ptr<Application::Info> Legacy::info()
@@ -187,8 +189,7 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
 {
     std::list<std::pair<std::string, std::string>> retval;
 
-    /* TODO: Not sure how we're gonna get this */
-    /* APP_DESKTOP_FILE_PATH */
+    retval.emplace_back(std::make_pair("APP_DESKTOP_FILE_PATH", desktopPath_));
 
     info();
 

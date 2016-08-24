@@ -55,6 +55,7 @@ private:
     std::string _basedir;
     std::shared_ptr<GKeyFile> _keyfile;
     std::shared_ptr<app_info::Desktop> appinfo_;
+    std::string desktopPath_;
 
     std::list<std::pair<std::string, std::string>> launchEnv(const std::string& instance);
     std::string getInstance();

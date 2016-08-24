@@ -166,9 +166,6 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 {
     std::list<std::pair<std::string, std::string>> retval;
 
-    /* TODO: Not sure how we're gonna get this */
-    /* APP_DESKTOP_FILE_PATH */
-
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
