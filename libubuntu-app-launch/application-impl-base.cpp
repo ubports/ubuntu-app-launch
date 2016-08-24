@@ -735,10 +735,11 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
 
     return registry->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
         [&]() -> std::shared_ptr<UpstartInstance> {
-            g_debug("Initializing params for an new UpstartInstance for: %s", std::string(appId).c_str());
+            std::string appIdStr{appId};
+            g_debug("Initializing params for an new UpstartInstance for: %s", appIdStr.c_str());
 
-            tracepoint(ubuntu_app_launch, libual_start, std::string(appId).c_str());
-            handshake_t* handshake = starting_handshake_start(std::string(appId).c_str());
+            tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
+            handshake_t* handshake = starting_handshake_start(appIdStr.c_str());
             if (handshake == NULL)
             {
                 g_warning("Unable to setup starting handshake");
@@ -749,7 +750,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
 
             /* Build up our environment */
             std::list<std::pair<std::string, std::string>> env{
-                {"APP_ID", std::string(appId)},                 /* Application ID */
+                {"APP_ID", appIdStr},                           /* Application ID */
                 {"APP_LAUNCHER_PID", std::to_string(getpid())}, /* Who we are, for bugs */
             };
 
@@ -808,12 +809,12 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
 
-            tracepoint(ubuntu_app_launch, handshake_wait, std::string(appId).c_str());
+            tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
             starting_handshake_wait(handshake);
-            tracepoint(ubuntu_app_launch, handshake_complete, std::string(appId).c_str());
+            tracepoint(ubuntu_app_launch, handshake_complete, appIdStr.c_str());
 
             /* Call the job start function */
-            g_debug("Asking Upstart to start task for: %s", std::string(appId).c_str());
+            g_debug("Asking Upstart to start task for: %s", appIdStr.c_str());
             g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
                                    DBUS_SERVICE_UPSTART,                          /* service name */
                                    jobpath.c_str(),                               /* Path */
@@ -828,7 +829,7 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
                                    chelper                                        /* object */
                                    );
 
-            tracepoint(ubuntu_app_launch, libual_start_message_sent, std::string(appId).c_str());
+            tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
 
             return retval;
         });
