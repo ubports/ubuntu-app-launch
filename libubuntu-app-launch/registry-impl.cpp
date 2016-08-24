@@ -110,9 +110,14 @@ std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
 /** Helper function for printing JSON nodes to debug output */
 std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
 {
+    std::string retval;
     auto gstr = json_to_string(jsonnode.get(), TRUE);
-    std::string retval = gstr;
-    g_free(gstr);
+
+    if (gstr != nullptr)
+    {
+        retval = gstr;
+        g_free(gstr);
+    }
 
     return retval;
 }
@@ -137,10 +142,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
         auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
 
-#if JSON_CHECK_VERSION(1,1,2)
-        // Not available in json-glib 1.0, so must leak there.
-        json_node_unref(node);
-#endif
+        json_node_free(node);
 
         return retval;
     });
