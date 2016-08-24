@@ -76,14 +76,11 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
     cset("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
 
     /* Add the application's dir to the list of sources for data */
-    const gchar* basedatadirs = g_getenv("XDG_DATA_DIRS");
-    if (basedatadirs == NULL || basedatadirs[0] == '\0')
-    {
-        basedatadirs = "/usr/local/share:/usr/share";
-    }
-    gchar* datadirs = g_strjoin(":", pkgdir.c_str(), basedatadirs, NULL);
+    gchar* basedatadirs = g_strjoinv(":", (gchar**)g_get_system_data_dirs());
+    gchar* datadirs = g_strjoin(":", pkgdir.c_str(), basedatadirs, nullptr);
     cset("XDG_DATA_DIRS", datadirs);
     g_free(datadirs);
+    g_free(basedatadirs);
 
     /* Set TMPDIR to something sane and application-specific */
     gchar* tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package.c_str());
@@ -130,7 +127,7 @@ pid_t UpstartInstance::primaryPid()
                                         G_VARIANT_TYPE("(o)"),                          /* return type */
                                         G_DBUS_CALL_FLAGS_NONE,                         /* flags */
                                         -1,                                             /* timeout: default */
-                                        registry_->impl->thread.getCancellable().get(), /* cancelable */
+                                        registry_->impl->thread.getCancellable().get(), /* cancellable */
                                         &error);
 
         if (error != nullptr)
@@ -167,7 +164,7 @@ pid_t UpstartInstance::primaryPid()
                                         G_VARIANT_TYPE("(a{sv})"),                             /* return type */
                                         G_DBUS_CALL_FLAGS_NONE,                                /* flags */
                                         -1,                                                    /* timeout: default */
-                                        registry_->impl->thread.getCancellable().get(),        /* cancelable */
+                                        registry_->impl->thread.getCancellable().get(),        /* cancellable */
                                         &error);
 
         if (error != nullptr)
@@ -309,7 +306,7 @@ void UpstartInstance::stop()
             g_variant_builder_close(&builder);
             g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
 
-            GError* error = NULL;
+            GError* error = nullptr;
             GVariant* stop_variant =
                 g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* Dbus */
                                             DBUS_SERVICE_UPSTART,                           /* Upstart name */
@@ -317,18 +314,15 @@ void UpstartInstance::stop()
                                             DBUS_INTERFACE_UPSTART_JOB,                     /* interface */
                                             "Stop",                                         /* method */
                                             g_variant_builder_end(&builder),                /* params */
-                                            NULL,                                           /* return */
+                                            nullptr,                                        /* return */
                                             G_DBUS_CALL_FLAGS_NONE,                         /* flags */
                                             -1,                                             /* timeout: default */
-                                            registry_->impl->thread.getCancellable().get(), /* cancelable */
+                                            registry_->impl->thread.getCancellable().get(), /* cancellable */
                                             &error);                                        /* error (hopefully not) */
 
-            if (stop_variant != nullptr)
-            {
-                g_variant_unref(stop_variant);
-            }
+            g_clear_pointer(&stop_variant, g_variant_unref);
 
-            if (error != NULL)
+            if (error != nullptr)
             {
                 g_warning("Unable to stop job %s app_id %s instance_id %s: %s", job_.c_str(),
                           std::string(appId_).c_str(), instance_.c_str(), error->message);
@@ -676,7 +670,7 @@ struct StartCHelper
 */
 void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
 {
-    StartCHelper* data = reinterpret_cast<StartCHelper*>(user_data);
+    auto data = static_cast<StartCHelper*>(user_data);
     GError* error{nullptr};
     GVariant* result{nullptr};
 
@@ -686,8 +680,7 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
 
     result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
-    if (result != nullptr)
-        g_variant_unref(result);
+    g_clear_pointer(&result, g_variant_unref);
 
     if (error != nullptr)
     {
@@ -735,18 +728,19 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
     const std::vector<Application::URL>& urls,
     const std::shared_ptr<Registry>& registry,
     launchMode mode,
-    std::function<std::list<std::pair<std::string, std::string>>(void)> getenv)
+    std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv)
 {
     if (appId.empty())
         return {};
 
     return registry->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
         [&]() -> std::shared_ptr<UpstartInstance> {
-            g_debug("Initializing params for an new UpstartInstance for: %s", std::string(appId).c_str());
+            std::string appIdStr{appId};
+            g_debug("Initializing params for an new UpstartInstance for: %s", appIdStr.c_str());
 
-            tracepoint(ubuntu_app_launch, libual_start, std::string(appId).c_str());
-            handshake_t* handshake = starting_handshake_start(std::string(appId).c_str());
-            if (handshake == NULL)
+            tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
+            auto handshake = starting_handshake_start(appIdStr.c_str());
+            if (handshake == nullptr)
             {
                 g_warning("Unable to setup starting handshake");
             }
@@ -755,38 +749,38 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             auto jobpath = registry->impl->upstartJobPath(job);
 
             /* Build up our environment */
-            std::list<std::pair<std::string, std::string>> env{
-                {"APP_ID", std::string(appId)},                 /* Application ID */
-                {"APP_LAUNCHER_PID", std::to_string(getpid())}, /* Who we are, for bugs */
-            };
+            auto env = getenv();
+
+            env.emplace_back(std::make_pair("APP_ID", appIdStr));                           /* Application ID */
+            env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
 
             if (!urls.empty())
             {
-                env.emplace_back(std::make_pair(
-                    "APP_URIS", std::accumulate(urls.begin(), urls.end(), std::string{},
-                                                [](const std::string& prev, Application::URL thisurl) {
-                                                    gchar* gescaped = g_shell_quote(thisurl.value().c_str());
-                                                    std::string escaped;
-                                                    if (gescaped != nullptr)
-                                                    {
-                                                        escaped = gescaped;
-                                                        g_free(gescaped);
-                                                    }
-                                                    else
-                                                    {
-                                                        g_warning("Unable to escape URL: %s", thisurl.value().c_str());
-                                                        return prev;
-                                                    }
+                auto accumfunc = [](const std::string& prev, Application::URL thisurl) -> std::string {
+                    gchar* gescaped = g_shell_quote(thisurl.value().c_str());
+                    std::string escaped;
+                    if (gescaped != nullptr)
+                    {
+                        escaped = gescaped;
+                        g_free(gescaped);
+                    }
+                    else
+                    {
+                        g_warning("Unable to escape URL: %s", thisurl.value().c_str());
+                        return prev;
+                    }
 
-                                                    if (prev.empty())
-                                                    {
-                                                        return escaped;
-                                                    }
-                                                    else
-                                                    {
-                                                        return prev + " " + escaped;
-                                                    }
-                                                })));
+                    if (prev.empty())
+                    {
+                        return escaped;
+                    }
+                    else
+                    {
+                        return prev + " " + escaped;
+                    }
+                };
+                auto urlstring = std::accumulate(urls.begin(), urls.end(), std::string{}, accumfunc);
+                env.emplace_back(std::make_pair("APP_URIS", urlstring));
             }
 
             if (mode == launchMode::TEST)
@@ -794,15 +788,13 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
                 env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
             }
 
-            env.splice(env.end(), getenv());
-
             /* Convert to GVariant */
             GVariantBuilder builder;
             g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
 
             g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 
-            for (auto envvar : env)
+            for (const auto& envvar : env)
             {
                 g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
                                                           "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
@@ -815,27 +807,27 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
 
-            tracepoint(ubuntu_app_launch, handshake_wait, std::string(appId).c_str());
+            tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
             starting_handshake_wait(handshake);
-            tracepoint(ubuntu_app_launch, handshake_complete, std::string(appId).c_str());
+            tracepoint(ubuntu_app_launch, handshake_complete, appIdStr.c_str());
 
             /* Call the job start function */
-            g_debug("Asking Upstart to start task for: %s", std::string(appId).c_str());
+            g_debug("Asking Upstart to start task for: %s", appIdStr.c_str());
             g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
                                    DBUS_SERVICE_UPSTART,                          /* service name */
                                    jobpath.c_str(),                               /* Path */
                                    DBUS_INTERFACE_UPSTART_JOB,                    /* interface */
                                    "Start",                                       /* method */
                                    g_variant_builder_end(&builder),               /* params */
-                                   NULL,                                          /* return */
+                                   nullptr,                                       /* return */
                                    G_DBUS_CALL_FLAGS_NONE,                        /* flags */
                                    -1,                                            /* default timeout */
-                                   registry->impl->thread.getCancellable().get(), /* cancelable */
+                                   registry->impl->thread.getCancellable().get(), /* cancellable */
                                    application_start_cb,                          /* callback */
                                    chelper                                        /* object */
                                    );
 
-            tracepoint(ubuntu_app_launch, libual_start_message_sent, std::string(appId).c_str());
+            tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
 
             return retval;
         });

@@ -89,7 +89,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 		G_VARIANT_TYPE("(o)"),
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* timeout: default */
-		NULL, /* cancelable */
+		NULL, /* cancellable */
 		&error);
 
 	if (error != NULL) {	
@@ -226,7 +226,7 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 		auto log = app->instances()[0]->logPath();
 		return g_strdup(log.c_str());
 	} catch (...) {
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -784,7 +784,7 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 		G_VARIANT_TYPE("(ao)"),
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* timeout: default */
-		NULL, /* cancelable */
+		NULL, /* cancellable */
 		&error);
 
 	if (error != NULL) {
@@ -810,7 +810,7 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 			G_VARIANT_TYPE("(a{sv})"),
 			G_DBUS_CALL_FLAGS_NONE,
 			-1, /* timeout: default */
-			NULL, /* cancelable */
+			NULL, /* cancellable */
 			&error);
 
 		if (error != NULL) {
@@ -1028,7 +1028,7 @@ start_helper_core (const gchar * type, const gchar * appid, const gchar * const 
 	                       NULL,
 	                       G_DBUS_CALL_FLAGS_NONE,
 	                       -1,
-	                       NULL, /* cancelable */
+	                       NULL, /* cancellable */
 	                       start_helper_callback,
 	                       NULL);
 
@@ -1361,7 +1361,7 @@ stop_helper_core (const gchar * type, const gchar * appid, const gchar * instanc
 	                       NULL,
 	                       G_DBUS_CALL_FLAGS_NONE,
 	                       -1,
-	                       NULL, /* cancelable */
+	                       NULL, /* cancellable */
 	                       stop_helper_callback,
 	                       NULL);
 
@@ -1712,7 +1712,7 @@ set_var (GDBusConnection * bus, const gchar * job_name, const gchar * instance_n
 		NULL, /* reply */
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* timeout */
-		NULL, /* cancelable */
+		NULL, /* cancellable */
 		NULL, NULL); /* callback */
 }
 

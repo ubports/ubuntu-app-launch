@@ -20,6 +20,7 @@
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <gtest/gtest.h>
+#include <numeric>
 
 #include "application.h"
 #include "registry.h"
@@ -31,7 +32,7 @@
 class ListApps : public ::testing::Test
 {
 protected:
-    GDBusConnection* bus = NULL;
+    GDBusConnection* bus = nullptr;
 
     virtual void SetUp()
     {
@@ -39,7 +40,7 @@ protected:
         g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
-        gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
+        gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", nullptr);
         g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
         g_free(linkfarmpath);
 
@@ -47,7 +48,7 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
-        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
     }
@@ -57,7 +58,7 @@ protected:
         g_object_unref(bus);
 
         unsigned int cleartry = 0;
-        while (bus != NULL && cleartry < 100)
+        while (bus != nullptr && cleartry < 100)
         {
             pause(100);
             cleartry++;
@@ -69,7 +70,7 @@ protected:
     {
         if (time > 0)
         {
-            GMainLoop* mainloop = g_main_loop_new(NULL, FALSE);
+            GMainLoop* mainloop = g_main_loop_new(nullptr, FALSE);
 
             g_timeout_add(time,
                           [](gpointer pmainloop) -> gboolean {
@@ -91,8 +92,12 @@ protected:
 
     bool findApp(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps, const std::string& appid)
     {
-        auto appId = ubuntu::app_launch::AppID::parse(appid);
+        return findApp(apps, ubuntu::app_launch::AppID::parse(appid));
+    }
 
+    bool findApp(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps,
+                 const ubuntu::app_launch::AppID& appId)
+    {
         for (auto app : apps)
         {
             if (app->appId() == appId)
@@ -103,12 +108,31 @@ protected:
 
         return false;
     }
+
+    void printApps(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps)
+    {
+        g_debug("Got apps: %s",
+                std::accumulate(apps.begin(), apps.end(), std::string{},
+                                [](const std::string& prev, std::shared_ptr<ubuntu::app_launch::Application> app) {
+                                    if (prev.empty())
+                                    {
+                                        return std::string(app->appId());
+                                    }
+                                    else
+                                    {
+                                        return prev + ", " + std::string(app->appId());
+                                    }
+                                })
+                    .c_str());
+    }
 };
 
 TEST_F(ListApps, ListClick)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Click::list(registry);
+
+    printApps(apps);
 
     EXPECT_EQ(11, apps.size());
 
@@ -135,13 +159,21 @@ TEST_F(ListApps, ListLegacy)
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Legacy::list(registry);
 
-    EXPECT_EQ(0, apps.size());
+    printApps(apps);
+
+    EXPECT_EQ(1, apps.size());
+
+    EXPECT_TRUE(findApp(apps, ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw({}),
+                                                        ubuntu::app_launch::AppID::AppName::from_raw("no-exec"),
+                                                        ubuntu::app_launch::AppID::Version::from_raw({}))));
 }
 
 TEST_F(ListApps, ListLibertine)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Libertine::list(registry);
+
+    printApps(apps);
 
     EXPECT_EQ(2, apps.size());
 
@@ -156,5 +188,7 @@ TEST_F(ListApps, ListAll)
     /* Get all the apps */
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
-    EXPECT_EQ(13, apps.size());
+    printApps(apps);
+
+    EXPECT_EQ(14, apps.size());
 }

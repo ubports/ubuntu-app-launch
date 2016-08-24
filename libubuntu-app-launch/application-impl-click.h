@@ -69,6 +69,7 @@ private:
 
     std::string _clickDir;
     std::shared_ptr<GKeyFile> _keyfile;
+    std::string desktopPath_;
 
     std::shared_ptr<app_info::Desktop> _info;
 

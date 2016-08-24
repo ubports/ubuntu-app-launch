@@ -187,10 +187,9 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
                  const std::string& basePath,
-                 std::shared_ptr<Registry> registry,
-                 bool allowNoDisplay,
-                 bool xMirDefault)
-    : _keyfile([keyfile, allowNoDisplay]() {
+                 std::bitset<2> flags,
+                 std::shared_ptr<Registry> registry)
+    : _keyfile([keyfile, flags]() {
         if (!keyfile)
         {
             throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
@@ -199,7 +198,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         {
             throw std::runtime_error("Keyfile does not represent application type");
         }
-        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value() && !allowNoDisplay)
+        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value() &&
+            (flags & DesktopFlags::ALLOW_NO_DISPLAY).none())
         {
             throw std::runtime_error("Application is not meant to be displayed");
         }
@@ -304,7 +304,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
     , _rotatesWindow(
           boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Contents", false))
     , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
-    , _xMirEnable(boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", xMirDefault))
+    , _xMirEnable(
+          boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", (flags & DesktopFlags::XMIR_DEFAULT).any()))
     , _exec(stringFromKeyfile<Exec>(keyfile, "Exec"))
 {
 }

@@ -214,9 +214,9 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
         auto container = containers.get()[i];
         auto apps = std::shared_ptr<gchar*>(libertine_list_apps_for_container(container), g_strfreev);
 
-        for (int i = 0; apps.get()[i] != nullptr; i++)
+        for (int j = 0; apps.get()[j] != nullptr; j++)
         {
-            auto appid = AppID::parse(apps.get()[i]);
+            auto appid = AppID::parse(apps.get()[j]);
             auto sapp = std::make_shared<Libertine>(appid.package, appid.appname, registry);
             applist.push_back(sapp);
         }
@@ -229,7 +229,8 @@ std::shared_ptr<Application::Info> Libertine::info()
 {
     if (!appinfo_)
     {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, false, true);
+        appinfo_ =
+            std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::XMIR_DEFAULT, _registry);
     }
     return appinfo_;
 }
@@ -262,9 +263,6 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 {
     std::list<std::pair<std::string, std::string>> retval;
 
-    /* TODO: Not sure how we're gonna get this */
-    /* APP_DESKTOP_FILE_PATH */
-
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
@@ -290,14 +288,16 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
+                                   UpstartInstance::launchMode::STANDARD, envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
+                                   UpstartInstance::launchMode::TEST, envfunc);
 }
 
 }  // namespace app_impls
