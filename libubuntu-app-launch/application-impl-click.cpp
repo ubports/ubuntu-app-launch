@@ -50,7 +50,7 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
     , _keyfile(manifestAppDesktop(_manifest, appid.package, appid.appname, _clickDir))
 {
     if (!_keyfile)
-        throw std::runtime_error{"No keyfile found for click application: " + (std::string)appid};
+        throw std::runtime_error{"No keyfile found for click application: " + std::string(appid)};
 }
 
 AppID Click::appId()
