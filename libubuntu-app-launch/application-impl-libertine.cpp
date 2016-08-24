@@ -142,7 +142,7 @@ bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_p
     for (int i = 0; containers.get()[i] != nullptr; i++)
     {
         auto container = containers.get()[i];
-        if (std::string(container) == package.value())
+        if (container == package.value())
         {
             return true;
         }
