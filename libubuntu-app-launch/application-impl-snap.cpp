@@ -175,7 +175,7 @@ public:
     file that matches the app name.
 
     \param appid Application ID of the snap
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
     \param interface Primary interface that we found this snap for
 */
 Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface)
@@ -201,7 +201,7 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
     have one.
 
     \param appid Application ID of the snap
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
 */
 Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
     : Snap(appid, registry, findInterface(appid, registry))
@@ -211,7 +211,7 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
 /** Lists all the Snappy apps that are using one of our supported interfaces.
     Also makes sure they're valid.
 
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
 */
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
 {
@@ -246,7 +246,7 @@ AppID Snap::appId()
     can support.
 
     \param appid Application ID of the snap
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
 */
 std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
@@ -279,7 +279,7 @@ bool Snap::checkPkgInfo(const std::shared_ptr<snapd::Info::PkgInfo>& pkginfo, co
     file just the package, app and version.
 
     \param appid Application ID of the snap
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
 */
 bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry)
 {
@@ -302,7 +302,7 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
 /** Look to see if a package is a valid Snap package name
 
     \param package Package name
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
 */
 bool Snap::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
@@ -321,7 +321,7 @@ bool Snap::verifyPackage(const AppID::Package& package, const std::shared_ptr<Re
 
     \param package Package name
     \param appname Command name
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
 */
 bool Snap::verifyAppname(const AppID::Package& package,
                          const AppID::AppName& appname,
@@ -341,7 +341,7 @@ bool Snap::verifyAppname(const AppID::Package& package,
 
     \param package Package name
     \param card Wildcard to use for finding the appname
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
 */
 AppID::AppName Snap::findAppname(const AppID::Package& package,
                                  AppID::ApplicationWildcard card,
@@ -376,7 +376,7 @@ AppID::AppName Snap::findAppname(const AppID::Package& package,
 
     \param package Package name
     \param appname Not used for snaps
-    \param registry Registry to use for persistant connections
+    \param registry Registry to use for persistent connections
 */
 AppID::Version Snap::findVersion(const AppID::Package& package,
                                  const AppID::AppName& appname,
