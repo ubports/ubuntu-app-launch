@@ -217,9 +217,9 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
 {
     std::list<std::shared_ptr<Application>> apps;
 
-    for (auto interface : SUPPORTED_INTERFACES)
+    for (const auto& interface : SUPPORTED_INTERFACES)
     {
-        for (auto id : registry->impl->snapdInfo.appsForInterface(interface))
+        for (const auto& id : registry->impl->snapdInfo.appsForInterface(interface))
         {
             try
             {
@@ -252,7 +252,7 @@ std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Regist
 {
     auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
 
-    for (auto interface : SUPPORTED_INTERFACES)
+    for (const auto& interface : SUPPORTED_INTERFACES)
     {
         if (ifaceset.find(interface) != ifaceset.end())
         {
@@ -398,7 +398,7 @@ std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
     std::vector<std::shared_ptr<Instance>> vect;
     auto startsWith = std::string(appId()) + "-";
 
-    for (auto instance : _registry->impl->upstartInstancesForJob("application-snap"))
+    for (const auto& instance : _registry->impl->upstartInstancesForJob("application-snap"))
     {
         g_debug("Looking at snap instance: %s", instance.c_str());
         if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
