@@ -18,14 +18,13 @@
  */
 
 #include <algorithm>
-#include <functional>
 #include <fcntl.h>
+#include <functional>
 #include <future>
-#include <numeric>
-#include <thread>
 #include <gio/gio.h>
 #include <gtest/gtest.h>
 #include <libdbustest/dbus-test.h>
+#include <numeric>
 #include <thread>
 #include <zeitgeist.h>
 
