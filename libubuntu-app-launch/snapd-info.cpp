@@ -274,7 +274,9 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
 }
 
 /** Looks through all the plugs in the interfaces and runs a function
-    based on them
+    based on them. Avoids pulling objects out of the parsed JSON structure
+    from Snappy and making sure they have the same lifecycle as the parser
+    object which seems to destroy them when it dies.
 
     \param plugfunc Function to execute on each plug
 */
