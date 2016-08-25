@@ -1,3 +1,10 @@
+ubuntu-app-launch (0.9+16.10.20160825-0ubuntu1) yakkety; urgency=medium
+
+  * Use at() instead of operator[]() so that we get an exception on
+    bounds checking
+
+ -- Ted Gould <ted@gould.cx>  Thu, 25 Aug 2016 14:43:00 +0000
+
 ubuntu-app-launch (0.9+16.10.20160817.1-0ubuntu1) yakkety; urgency=medium
 
   [ Charles Kerr ]
