@@ -400,13 +400,19 @@ std::set<std::string> Info::interfacesForAppId(const AppID &appid) const
     try
     {
         forAllPlugs([&interfaces, appid](JsonObject *ifaceobj) {
-            std::string snapname = json_object_get_string_member(ifaceobj, "snap");
+            auto snapname = json_object_get_string_member(ifaceobj, "snap");
             if (snapname != appid.package.value())
             {
                 return;
             }
 
-            std::string interfacename = json_object_get_string_member(ifaceobj, "interface");
+            auto cinterfacename = json_object_get_string_member(ifaceobj, "interface");
+            if (cinterfacename == nullptr)
+            {
+                return;
+            }
+
+            std::string interfacename(cinterfacename);
 
             auto apps = json_object_get_array_member(ifaceobj, "apps");
             for (unsigned int k = 0; k < json_array_get_length(apps); k++)
