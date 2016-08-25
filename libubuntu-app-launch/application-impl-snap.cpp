@@ -136,7 +136,7 @@ public:
             return Exec::from_raw({});
         }
 
-        if (g_strv_length(parsed) < 1)
+        if (g_strv_length(parsed) == 0)
         {
             g_warning("Parse resulted in a blank line");
             g_strfreev(parsed);
