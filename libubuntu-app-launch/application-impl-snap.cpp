@@ -131,7 +131,8 @@ public:
 
         if (error != nullptr)
         {
-            g_warning("Unable to parse exec line: %s", keyfile.c_str());
+            g_warning("Unable to parse exec line '%s': %s", keyfile.c_str(), error->message);
+            g_error_free(error);
             return Exec::from_raw({});
         }
 
