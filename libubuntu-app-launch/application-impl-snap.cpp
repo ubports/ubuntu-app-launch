@@ -344,7 +344,7 @@ AppID::AppName Snap::findAppname(const AppID::Package& package,
 {
     auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
 
-    if (pkgInfo->appnames.size() == 0)
+    if (pkgInfo->appnames.empty())
     {
         throw std::runtime_error("No apps in package '" + package.value() + "' to find");
     }
