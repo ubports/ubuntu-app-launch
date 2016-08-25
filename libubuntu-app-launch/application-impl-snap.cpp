@@ -391,19 +391,16 @@ std::shared_ptr<Application::Info> Snap::info()
 std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
 {
     std::vector<std::shared_ptr<Instance>> vect;
-    auto startsWith = std::string(appId()) + "-";
+    auto startsWith = std::string(appid_) + "-";
 
     for (const auto& instance : _registry->impl->upstartInstancesForJob("application-snap"))
     {
-        g_debug("Looking at snap instance: %s", instance.c_str());
         if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
         {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-snap", instance,
+            vect.emplace_back(std::make_shared<UpstartInstance>(appid_, "application-snap", instance,
                                                                 std::vector<Application::URL>{}, _registry));
         }
     }
-
-    g_debug("Snap app '%s' has %d instances", std::string(appId()).c_str(), int(vect.size()));
 
     return vect;
 }
