@@ -276,7 +276,9 @@ bool Snap::checkPkgInfo(const std::shared_ptr<snapd::Info::PkgInfo>& pkginfo, co
 }
 
 /** Checks if an AppID could be a snap. Note it doesn't look for a desktop
-    file just the package, app and version.
+    file just the package, app and version. This is done to make the lookup
+    quickly, as this function can be used to select which backend to use
+    and we want to reject quickly.
 
     \param appid Application ID of the snap
     \param registry Registry to use for persistent connections
