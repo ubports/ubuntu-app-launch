@@ -224,7 +224,7 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
             try
             {
                 auto app = std::make_shared<Snap>(id, registry, interface);
-                apps.push_back(app);
+                apps.emplace_back(app);
             }
             catch (std::runtime_error& e)
             {
