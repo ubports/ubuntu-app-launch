@@ -189,8 +189,7 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
         throw std::runtime_error("Unable to get snap package info for AppID: " + std::string(appid));
     }
 
-    if (pkgInfo_->revision != appid.version.value() ||
-        pkgInfo_->appnames.find(appid.appname) == pkgInfo_->appnames.end())
+    if (!checkPkgInfo(pkgInfo_, appid_))
     {
         throw std::runtime_error("AppID does not match installed package for: " + std::string(appid));
     }
@@ -264,6 +263,18 @@ std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Regist
     throw std::runtime_error("Interface not found for: " + std::string(appid));
 }
 
+/** Checks a PkgInfo structure to ensure that it matches the AppID */
+bool Snap::checkPkgInfo(const std::shared_ptr<snapd::Info::PkgInfo>& pkginfo, const AppID& appid)
+{
+    if (!pkginfo)
+    {
+        return false;
+    }
+
+    return pkginfo->revision == appid.version.value() &&
+           pkginfo->appnames.find(appid.appname) != pkginfo->appnames.end();
+}
+
 /** Checks if an AppID could be a snap. Note it doesn't look for a desktop
     file just the package, app and version.
 
@@ -280,13 +291,7 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
         }
 
         auto pkginfo = registry->impl->snapdInfo.pkgInfo(appId.package);
-        if (!pkginfo)
-        {
-            return false;
-        }
-
-        return pkginfo->revision == appId.version.value() &&
-               pkginfo->appnames.find(appId.appname) != pkginfo->appnames.end();
+        return checkPkgInfo(pkginfo, appId);
     }
     catch (std::runtime_error& e)
     {

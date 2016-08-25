@@ -90,6 +90,7 @@ private:
 
     std::list<std::pair<std::string, std::string>> launchEnv();
     static std::string findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry);
+    static bool checkPkgInfo(const std::shared_ptr<snapd::Info::PkgInfo>& pkginfo, const AppID& appid);
 };
 
 }  // namespace app_impls
