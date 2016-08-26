@@ -92,6 +92,17 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
             {
                 throw std::runtime_error("Snap JSON didn't have a '" + std::string(member) + "'");
             }
+
+            auto node = json_object_get_member(snapobject, member);
+            if (json_node_get_node_type(node) != JSON_NODE_VALUE)
+            {
+                throw std::runtime_error{"Snap JSON had a '" + std::string(member) + "' but it's an object!"};
+            }
+
+            if (json_node_get_value_type(node) != G_TYPE_STRING)
+            {
+                throw std::runtime_error{"Snap JSON had a '" + std::string(member) + "' but it's not a string!"};
+            }
         }
 
         std::string namestr = json_object_get_string_member(snapobject, "name");
