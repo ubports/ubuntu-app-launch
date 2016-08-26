@@ -242,9 +242,9 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
 
     if (error != nullptr)
     {
-        g_warning("Can not parse! %s", error->message);
+        std::string message{"Can not parse JSON: " + std::string(error->message)};
         g_error_free(error);
-        throw std::runtime_error("Can not parse JSON response");
+        throw std::runtime_error{message};
     }
 
     auto root = json_parser_get_root(parser.get());
