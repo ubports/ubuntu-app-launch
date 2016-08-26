@@ -26,7 +26,7 @@
 class EventuallyFixture : public ::testing::Test
 {
 protected:
-    std::chrono::milliseconds _eventuallyTime = std::chrono::seconds{10};
+    std::chrono::milliseconds _eventuallyTime = std::chrono::minutes{1};
 
     static gboolean timeout_cb(gpointer user_data)
     {
