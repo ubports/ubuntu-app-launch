@@ -256,11 +256,30 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     }
 
     /* Check members */
-    for (const auto &member : {"status", "status-code", "result", "type"})
+    for (const auto &member : {"status-code"})
     {
         if (!json_object_has_member(rootobj, member))
         {
             throw std::runtime_error("Resulting JSON didn't have a '" + std::string(member) + "'");
+        }
+    }
+
+    for (const auto &member : {"status", "result", "type"})
+    {
+        if (!json_object_has_member(rootobj, member))
+        {
+            throw std::runtime_error("Snap JSON didn't have a '" + std::string(member) + "'");
+        }
+
+        auto node = json_object_get_member(rootobj, member);
+        if (json_node_get_node_type(node) != JSON_NODE_VALUE)
+        {
+            throw std::runtime_error{"Snap JSON had a '" + std::string(member) + "' but it's an object!"};
+        }
+
+        if (json_node_get_value_type(node) != G_TYPE_STRING)
+        {
+            throw std::runtime_error{"Snap JSON had a '" + std::string(member) + "' but it's not a string!"};
         }
     }
 
