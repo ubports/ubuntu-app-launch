@@ -86,7 +86,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
         /******************************************/
         /* Validation of the object we got        */
         /******************************************/
-        for (auto member : {"name", "status", "revision", "type", "version", "apps"})
+        for (const auto &member : {"name", "status", "revision", "type", "version", "apps"})
         {
             if (!json_object_has_member(snapobject, member))
             {
@@ -242,7 +242,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     }
 
     /* Check members */
-    for (auto member : {"status", "status-code", "result", "type"})
+    for (const auto &member : {"status", "status-code", "result", "type"})
     {
         if (!json_object_has_member(rootobj, member))
         {
@@ -294,7 +294,7 @@ void Info::forAllPlugs(std::function<void(JsonObject *plugobj)> plugfunc) const
         throw std::runtime_error("Interfaces result isn't an object: " + Registry::Impl::printJson(interfacesnode));
     }
 
-    for (auto member : {"plugs", "slots"})
+    for (const auto &member : {"plugs", "slots"})
     {
         if (!json_object_has_member(interface, member))
         {
@@ -308,7 +308,7 @@ void Info::forAllPlugs(std::function<void(JsonObject *plugobj)> plugfunc) const
         auto ifaceobj = json_array_get_object_element(plugarray, i);
         try
         {
-            for (auto member : {"snap", "interface", "apps"})
+            for (const auto &member : {"snap", "interface", "apps"})
             {
                 if (!json_object_has_member(ifaceobj, member))
                 {
