@@ -22,17 +22,17 @@
 #include <gtest/gtest.h>
 #include <numeric>
 
-#include "application.h"
-#include "registry.h"
+#include "eventually-fixture.h"
+#include "snapd-mock.h"
 
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
 #include "application-impl-snap.h"
+#include "application.h"
+#include "registry.h"
 
-#include "snapd-mock.h"
-
-class ListApps : public ::testing::Test
+class ListApps : public EventuallyFixture
 {
 protected:
     GDBusConnection* bus = nullptr;
@@ -69,37 +69,7 @@ protected:
 
         g_object_unref(bus);
 
-        unsigned int cleartry = 0;
-        while (bus != nullptr && cleartry < 100)
-        {
-            pause(100);
-            cleartry++;
-        }
-        ASSERT_EQ(nullptr, bus);
-    }
-
-    void pause(guint time = 0)
-    {
-        if (time > 0)
-        {
-            GMainLoop* mainloop = g_main_loop_new(nullptr, FALSE);
-
-            g_timeout_add(time,
-                          [](gpointer pmainloop) -> gboolean {
-                              g_main_loop_quit(static_cast<GMainLoop*>(pmainloop));
-                              return G_SOURCE_REMOVE;
-                          },
-                          mainloop);
-
-            g_main_loop_run(mainloop);
-
-            g_main_loop_unref(mainloop);
-        }
-
-        while (g_main_pending())
-        {
-            g_main_iteration(TRUE);
-        }
+        ASSERT_EVENTUALLY_EQ(nullptr, bus);
     }
 
     bool findApp(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps, const std::string& appid)

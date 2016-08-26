@@ -304,7 +304,7 @@ class LibUAL : public EventuallyFixture
 
 			g_object_unref(bus);
 
-			EXPECT_EVENTUALLY_EQ(nullptr, bus);
+			ASSERT_EVENTUALLY_EQ(nullptr, bus);
 		}
 		
 		GVariant * find_env (GVariant * env_array, const gchar * var) {
