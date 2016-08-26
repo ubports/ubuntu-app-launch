@@ -256,7 +256,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     }
 
     /* Check members */
-    for (const auto &member : {"status-code"})
+    for (const auto &member : {"status-code", "result"})
     {
         if (!json_object_has_member(rootobj, member))
         {
@@ -264,7 +264,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
         }
     }
 
-    for (const auto &member : {"status", "result", "type"})
+    for (const auto &member : {"status", "type"})
     {
         if (!json_object_has_member(rootobj, member))
         {
