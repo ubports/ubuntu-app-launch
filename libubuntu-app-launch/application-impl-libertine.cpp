@@ -129,6 +129,12 @@ std::shared_ptr<GKeyFile> Libertine::find_desktop_file(const std::string& basepa
     return {};
 }
 
+/** Checks the AppID by making sure the version is "0.0" and then
+    calling verifyAppname() to check the rest.
+
+    \param appid AppID to check
+    \param registry persistent connections to use
+*/
 bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     try
@@ -146,6 +152,12 @@ bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& re
     }
 }
 
+/** Verify a package name by getting the list of containers from
+    liblibertine and ensuring it is in that list.
+
+    \param package Container name
+    \param registry persistent connections to use
+*/
 bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
     auto containers = std::shared_ptr<gchar*>(libertine_list_containers(), g_strfreev);
@@ -153,7 +165,7 @@ bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_p
     for (int i = 0; containers.get()[i] != nullptr; i++)
     {
         auto container = containers.get()[i];
-        if (std::string(container) == package.value())
+        if (container == package.value())
         {
             return true;
         }
@@ -162,6 +174,13 @@ bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_p
     return false;
 }
 
+/** Gets the list of applications from the container using liblibertine
+    and see if @appname is in that list.
+
+    \param package Container name
+    \param appname Application name to look for
+    \param registry persistent connections to use
+*/
 bool Libertine::verifyAppname(const AppID::Package& package,
                               const AppID::AppName& appname,
                               const std::shared_ptr<Registry>& registry)
@@ -180,6 +199,13 @@ bool Libertine::verifyAppname(const AppID::Package& package,
     return false;
 }
 
+/** We don't really have a way to implement this for Libertine, any
+    search wouldn't really make sense. We just throw an error.
+
+    \param package Container name
+    \param card Application search paths
+    \param registry persistent connections to use
+*/
 AppID::AppName Libertine::findAppname(const AppID::Package& package,
                                       AppID::ApplicationWildcard card,
                                       const std::shared_ptr<Registry>& registry)
@@ -187,6 +213,12 @@ AppID::AppName Libertine::findAppname(const AppID::Package& package,
     throw std::runtime_error("Legacy apps can't be discovered by package");
 }
 
+/** Function to return "0.0"
+
+    \param package Container name (unused)
+    \param appname Application name (unused)
+    \param registry persistent connections to use (unused)
+*/
 AppID::Version Libertine::findVersion(const AppID::Package& package,
                                       const AppID::AppName& appname,
                                       const std::shared_ptr<Registry>& registry)
@@ -205,9 +237,9 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
         auto container = containers.get()[i];
         auto apps = std::shared_ptr<gchar*>(libertine_list_apps_for_container(container), g_strfreev);
 
-        for (int i = 0; apps.get()[i] != nullptr; i++)
+        for (int j = 0; apps.get()[j] != nullptr; j++)
         {
-            auto appid = AppID::parse(apps.get()[i]);
+            auto appid = AppID::parse(apps.get()[j]);
             auto sapp = std::make_shared<Libertine>(appid.package, appid.appname, registry);
             applist.push_back(sapp);
         }
@@ -220,7 +252,8 @@ std::shared_ptr<Application::Info> Libertine::info()
 {
     if (!appinfo_)
     {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, false, true);
+        appinfo_ =
+            std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::XMIR_DEFAULT, _registry);
     }
     return appinfo_;
 }
@@ -240,12 +273,18 @@ std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
     return vect;
 }
 
+/** Grabs all the environment variables for the application to
+    launch in. It sets up the confinement ones and then adds in
+    the APP_EXEC line and whether to use XMir.
+
+    This function adds 'libertine-launch' at the beginning of the
+    Exec line with the container name as a parameter. The command
+    can be overridden with the UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH
+    environment variable.
+*/
 std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 {
     std::list<std::pair<std::string, std::string>> retval;
-
-    /* TODO: Not sure how we're gonna get this */
-    /* APP_DESKTOP_FILE_PATH */
 
     info();
 
@@ -272,14 +311,16 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, [this]() { return launchEnv(); });
+                                   UpstartInstance::launchMode::STANDARD, envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST, [this]() { return launchEnv(); });
+                                   UpstartInstance::launchMode::TEST, envfunc);
 }
 
 }  // namespace app_impls

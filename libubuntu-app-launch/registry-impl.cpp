@@ -97,6 +97,7 @@ void Registry::Impl::initClick()
     }
 }
 
+#if JSON_CHECK_VERSION(1, 1, 2)
 /** Helper function for printing JSON objects to debug output */
 std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
 {
@@ -110,12 +111,28 @@ std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
 /** Helper function for printing JSON nodes to debug output */
 std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
 {
+    std::string retval;
     auto gstr = json_to_string(jsonnode.get(), TRUE);
-    std::string retval = gstr;
-    g_free(gstr);
+
+    if (gstr != nullptr)
+    {
+        retval = gstr;
+        g_free(gstr);
+    }
 
     return retval;
 }
+#else
+std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
+{
+    return "Your JSON-GLib is too old to print the JSON here, please talk to your vendor about upgrading";
+}
+
+std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
+{
+    return "Your JSON-GLib is too old to print the JSON here, please talk to your vendor about upgrading";
+}
+#endif
 
 std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& package)
 {
@@ -128,7 +145,8 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
         if (error != nullptr)
         {
             auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            throw std::runtime_error(perror->message);
+            g_critical("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
+            return std::shared_ptr<JsonObject>();
         }
 
         auto node = json_node_alloc();
@@ -136,7 +154,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
         auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
 
-        json_node_unref(node);
+        json_node_free(node);
 
         return retval;
     });
@@ -327,7 +345,7 @@ std::string Registry::Impl::upstartJobPath(const std::string& job)
                                                                      G_VARIANT_TYPE("(o)"),             /* return */
                                                                      G_DBUS_CALL_FLAGS_NONE,            /* flags */
                                                                      -1, /* timeout: default */
-                                                                     thread.getCancellable().get(), /* cancelable */
+                                                                     thread.getCancellable().get(), /* cancellable */
                                                                      &error);                       /* error */
 
             if (error != nullptr)
@@ -380,7 +398,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
                                                                G_VARIANT_TYPE("(ao)"),        /* return type */
                                                                G_DBUS_CALL_FLAGS_NONE,        /* flags */
                                                                -1,                            /* timeout: default */
-                                                               thread.getCancellable().get(), /* cancelable */
+                                                               thread.getCancellable().get(), /* cancellable */
                                                                &error);
 
         if (error != nullptr)
@@ -415,7 +433,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
                                             G_VARIANT_TYPE("(a{sv})"),                             /* return type */
                                             G_DBUS_CALL_FLAGS_NONE,                                /* flags */
                                             -1,                            /* timeout: default */
-                                            thread.getCancellable().get(), /* cancelable */
+                                            thread.getCancellable().get(), /* cancellable */
                                             &error);
 
             if (error != nullptr)

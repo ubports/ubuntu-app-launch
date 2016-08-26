@@ -1,19 +1,32 @@
 project(ubuntu-app-launch C CXX)
 cmake_minimum_required(VERSION 2.8.9)
 
+##########################
+# Version Info
+##########################
+
+set(API_VERSION 2)
+set(ABI_VERSION 3)
+
+##########################
+# Options
+##########################
+
 option (enable_tests "Build tests" ON)
-option (enable_lcov "Generate Coverage Reports" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
 
 set(PACKAGE ${CMAKE_PROJECT_NAME})
+
+##########################
+# Dependent Packages
+##########################
 
 find_package(PkgConfig REQUIRED)
 find_package(GObjectIntrospection REQUIRED)
 include(GNUInstallDirs)
 include(CheckIncludeFile)
 include(CheckFunctionExists)
-include(Coverage)
 include(UseGlibGeneration)
 include(UseGdbusCodegen)
 include(UseConstantBuilder)
@@ -212,9 +225,18 @@ if (${enable_tests})
   set (GTEST_INCLUDE_DIR ${GTEST_SOURCE_DIR}/..)
   set (GTEST_LIBS -lpthread)
   enable_testing ()
-  if (${enable_lcov})
-#    include(GCov)
-  endif ()
   add_subdirectory(tests)
 endif ()
 
+include(EnableCoverageReport)
+set(filter-list)
+list(APPEND filter-list "/usr/include")
+list(APPEND filter-list "${CMAKE_SOURCE_DIR}/tests/*")
+if (NOT ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+  list(APPEND filter-list "${CMAKE_BINARY_DIR}/*")
+endif()
+ENABLE_COVERAGE_REPORT(
+  TARGETS ubuntu-launcher
+  TESTS application-icon-finder-test application-info-desktop-test cgroup-reap-test exec-util-test failure-test helper-test helper-handshake-test libual-test libual-cpp-test zg-test
+  FILTER ${filter-list}
+)

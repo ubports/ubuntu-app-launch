@@ -49,9 +49,9 @@ public:
         failed. */
     enum class FailureType
     {
-        CRASH,         /**< The application was running, but failed while running. */
-        START_FAILURE, /**< Something in the configuration of the application made it impossible to start the
-                          application */
+        CRASH,        /**< The application was running, but failed while running. */
+        START_FAILURE /**< Something in the configuration of the application made it impossible to start the
+                         application */
     };
 
     Registry();

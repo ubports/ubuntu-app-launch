@@ -1,19 +1,17 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-##########################
-# Version Info
-##########################
-
-set(API_VERSION 2)
-set(ABI_VERSION 2)
-
 
 ##########################
 # Library
 ##########################
 
 add_lttng_gen_tp(NAME ubuntu-app-launch-trace)
+
+EXECUTE_PROCESS(COMMAND gcc -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+if ("${GCC_VERSION}" VERSION_LESS "5.0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=pedantic")
+endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -Wpedantic")
@@ -176,3 +174,4 @@ set(UbuntuAppLaunch_2_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
 list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-2.gir)
 gir_add_introspections(INTROSPECTION_GIRS)
 
+add_subdirectory(abi-check)

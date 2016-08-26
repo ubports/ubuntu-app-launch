@@ -127,6 +127,37 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
     return retval;
 }
 
+template <typename T>
+auto stringlistFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const gchar* key, const std::string& exceptionText = {})
+    -> T
+{
+    GError* error = nullptr;
+    auto keyval = g_key_file_get_locale_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, nullptr, &error);
+
+    if (error != nullptr)
+    {
+        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        if (!exceptionText.empty())
+        {
+            throw std::runtime_error(exceptionText + perror.get()->message);
+        }
+
+        return T::from_raw({});
+    }
+
+    std::vector<std::string> results;
+    for (auto i = 0; keyval[i] != nullptr; ++i)
+    {
+        if (strlen(keyval[i]) != 0)
+        {
+            results.emplace_back(keyval[i]);
+        }
+    }
+    g_strfreev(keyval);
+
+    return T::from_raw(results);
+}
+
 bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
                                    const gchar* key,
                                    const std::string& match,
@@ -156,10 +187,9 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
                  const std::string& basePath,
-                 std::shared_ptr<Registry> registry,
-                 bool allowNoDisplay,
-                 bool xMirDefault)
-    : _keyfile([keyfile, allowNoDisplay]() {
+                 std::bitset<2> flags,
+                 std::shared_ptr<Registry> registry)
+    : _keyfile([keyfile, flags]() {
         if (!keyfile)
         {
             throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
@@ -168,7 +198,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         {
             throw std::runtime_error("Keyfile does not represent application type");
         }
-        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value() && !allowNoDisplay)
+        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value() &&
+            (flags & DesktopFlags::ALLOW_NO_DISPLAY).none())
         {
             throw std::runtime_error("Application is not meant to be displayed");
         }
@@ -202,6 +233,12 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         }
         return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
     }())
+    , _defaultDepartment(
+          stringFromKeyfile<Application::Info::DefaultDepartment>(keyfile, "X-Ubuntu-Default-Department-ID"))
+    , _screenshotPath([keyfile, basePath]() {
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "X-Screenshot");
+    }())
+    , _keywords(stringlistFromKeyfile<Application::Info::Keywords>(keyfile, "Keywords"))
     , _splashInfo(
           {stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
            fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
@@ -267,7 +304,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
     , _rotatesWindow(
           boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Contents", false))
     , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
-    , _xMirEnable(boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", xMirDefault))
+    , _xMirEnable(
+          boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", (flags & DesktopFlags::XMIR_DEFAULT).any()))
     , _exec(stringFromKeyfile<Exec>(keyfile, "Exec"))
 {
 }

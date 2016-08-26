@@ -30,6 +30,23 @@ namespace app_launch
 namespace app_impls
 {
 
+/** Application Implmentation for the Libertine container system. Libertine
+    sets up containers that are read/write on a read only system, to all for
+    more dynamic packaging systems (like deb) to work. This provides some
+    compatibility for older applications or those who are only distributed in
+    packaging systems requiring full system access.
+
+    Application IDs for Libertine applications have the package field as the
+    name of the container. The appname is similar to that of the Legacy() implementation
+    as the filename of the desktop file defining the application without the
+    ".desktop" suffix. UAL has no way to know the version, so it is always hard
+    coded to "0.0".
+
+    Libertine applications always are setup with XMir and started using the
+    libertine-launch utility which configures the environment for the container.
+
+    More info: https://wiki.ubuntu.com/Touch/Libertine
+*/
 class Libertine : public Base
 {
 public:

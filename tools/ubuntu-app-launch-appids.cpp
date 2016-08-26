@@ -17,7 +17,6 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "libubuntu-app-launch/application.h"
 #include "libubuntu-app-launch/registry.h"
 #include <iostream>
 
@@ -26,7 +25,7 @@ int main(int argc, char* argv[])
     if (argc != 1)
     {
         std::cerr << "Usage: " << argv[0] << std::endl;
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
@@ -36,5 +35,5 @@ int main(int argc, char* argv[])
         std::cout << std::string(app->appId()) << std::endl;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

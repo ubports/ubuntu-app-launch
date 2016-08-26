@@ -35,7 +35,7 @@ namespace app_impls
 
 /** Provides some helper functions that can be used by all
     implementations of application. Stores the registry pointer
-        which everyone wants anyway. */
+    which everyone wants anyway. */
 class Base : public ubuntu::app_launch::Application
 {
 public:
@@ -93,7 +93,7 @@ public:
         const std::vector<Application::URL>& urls,
         const std::shared_ptr<Registry>& registry,
         launchMode mode,
-        std::function<std::list<std::pair<std::string, std::string>>(void)> getenv);
+        std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv);
 
 private:
     /** Application ID */

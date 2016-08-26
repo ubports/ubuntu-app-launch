@@ -20,21 +20,23 @@
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <gtest/gtest.h>
+#include <numeric>
 
-#include "application.h"
-#include "registry.h"
+#include "eventually-fixture.h"
+#include "snapd-mock.h"
 
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
 #include "application-impl-snap.h"
+#include "application.h"
+#include "registry.h"
 
-#include "snapd-mock.h"
-
-class ListApps : public ::testing::Test
+class ListApps : public EventuallyFixture
 {
 protected:
-    GDBusConnection* bus = NULL;
+    GTestDBus* testbus = nullptr;
+    GDBusConnection* bus = nullptr;
 
     virtual void SetUp()
     {
@@ -45,7 +47,7 @@ protected:
         g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
-        gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
+        gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", nullptr);
         g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
         g_free(linkfarmpath);
 
@@ -57,7 +59,10 @@ protected:
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
 
-        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+        testbus = g_test_dbus_new(G_TEST_DBUS_NONE);
+        g_test_dbus_up(testbus);
+
+        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
     }
@@ -68,43 +73,20 @@ protected:
 
         g_object_unref(bus);
 
-        unsigned int cleartry = 0;
-        while (bus != NULL && cleartry < 100)
-        {
-            pause(100);
-            cleartry++;
-        }
-        ASSERT_EQ(nullptr, bus);
-    }
+        g_test_dbus_down(testbus);
+        g_clear_object(&testbus);
 
-    void pause(guint time = 0)
-    {
-        if (time > 0)
-        {
-            GMainLoop* mainloop = g_main_loop_new(NULL, FALSE);
-
-            g_timeout_add(time,
-                          [](gpointer pmainloop) -> gboolean {
-                              g_main_loop_quit(static_cast<GMainLoop*>(pmainloop));
-                              return G_SOURCE_REMOVE;
-                          },
-                          mainloop);
-
-            g_main_loop_run(mainloop);
-
-            g_main_loop_unref(mainloop);
-        }
-
-        while (g_main_pending())
-        {
-            g_main_iteration(TRUE);
-        }
+        ASSERT_EVENTUALLY_EQ(nullptr, bus);
     }
 
     bool findApp(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps, const std::string& appid)
     {
-        auto appId = ubuntu::app_launch::AppID::parse(appid);
+        return findApp(apps, ubuntu::app_launch::AppID::parse(appid));
+    }
 
+    bool findApp(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps,
+                 const ubuntu::app_launch::AppID& appId)
+    {
         for (auto app : apps)
         {
             if (app->appId() == appId)
@@ -115,12 +97,31 @@ protected:
 
         return false;
     }
+
+    void printApps(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps)
+    {
+        g_debug("Got apps: %s",
+                std::accumulate(apps.begin(), apps.end(), std::string{},
+                                [](const std::string& prev, std::shared_ptr<ubuntu::app_launch::Application> app) {
+                                    if (prev.empty())
+                                    {
+                                        return std::string(app->appId());
+                                    }
+                                    else
+                                    {
+                                        return prev + ", " + std::string(app->appId());
+                                    }
+                                })
+                    .c_str());
+    }
 };
 
 TEST_F(ListApps, ListClick)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Click::list(registry);
+
+    printApps(apps);
 
     EXPECT_EQ(11, apps.size());
 
@@ -147,7 +148,13 @@ TEST_F(ListApps, ListLegacy)
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Legacy::list(registry);
 
-    EXPECT_EQ(0, apps.size());
+    printApps(apps);
+
+    EXPECT_EQ(1, apps.size());
+
+    EXPECT_TRUE(findApp(apps, ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw({}),
+                                                        ubuntu::app_launch::AppID::AppName::from_raw("no-exec"),
+                                                        ubuntu::app_launch::AppID::Version::from_raw({}))));
 }
 
 TEST_F(ListApps, ListLibertine)
@@ -155,11 +162,12 @@ TEST_F(ListApps, ListLibertine)
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Libertine::list(registry);
 
+    printApps(apps);
+
     EXPECT_EQ(3, apps.size());
 
     EXPECT_TRUE(findApp(apps, "container-name_test_0.0"));
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
-    EXPECT_TRUE(findApp(apps, "container-name_test-nested_0.0"));
 }
 
 static std::pair<std::string, std::string> interfaces{
@@ -193,6 +201,8 @@ TEST_F(ListApps, ListSnap)
 
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
 
+    printApps(apps);
+
     mock.result();
 
     EXPECT_EQ(4, apps.size());
@@ -217,5 +227,7 @@ TEST_F(ListApps, ListAll)
     /* Get all the apps */
     auto apps = ubuntu::app_launch::Registry::installedApps(registry);
 
-    EXPECT_EQ(18, apps.size());
+    printApps(apps);
+
+    EXPECT_EQ(19, apps.size());
 }

@@ -37,7 +37,7 @@ const std::string snappyDesktopPath{"/var/lib/snapd"};
 /***********************************
    Prototypes
  ***********************************/
-std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name);
+std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name);
 
 /** Helper function to put on shared_ptr's for keyfiles */
 void clear_keyfile(GKeyFile* keyfile)
@@ -52,9 +52,10 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     : Base(registry)
     , _appname(appname)
 {
-    std::tie(_basedir, _keyfile) = keyfileForApp(appname);
+    std::tie(_basedir, _keyfile, desktopPath_) = keyfileForApp(appname);
 
-    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry, true, false);
+    appinfo_ =
+        std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
 
     if (!_keyfile)
     {
@@ -67,16 +68,18 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     }
 }
 
-std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::AppName& name)
+std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name)
 {
-    std::string desktopName = name.value() + ".desktop";
-    auto keyfilecheck = [desktopName](const std::string& dir) -> std::shared_ptr<GKeyFile> {
+    auto desktopName = name.value() + ".desktop";
+    std::string desktopPath;
+    auto keyfilecheck = [desktopName, &desktopPath](const std::string& dir) -> std::shared_ptr<GKeyFile> {
         auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
         if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
         {
             g_free(fullname);
             return {};
         }
+        desktopPath = fullname;
 
         auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), clear_keyfile);
 
@@ -104,7 +107,7 @@ std::pair<std::string, std::shared_ptr<GKeyFile>> keyfileForApp(const AppID::App
         retval = keyfilecheck(basedir);
     }
 
-    return std::make_pair(basedir, retval);
+    return std::make_tuple(basedir, retval, desktopPath);
 }
 
 std::shared_ptr<Application::Info> Legacy::info()
@@ -112,6 +115,12 @@ std::shared_ptr<Application::Info> Legacy::info()
     return appinfo_;
 }
 
+/** Checks the AppID by ensuring the version and package are empty
+    then looks for the application.
+
+    \param appid AppID to check
+    \param registry persistent connections to use
+*/
 bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     try
@@ -129,11 +138,23 @@ bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& regis
     }
 }
 
+/** Ensure the package is empty
+
+    \param package Container name
+    \param registry persistent connections to use
+*/
 bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
     return package.value().empty();
 }
 
+/** Looks for an application by looking through the system and user
+    application directories to find the desktop file.
+
+    \param package Container name
+    \param appname Application name to look for
+    \param registry persistent connections to use
+*/
 bool Legacy::verifyAppname(const AppID::Package& package,
                            const AppID::AppName& appname,
                            const std::shared_ptr<Registry>& registry)
@@ -143,8 +164,8 @@ bool Legacy::verifyAppname(const AppID::Package& package,
         throw std::runtime_error{"Invalid Legacy package: " + std::string(package)};
     }
 
-    std::string desktop = std::string(appname) + ".desktop";
-    std::function<bool(const gchar* dir)> evaldir = [&desktop](const gchar* dir) {
+    auto desktop = std::string(appname) + ".desktop";
+    auto evaldir = [&desktop](const gchar* dir) -> bool {
         char* fulldir = g_build_filename(dir, "applications", desktop.c_str(), nullptr);
         gboolean found = g_file_test(fulldir, G_FILE_TEST_EXISTS);
         g_free(fulldir);
@@ -168,6 +189,13 @@ bool Legacy::verifyAppname(const AppID::Package& package,
     return false;
 }
 
+/** We don't really have a way to implement this for Legacy, any
+    search wouldn't really make sense. We just throw an error.
+
+    \param package Container name
+    \param card Application search paths
+    \param registry persistent connections to use
+*/
 AppID::AppName Legacy::findAppname(const AppID::Package& package,
                                    AppID::ApplicationWildcard card,
                                    const std::shared_ptr<Registry>& registry)
@@ -175,6 +203,12 @@ AppID::AppName Legacy::findAppname(const AppID::Package& package,
     throw std::runtime_error("Legacy apps can't be discovered by package");
 }
 
+/** Function to return an empty string
+
+    \param package Container name (unused)
+    \param appname Application name (unused)
+    \param registry persistent connections to use (unused)
+*/
 AppID::Version Legacy::findVersion(const AppID::Package& package,
                                    const AppID::AppName& appname,
                                    const std::shared_ptr<Registry>& registry)
@@ -215,10 +249,8 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
         }
 
         /* Remove entries generated by the desktop hook in .local */
-        auto fileappid = g_desktop_app_info_get_string(appinfo, "x-Ubuntu-UAL-Application-ID");
-        if (fileappid != nullptr)
+        if (g_desktop_app_info_has_key(appinfo, "X-Ubuntu-Application-ID"))
         {
-            g_free(fileappid);
             continue;
         }
 
@@ -258,12 +290,15 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
     return vect;
 }
 
+/** Grabs all the environment for a legacy app. Mostly this consists of
+    the exec line and whether it needs XMir. Also we set the path if that
+    is specified in the desktop file. We can also set an AppArmor profile
+    if requested. */
 std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::string& instance)
 {
     std::list<std::pair<std::string, std::string>> retval;
 
-    /* TODO: Not sure how we're gonna get this */
-    /* APP_DESKTOP_FILE_PATH */
+    retval.emplace_back(std::make_pair("APP_DESKTOP_FILE_PATH", desktopPath_));
 
     info();
 
@@ -297,6 +332,8 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     return retval;
 }
 
+/** Generates an instance string based on the clock if we're a multi-instance
+    application. */
 std::string Legacy::getInstance()
 {
     auto single = g_key_file_get_boolean(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Single-Instance", nullptr);
@@ -310,20 +347,34 @@ std::string Legacy::getInstance()
     }
 }
 
+/** Create an UpstartInstance for this AppID using the UpstartInstance launch
+    function.
+
+    \param urls URLs to pass to the application
+*/
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
     std::string instance = getInstance();
-    return UpstartInstance::launch(appId(), "application-legacy", "-" + instance, urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD,
-                                   [this, instance]() { return launchEnv(instance); });
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
+        return launchEnv(instance);
+    };
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls,
+                                   _registry, UpstartInstance::launchMode::STANDARD, envfunc);
 }
 
+/** Create an UpstartInstance for this AppID using the UpstartInstance launch
+    function with a testing environment.
+
+    \param urls URLs to pass to the application
+*/
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
     std::string instance = getInstance();
-    return UpstartInstance::launch(appId(), "application-legacy", "-" + instance, urls, _registry,
-                                   UpstartInstance::launchMode::TEST,
-                                   [this, instance]() { return launchEnv(instance); });
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
+        return launchEnv(instance);
+    };
+    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls,
+                                   _registry, UpstartInstance::launchMode::TEST, envfunc);
 }
 
 }  // namespace app_impls

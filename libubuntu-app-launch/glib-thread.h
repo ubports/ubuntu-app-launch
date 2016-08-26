@@ -17,12 +17,13 @@
  *   Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include <future>
+#include <mutex>
 #include <thread>
 
 #include <gio/gio.h>
-
-#pragma once
 
 namespace GLib
 {
@@ -33,6 +34,9 @@ class ContextThread
     std::shared_ptr<GMainContext> _context;
     std::shared_ptr<GMainLoop> _loop;
     std::shared_ptr<GCancellable> _cancel;
+
+    std::function<void(void)> afterLoop_;
+    std::shared_ptr<std::once_flag> afterFlag_;
 
 public:
     ContextThread(std::function<void()> beforeLoop = [] {}, std::function<void()> afterLoop = [] {});
