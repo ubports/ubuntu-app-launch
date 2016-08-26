@@ -3,6 +3,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 configure_file ("click-db-dir/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-db-dir/test.conf" @ONLY)
 set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_CURRENT_BINARY_DIR}/click-db-dir/test.conf")
 
+if(CURL_FOUND)
+add_definitions ( -DENABLE_SNAPPY=1 )
+endif()
+
+
 # Google Test
 
 include_directories(${GTEST_INCLUDE_DIR})
@@ -60,11 +65,13 @@ add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
 # Snapd Info Test
 
+if(CURL_FOUND)
 add_definitions ( -DSNAPD_TEST_SOCKET="/tmp/snapd-test-socket" )
 add_executable (snapd-info-test
 	snapd-info-test.cpp)
 target_link_libraries (snapd-info-test gtest ${GTEST_LIBS} launcher-static)
 add_test (NAME snapd-info-test COMMAND snapd-info-test)
+endif()
 
 # List Apps
 

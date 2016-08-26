@@ -102,7 +102,7 @@ include_directories(${MIR_INCLUDE_DIRS})
 pkg_check_modules(LIBERTINE libertine)
 include_directories(${LIBERTINE_INCLUDE_DIRS})
 
-pkg_check_modules(CURL libcurl)
+pkg_check_modules(CURL libcurl>=7.47)
 include_directories(${CURL_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

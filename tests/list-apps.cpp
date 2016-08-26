@@ -23,7 +23,6 @@
 #include <numeric>
 
 #include "eventually-fixture.h"
-#include "snapd-mock.h"
 
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
@@ -32,7 +31,10 @@
 #include "application.h"
 #include "registry.h"
 
+#ifdef ENABLE_SNAPPY
+#include "snapd-mock.h"
 #define SNAPD_LIST_APPS_SOCKET SNAPD_TEST_SOCKET "-list-apps"
+#endif
 
 class ListApps : public EventuallyFixture
 {
@@ -42,8 +44,10 @@ protected:
 
     virtual void SetUp()
     {
+#ifdef ENABLE_SNAPPY
         /* Ensure it is cleared */
         g_unlink(SNAPD_LIST_APPS_SOCKET);
+#endif
 
         /* Click DB test mode */
         g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
@@ -57,9 +61,11 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
+#ifdef ENABLE_SNAPPY
         g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_LIST_APPS_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
+#endif
 
         testbus = g_test_dbus_new(G_TEST_DBUS_NONE);
         g_test_dbus_up(testbus);
@@ -71,7 +77,9 @@ protected:
 
     virtual void TearDown()
     {
+#ifdef ENABLE_SNAPPY
         g_unlink(SNAPD_LIST_APPS_SOCKET);
+#endif
 
         g_object_unref(bus);
 
@@ -172,6 +180,7 @@ TEST_F(ListApps, ListLibertine)
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
 }
 
+#ifdef ENABLE_SNAPPY
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
@@ -217,13 +226,16 @@ TEST_F(ListApps, ListSnap)
     EXPECT_FALSE(findApp(apps, "unity7-package_scope_x123"));
     EXPECT_FALSE(findApp(apps, "x11-package_hidden_x123"));
 }
+#endif
 
 TEST_F(ListApps, ListAll)
 {
+#ifdef ENABLE_SNAPPY
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
                    {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
                     interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
                     interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
+#endif
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     /* Get all the apps */
@@ -231,5 +243,9 @@ TEST_F(ListApps, ListAll)
 
     printApps(apps);
 
+#ifdef ENABLE_SNAPPY
     EXPECT_EQ(18, apps.size());
+#else
+    EXPECT_EQ(14, apps.size());
+#endif
 }
