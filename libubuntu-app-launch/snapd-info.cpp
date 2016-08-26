@@ -192,7 +192,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     /* Configure the command */
     // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
-    curl_easy_setopt(curl, CURLOPT_URL, ("http:" + endpoint).c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, ("http://snapd" + endpoint).c_str());
     curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, snapdSocket.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, snapd_writefunc);

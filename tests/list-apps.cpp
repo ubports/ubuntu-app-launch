@@ -182,7 +182,7 @@ TEST_F(ListApps, ListLibertine)
 
 #ifdef ENABLE_SNAPPY
 static std::pair<std::string, std::string> interfaces{
-    "GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
         SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "bar"}},
                                                         {"unity7", "unity7-package", {"single", "multiple"}},
@@ -190,15 +190,15 @@ static std::pair<std::string, std::string> interfaces{
 
         })))};
 static std::pair<std::string, std::string> u8Package{
-    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
         SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))};
 static std::pair<std::string, std::string> u7Package{
-    "GET /v2/snaps/unity7-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    "GET /v2/snaps/unity7-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
         "unity7-package", "active", "app", "1.2.3.4", "x123", {"scope", "single", "multiple"})))};
 static std::pair<std::string, std::string> x11Package{
-    "GET /v2/snaps/x11-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    "GET /v2/snaps/x11-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
         SnapdMock::packageJson("x11-package", "active", "app", "1.2.3.4", "x123", {"multiple", "hidden"})))};
 

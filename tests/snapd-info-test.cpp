@@ -47,7 +47,7 @@ TEST_F(SnapdInfo, Init)
 TEST_F(SnapdInfo, PackageInfo)
 {
     SnapdMock mock{SNAPD_TEST_SOCKET,
-                   {{"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+                   {{"GET /v2/snaps/test-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
                      SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
                          "test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))}}};
     auto info = std::make_shared<ubuntu::app_launch::snapd::Info>();
@@ -68,10 +68,10 @@ TEST_F(SnapdInfo, PackageInfo)
 TEST_F(SnapdInfo, AppsForInterface)
 {
     SnapdMock mock{SNAPD_TEST_SOCKET,
-                   {{"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+                   {{"GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
                      SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
                          SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))},
-                    {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+                    {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
                      SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
                          "test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))}}};
 
@@ -89,7 +89,7 @@ TEST_F(SnapdInfo, AppsForInterface)
 TEST_F(SnapdInfo, InterfacesForAppID)
 {
     SnapdMock mock{SNAPD_TEST_SOCKET,
-                   {{"GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+                   {{"GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
                      SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
                          SnapdMock::interfacesJson({{"unity8", "test-package", {"foo"}},
                                                     {"noniface", "test-package", {"bar", "bamf", "bunny"}},
@@ -114,11 +114,11 @@ TEST_F(SnapdInfo, BadJson)
     SnapdMock mock{
         SNAPD_TEST_SOCKET,
         {
-            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
              SnapdMock::httpJsonResponse("«This is not valid JSON»")},
-            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
              SnapdMock::httpJsonResponse("{ 'status': 'FAIL', 'status-code': 404, 'type': 'sync', 'result': { } }")},
-            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+            {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
              SnapdMock::httpJsonResponse(SnapdMock::snapdOkay("'«This is not an object»'"))},
 
         }};
