@@ -32,6 +32,8 @@
 #include "application.h"
 #include "registry.h"
 
+#define SNAPD_LIST_APPS_SOCKET SNAPD_TEST_SOCKET "-list-apps"
+
 class ListApps : public EventuallyFixture
 {
 protected:
@@ -41,7 +43,7 @@ protected:
     virtual void SetUp()
     {
         /* Ensure it is cleared */
-        g_unlink(SNAPD_TEST_SOCKET);
+        g_unlink(SNAPD_LIST_APPS_SOCKET);
 
         /* Click DB test mode */
         g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
@@ -55,7 +57,7 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
-        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_LIST_APPS_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
 
@@ -69,7 +71,7 @@ protected:
 
     virtual void TearDown()
     {
-        g_unlink(SNAPD_TEST_SOCKET);
+        g_unlink(SNAPD_LIST_APPS_SOCKET);
 
         g_object_unref(bus);
 
@@ -193,7 +195,7 @@ static std::pair<std::string, std::string> x11Package{
 
 TEST_F(ListApps, ListSnap)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET,
+    SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
                    {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
                     interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
                     interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
@@ -218,7 +220,7 @@ TEST_F(ListApps, ListSnap)
 
 TEST_F(ListApps, ListAll)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET,
+    SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
                    {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
                     interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
                     interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
