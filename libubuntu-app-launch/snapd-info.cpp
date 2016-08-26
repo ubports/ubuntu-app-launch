@@ -173,7 +173,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
 static size_t snapd_writefunc(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
     unsigned int i;
-    std::vector<char> *data = static_cast<std::vector<char> *>(userdata);
+    auto data = static_cast<std::vector<char> *>(userdata);
     data->reserve(data->size() + (size * nmemb)); /* allocate once */
     for (i = 0; i < size * nmemb; i++)
     {
