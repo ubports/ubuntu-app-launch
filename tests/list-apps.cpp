@@ -32,6 +32,7 @@
 class ListApps : public EventuallyFixture
 {
 protected:
+    GTestDBus* testbus = nullptr;
     GDBusConnection* bus = nullptr;
 
     virtual void SetUp()
@@ -48,6 +49,9 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
+        testbus = g_test_dbus_new(G_TEST_DBUS_NONE);
+        g_test_dbus_up(testbus);
+
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
@@ -56,6 +60,9 @@ protected:
     virtual void TearDown()
     {
         g_object_unref(bus);
+
+        g_test_dbus_down(testbus);
+        g_clear_object(&testbus);
 
         ASSERT_EVENTUALLY_EQ(nullptr, bus);
     }
