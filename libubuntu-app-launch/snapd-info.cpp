@@ -86,7 +86,15 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
         /******************************************/
         /* Validation of the object we got        */
         /******************************************/
-        for (const auto &member : {"name", "status", "revision", "type", "version", "apps"})
+        for (const auto &member : {"apps"})
+        {
+            if (!json_object_has_member(snapobject, member))
+            {
+                throw std::runtime_error("Snap JSON didn't have a '" + std::string(member) + "'");
+            }
+        }
+
+        for (const auto &member : {"name", "status", "revision", "type", "version"})
         {
             if (!json_object_has_member(snapobject, member))
             {
@@ -172,14 +180,9 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
 */
 static size_t snapd_writefunc(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
-    unsigned int i;
     auto data = static_cast<std::vector<char> *>(userdata);
-    data->reserve(data->size() + (size * nmemb)); /* allocate once */
-    for (i = 0; i < size * nmemb; i++)
-    {
-        data->push_back(ptr[i]);
-    }
-    return i;
+    data->insert(data->end(), ptr, ptr + (size * nmemb));
+    return size * nmemb;
 }
 
 /** Asks the snapd process for some JSON. This function parses the basic
