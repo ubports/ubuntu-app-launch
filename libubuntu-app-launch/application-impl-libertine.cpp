@@ -43,7 +43,7 @@ Libertine::Libertine(const AppID::Package& container,
         g_free(system_app_path);
         g_free(container_path);
 
-        _keyfile = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
+        _keyfile = findDesktopFile(_basedir, "applications", appname.value() + ".desktop");
     }
 
     if (!_keyfile)
@@ -54,7 +54,7 @@ Libertine::Libertine(const AppID::Package& container,
         g_free(local_app_path);
         g_free(container_home_path);
 
-        _keyfile = find_desktop_file(_basedir, "applications", appname.value() + ".desktop");
+        _keyfile = findDesktopFile(_basedir, "applications", appname.value() + ".desktop");
     }
 
     if (!_keyfile)
@@ -83,7 +83,7 @@ std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname
     return keyfile;
 }
 
-std::shared_ptr<GKeyFile> Libertine::find_desktop_file(const std::string& basepath, const std::string& subpath, const std::string& filename)
+std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath, const std::string& subpath, const std::string& filename)
 {
     auto fullpath = g_build_filename(basepath.c_str(), subpath.c_str(), filename.c_str(), nullptr);
     std::string sfullpath(fullpath);
@@ -111,7 +111,7 @@ std::shared_ptr<GKeyFile> Libertine::find_desktop_file(const std::string& basepa
         auto new_fullpath = g_build_filename(basepath.c_str(), new_subpath, nullptr);
         if (g_file_test(new_fullpath, G_FILE_TEST_IS_DIR))
         {
-            auto desktop_file = find_desktop_file(basepath, new_subpath, filename);
+            auto desktop_file = findDesktopFile(basepath, new_subpath, filename);
 
             if (desktop_file)
             {
