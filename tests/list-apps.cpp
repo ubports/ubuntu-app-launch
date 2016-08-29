@@ -243,5 +243,9 @@ TEST_F(ListApps, ListAll)
 
     printApps(apps);
 
+#ifdef ENABLE_SNAPPY
     EXPECT_EQ(19, apps.size());
+#else
+    EXPECT_EQ(15, apps.size());
+#endif
 }
