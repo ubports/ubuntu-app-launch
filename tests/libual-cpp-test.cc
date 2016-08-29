@@ -38,7 +38,9 @@
 #include "eventually-fixture.h"
 #include "mir-mock.h"
 
+#ifdef ENABLE_SNAPPY
 #include "snapd-mock.h"
+#endif
 
 class LibUAL : public EventuallyFixture
 {
@@ -105,10 +107,12 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
+#ifdef ENABLE_SNAPPY
         g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
         g_unlink(SNAPD_TEST_SOCKET);
+#endif
 
         service = dbus_test_service_new(NULL);
 
@@ -162,6 +166,7 @@ protected:
                                                 g_variant_new_parsed(process_var), NULL);
         g_free(process_var);
 
+#ifdef ENABLE_SNAPPY
         /* Snap App */
         auto snapjobobj =
             dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -189,6 +194,7 @@ protected:
         dbus_test_dbus_mock_object_add_property(mock, snapinstobj, "processes", G_VARIANT_TYPE("a(si)"),
                                                 g_variant_new_parsed(snapprocess_var), NULL);
         g_free(snapprocess_var);
+#endif
 
         /*  Legacy App */
         DbusTestDbusMockObject* ljobobj =
@@ -287,7 +293,9 @@ protected:
 
         ASSERT_EVENTUALLY_EQ(nullptr, bus);
 
+#ifdef ENABLE_SNAPPY
         g_unlink(SNAPD_TEST_SOCKET);
+#endif
     }
 
     GVariant* find_env(GVariant* env_array, const gchar* var)
@@ -451,13 +459,14 @@ TEST_F(LibUAL, StopClickApplication)
     ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 }
 
+#ifdef ENABLE_SNAPPY
 /* Snapd mock data */
 static std::pair<std::string, std::string> interfaces{
-    "GET /v2/interfaces HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
         SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single"}}})))};
 static std::pair<std::string, std::string> u8Package{
-    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: http\r\nAccept: */*\r\n\r\n",
+    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
         SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
 
@@ -588,6 +597,7 @@ TEST_F(LibUAL, StopSnapApplication)
 
     ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 }
+#endif
 
 /* NOTE: The fact that there is 'libertine-data' in these strings is because
    we're using one CACHE_HOME for this test suite and the libertine functions
@@ -756,12 +766,18 @@ TEST_F(LibUAL, AppIdParse)
 
 TEST_F(LibUAL, ApplicationList)
 {
+#ifdef ENABLE_SNAPPY
     SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, u8Package, u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
+#endif
 
     auto apps = ubuntu::app_launch::Registry::runningApps(registry);
 
+#ifdef ENABLE_SNAPPY
     ASSERT_EQ(4, apps.size());
+#else
+    ASSERT_EQ(3, apps.size());
+#endif
 
     apps.sort([](const std::shared_ptr<ubuntu::app_launch::Application>& a,
                  const std::shared_ptr<ubuntu::app_launch::Application>& b) {
@@ -772,7 +788,9 @@ TEST_F(LibUAL, ApplicationList)
     });
 
     EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.front()->appId());
+#ifdef ENABLE_SNAPPY
     EXPECT_EQ("unity8-package_foo_x123", (std::string)apps.back()->appId());
+#endif
 }
 
 typedef struct
