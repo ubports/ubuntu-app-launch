@@ -41,7 +41,7 @@ https://click.readthedocs.org/en/latest/
 */
 
 gboolean
-click_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle)
+click_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle, int timeout_s)
 {
 	g_return_val_if_fail(bus != NULL, FALSE);
 	g_return_val_if_fail(app_id != NULL, FALSE);
@@ -51,7 +51,7 @@ click_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handl
 
 	GError * error = NULL;
 
-	handshake_t * handshake = starting_handshake_start(app_id);
+	handshake_t * handshake = starting_handshake_start(app_id, timeout_s);
 	if (handshake == NULL) {
 		g_warning("Unable to setup starting handshake");
 	}

@@ -300,11 +300,17 @@ start_application_core (GDBusConnection * con, GCancellable * cancel, const gcha
 		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
 	}
 
+	int timeout = 1;
+	auto registry = ubuntu::app_launch::Registry::getDefault();
+	if (registry->impl->isWatchingAppStarting()) {
+		timeout = 0;
+	}
+
 	gboolean setup_complete = FALSE;
 	if (click) {
-		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
+		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder, timeout);
 	} else {
-		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder, libertine);
+		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder, libertine, timeout);
 	}
 
 	if (setup_complete) {
