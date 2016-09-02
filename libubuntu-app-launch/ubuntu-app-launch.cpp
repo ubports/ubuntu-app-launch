@@ -301,8 +301,7 @@ start_application_core (GDBusConnection * con, GCancellable * cancel, const gcha
 	}
 
 	int timeout = 1;
-	auto registry = ubuntu::app_launch::Registry::getDefault();
-	if (registry->impl->isWatchingAppStarting()) {
+	if (ubuntu::app_launch::Registry::Impl::isWatchingAppStarting()) {
 		timeout = 0;
 	}
 
@@ -827,8 +826,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 gboolean
 ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto registry = ubuntu::app_launch::Registry::getDefault();
-	registry->impl->watchingAppStarting(true);
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(true);
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
 
@@ -1020,8 +1018,7 @@ ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer
 gboolean
 ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto registry = ubuntu::app_launch::Registry::getDefault();
-	registry->impl->watchingAppStarting(false);
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(false);
 	return delete_app_generic(observer, user_data, &starting_array);
 }
 

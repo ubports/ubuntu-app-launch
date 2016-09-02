@@ -71,8 +71,10 @@ public:
     std::string upstartJobPath(const std::string& job);
 
     /* Signal Hints */
-    void watchingAppStarting(bool rWatching);
-    bool isWatchingAppStarting();
+    /* NOTE: Static because we don't have registry instances in the C
+       code right now. We want these to not be static in the future */
+    static void watchingAppStarting(bool rWatching);
+    static bool isWatchingAppStarting();
 
 private:
     Registry* _registry;
