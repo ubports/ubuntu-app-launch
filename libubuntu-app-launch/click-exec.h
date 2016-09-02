@@ -20,6 +20,6 @@
 #include <glib.h>
 #include "helpers.h"
 
-gboolean click_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * envhandle);
+gboolean click_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * envhandle, int timeout_s);
 
 

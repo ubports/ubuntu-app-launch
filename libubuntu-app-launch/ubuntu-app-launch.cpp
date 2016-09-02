@@ -42,6 +42,7 @@ extern "C" {
 #include "application.h"
 #include "appid.h"
 #include "registry.h"
+#include "registry-impl.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -299,11 +300,16 @@ start_application_core (GDBusConnection * con, GCancellable * cancel, const gcha
 		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
 	}
 
+	int timeout = 1;
+	if (ubuntu::app_launch::Registry::Impl::isWatchingAppStarting()) {
+		timeout = 0;
+	}
+
 	gboolean setup_complete = FALSE;
 	if (click) {
-		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
+		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder, timeout);
 	} else {
-		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder, libertine);
+		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder, libertine, timeout);
 	}
 
 	if (setup_complete) {
@@ -820,6 +826,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 gboolean
 ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(true);
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
 
@@ -1011,6 +1018,7 @@ ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer
 gboolean
 ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(false);
 	return delete_app_generic(observer, user_data, &starting_array);
 }
 

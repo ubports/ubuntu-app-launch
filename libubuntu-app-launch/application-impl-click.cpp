@@ -75,7 +75,7 @@ AppID::Version manifestVersion(const std::shared_ptr<JsonObject>& manifest)
 
 std::list<AppID::AppName> manifestApps(const std::shared_ptr<JsonObject>& manifest)
 {
-    JsonObject *hooks = nullptr;
+    JsonObject* hooks = nullptr;
     if (!json_object_has_member(manifest.get(), "hooks") ||
         (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
     {
@@ -108,14 +108,14 @@ std::shared_ptr<GKeyFile> manifestAppDesktop(const std::shared_ptr<JsonObject>& 
                                              const std::string& app,
                                              const std::string& clickDir)
 {
-    JsonObject *hooks = nullptr;
+    JsonObject* hooks = nullptr;
     if (!json_object_has_member(manifest.get(), "hooks") ||
         (hooks = json_object_get_object_member(manifest.get(), "hooks")) == nullptr)
     {
         throw std::runtime_error("Manifest for application '" + app + "' does not have a 'hooks' field");
     }
 
-    JsonObject *hooklist = nullptr;
+    JsonObject* hooklist = nullptr;
     if (!json_object_has_member(hooks, app.c_str()) ||
         (hooklist = json_object_get_object_member(hooks, app.c_str())) == nullptr)
     {

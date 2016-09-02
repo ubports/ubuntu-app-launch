@@ -77,7 +77,7 @@ TEST_F(HelperHandshakeTest, BaseHandshake)
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	guint filter = g_dbus_connection_add_filter(con, filter_func, this, NULL);
 
-	handshake_t * handshake = starting_handshake_start("fooapp");
+	handshake_t * handshake = starting_handshake_start("fooapp", 1);
 
 	g_main_loop_run(mainloop);
 
@@ -109,7 +109,7 @@ two_second_reached (gpointer user_data)
 TEST_F(HelperHandshakeTest, HandshakeTimeout)
 {
 	bool timeout_reached = false;
-	handshake_t * handshake = starting_handshake_start("fooapp");
+	handshake_t * handshake = starting_handshake_start("fooapp", 1);
 
 	guint outertimeout = g_timeout_add_seconds(2, two_second_reached, &timeout_reached);
 
