@@ -42,6 +42,7 @@ extern "C" {
 #include "application.h"
 #include "appid.h"
 #include "registry.h"
+#include "registry-impl.h"
 
 static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
 static void free_helper (gpointer value);
@@ -820,6 +821,8 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 gboolean
 ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	auto registry = ubuntu::app_launch::Registry::getDefault();
+	registry->impl->watchingAppStarting(true);
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
 
@@ -1011,6 +1014,8 @@ ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer
 gboolean
 ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	auto registry = ubuntu::app_launch::Registry::getDefault();
+	registry->impl->watchingAppStarting(false);
 	return delete_app_generic(observer, user_data, &starting_array);
 }
 

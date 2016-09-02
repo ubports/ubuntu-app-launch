@@ -70,6 +70,10 @@ public:
     std::list<std::string> upstartInstancesForJob(const std::string& job);
     std::string upstartJobPath(const std::string& job);
 
+    /* Signal Hints */
+    void watchingAppStarting(bool rWatching);
+    bool isWatchingAppStarting();
+
 private:
     Registry* _registry;
 #if 0
