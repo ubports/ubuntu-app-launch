@@ -555,5 +555,26 @@ Registry::Impl::clearManager ()
 }
 #endif
 
+/** App start watching, if we're registered for the signal we
+    can't wait on it. We are making this static right now because
+    we need it to go across the C and C++ APIs smoothly, and those
+    can end up with different registry objects. Long term, this
+    should become a member variable. */
+static bool watchingAppStarting_ = false;
+
+/** Variable to track if this program is watching app startup
+    so that we can know to not wait on the response to that. */
+void Registry::Impl::watchingAppStarting(bool rWatching)
+{
+    watchingAppStarting_ = rWatching;
+}
+
+/** Accessor for the internal variable to know whether an app
+    is watching for app startup */
+bool Registry::Impl::isWatchingAppStarting()
+{
+    return watchingAppStarting_;
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

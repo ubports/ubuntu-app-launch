@@ -73,6 +73,12 @@ public:
     static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
     static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
 
+    /* Signal Hints */
+    /* NOTE: Static because we don't have registry instances in the C
+       code right now. We want these to not be static in the future */
+    static void watchingAppStarting(bool rWatching);
+    static bool isWatchingAppStarting();
+
 private:
     Registry* _registry;
 #if 0
