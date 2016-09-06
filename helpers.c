@@ -503,7 +503,7 @@ unity_too_slow_cb (gpointer user_data)
 }
 
 handshake_t *
-starting_handshake_start (const gchar *   app_id)
+starting_handshake_start (const gchar *   app_id, int timeout_s)
 {
 	GError * error = NULL;
 	handshake_t * handshake = g_new0(handshake_t, 1);
@@ -541,7 +541,7 @@ starting_handshake_start (const gchar *   app_id)
 		&error);
 
 	/* Really, Unity? */
-	handshake->timeout = g_timeout_source_new_seconds(1);
+	handshake->timeout = g_timeout_source_new_seconds(timeout_s);
 	g_source_set_callback(handshake->timeout, unity_too_slow_cb, handshake, NULL);
 	g_source_attach(handshake->timeout, context);
 
