@@ -66,7 +66,7 @@ std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(co
             g_free(fullname);
             return {};
         }
-		desktopPath = fullname;
+        desktopPath = fullname;
 
         auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), clear_keyfile);
 

@@ -509,6 +509,8 @@ TEST_F(LibUAL, ApplicationPid)
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-multiple-2342345")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
+	/* Check non running app */
+	EXPECT_EQ(0, ubuntu_app_launch_get_primary_pid("chatter.robert-ancell_chatter_2"));
 }
 
 TEST_F(LibUAL, ApplicationId)

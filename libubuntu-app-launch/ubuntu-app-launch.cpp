@@ -39,6 +39,7 @@ extern "C" {
 #include "application.h"
 #include "appid.h"
 #include "registry.h"
+#include "registry-impl.h"
 
 static void free_helper (gpointer value);
 int kill (pid_t pid, int signal) noexcept;
@@ -196,7 +197,7 @@ ubuntu_app_launch_pause_application (const gchar * appid)
 		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
-		app->instances()[0]->pause();
+		app->instances().at(0)->pause();
 		return TRUE;
 	} catch (...) {
 		return FALSE;
@@ -210,7 +211,7 @@ ubuntu_app_launch_resume_application (const gchar * appid)
 		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
-		app->instances()[0]->resume();
+		app->instances().at(0)->resume();
 		return TRUE;
 	} catch (...) {
 		return FALSE;
@@ -506,6 +507,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 gboolean
 ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(true);
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
 
@@ -697,6 +699,7 @@ ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer
 gboolean
 ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(false);
 	return delete_app_generic(observer, user_data, &starting_array);
 }
 
@@ -860,7 +863,7 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
-		return app->instances()[0]->primaryPid();
+		return app->instances().at(0)->primaryPid();
 	} catch (...) {
 		return 0;
 	}
@@ -876,7 +879,7 @@ ubuntu_app_launch_get_pids (const gchar * appid)
 		auto registry = ubuntu::app_launch::Registry::getDefault();
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
-		auto pids = app->instances()[0]->pids();
+		auto pids = app->instances().at(0)->pids();
 
 		GList * retval = nullptr;
 		for (auto pid : pids) {
@@ -898,7 +901,7 @@ ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-		if (app->instances()[0]->hasPid(pid)) {
+		if (app->instances().at(0)->hasPid(pid)) {
 			return TRUE;
 		} else {
 			return FALSE;

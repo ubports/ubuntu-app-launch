@@ -739,7 +739,14 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             g_debug("Initializing params for an new UpstartInstance for: %s", appIdStr.c_str());
 
             tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
-            auto handshake = starting_handshake_start(appIdStr.c_str());
+
+            int timeout = 1;
+            if (ubuntu::app_launch::Registry::Impl::isWatchingAppStarting())
+            {
+                timeout = 0;
+            }
+
+            auto handshake = starting_handshake_start(appIdStr.c_str(), timeout);
             if (handshake == nullptr)
             {
                 g_warning("Unable to setup starting handshake");
