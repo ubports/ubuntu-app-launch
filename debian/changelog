@@ -48,6 +48,12 @@ ubuntu-app-launch (0.9+16.10.20160803-0ubuntu1) yakkety; urgency=medium
 
  -- Rodney Dawes <rodney.dawes@canonical.com>  Wed, 03 Aug 2016 14:10:45 +0000
 
+ubuntu-app-launch (0.9+16.04.20160730-0ubuntu1) UNRELEASED; urgency=medium
+
+  * Introducing Snappy backend
+
+ -- Ted Gould <ted@ubuntu.com>  Fri, 29 Jul 2016 11:05:47 -0500
+
 ubuntu-app-launch (0.9+16.04.20160510.2-0ubuntu1) xenial; urgency=medium
 
   * Allow invalid desktop files for OTA11 quick fix (LP: #1580092)

@@ -19,6 +19,7 @@
 
 #include "glib-thread.h"
 #include "registry.h"
+#include "snapd-info.h"
 #include <click.h>
 #include <gio/gio.h>
 #include <json-glib/json-glib.h>
@@ -57,8 +58,16 @@ public:
     void clearManager ();
 #endif
 
+    /** Shared context thread for events and background tasks
+        that UAL subtasks are doing */
     GLib::ContextThread thread;
+    /** DBus shared connection for the session bus */
     std::shared_ptr<GDBusConnection> _dbus;
+
+#ifdef ENABLE_SNAPPY
+    /** Snapd information object */
+    snapd::Info snapdInfo;
+#endif
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
@@ -69,6 +78,9 @@ public:
     /* Upstart Jobs */
     std::list<std::string> upstartInstancesForJob(const std::string& job);
     std::string upstartJobPath(const std::string& job);
+
+    static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
+    static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
 
     /* Signal Hints */
     /* NOTE: Static because we don't have registry instances in the C

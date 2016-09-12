@@ -3,4 +3,4 @@ Version=1.0
 Name=Application
 Type=Application
 Exec=grep
-Icon=foo
+Icon=foo.png

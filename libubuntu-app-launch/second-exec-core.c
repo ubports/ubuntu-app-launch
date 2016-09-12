@@ -29,17 +29,30 @@
 typedef struct {
 	GDBusConnection * bus;
 	gchar * appid;
-	gchar * input_uris;
+	gchar ** input_uris;
 	GPid app_pid;
 	guint connections_open;
 	GVariant * app_data;
 	gchar * dbus_path;
 	guint64 unity_starttime;
-	guint timer;
+	GSource * timer;
 	guint signal;
 } second_exec_t;
 
 static void second_exec_complete (second_exec_t * data);
+
+static GSource *
+thread_default_timeout (guint interval, GSourceFunc func, gpointer data)
+{
+	GSource * src = g_timeout_source_new(interval);
+	GMainContext * context = g_main_context_get_thread_default();
+
+	g_source_set_callback(src, func, data, NULL);
+
+	g_source_attach(src, context);
+
+	return src;
+}
 
 /* Unity didn't respond in time, continue on */
 static gboolean
@@ -47,6 +60,7 @@ timer_cb (gpointer user_data)
 {
 	ual_tracepoint(second_exec_resume_timeout, ((second_exec_t *)user_data)->appid);
 	g_warning("Unity didn't respond in 500ms to resume the app");
+
 	second_exec_complete(user_data);
 	return G_SOURCE_REMOVE;
 }
@@ -67,7 +81,7 @@ connection_count_dec (second_exec_t * data)
 			second_exec_complete(data);
 		} else {
 			g_debug("Timer Set");
-			data->timer = g_timeout_add(500 - (timespent / 1000), timer_cb, data);
+			data->timer = thread_default_timeout(500 - (timespent / 1000), timer_cb, data);
 		}
 	}
 	return;
@@ -82,9 +96,10 @@ unity_resume_cb (GDBusConnection * connection, const gchar * sender, const gchar
 	g_debug("Unity Completed Resume");
 	ual_tracepoint(second_exec_resume_complete, data->appid);
 
-	if (data->timer != 0) {
-		g_source_remove(data->timer);
-		data->timer = 0;
+	if (data->timer != NULL) {
+		g_source_destroy(data->timer);
+		g_source_unref(data->timer);
+		data->timer = NULL;
 	}
 
 	if (data->connections_open == 0) {
@@ -107,31 +122,17 @@ parse_uris (second_exec_t * data)
 	}
 
 	GVariant * uris = NULL;
-	gchar ** uri_split = NULL;
-	GError * error = NULL;
 
-	g_shell_parse_argv(data->input_uris, NULL, &uri_split, &error);
-
-	if (uri_split == NULL || uri_split[0] == NULL || error != NULL) {
-		if (error != NULL) {
-			g_warning("Unable to parse URLs '%s': %s", data->input_uris, error->message);
-			g_error_free(error);
-		}
-
+	if (data->input_uris == NULL) {
 		uris = g_variant_new_array(G_VARIANT_TYPE_STRING, NULL, 0);
-
-		if (uri_split != NULL) {
-			g_strfreev(uri_split);
-		}
 	} else {
 		GVariantBuilder builder;
 		g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
 
 		int i;
-		for (i = 0; uri_split[i] != NULL; i++) {
-			g_variant_builder_add_value(&builder, g_variant_new_take_string(uri_split[i]));
+		for (i = 0; data->input_uris[i] != NULL; i++) {
+			g_variant_builder_add_value(&builder, g_variant_new_string(data->input_uris[i]));
 		}
-		g_free(uri_split);
 
 		uris = g_variant_builder_end(&builder);
 	}
@@ -281,7 +282,7 @@ get_pid_cb (GObject * object, GAsyncResult * res, gpointer user_data)
 }
 
 /* Starts to look for the PID and the connections for that PID */
-void
+static void
 find_appid_pid (GDBusConnection * session, second_exec_t * data)
 {
 	GError * error = NULL;
@@ -309,16 +310,6 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 
 	g_debug("Got bus names");
 	ual_tracepoint(second_exec_got_dbus_names, data->appid);
-
-	/* Next figure out what we're looking for (and if there is something to look for) */
-	/* NOTE: We're getting the PID *after* the list of connections so
-	   that some new process can't come in, be the same PID as it's
-	   connection will not be in teh list we just got. */
-	data->app_pid = ubuntu_app_launch_get_primary_pid(data->appid);
-	if (data->app_pid == 0) {
-		g_warning("Unable to find pid for app id '%s'", data->appid);
-		return;
-	}
 
 	g_debug("Primary PID: %d", data->app_pid);
 	ual_tracepoint(second_exec_got_primary_pid, data->appid);
@@ -364,16 +355,17 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 }
 
 gboolean
-second_exec (GDBusConnection * session, GCancellable * cancel, const gchar * app_id, const gchar * appuris)
+second_exec (GDBusConnection * session, GCancellable * cancel, GPid pid, const gchar * app_id, gchar ** appuris)
 {
-	ual_tracepoint(second_exec_start, app_id, appuris);
+	ual_tracepoint(second_exec_start, app_id);
 	GError * error = NULL;
 
 	/* Setup our continuation data */
 	second_exec_t * data = g_new0(second_exec_t, 1);
 	data->appid = g_strdup(app_id);
-	data->input_uris = g_strdup(appuris);
+	data->input_uris = g_strdupv(appuris);
 	data->bus = g_object_ref(session);
+	data->app_pid = pid;
 
 	/* Set up listening for the unfrozen signal from Unity */
 	data->signal = g_dbus_connection_signal_subscribe(session,
@@ -414,11 +406,17 @@ second_exec (GDBusConnection * session, GCancellable * cancel, const gchar * app
 	/* If we've got something to give out, start looking for how */
 	if (data->input_uris != NULL) {
 		find_appid_pid(session, data);
+	} else {
+		g_debug("No URIs to send");
 	}
 
 	/* Loop and wait for everything to align */
-	if (data->connections_open == 0 && data->unity_starttime == 0) {
-		second_exec_complete(data);
+	if (data->connections_open == 0) {
+		if (data->unity_starttime == 0) {
+			second_exec_complete(data);
+		} else {
+			data->timer = thread_default_timeout(500, timer_cb, data);
+		}
 	}
 
 	return TRUE;
@@ -461,11 +459,15 @@ second_exec_complete (second_exec_t * data)
 	if (data->signal != 0)
 		g_dbus_connection_signal_unsubscribe(data->bus, data->signal);
 
+	if (data->timer != NULL) {
+		g_source_destroy(data->timer);
+		g_source_unref(data->timer);
+	}
 	g_object_unref(data->bus);
 	if (data->app_data != NULL)
 		g_variant_unref(data->app_data);
 	g_free(data->appid);
-	g_free(data->input_uris);
+	g_strfreev(data->input_uris);
 	g_free(data->dbus_path);
 	g_free(data);
 
