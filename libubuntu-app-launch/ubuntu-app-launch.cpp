@@ -27,7 +27,6 @@ extern "C" {
 #include <errno.h>
 #include <zeitgeist.h>
 
-#include "app-info.h"
 #include "ubuntu-app-launch-trace.h"
 #include "helpers.h"
 #include "ual-tracepoint.h"
@@ -948,16 +947,24 @@ ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const
 {
 	g_return_val_if_fail(pkg != NULL, NULL);
 
-	/* Check if is a libertine container */
-	gchar * libertinepath = g_build_filename(g_get_user_cache_dir(), "libertine-container", pkg, NULL);
-	gboolean libcontainer = g_file_test(libertinepath, G_FILE_TEST_EXISTS);
-	g_free(libertinepath);
+	std::string package{pkg};
+	std::string appname;
+	std::string version;
 
-	if (libcontainer) {
-		return libertine_triplet_to_app_id(pkg, app, ver);
-	} else {
-		return click_triplet_to_app_id(pkg, app, ver);
+	if (app != nullptr) {
+		appname = app;
 	}
+
+	if (ver != nullptr) {
+		version = ver;
+	}
+
+	auto appid = ubuntu::app_launch::AppID::discover(package, appname, version);
+	if (appid.empty()) {
+		return nullptr;
+	}
+
+	return g_strdup(std::string(appid).c_str());
 }
 
 /* Print an error if we couldn't start it */

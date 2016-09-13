@@ -17,6 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <memory>
 #include <string>
 
 #include "type-tagger.h"
@@ -28,6 +29,8 @@ namespace ubuntu
 {
 namespace app_launch
 {
+
+class Registry;
 
 /** \brief The set of information that is used to uniquely identify an
            application in Ubuntu.
@@ -104,9 +107,21 @@ struct AppID
         It can be used, but is slower than parse() if you've got well formed data
         already.
 
+        \note This will use the default registry instance, it is generally
+              recommended to have your own instead of using the default.
+
         \param sappid String with the concatenated AppID
     */
     static AppID find(const std::string& sappid);
+    /** Find is a more tollerant version of parse(), it handles legacy applications,
+        short AppIDs ($package_$app) and other forms of that are in common usage.
+        It can be used, but is slower than parse() if you've got well formed data
+        already.
+
+        \param registry Registry instance to use for persistant connections
+        \param sappid String with the concatenated AppID
+    */
+    static AppID find(const std::shared_ptr<Registry>& registry, const std::string& sappid);
     /** Check to see whether a string is a valid AppID string
 
         \param sappid String with the concatenated AppID
@@ -130,6 +145,9 @@ struct AppID
     /** Find the AppID for an application where you only know the package
         name.
 
+        \note This will use the default registry instance, it is generally
+              recommended to have your own instead of using the default.
+
         \param package Name of the package
         \param appwildcard Specification of how to search the manifest for apps
         \param versionwildcard Specification of how to search for the version
@@ -140,6 +158,9 @@ struct AppID
     /** Find the AppID for an application where you know the package
         name and application name.
 
+        \note This will use the default registry instance, it is generally
+              recommended to have your own instead of using the default.
+
         \param package Name of the package
         \param appname Name of the application
         \param versionwildcard Specification of how to search for the version
@@ -149,15 +170,55 @@ struct AppID
                           VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
     /** Create an AppID providing known strings of packages and names
 
+        \note This will use the default registry instance, it is generally
+              recommended to have your own instead of using the default.
+
         \param package Name of the package
         \param appname Name of the application
         \param version Version of the package
     */
     static AppID discover(const std::string& package, const std::string& appname, const std::string& version);
+
+    /** Find the AppID for an application where you only know the package
+        name.
+
+        \param registry Registry instance to use for persistant connections
+        \param package Name of the package
+        \param appwildcard Specification of how to search the manifest for apps
+        \param versionwildcard Specification of how to search for the version
+    */
+    static AppID discover(const std::shared_ptr<Registry>& registry,
+                          const std::string& package,
+                          ApplicationWildcard appwildcard = ApplicationWildcard::FIRST_LISTED,
+                          VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
+    /** Find the AppID for an application where you know the package
+        name and application name.
+
+        \param registry Registry instance to use for persistant connections
+        \param package Name of the package
+        \param appname Name of the application
+        \param versionwildcard Specification of how to search for the version
+    */
+    static AppID discover(const std::shared_ptr<Registry>& registry,
+                          const std::string& package,
+                          const std::string& appname,
+                          VersionWildcard versionwildcard = VersionWildcard::CURRENT_USER_VERSION);
+    /** Create an AppID providing known strings of packages and names
+
+        \param registry Registry instance to use for persistant connections
+        \param package Name of the package
+        \param appname Name of the application
+        \param version Version of the package
+    */
+    static AppID discover(const std::shared_ptr<Registry>& registry,
+                          const std::string& package,
+                          const std::string& appname,
+                          const std::string& version);
 };
 
 bool operator==(const AppID& a, const AppID& b);
 bool operator!=(const AppID& a, const AppID& b);
+bool operator<(const AppID& a, const AppID& b);
 
 }  // namespace app_launch
 }  // namespace ubuntu

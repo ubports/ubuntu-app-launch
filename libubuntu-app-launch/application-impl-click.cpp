@@ -58,6 +58,115 @@ AppID Click::appId()
     return _appid;
 }
 
+/** Check to see if this AppID has a desktop file that is in our link
+    farm built by Click. Click puts a symoblic link there for every
+    valid AppID.
+
+    \param appid Application ID to check
+    \param registry Persistent connections to use
+*/
+bool Click::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
+{
+    std::string appiddesktop = std::string(appid) + ".desktop";
+    gchar* click_link = nullptr;
+    const gchar* link_farm_dir = g_getenv("UBUNTU_APP_LAUNCH_LINK_FARM");
+    if (G_LIKELY(link_farm_dir == nullptr))
+    {
+        click_link =
+            g_build_filename(g_get_user_cache_dir(), "ubuntu-app-launch", "desktop", appiddesktop.c_str(), NULL);
+    }
+    else
+    {
+        click_link = g_build_filename(link_farm_dir, appiddesktop.c_str(), NULL);
+    }
+
+    bool click = g_file_test(click_link, G_FILE_TEST_EXISTS);
+    g_free(click_link);
+
+    return click;
+}
+
+/** Tries to get the Click manifest for a package. If it can successfully
+    get the manifest returns true.
+
+    \param package Name of the package
+    \param registry Persistent connections to use
+*/
+bool Click::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
+{
+    return registry->impl->getClickManifest(package) != nullptr;
+}
+
+/** Verifies the applicaiton name by getting the list of applications
+    in the package manifest and seeing if the appname is in the list.
+
+    \param package Name of the package
+    \param appname Name of the application
+    \param registry Persistent connections to use
+*/
+bool Click::verifyAppname(const AppID::Package& package,
+                          const AppID::AppName& appname,
+                          const std::shared_ptr<Registry>& registry)
+{
+    auto manifest = registry->impl->getClickManifest(package);
+    auto apps = manifestApps(manifest);
+
+    return std::find_if(apps.begin(), apps.end(), [&appname](const AppID::AppName& listApp) -> bool {
+               return appname.value() == listApp.value();
+           }) != apps.end();
+}
+
+/** Finds an application name based on a wildcard search. Gets the list
+    from the manifest, and then returns a value from that list.
+
+    \param package Name of the package
+    \param card Wildcard to search as
+    \param registry Persistent connections to use
+*/
+AppID::AppName Click::findAppname(const AppID::Package& package,
+                                  AppID::ApplicationWildcard card,
+                                  const std::shared_ptr<Registry>& registry)
+{
+    auto manifest = registry->impl->getClickManifest(package);
+    auto apps = manifestApps(manifest);
+
+    if (apps.empty())
+    {
+        throw std::runtime_error("No apps in package '" + package.value() + "' to find");
+    }
+
+    switch (card)
+    {
+        case AppID::ApplicationWildcard::FIRST_LISTED:
+            return *apps.begin();
+        case AppID::ApplicationWildcard::LAST_LISTED:
+            return *apps.rbegin();
+        case AppID::ApplicationWildcard::ONLY_LISTED:
+            if (apps.size() != 1)
+            {
+                throw std::runtime_error("More than a single app in package '" + package.value() +
+                                         "' when requested to find only app");
+            }
+            return *apps.begin();
+    }
+
+    throw std::logic_error("Got a value of the app wildcard enum that can't exist");
+}
+
+/** Find the version of a package that that is requested
+
+    \param package Name of the package
+    \param appname Name of the application (not used)
+    \param registry Persistent connections to use
+*/
+AppID::Version Click::findVersion(const AppID::Package& package,
+                                  const AppID::AppName& appname,
+                                  const std::shared_ptr<Registry>& registry)
+{
+    auto manifest = registry->impl->getClickManifest(package);
+    return manifestVersion(manifest);
+}
+
 std::shared_ptr<Application::Info> Click::info()
 {
     if (!_info)

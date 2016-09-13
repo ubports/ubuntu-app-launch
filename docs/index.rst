@@ -109,7 +109,7 @@ Application Info Desktop
 Application Icon Finder
 ------------------------
 
-.. doxygenclass:: ubuntu::app_launch::app_info::IconFinder
+.. doxygenclass:: ubuntu::app_launch::IconFinder
    :project: libubuntu-app-launch
    :members:
    :protected-members:
@@ -140,6 +140,16 @@ Type Tagger
 -----------
 
 .. doxygenclass:: ubuntu::app_launch::TypeTagger
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Upstart Instance
+----------------
+
+.. doxygenclass:: ubuntu::app_launch::app_impls::UpstartInstance
    :project: libubuntu-app-launch
    :members:
    :protected-members:

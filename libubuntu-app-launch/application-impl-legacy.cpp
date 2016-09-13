@@ -57,7 +57,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 
 std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name)
 {
-    std::string desktopName = name.value() + ".desktop";
+    auto desktopName = name.value() + ".desktop";
     std::string desktopPath;
     auto keyfilecheck = [desktopName, &desktopPath](const std::string& dir) -> std::shared_ptr<GKeyFile> {
         auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
@@ -99,12 +99,108 @@ std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(co
 
 std::shared_ptr<Application::Info> Legacy::info()
 {
-    if (!appinfo_)
-    {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::ALLOW_NO_DISPLAY,
-                                                       _registry);
-    }
     return appinfo_;
+}
+
+/** Checks the AppID by ensuring the version and package are empty
+    then looks for the application.
+
+    \param appid AppID to check
+    \param registry persistent connections to use
+*/
+bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
+{
+    try
+    {
+        if (!appid.version.value().empty())
+        {
+            return false;
+        }
+
+        return verifyAppname(appid.package, appid.appname, registry);
+    }
+    catch (std::runtime_error& e)
+    {
+        return false;
+    }
+}
+
+/** Ensure the package is empty
+
+    \param package Container name
+    \param registry persistent connections to use
+*/
+bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
+{
+    return package.value().empty();
+}
+
+/** Looks for an application by looking through the system and user
+    application directories to find the desktop file.
+
+    \param package Container name
+    \param appname Application name to look for
+    \param registry persistent connections to use
+*/
+bool Legacy::verifyAppname(const AppID::Package& package,
+                           const AppID::AppName& appname,
+                           const std::shared_ptr<Registry>& registry)
+{
+    if (!verifyPackage(package, registry))
+    {
+        throw std::runtime_error{"Invalid Legacy package: " + std::string(package)};
+    }
+
+    auto desktop = std::string(appname) + ".desktop";
+    auto evaldir = [&desktop](const gchar* dir) -> bool {
+        char* fulldir = g_build_filename(dir, "applications", desktop.c_str(), nullptr);
+        gboolean found = g_file_test(fulldir, G_FILE_TEST_EXISTS);
+        g_free(fulldir);
+        return found == TRUE;
+    };
+
+    if (evaldir(g_get_user_data_dir()))
+    {
+        return true;
+    }
+
+    const char* const* data_dirs = g_get_system_data_dirs();
+    for (int i = 0; data_dirs[i] != nullptr; i++)
+    {
+        if (evaldir(data_dirs[i]))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/** We don't really have a way to implement this for Legacy, any
+    search wouldn't really make sense. We just throw an error.
+
+    \param package Container name
+    \param card Application search paths
+    \param registry persistent connections to use
+*/
+AppID::AppName Legacy::findAppname(const AppID::Package& package,
+                                   AppID::ApplicationWildcard card,
+                                   const std::shared_ptr<Registry>& registry)
+{
+    throw std::runtime_error("Legacy apps can't be discovered by package");
+}
+
+/** Function to return an empty string
+
+    \param package Container name (unused)
+    \param appname Application name (unused)
+    \param registry persistent connections to use (unused)
+*/
+AppID::Version Legacy::findVersion(const AppID::Package& package,
+                                   const AppID::AppName& appname,
+                                   const std::shared_ptr<Registry>& registry)
+{
+    return AppID::Version::from_raw({});
 }
 
 static const std::regex desktop_remover("^(.*)\\.desktop$");
