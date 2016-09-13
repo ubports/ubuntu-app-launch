@@ -35,13 +35,14 @@ Libertine::Libertine(const AppID::Package& container,
     , _container(container)
     , _appname(appname)
 {
+	/** TODO: Handle nullptr */
+	_container_path = libertine_container_path(container.value().c_str());
+
     if (!_keyfile)
     {
-        auto container_path = libertine_container_path(container.value().c_str());
-        auto system_app_path = g_build_filename(container_path, "usr", "share", nullptr);
+        auto system_app_path = g_build_filename(_container_path.c_str(), "usr", "share", nullptr);
         _basedir = system_app_path;
         g_free(system_app_path);
-        g_free(container_path);
 
         _keyfile = findDesktopFile(_basedir, "applications", appname.value() + ".desktop");
     }
@@ -253,7 +254,7 @@ std::shared_ptr<Application::Info> Libertine::info()
     if (!appinfo_)
     {
         appinfo_ =
-            std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::XMIR_DEFAULT, _registry);
+            std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path, app_info::DesktopFlags::XMIR_DEFAULT, _registry);
     }
     return appinfo_;
 }

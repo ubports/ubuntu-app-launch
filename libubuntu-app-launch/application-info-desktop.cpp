@@ -187,6 +187,7 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
                  const std::string& basePath,
+                 const std::string& rootDir,
                  std::bitset<2> flags,
                  std::shared_ptr<Registry> registry)
     : _keyfile([keyfile, flags]() {
@@ -222,6 +223,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         return keyfile;
     }())
     , _basePath(basePath)
+    , _rootDir(rootDir)
     , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
     , _iconPath([keyfile, basePath, registry]() {
