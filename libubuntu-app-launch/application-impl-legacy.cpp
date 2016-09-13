@@ -55,7 +55,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     std::tie(_basedir, _keyfile, desktopPath_) = keyfileForApp(appname);
 
     std::string rootDir = "";
-    auto rootenv = g_getenv("SNAP");
+    auto rootenv = g_getenv("UBUNTU_APP_LAUNCH_LEGACY_ROOT");
     if (rootenv != nullptr)
         rootDir = rootenv;
 
