@@ -128,6 +128,21 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
 #endif
 }
 
+TEST_F(ApplicationInfoDesktop, KeyfileIconPatterns)
+{
+    auto defkeyfile = defaultKeyfile();
+    std::string datadir = "/foo/usr/share";
+    std::string basedir = "/foo";
+
+    auto defappinfo = ubuntu::app_launch::app_info::Desktop(defkeyfile, datadir, basedir, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr);
+    EXPECT_EQ("/foo/usr/share/foo.png", defappinfo.iconPath().value());
+
+    auto rootkeyfile = defaultKeyfile();
+    g_key_file_set_string(rootkeyfile.get(), DESKTOP, "Icon", "/bar/foo.png");
+    auto rootappinfo = ubuntu::app_launch::app_info::Desktop(rootkeyfile, datadir, basedir, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr);
+    EXPECT_EQ("/foo/bar/foo.png", rootappinfo.iconPath().value());
+}
+
 TEST_F(ApplicationInfoDesktop, KeyfileDefaultDepartment)
 {
     auto keyfile = defaultKeyfile();
