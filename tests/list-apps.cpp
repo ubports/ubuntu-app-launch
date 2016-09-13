@@ -27,8 +27,14 @@
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
+#include "application-impl-snap.h"
 #include "application.h"
 #include "registry.h"
+
+#ifdef ENABLE_SNAPPY
+#include "snapd-mock.h"
+#define SNAPD_LIST_APPS_SOCKET SNAPD_TEST_SOCKET "-list-apps"
+#endif
 
 class ListApps : public EventuallyFixture
 {
@@ -38,6 +44,11 @@ protected:
 
     virtual void SetUp()
     {
+#ifdef ENABLE_SNAPPY
+        /* Ensure it is cleared */
+        g_unlink(SNAPD_LIST_APPS_SOCKET);
+#endif
+
         /* Click DB test mode */
         g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);
@@ -50,6 +61,12 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
+#ifdef ENABLE_SNAPPY
+        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_LIST_APPS_SOCKET, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
+#endif
+
         testbus = g_test_dbus_new(G_TEST_DBUS_NONE);
         g_test_dbus_up(testbus);
 
@@ -60,6 +77,10 @@ protected:
 
     virtual void TearDown()
     {
+#ifdef ENABLE_SNAPPY
+        g_unlink(SNAPD_LIST_APPS_SOCKET);
+#endif
+
         g_object_unref(bus);
 
         g_test_dbus_down(testbus);
@@ -159,8 +180,62 @@ TEST_F(ListApps, ListLibertine)
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
 }
 
+#ifdef ENABLE_SNAPPY
+static std::pair<std::string, std::string> interfaces{
+    "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(
+        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "bar"}},
+                                                        {"unity7", "unity7-package", {"single", "multiple"}},
+                                                        {"x11", "x11-package", {"multiple", "hidden"}}
+
+        })))};
+static std::pair<std::string, std::string> u8Package{
+    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))};
+static std::pair<std::string, std::string> u7Package{
+    "GET /v2/snaps/unity7-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
+        "unity7-package", "active", "app", "1.2.3.4", "x123", {"scope", "single", "multiple"})))};
+static std::pair<std::string, std::string> x11Package{
+    "GET /v2/snaps/x11-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+        SnapdMock::packageJson("x11-package", "active", "app", "1.2.3.4", "x123", {"multiple", "hidden"})))};
+
+TEST_F(ListApps, ListSnap)
+{
+    SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
+                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
+                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
+                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
+
+    printApps(apps);
+
+    mock.result();
+
+    EXPECT_EQ(4, apps.size());
+    EXPECT_TRUE(findApp(apps, "unity8-package_foo_x123"));
+    EXPECT_TRUE(findApp(apps, "unity7-package_single_x123"));
+    EXPECT_TRUE(findApp(apps, "unity7-package_multiple_x123"));
+    EXPECT_TRUE(findApp(apps, "x11-package_multiple_x123"));
+
+    EXPECT_FALSE(findApp(apps, "unity8-package_bar_x123"));
+    EXPECT_FALSE(findApp(apps, "unity7-package_scope_x123"));
+    EXPECT_FALSE(findApp(apps, "x11-package_hidden_x123"));
+}
+#endif
+
 TEST_F(ListApps, ListAll)
 {
+#ifdef ENABLE_SNAPPY
+    SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
+                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
+                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
+                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
+#endif
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     /* Get all the apps */
@@ -168,5 +243,9 @@ TEST_F(ListApps, ListAll)
 
     printApps(apps);
 
+#ifdef ENABLE_SNAPPY
+    EXPECT_EQ(18, apps.size());
+#else
     EXPECT_EQ(14, apps.size());
+#endif
 }

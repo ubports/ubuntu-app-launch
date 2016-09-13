@@ -61,6 +61,16 @@ ubuntu-app-launch-trace.c
 app-info.c
 )
 
+if(CURL_FOUND)
+add_definitions ( -DENABLE_SNAPPY=1 )
+list(APPEND LAUNCHER_CPP_SOURCES
+application-impl-snap.h
+application-impl-snap.cpp
+snapd-info.h
+snapd-info.cpp
+)
+endif()
+
 add_custom_target(format
 	COMMAND clang-format -i -style=file ${LAUNCHER_CPP_HEADERS} ${LAUNCHER_CPP_SOURCES}
 )
@@ -83,6 +93,7 @@ target_link_libraries(launcher-static
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
 	${LIBERTINE_LIBRARIES}
+	${CURL_LIBRARIES}
 	-lpthread
 	helpers
 	-Wl,--no-undefined
@@ -109,6 +120,7 @@ target_link_libraries(ubuntu-launcher
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
 	${LIBERTINE_LIBRARIES}
+	${CURL_LIBRARIES}
 	-lpthread
 	helpers
 	-Wl,--no-undefined

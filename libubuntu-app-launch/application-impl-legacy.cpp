@@ -30,8 +30,16 @@ namespace app_launch
 namespace app_impls
 {
 
+/** Path that snapd puts desktop files, we don't want to read those directly
+    in the Legacy backend. We want to use the snap backend. */
+const std::string snappyDesktopPath{"/var/lib/snapd"};
+
+/***********************************
+   Prototypes
+ ***********************************/
 std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name);
 
+/** Helper function to put on shared_ptr's for keyfiles */
 void clear_keyfile(GKeyFile* keyfile)
 {
     if (keyfile != nullptr)
@@ -52,6 +60,11 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     if (!_keyfile)
     {
         throw std::runtime_error{"Unable to find keyfile for legacy application: " + appname.value()};
+    }
+
+    if (std::equal(snappyDesktopPath.begin(), snappyDesktopPath.end(), _basedir.begin()))
+    {
+        throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
     }
 }
 
