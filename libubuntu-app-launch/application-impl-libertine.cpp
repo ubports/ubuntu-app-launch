@@ -18,7 +18,6 @@
  */
 
 #include "application-impl-libertine.h"
-#include "application-info-desktop.h"
 #include "libertine.h"
 #include "registry-impl.h"
 
@@ -131,7 +130,12 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
 std::shared_ptr<Application::Info> Libertine::info()
 {
-    return std::make_shared<app_info::Desktop>(_keyfile, _basedir, _registry);
+    if (!appinfo_)
+    {
+        appinfo_ =
+            std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::XMIR_DEFAULT, _registry);
+    }
+    return appinfo_;
 }
 
 std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
@@ -142,23 +146,61 @@ std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
     for (auto instancename : _registry->impl->upstartInstancesForJob("application-legacy"))
     {
         if (std::equal(sappid.begin(), sappid.end(), instancename.begin()))
-            vect.emplace_back(
-                std::make_shared<UpstartInstance>(appId(), "application-legacy", sappid + "-", _registry));
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", sappid + "-",
+                                                                std::vector<Application::URL>{}, _registry));
     }
 
     return vect;
 }
 
+/** Grabs all the environment variables for the application to
+    launch in. It sets up the confinement ones and then adds in
+    the APP_EXEC line and whether to use XMir.
+
+    This function adds 'libertine-launch' at the beginning of the
+    Exec line with the container name as a parameter. The command
+    can be overridden with the UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH
+    environment variable.
+*/
+std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
+{
+    std::list<std::pair<std::string, std::string>> retval;
+
+    info();
+
+    retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
+
+    /* The container is our confinement */
+    retval.emplace_back(std::make_pair("APP_EXEC_POLICY", "unconfined"));
+
+    auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+    if (libertine_launch == nullptr)
+    {
+        libertine_launch = LIBERTINE_LAUNCH;
+    }
+
+    auto desktopexec = appinfo_->execLine().value();
+    auto execline = std::string(libertine_launch) + " \"" + _container.value() + "\" " + desktopexec;
+    retval.emplace_back(std::make_pair("APP_EXEC", execline));
+
+    /* TODO: Go multi instance */
+    retval.emplace_back(std::make_pair("INSTANCE_ID", ""));
+
+    return retval;
+}
+
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD);
+                                   UpstartInstance::launchMode::STANDARD, envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
+    std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
     return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST);
+                                   UpstartInstance::launchMode::TEST, envfunc);
 }
 
 }  // namespace app_impls

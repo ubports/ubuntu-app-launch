@@ -24,6 +24,7 @@
 #include <libdbustest/dbus-test.h>
 #include <gio/gio.h>
 #include <libubuntu-app-launch/ubuntu-app-launch.h>
+#include <libubuntu-app-launch/registry.h>
 
 class ExecUtil : public ::testing::Test
 {
@@ -79,6 +80,7 @@ class ExecUtil : public ::testing::Test
 
 		virtual void TearDown() {
 			ubuntu_app_launch_observer_delete_app_starting(starting_cb, NULL);
+			ubuntu::app_launch::Registry::clearDefault();
 
 			g_clear_object(&mock);
 			g_clear_object(&service);
@@ -130,8 +132,11 @@ class ExecUtil : public ::testing::Test
 				/* Test the variable */
 				auto varfunc = enums[var];
 				EXPECT_NE(nullptr, varfunc);
-				if (varfunc)
+				if (varfunc) {
 					varfunc(value);
+				} else {
+					g_warning("Unable to find function for '%s'", var);
+				}
 
 				/* Mark it as found */
 				env_found[var] = true;
@@ -143,6 +148,9 @@ class ExecUtil : public ::testing::Test
 
 			for(auto enumval : enums) {
 				EXPECT_TRUE(env_found[enumval.first]);
+				if (!env_found[enumval.first]) {
+					g_warning("Unable to find enum %s", enumval.first.c_str());
+				}
 			}
 		}
 };
@@ -179,6 +187,8 @@ TEST_F(ExecUtil, ClickExec)
 			EXPECT_EQ(getpid(), atoi(value)); }},
 		{"APP_DESKTOP_FILE_PATH", [](const gchar * value) {
 			EXPECT_STREQ(APP_DIR "/application.desktop", value); }},
+		{"APP_XMIR_ENABLE", [](const gchar * value) {
+			EXPECT_STREQ("0", value); }},
 	});
 
 #undef APP_DIR
@@ -198,6 +208,8 @@ TEST_F(ExecUtil, DesktopExec)
 		{"INSTANCE_ID", nocheck},
 		{"APP_LAUNCHER_PID", [](const gchar * value) {
 			EXPECT_EQ(getpid(), atoi(value)); }},
+		{"APP_XMIR_ENABLE", [](const gchar * value) {
+			EXPECT_STREQ("0", value); }},
 	});
 }
 

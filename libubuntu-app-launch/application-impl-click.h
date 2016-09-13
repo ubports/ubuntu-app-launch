@@ -17,9 +17,11 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include "application-impl-base.h"
+#include "application-info-desktop.h"
+
 #include <gio/gdesktopappinfo.h>
 #include <json-glib/json-glib.h>
-#include "application-impl-base.h"
 
 #pragma once
 
@@ -44,8 +46,9 @@ public:
 
     std::vector<std::shared_ptr<Instance>> instances() override;
 
-    std::shared_ptr<Instance> launch(const std::vector<Application::URL> &urls = {}) override;
-    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL> &urls = {}) override;
+    std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
+    std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
+
 private:
     AppID _appid;
 
@@ -53,6 +56,11 @@ private:
 
     std::string _clickDir;
     std::shared_ptr<GKeyFile> _keyfile;
+    std::string desktopPath_;
+
+    std::shared_ptr<app_info::Desktop> _info;
+
+    std::list<std::pair<std::string, std::string>> launchEnv();
 };
 
 }  // namespace app_impls

@@ -18,6 +18,7 @@
  */
 
 #include "application-impl-base.h"
+#include "application-info-desktop.h"
 #include <gio/gdesktopappinfo.h>
 
 #pragma once
@@ -55,6 +56,9 @@ private:
     AppID::AppName _appname;
     std::shared_ptr<GKeyFile> _keyfile;
     std::string _basedir;
+    std::shared_ptr<app_info::Desktop> appinfo_;
+
+    std::list<std::pair<std::string, std::string>> launchEnv();
 };
 
 }  // namespace app_impls

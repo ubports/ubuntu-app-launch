@@ -39,25 +39,26 @@ registry-impl.h
 registry-impl.cpp
 application-impl-base.h
 application-impl-base.cpp
+application-impl-click.h
 application-impl-click.cpp
 application-impl-legacy.h
 application-impl-legacy.cpp
 application-impl-libertine.h
 application-impl-libertine.cpp
+application-info-desktop.h
 application-info-desktop.cpp
+application-icon-finder.h
 application-icon-finder.cpp
 helper-impl-click.cpp
+glib-thread.h
 glib-thread.cpp
 )
 
 set(LAUNCHER_SOURCES
 ubuntu-app-launch.cpp
 second-exec-core.c
-click-exec.c
-desktop-exec.c
 ubuntu-app-launch-trace.c
 app-info.c
-${LAUNCHER_CPP_SOURCES}
 )
 
 add_custom_target(format
