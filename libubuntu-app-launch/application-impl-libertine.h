@@ -84,14 +84,16 @@ public:
 private:
     AppID::Package _container;
     AppID::AppName _appname;
-	std::string _container_path;
+    std::string _container_path;
     std::shared_ptr<GKeyFile> _keyfile;
     std::string _basedir;
     std::shared_ptr<app_info::Desktop> appinfo_;
 
     std::list<std::pair<std::string, std::string>> launchEnv();
     static std::shared_ptr<GKeyFile> keyfileFromPath(const std::string& pathname);
-    static std::shared_ptr<GKeyFile> findDesktopFile(const std::string& basepath, const std::string& subpath, const std::string& filename);
+    static std::shared_ptr<GKeyFile> findDesktopFile(const std::string& basepath,
+                                                     const std::string& subpath,
+                                                     const std::string& filename);
 };
 
 }  // namespace app_impls

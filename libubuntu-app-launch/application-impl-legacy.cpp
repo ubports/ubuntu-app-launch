@@ -54,8 +54,13 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 {
     std::tie(_basedir, _keyfile, desktopPath_) = keyfileForApp(appname);
 
-    appinfo_ =
-        std::make_shared<app_info::Desktop>(_keyfile, _basedir, "/", app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
+    std::string rootDir = "";
+    auto rootenv = g_getenv("SNAP");
+    if (rootenv != nullptr)
+        rootDir = rootenv;
+
+    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, rootDir,
+                                                   app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
 
     if (!_keyfile)
     {
