@@ -27,9 +27,7 @@ namespace app_launch
 {
 namespace app_impls
 {
-
-std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname);
-
+    
 Libertine::Libertine(const AppID::Package& container,
                      const AppID::AppName& appname,
                      const std::shared_ptr<Registry>& registry)
@@ -40,39 +38,23 @@ Libertine::Libertine(const AppID::Package& container,
     if (!_keyfile)
     {
         auto container_path = libertine_container_path(container.value().c_str());
-        auto container_app_path = g_build_filename(container_path, "usr", "share", "applications",
-                                                   (appname.value() + ".desktop").c_str(), nullptr);
-
-        _keyfile = keyfileFromPath(container_app_path);
-
-        if (_keyfile)
-        {
-            auto gbasedir = g_build_filename(container_path, "usr", "share", nullptr);
-            _basedir = gbasedir;
-            g_free(gbasedir);
-        }
-
-        g_free(container_app_path);
+        auto system_app_path = g_build_filename(container_path, "usr", "share", nullptr);
+        _basedir = system_app_path;
+        g_free(system_app_path);
         g_free(container_path);
+
+        _keyfile = findDesktopFile(_basedir, "applications", appname.value() + ".desktop");
     }
 
     if (!_keyfile)
     {
-        auto home_path = libertine_container_home_path(container.value().c_str());
-        auto home_app_path = g_build_filename(home_path, ".local", "share", "applications",
-                                              (appname.value() + ".desktop").c_str(), NULL);
+        auto container_home_path = libertine_container_home_path(container.value().c_str());
+        auto local_app_path = g_build_filename(container_home_path, ".local", "share", nullptr);
+        _basedir = local_app_path;
+        g_free(local_app_path);
+        g_free(container_home_path);
 
-        _keyfile = keyfileFromPath(home_app_path);
-
-        if (_keyfile)
-        {
-            auto gbasedir = g_build_filename(home_path, ".local", "share", nullptr);
-            _basedir = gbasedir;
-            g_free(gbasedir);
-        }
-
-        g_free(home_app_path);
-        g_free(home_path);
+        _keyfile = findDesktopFile(_basedir, "applications", appname.value() + ".desktop");
     }
 
     if (!_keyfile)
@@ -80,13 +62,8 @@ Libertine::Libertine(const AppID::Package& container,
                                  container.value() + "'"};
 }
 
-std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname)
+std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname)
 {
-    if (!g_file_test(pathname, G_FILE_TEST_EXISTS))
-    {
-        return {};
-    }
-
     std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), [](GKeyFile* keyfile) {
         if (keyfile != nullptr)
         {
@@ -95,7 +72,7 @@ std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname)
     });
     GError* error = nullptr;
 
-    g_key_file_load_from_file(keyfile.get(), pathname, G_KEY_FILE_NONE, &error);
+    g_key_file_load_from_file(keyfile.get(), pathname.c_str(), G_KEY_FILE_NONE, &error);
 
     if (error != nullptr)
     {
@@ -104,6 +81,52 @@ std::shared_ptr<GKeyFile> keyfileFromPath(const gchar* pathname)
     }
 
     return keyfile;
+}
+
+std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath, const std::string& subpath, const std::string& filename)
+{
+    auto fullpath = g_build_filename(basepath.c_str(), subpath.c_str(), filename.c_str(), nullptr);
+    std::string sfullpath(fullpath);
+    g_free(fullpath);
+
+    if (g_file_test(sfullpath.c_str(), G_FILE_TEST_IS_REGULAR))
+    {
+        return keyfileFromPath(sfullpath);
+    }
+
+    GError* error = nullptr;
+    auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
+    GDir* dir = g_dir_open(dirpath, 0, &error);
+    if (error != NULL) {
+        g_error_free(error);
+        g_free(dirpath);
+        return {};
+    }
+    g_free(dirpath);
+
+    const gchar* file;
+    while ((file = g_dir_read_name(dir)) != nullptr)
+    {
+        auto new_subpath = g_build_filename(subpath.c_str(), file, nullptr);
+        auto new_fullpath = g_build_filename(basepath.c_str(), new_subpath, nullptr);
+        if (g_file_test(new_fullpath, G_FILE_TEST_IS_DIR))
+        {
+            auto desktop_file = findDesktopFile(basepath, new_subpath, filename);
+
+            if (desktop_file)
+            {
+                g_free(new_fullpath);
+                g_free(new_subpath);
+                g_dir_close(dir);
+                return desktop_file;
+            }
+        }
+        g_free(new_fullpath);
+        g_free(new_subpath);
+    }
+    g_dir_close(dir);
+
+    return {};
 }
 
 /** Checks the AppID by making sure the version is "0.0" and then

@@ -174,7 +174,7 @@ TEST_F(ListApps, ListLibertine)
 
     printApps(apps);
 
-    EXPECT_EQ(2, apps.size());
+    EXPECT_EQ(3, apps.size());
 
     EXPECT_TRUE(findApp(apps, "container-name_test_0.0"));
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
@@ -244,8 +244,8 @@ TEST_F(ListApps, ListAll)
     printApps(apps);
 
 #ifdef ENABLE_SNAPPY
-    EXPECT_EQ(18, apps.size());
+    EXPECT_EQ(19, apps.size());
 #else
-    EXPECT_EQ(14, apps.size());
+    EXPECT_EQ(15, apps.size());
 #endif
 }
