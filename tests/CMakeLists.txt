@@ -57,18 +57,19 @@ add_executable (socket-tool
 add_test (NAME libual-test COMMAND libual-test)
 add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
+# List Apps
+
+add_executable (list-apps
+	list-apps.cpp)
+target_link_libraries (list-apps gtest ${GTEST_LIBS} launcher-static)
+add_test (NAME list-apps COMMAND ${CMAKE_CURRENT_BINARY_DIR}/list-apps)
+
 # Application Info Desktop
 
 add_executable (application-info-desktop-test
-  # test
   application-info-desktop.cpp
-
-  # sources
-  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-info-desktop.cpp
-  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-icon-finder.cpp
-  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/glib-thread.cpp
-  ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/registry-impl.cpp)
-target_link_libraries (application-info-desktop-test gtest ${GTEST_LIBS} ubuntu-launcher)
+)
+target_link_libraries (application-info-desktop-test gtest ${GTEST_LIBS} launcher-static)
 
 add_test (NAME application-info-desktop-test COMMAND application-info-desktop-test)
 
@@ -139,5 +140,9 @@ add_test (xmir-helper-test xmir-helper-test)
 # Formatted code
 
 add_custom_target(format-tests
-	COMMAND clang-format -i -style=file libual-cpp-test.cc eventually-fixture.h zg-test.cc
+	COMMAND clang-format -i -style=file
+	libual-cpp-test.cc
+	list-apps.cpp
+	eventually-fixture.h
+	zg-test.cc
 )

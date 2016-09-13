@@ -111,23 +111,20 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 {
     std::list<std::shared_ptr<Application>> applist;
 
-    auto containers = libertine_list_containers();
+    auto containers = std::shared_ptr<gchar*>(libertine_list_containers(), g_strfreev);
 
-    for (int i = 0; containers[i] != nullptr; i++)
+    for (int i = 0; containers.get()[i] != nullptr; i++)
     {
-        auto container = containers[i];
-        auto apps = libertine_list_apps_for_container(container);
+        auto container = containers.get()[i];
+        auto apps = std::shared_ptr<gchar*>(libertine_list_apps_for_container(container), g_strfreev);
 
-        for (int i = 0; apps[i] != nullptr; i++)
+        for (int j = 0; apps.get()[j] != nullptr; j++)
         {
-            auto sapp = std::make_shared<Libertine>(AppID::Package::from_raw(container),
-                                                    AppID::AppName::from_raw(apps[i]), registry);
+            auto appid = AppID::parse(apps.get()[j]);
+            auto sapp = std::make_shared<Libertine>(appid.package, appid.appname, registry);
             applist.push_back(sapp);
         }
-
-        g_strfreev(apps);
     }
-    g_strfreev(containers);
 
     return applist;
 }

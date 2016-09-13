@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Canonical Ltd.
+ * Copyright 2016 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,9 +17,23 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#ifndef UAL_TRACEPOINT_H__
-#define UAL_TRACEPOINT_H__ 1
+#include "libubuntu-app-launch/registry.h"
+#include <iostream>
 
-#define ual_tracepoint(point, ...) tracepoint(ubuntu_app_launch, point, __VA_ARGS__)
+int main(int argc, char* argv[])
+{
+    if (argc != 1)
+    {
+        std::cerr << "Usage: " << argv[0] << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-#endif /* UAL_TRACEPOINT_H__ */
+    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    for (auto app : ubuntu::app_launch::Registry::installedApps(registry))
+    {
+        std::cout << std::string(app->appId()) << std::endl;
+    }
+
+    return EXIT_SUCCESS;
+}

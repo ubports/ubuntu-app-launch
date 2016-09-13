@@ -87,6 +87,7 @@ void Registry::Impl::initClick()
             }
         }
 
+        g_debug("Initialized Click DB");
         return true;
     });
 
@@ -95,6 +96,43 @@ void Registry::Impl::initClick()
         throw std::runtime_error("Unable to initialize the Click Database");
     }
 }
+
+#if JSON_CHECK_VERSION(1, 1, 2)
+/** Helper function for printing JSON objects to debug output */
+std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
+{
+    auto node = json_node_alloc();
+    json_node_init_object(node, jsonobj.get());
+
+    auto snode = std::shared_ptr<JsonNode>(node, json_node_unref);
+    return printJson(snode);
+}
+
+/** Helper function for printing JSON nodes to debug output */
+std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
+{
+    std::string retval;
+    auto gstr = json_to_string(jsonnode.get(), TRUE);
+
+    if (gstr != nullptr)
+    {
+        retval = gstr;
+        g_free(gstr);
+    }
+
+    return retval;
+}
+#else
+std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
+{
+    return "Your JSON-GLib is too old to print the JSON here, please talk to your vendor about upgrading";
+}
+
+std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
+{
+    return "Your JSON-GLib is too old to print the JSON here, please talk to your vendor about upgrading";
+}
+#endif
 
 std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& package)
 {
@@ -116,10 +154,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
         auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
 
-#if JSON_CHECK_VERSION(1, 1, 2)
-        // Not available in json-glib 1.0, so must leak there.
-        json_node_unref(node);
-#endif
+        json_node_free(node);
 
         return retval;
     });
@@ -147,7 +182,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         std::list<AppID::Package> list;
         for (GList* item = pkgs; item != NULL; item = g_list_next(item))
         {
-            auto pkgobj = reinterpret_cast<char*>(item->data);
+            auto pkgobj = reinterpret_cast<gchar*>(item->data);
             if (pkgobj)
             {
                 list.emplace_back(AppID::Package::from_raw(pkgobj));

@@ -70,6 +70,9 @@ public:
     std::list<std::string> upstartInstancesForJob(const std::string& job);
     std::string upstartJobPath(const std::string& job);
 
+    static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
+    static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
+
     /* Signal Hints */
     /* NOTE: Static because we don't have registry instances in the C
        code right now. We want these to not be static in the future */
