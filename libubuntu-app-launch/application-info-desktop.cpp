@@ -268,8 +268,7 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
     , _iconPath([keyfile, basePath, rootDir, registry]() {
         if (registry != nullptr)
         {
-            auto iconName = stringFromKeyfileRequired<Application::Info::IconPath>(keyfile, "Icon",
-                                                                                   "Missing icon for desktop file");
+            auto iconName = stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon");
 
             if (!iconName.value().empty() && iconName.value()[0] != '/')
             {
@@ -277,8 +276,7 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
                 return registry->impl->getIconFinder(basePath)->find(iconName);
             }
         }
-        return fileFromKeyfileRequired<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon",
-                                                                    "Missing icon for desktop file");
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon");
     }())
     , _defaultDepartment(
           stringFromKeyfile<Application::Info::DefaultDepartment>(keyfile, "X-Ubuntu-Default-Department-ID"))

@@ -93,11 +93,6 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
     g_key_file_remove_key(noname.get(), DESKTOP, "Name", nullptr);
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(noname, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr), std::runtime_error);
 
-    // empty icon
-    auto noicon = defaultKeyfile();
-    g_key_file_remove_key(noicon.get(), DESKTOP, "Icon", nullptr);
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(noicon, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr), std::runtime_error);
-
     // wrong type
     auto wrongtype = defaultKeyfile();
     g_key_file_set_string(wrongtype.get(), DESKTOP, "Type", "MimeType");
