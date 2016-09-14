@@ -35,8 +35,12 @@ Libertine::Libertine(const AppID::Package& container,
     , _container(container)
     , _appname(appname)
 {
-    /** TODO: Handle nullptr */
-    _container_path = libertine_container_path(container.value().c_str());
+    auto gcontainer_path = libertine_container_path(container.value().c_str());
+    if (gcontainer_path != nullptr)
+    {
+        _container_path = gcontainer_path;
+        g_free(gcontainer_path);
+    }
 
     if (!_keyfile)
     {
