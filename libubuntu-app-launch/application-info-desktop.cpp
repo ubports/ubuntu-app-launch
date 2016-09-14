@@ -43,7 +43,7 @@ typedef TypeTagger<NoDisplayTag, bool> NoDisplay;
 }  // anonymous namespace
 
 template <typename T>
-auto stringFromKeyfileRequired(std::shared_ptr<GKeyFile> keyfile,
+auto stringFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
                                const std::string& key,
                                const std::string& exceptionText) -> T
 {
@@ -67,13 +67,13 @@ auto stringFromKeyfileRequired(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key) -> T
+auto stringFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const std::string& key) -> T
 {
     return stringFromKeyfileRequired<T>(keyfile, key, {});
 }
 
 template <typename T>
-auto fileFromKeyfileRequired(std::shared_ptr<GKeyFile> keyfile,
+auto fileFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
                              const std::string& basePath,
                              const std::string& rootDir,
                              const std::string& key,
@@ -120,7 +120,7 @@ auto fileFromKeyfileRequired(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
+auto fileFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile,
                      const std::string& basePath,
                      const std::string& rootDir,
                      const std::string& key) -> T
@@ -129,7 +129,7 @@ auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto boolFromKeyfileRequired(std::shared_ptr<GKeyFile> keyfile,
+auto boolFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
                              const std::string& key,
                              const std::string& exceptionText) -> T
 {
@@ -147,7 +147,7 @@ auto boolFromKeyfileRequired(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, bool defaultReturn) -> T
+auto boolFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const std::string& key, bool defaultReturn) -> T
 {
     try
     {
@@ -160,7 +160,7 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, 
 }
 
 template <typename T>
-auto stringlistFromKeyfileRequired(std::shared_ptr<GKeyFile> keyfile,
+auto stringlistFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
                                    const gchar* key,
                                    const std::string& exceptionText) -> T
 {
@@ -192,12 +192,12 @@ auto stringlistFromKeyfileRequired(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto stringlistFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const gchar* key) -> T
+auto stringlistFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const gchar* key) -> T
 {
     return stringlistFromKeyfileRequired<T>(keyfile, key, {});
 }
 
-bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
+bool stringlistFromKeyfileContains(const std::shared_ptr<GKeyFile>& keyfile,
                                    const gchar* key,
                                    const std::string& match,
                                    bool defaultValue)
@@ -224,7 +224,7 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
     return result;
 }
 
-Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
+Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
                  const std::string& basePath,
                  const std::string& rootDir,
                  std::bitset<2> flags,
