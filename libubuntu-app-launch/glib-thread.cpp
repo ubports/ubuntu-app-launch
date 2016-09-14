@@ -36,7 +36,11 @@ ContextThread::ContextThread(std::function<void()> beforeLoop, std::function<voi
     /* NOTE: We copy afterLoop but reference beforeLoop. We're blocking so we
        know that beforeLoop will stay valid long enough, but we can't say the
        same for afterLoop */
-    _thread = std::thread([&context_promise, &beforeLoop, afterLoop, this]() {
+    afterLoop_ = afterLoop;
+    auto flag = std::make_shared<std::once_flag>();
+    afterFlag_ = flag;
+
+    _thread = std::thread([&context_promise, &beforeLoop, afterLoop, flag, this]() {
         /* Build up the context and loop for the async events and a place
            for GDBus to send its events back to */
         auto context = std::shared_ptr<GMainContext>(
@@ -57,7 +61,7 @@ ContextThread::ContextThread(std::function<void()> beforeLoop, std::function<voi
             g_main_loop_run(loop.get());
         }
 
-        afterLoop();
+        std::call_once(*flag, afterLoop);
     });
 
     /* We need to have the context and the mainloop ready before
@@ -91,11 +95,16 @@ void ContextThread::quit()
 
     /* Joining here because we want to ensure that the final afterLoop()
        function is run before returning */
-    if (std::this_thread::get_id() != _thread.get_id())
+    if (_thread.joinable())
     {
-        if (_thread.joinable())
+        if (std::this_thread::get_id() != _thread.get_id())
         {
             _thread.join();
+        }
+        else
+        {
+            std::call_once(*afterFlag_, afterLoop_);
+            _thread.detach();
         }
     }
 }

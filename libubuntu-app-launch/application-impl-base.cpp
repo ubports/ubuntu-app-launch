@@ -25,9 +25,14 @@
 
 #include <upstart.h>
 
-#include "app-info.h"
 #include "application-impl-base.h"
+#include "helpers.h"
 #include "registry-impl.h"
+#include "second-exec-core.h"
+
+extern "C" {
+#include "ubuntu-app-launch-trace.h"
+}
 
 namespace ubuntu
 {
@@ -46,11 +51,60 @@ bool Base::hasInstances()
     return !instances().empty();
 }
 
+/** Function to create all the standard environment variables that we're
+    building for everyone. Mostly stuff involving paths.
+
+    \param package Name of the package
+    \param pkgdir Directory that the package lives in
+*/
+std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::string& package, const std::string& pkgdir)
+{
+    std::list<std::pair<std::string, std::string>> retval{{"UBUNTU_APPLICATION_ISOLATION", "1"}};
+
+    /* C Funcs can return null, which offends std::string */
+    auto cset = [&retval](const gchar* key, const gchar* value) {
+        if (value != nullptr)
+        {
+            g_debug("Setting '%s' to '%s'", key, value);
+            retval.emplace_back(std::make_pair(key, value));
+        }
+    };
+
+    cset("XDG_CACHE_HOME", g_get_user_cache_dir());
+    cset("XDG_CONFIG_HOME", g_get_user_config_dir());
+    cset("XDG_DATA_HOME", g_get_user_data_dir());
+    cset("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
+
+    /* Add the application's dir to the list of sources for data */
+    gchar* basedatadirs = g_strjoinv(":", (gchar**)g_get_system_data_dirs());
+    gchar* datadirs = g_strjoin(":", pkgdir.c_str(), basedatadirs, nullptr);
+    cset("XDG_DATA_DIRS", datadirs);
+    g_free(datadirs);
+    g_free(basedatadirs);
+
+    /* Set TMPDIR to something sane and application-specific */
+    gchar* tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package.c_str());
+    cset("TMPDIR", tmpdir);
+    g_debug("Creating '%s'", tmpdir);
+    g_mkdir_with_parents(tmpdir, 0700);
+    g_free(tmpdir);
+
+    /* Do the same for nvidia */
+    gchar* nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package.c_str());
+    cset("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
+    g_free(nv_shader_cachedir);
+
+    return retval;
+}
+
+/** Checks to see if we have a primary PID for the instance */
 bool UpstartInstance::isRunning()
 {
     return primaryPid() != 0;
 }
 
+/** Uses Upstart to get the primary PID of the instance using Upstart's
+    DBus interface */
 pid_t UpstartInstance::primaryPid()
 {
     auto jobpath = registry_->impl->upstartJobPath(job_);
@@ -73,7 +127,7 @@ pid_t UpstartInstance::primaryPid()
                                         G_VARIANT_TYPE("(o)"),                          /* return type */
                                         G_DBUS_CALL_FLAGS_NONE,                         /* flags */
                                         -1,                                             /* timeout: default */
-                                        registry_->impl->thread.getCancellable().get(), /* cancelable */
+                                        registry_->impl->thread.getCancellable().get(), /* cancellable */
                                         &error);
 
         if (error != nullptr)
@@ -110,7 +164,7 @@ pid_t UpstartInstance::primaryPid()
                                         G_VARIANT_TYPE("(a{sv})"),                             /* return type */
                                         G_DBUS_CALL_FLAGS_NONE,                                /* flags */
                                         -1,                                                    /* timeout: default */
-                                        registry_->impl->thread.getCancellable().get(),        /* cancelable */
+                                        registry_->impl->thread.getCancellable().get(),        /* cancellable */
                                         &error);
 
         if (error != nullptr)
@@ -147,6 +201,11 @@ pid_t UpstartInstance::primaryPid()
     });
 }
 
+/** Looks at the PIDs in the instance cgroup and checks to see if @pid
+    is in the set.
+
+    @param pid PID to look for
+*/
 bool UpstartInstance::hasPid(pid_t pid)
 {
     for (auto testpid : registry_->impl->pidsFromCgroup(job_, instance_))
@@ -155,21 +214,26 @@ bool UpstartInstance::hasPid(pid_t pid)
     return false;
 }
 
+/** Gets the path to the log file for this instance */
 std::string UpstartInstance::logPath()
 {
-    auto cpath = ubuntu_app_launch_application_log_path(std::string(appId_).c_str());
-    if (cpath != nullptr)
+    std::string logfile = job_;
+    if (!instance_.empty())
     {
-        std::string retval(cpath);
-        g_free(cpath);
-        return retval;
+        logfile += "-";
+        logfile += instance_;
     }
-    else
-    {
-        return {};
-    }
+
+    logfile += ".log";
+
+    gchar* cpath = g_build_filename(g_get_user_cache_dir(), "upstart", logfile.c_str(), nullptr);
+    std::string path(cpath);
+    g_free(cpath);
+
+    return path;
 }
 
+/** Returns all the PIDs that are in the cgroup for this application */
 std::vector<pid_t> UpstartInstance::pids()
 {
     auto pids = registry_->impl->pidsFromCgroup(job_, instance_);
@@ -177,6 +241,8 @@ std::vector<pid_t> UpstartInstance::pids()
     return pids;
 }
 
+/** Pauses this application by sending SIGSTOP to all the PIDs in the
+    cgroup and tells Zeitgeist that we've left the application. */
 void UpstartInstance::pause()
 {
     g_debug("Pausing application: %s", std::string(appId_).c_str());
@@ -192,6 +258,8 @@ void UpstartInstance::pause()
     pidListToDbus(pids, "ApplicationPaused");
 }
 
+/** Resumes this application by sending SIGCONT to all the PIDs in the
+    cgroup and tells Zeitgeist that we're accessing the application. */
 void UpstartInstance::resume()
 {
     g_debug("Resuming application: %s", std::string(appId_).c_str());
@@ -207,13 +275,73 @@ void UpstartInstance::resume()
     pidListToDbus(pids, "ApplicationResumed");
 }
 
+/** Stops this instance by asking Upstart to stop it. Upstart will then
+    send a SIGTERM and five seconds later start killing things. */
 void UpstartInstance::stop()
 {
-    ubuntu_app_launch_stop_application(std::string(appId_).c_str());
+    if (!registry_->impl->thread.executeOnThread<bool>([this]() {
+
+            g_debug("Stopping job %s app_id %s instance_id %s", job_.c_str(), std::string(appId_).c_str(),
+                    instance_.c_str());
+
+            auto jobpath = registry_->impl->upstartJobPath(job_);
+            if (jobpath.empty())
+            {
+                throw new std::runtime_error("Unable to get job path for Upstart job '" + job_ + "'");
+            }
+
+            GVariantBuilder builder;
+            g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+            g_variant_builder_add_value(
+                &builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", std::string(appId_).c_str())));
+
+            if (!instance_.empty())
+            {
+                g_variant_builder_add_value(
+                    &builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instance_.c_str())));
+            }
+
+            g_variant_builder_close(&builder);
+            g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
+
+            GError* error = nullptr;
+            GVariant* stop_variant =
+                g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* Dbus */
+                                            DBUS_SERVICE_UPSTART,                           /* Upstart name */
+                                            jobpath.c_str(),                                /* path */
+                                            DBUS_INTERFACE_UPSTART_JOB,                     /* interface */
+                                            "Stop",                                         /* method */
+                                            g_variant_builder_end(&builder),                /* params */
+                                            nullptr,                                        /* return */
+                                            G_DBUS_CALL_FLAGS_NONE,                         /* flags */
+                                            -1,                                             /* timeout: default */
+                                            registry_->impl->thread.getCancellable().get(), /* cancellable */
+                                            &error);                                        /* error (hopefully not) */
+
+            g_clear_pointer(&stop_variant, g_variant_unref);
+
+            if (error != nullptr)
+            {
+                g_warning("Unable to stop job %s app_id %s instance_id %s: %s", job_.c_str(),
+                          std::string(appId_).c_str(), instance_.c_str(), error->message);
+                g_error_free(error);
+                return false;
+            }
+
+            return true;
+        }))
+    {
+        g_warning("Unable to stop Upstart instance");
+    }
 }
 
 /** Sets the OOM adjustment by getting the list of PIDs and writing
-    the value to each of their files in proc */
+    the value to each of their files in proc
+
+    \param score OOM Score to set
+*/
 void UpstartInstance::setOomAdjustment(const oom::Score score)
 {
     forAllPids([this, &score](pid_t pid) { oomValueToPid(pid, score); });
@@ -251,7 +379,10 @@ const oom::Score UpstartInstance::getOomAdjustment()
 }
 
 /** Go through the list of PIDs calling a function and handling
-    the issue with getting PIDs being a racey condition. */
+    the issue with getting PIDs being a racey condition.
+
+    \param eachPid Function to run on each PID
+*/
 std::vector<pid_t> UpstartInstance::forAllPids(std::function<void(pid_t)> eachPid)
 {
     std::set<pid_t> seenPids;
@@ -275,7 +406,11 @@ std::vector<pid_t> UpstartInstance::forAllPids(std::function<void(pid_t)> eachPi
 }
 
 /** Sends a signal to a PID with a warning if we can't send it.
-    We could throw an exception, but we can't handle it usefully anyway */
+    We could throw an exception, but we can't handle it usefully anyway
+
+    \param pid PID to send the signal to
+    \param signal signal to send
+*/
 void UpstartInstance::signalToPid(pid_t pid, int signal)
 {
     if (-1 == kill(pid, signal))
@@ -287,7 +422,10 @@ void UpstartInstance::signalToPid(pid_t pid, int signal)
 
 /** Get the path to the PID's OOM adjust path, with allowing for an
     override for testing using the environment variable
-    UBUNTU_APP_LAUNCH_OOM_PROC_PATH */
+    UBUNTU_APP_LAUNCH_OOM_PROC_PATH
+
+    \param pid PID to build path for
+*/
 std::string UpstartInstance::pidToOomPath(pid_t pid)
 {
     static std::string procpath;
@@ -308,7 +446,11 @@ std::string UpstartInstance::pidToOomPath(pid_t pid)
 }
 
 /** Writes an OOM value to proc, assuming we have a string
-    in the outer loop */
+    in the outer loop
+
+    \param pid PID to change the OOM value of
+    \param oomvalue OOM value to set
+*/
 void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
 {
     auto oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
@@ -356,7 +498,11 @@ void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
 }
 
 /** Use a setuid root helper for setting the oom value of
-    Chromium instances */
+    Chromium instances
+
+    \param pid PID to change the OOM value of
+    \param oomvalue OOM value to set
+*/
 void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
 {
     GError* error = nullptr;
@@ -400,7 +546,11 @@ void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
 }
 
 /** Send a signal that we've change the application. Do this on the
-    registry thread in an idle so that we don't block anyone. */
+    registry thread in an idle so that we don't block anyone.
+
+    \param pids List of PIDs to turn into variants to send
+    \param signal Name of the DBus signal to send
+*/
 void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal)
 {
     auto registry = registry_;
@@ -458,18 +608,34 @@ void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::s
     });
 }
 
+/** Create a new Upstart Instance object that can track the job and
+    get information about it.
+
+    \param appId Application ID
+    \param job Upstart job name
+    \param instance Upstart instance name
+    \param urls URLs sent to the application (only on launch today)
+    \param registry Registry of persistent connections to use
+*/
 UpstartInstance::UpstartInstance(const AppID& appId,
                                  const std::string& job,
                                  const std::string& instance,
+                                 const std::vector<Application::URL>& urls,
                                  const std::shared_ptr<Registry>& registry)
     : appId_(appId)
     , job_(job)
     , instance_(instance)
+    , urls_(urls)
     , registry_(registry)
 {
+    g_debug("Creating a new UpstartInstance for '%s' instance '%s'", std::string(appId_).c_str(), instance.c_str());
 }
 
-std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls)
+/** Reformat a C++ vector of URLs into a C GStrv of strings
+
+    \param urls Vector of URLs to make into C strings
+*/
+std::shared_ptr<gchar*> UpstartInstance::urlsToStrv(const std::vector<Application::URL>& urls)
 {
     if (urls.empty())
     {
@@ -481,32 +647,197 @@ std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls)
     for (auto url : urls)
     {
         auto str = g_strdup(url.value().c_str());
+        g_debug("Converting URL: %s", str);
         g_array_append_val(array, str);
     }
 
     return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
-std::shared_ptr<UpstartInstance> UpstartInstance::launch(const AppID& appId,
-                                                         const std::string& job,
-                                                         const std::string& instance,
-                                                         const std::vector<Application::URL>& urls,
-                                                         const std::shared_ptr<Registry>& registry,
-                                                         launchMode mode)
+/** Small helper that we can new/delete to work better with C stuff */
+struct StartCHelper
 {
-    auto urlstrv = urlsToStrv(urls);
-    auto start_result = registry->impl->thread.executeOnThread<gboolean>([registry, &appId, &urlstrv, &mode]() {
-        return start_application_core(registry->impl->_dbus.get(), registry->impl->thread.getCancellable().get(),
-                                      std::string(appId).c_str(), urlstrv.get(),
-                                      mode == launchMode::STANDARD ? FALSE : TRUE);
-    });
+    std::shared_ptr<UpstartInstance> ptr;
+};
 
-    if (start_result == FALSE)
+/** Callback from starting an application. It checks to see whether the
+    app is already running. If it is already running then we need to send
+    the URLs to it via DBus.
+
+    \param obj The GDBusConnection object
+    \param res Async result object
+    \param user_data A pointer to a StartCHelper structure
+*/
+void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
+{
+    auto data = static_cast<StartCHelper*>(user_data);
+    GError* error{nullptr};
+    GVariant* result{nullptr};
+
+    tracepoint(ubuntu_app_launch, libual_start_message_callback, std::string(data->ptr->appId_).c_str());
+
+    g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
+
+    result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+
+    g_clear_pointer(&result, g_variant_unref);
+
+    if (error != nullptr)
     {
-        return {};
+        if (g_dbus_error_is_remote_error(error))
+        {
+            gchar* remote_error = g_dbus_error_get_remote_error(error);
+            g_debug("Remote error: %s", remote_error);
+            if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0)
+            {
+                auto urls = urlsToStrv(data->ptr->urls_);
+                second_exec(data->ptr->registry_->impl->_dbus.get(),                   /* DBus */
+                            data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
+                            data->ptr->primaryPid(),                                   /* primary pid */
+                            std::string(data->ptr->appId_).c_str(),                    /* appid */
+                            urls.get());                                               /* urls */
+            }
+
+            g_free(remote_error);
+        }
+        else
+        {
+            g_warning("Unable to emit event to start application: %s", error->message);
+        }
+        g_error_free(error);
     }
 
-    return std::make_shared<UpstartInstance>(appId, job, instance, registry);
+    delete data;
+}
+
+/** Launch an application and create a new UpstartInstance object to track
+    its progress.
+
+    \param appId Application ID
+    \param job Upstart job name
+    \param instance Upstart instance name
+    \param urls URLs sent to the application (only on launch today)
+    \param registry Registry of persistent connections to use
+    \param mode Whether or not to setup the environment for testing
+    \param getenv A function to get additional environment variable when appropriate
+*/
+std::shared_ptr<UpstartInstance> UpstartInstance::launch(
+    const AppID& appId,
+    const std::string& job,
+    const std::string& instance,
+    const std::vector<Application::URL>& urls,
+    const std::shared_ptr<Registry>& registry,
+    launchMode mode,
+    std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv)
+{
+    if (appId.empty())
+        return {};
+
+    return registry->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
+        [&]() -> std::shared_ptr<UpstartInstance> {
+            std::string appIdStr{appId};
+            g_debug("Initializing params for an new UpstartInstance for: %s", appIdStr.c_str());
+
+            tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
+
+            int timeout = 1;
+            if (ubuntu::app_launch::Registry::Impl::isWatchingAppStarting())
+            {
+                timeout = 0;
+            }
+
+            auto handshake = starting_handshake_start(appIdStr.c_str(), timeout);
+            if (handshake == nullptr)
+            {
+                g_warning("Unable to setup starting handshake");
+            }
+
+            /* Figure out the DBus path for the job */
+            auto jobpath = registry->impl->upstartJobPath(job);
+
+            /* Build up our environment */
+            auto env = getenv();
+
+            env.emplace_back(std::make_pair("APP_ID", appIdStr));                           /* Application ID */
+            env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
+
+            if (!urls.empty())
+            {
+                auto accumfunc = [](const std::string& prev, Application::URL thisurl) -> std::string {
+                    gchar* gescaped = g_shell_quote(thisurl.value().c_str());
+                    std::string escaped;
+                    if (gescaped != nullptr)
+                    {
+                        escaped = gescaped;
+                        g_free(gescaped);
+                    }
+                    else
+                    {
+                        g_warning("Unable to escape URL: %s", thisurl.value().c_str());
+                        return prev;
+                    }
+
+                    if (prev.empty())
+                    {
+                        return escaped;
+                    }
+                    else
+                    {
+                        return prev + " " + escaped;
+                    }
+                };
+                auto urlstring = std::accumulate(urls.begin(), urls.end(), std::string{}, accumfunc);
+                env.emplace_back(std::make_pair("APP_URIS", urlstring));
+            }
+
+            if (mode == launchMode::TEST)
+            {
+                env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
+            }
+
+            /* Convert to GVariant */
+            GVariantBuilder builder;
+            g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+            for (const auto& envvar : env)
+            {
+                g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
+                                                          "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
+            }
+
+            g_variant_builder_close(&builder);
+            g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+            auto retval = std::make_shared<UpstartInstance>(appId, job, instance, urls, registry);
+            auto chelper = new StartCHelper{};
+            chelper->ptr = retval;
+
+            tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
+            starting_handshake_wait(handshake);
+            tracepoint(ubuntu_app_launch, handshake_complete, appIdStr.c_str());
+
+            /* Call the job start function */
+            g_debug("Asking Upstart to start task for: %s", appIdStr.c_str());
+            g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
+                                   DBUS_SERVICE_UPSTART,                          /* service name */
+                                   jobpath.c_str(),                               /* Path */
+                                   DBUS_INTERFACE_UPSTART_JOB,                    /* interface */
+                                   "Start",                                       /* method */
+                                   g_variant_builder_end(&builder),               /* params */
+                                   nullptr,                                       /* return */
+                                   G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                   -1,                                            /* default timeout */
+                                   registry->impl->thread.getCancellable().get(), /* cancellable */
+                                   application_start_cb,                          /* callback */
+                                   chelper                                        /* object */
+                                   );
+
+            tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
+
+            return retval;
+        });
 }
 
 }  // namespace app_impls

@@ -37,7 +37,6 @@ class FailureTest : public EventuallyFixture
 		virtual void TearDown() {
 			g_test_dbus_down(testbus);
 			g_clear_object(&testbus);
-			return;
 		}
 };
 
@@ -48,7 +47,6 @@ failed_observer (const gchar * appid, UbuntuAppLaunchAppFailed reason, gpointer 
 		std::string * last = static_cast<std::string *>(user_data);
 		*last = appid;
 	}
-	return;
 }
 
 TEST_F(FailureTest, CrashTest)
@@ -75,8 +73,6 @@ TEST_F(FailureTest, CrashTest)
 	EXPECT_EVENTUALLY_EQ("foo", last_observer);
 
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
-
-	return;
 }
 
 TEST_F(FailureTest, LegacyTest)
@@ -94,8 +90,23 @@ TEST_F(FailureTest, LegacyTest)
 	EXPECT_EVENTUALLY_EQ("foo", last_observer);
 
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+}
 
-	return;
+TEST_F(FailureTest, SnapTest)
+{
+	g_setenv("EXIT_STATUS", "-100", TRUE);
+	g_setenv("JOB", "application-snap", TRUE);
+	g_setenv("INSTANCE", "foo_bar_x123-1234", TRUE);
+
+	std::string last_observer;
+	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+
+	/* Status based */
+	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
+
+	EXPECT_EVENTUALLY_EQ("foo_bar_x123", last_observer);
+
+	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 }
 
 static void
@@ -105,7 +116,6 @@ failed_start_observer (const gchar * appid, UbuntuAppLaunchAppFailed reason, gpo
 		std::string * last = static_cast<std::string *>(user_data);
 		*last = appid;
 	}
-	return;
 }
 
 TEST_F(FailureTest, StartTest)
@@ -123,6 +133,4 @@ TEST_F(FailureTest, StartTest)
 	EXPECT_EVENTUALLY_EQ("foo", last_observer);
 
 	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_start_observer, &last_observer));
-
-	return;
 }
