@@ -1,3 +1,36 @@
+ubuntu-app-launch (0.9+16.10.20160902-0ubuntu1) yakkety; urgency=medium
+
+  * Disable handshake wait with clients doing handshaking (LP: #1618540)
+
+ -- Ted Gould <ted@gould.cx>  Fri, 02 Sep 2016 14:51:45 +0000
+
+ubuntu-app-launch (0.9+16.10.20160825-0ubuntu1) yakkety; urgency=medium
+
+  * Use at() instead of operator[]() so that we get an exception on
+    bounds checking
+
+ -- Ted Gould <ted@gould.cx>  Thu, 25 Aug 2016 14:43:00 +0000
+
+ubuntu-app-launch (0.9+16.10.20160817.1-0ubuntu1) yakkety; urgency=medium
+
+  [ Charles Kerr ]
+  * Fix memory leak in Click::launch()
+
+  [ Rodney Dawes ]
+  * Use cmake-extras for coverage reporting. (LP: #1609545)
+  * Backport some fixes for listing installed Click apps.
+
+  [ Ted Gould ]
+  * Add in eventually timeouts in tests to make them more robust
+  * Add test for abi compatibility (LP: #1609565)
+  * Add API to allow adjusting of the OOM score for an application
+    instance (LP: #1579799)
+
+  [ Rodney Dawes, Ted Gould ]
+  * Add desktop info fields needed for applications scope
+
+ -- Ted Gould <ted@gould.cx>  Wed, 17 Aug 2016 15:25:23 +0000
+
 ubuntu-app-launch (0.9+16.10.20160803-0ubuntu1) yakkety; urgency=medium
 
   [ Ken VanDine ]

@@ -1,0 +1,9 @@
+<version>
+@ABI_VERSION@
+</version>
+<headers>
+/usr/include/libubuntu-app-launch-@API_VERSION@/
+</headers>
+<libs>
+/usr/lib/@UBUNTU_APP_LAUNCH_ARCH@/libubuntu-app-launch.so.@ABI_VERSION@
+</libs>

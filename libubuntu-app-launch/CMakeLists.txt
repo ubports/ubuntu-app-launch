@@ -1,13 +1,6 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-##########################
-# Version Info
-##########################
-
-set(API_VERSION 2)
-set(ABI_VERSION 2)
-
 
 ##########################
 # Library
@@ -28,6 +21,7 @@ set(LAUNCHER_CPP_HEADERS
 appid.h
 application.h
 helper.h
+oom.h
 registry.h
 type-tagger.h
 )
@@ -36,7 +30,9 @@ set(LAUNCHER_CPP_SOURCES
 application.cpp
 helper.cpp
 registry.cpp
+registry-impl.h
 registry-impl.cpp
+application-impl-base.h
 application-impl-base.cpp
 application-impl-click.cpp
 application-impl-legacy.h
@@ -50,7 +46,7 @@ glib-thread.cpp
 )
 
 set(LAUNCHER_SOURCES
-ubuntu-app-launch.c
+ubuntu-app-launch.cpp
 second-exec-core.c
 click-exec.c
 desktop-exec.c
@@ -90,6 +86,7 @@ target_link_libraries(ubuntu-launcher
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
 	${LIBERTINE_LIBRARIES}
+	-lpthread
 	helpers
 	-Wl,--no-undefined
 )
@@ -148,3 +145,4 @@ set(UbuntuAppLaunch_2_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
 list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-2.gir)
 gir_add_introspections(INTROSPECTION_GIRS)
 
+add_subdirectory(abi-check)

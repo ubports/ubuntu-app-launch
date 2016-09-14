@@ -117,7 +117,7 @@ keyfile_for_libertine (const gchar * appid, gchar ** outcontainer)
 }
 
 gboolean
-desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle, gboolean is_libertine)
+desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * handle, gboolean is_libertine, int timeout_s)
 {
 	if (app_id == NULL) {
 		g_error("No APP_ID environment variable defined");
@@ -126,7 +126,7 @@ desktop_task_setup (GDBusConnection * bus, const gchar * app_id, EnvHandle * han
 
 	ual_tracepoint(desktop_start, app_id);
 
-	handshake_t * handshake = starting_handshake_start(app_id);
+	handshake_t * handshake = starting_handshake_start(app_id, timeout_s);
 	if (handshake == NULL) {
 		g_warning("Unable to setup starting handshake");
 	}

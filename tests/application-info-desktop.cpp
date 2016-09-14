@@ -64,6 +64,7 @@ TEST_F(ApplicationInfoDesktop, DefaultState)
     EXPECT_EQ("Foo App", appinfo.name().value());
     EXPECT_EQ("", appinfo.description().value());
     EXPECT_EQ("/foo.png", appinfo.iconPath().value());
+    EXPECT_EQ("", appinfo.defaultDepartment().value());
 
     EXPECT_EQ("", appinfo.splash().title.value());
     EXPECT_EQ("", appinfo.splash().image.value());
@@ -121,6 +122,29 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
     auto onlyshowin = defaultKeyfile();
     g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", "KDE;Gnome;");
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/"), std::runtime_error);
+}
+
+TEST_F(ApplicationInfoDesktop, KeyfileDefaultDepartment)
+{
+    auto keyfile = defaultKeyfile();
+    g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Default-Department-ID", "foo");
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(keyfile, "/"));
+}
+
+TEST_F(ApplicationInfoDesktop, KeyfileScreenshotPath)
+{
+    auto keyfile = defaultKeyfile();
+    g_key_file_set_string(keyfile.get(), DESKTOP, "X-Screenshot", "foo.png");
+    EXPECT_EQ("/foo.png", ubuntu::app_launch::app_info::Desktop(keyfile, "/").screenshotPath().value());
+}
+
+TEST_F(ApplicationInfoDesktop, KeyfileKeywords)
+{
+    std::vector<std::string>expectedKeywords{"foo", "bar", "baz"};
+
+    auto keyfile = defaultKeyfile();
+    g_key_file_set_string(keyfile.get(), DESKTOP, "Keywords", "foo;bar;baz;");
+    EXPECT_EQ(expectedKeywords, ubuntu::app_launch::app_info::Desktop(keyfile, "/").keywords().value());
 }
 
 TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)

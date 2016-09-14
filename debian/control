@@ -2,8 +2,10 @@ Source: ubuntu-app-launch
 Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: click-dev (>= 0.2.2),
+Build-Depends: abi-compliance-checker,
+               click-dev (>= 0.2.2),
                cmake,
+               cmake-extras,
                dbus-x11,
                dbus-test-runner,
                debhelper (>= 9),
@@ -21,6 +23,9 @@ Build-Depends: click-dev (>= 0.2.2),
                libnih-dbus-dev,
                libnih-dev,
                libproperties-cpp-dev,
+# For ABI check to distro version
+# Make sure to set DEB_BUILD_PROFILES when bootstrapping
+               libubuntu-app-launch2-dev <!stage1>,
                libupstart-dev,
                libzeitgeist-2.0-dev,
                gobject-introspection,
@@ -64,7 +69,7 @@ Description: Tools for working wtih launched applications
  .
  This package provides tools for working with the Upstart App Launch.
 
-Package: libubuntu-app-launch2
+Package: libubuntu-app-launch3
 Section: libs
 Architecture: any
 Depends: ${misc:Depends},
@@ -85,7 +90,7 @@ Depends: ${misc:Depends},
          libglib2.0-dev,
          libmirclient-dev (>= 0.5),
          libproperties-cpp-dev,
-         libubuntu-app-launch2 (= ${binary:Version}),
+         libubuntu-app-launch3 (= ${binary:Version}),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
 Description: library for sending requests to the ubuntu app launch
@@ -99,15 +104,15 @@ Section: libs
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         libubuntu-app-launch2 (= ${binary:Version}),
+         libubuntu-app-launch3 (= ${binary:Version}),
          ${gir:Depends},
 Pre-Depends: ${misc:Pre-Depends}
 Recommends: ubuntu-app-launch (= ${binary:Version})
-Description: typelib file for libubuntu-app-launch2
+Description: typelib file for libubuntu-app-launch3
  Interface for starting apps and getting info on them.
  .
  This package can be used by other packages using the GIRepository format to
- generate dynamic bindings for libubuntu-app-launch2.
+ generate dynamic bindings for libubuntu-app-launch3.
 
 Package: ubuntu-app-test
 Architecture: any

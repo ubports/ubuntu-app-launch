@@ -43,6 +43,7 @@ target_link_libraries (libual-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} $
 
 add_executable (libual-cpp-test
 	libual-cpp-test.cc
+	${CMAKE_SOURCE_DIR}/libubuntu-app-launch/glib-thread.cpp
 	mir-mock.cpp)
 target_link_libraries (libual-cpp-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
 
@@ -138,5 +139,5 @@ add_test (xmir-helper-test xmir-helper-test)
 # Formatted code
 
 add_custom_target(format-tests
-	COMMAND clang-format -i -style=file libual-cpp-test.cc
+	COMMAND clang-format -i -style=file libual-cpp-test.cc eventually-fixture.h zg-test.cc
 )
