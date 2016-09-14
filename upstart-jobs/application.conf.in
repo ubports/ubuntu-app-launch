@@ -14,6 +14,4 @@ export APP_ID
 env APP_URIS
 export APP_URIS
 
-env UBUNTU_APP_LAUNCH_LIBEXEC="${SNAP}/@pkglibexecdir@"
-
-exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/application-job
+exec ${SNAP}/@pkglibexecdir@/application-job

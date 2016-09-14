@@ -13,8 +13,6 @@ env APP_URIS
 env APP_DESKTOP_FILE_PATH
 env APP_XMIR_ENABLE
 
-env UBUNTU_APP_LAUNCH_LIBEXEC="${SNAP}/@pkglibexecdir@"
-
 # This will be set to "unconfined" by desktop-exec if there is no confinement defined
 apparmor switch $APP_EXEC_POLICY
 cgroup freezer
@@ -23,12 +21,12 @@ cgroup freezer
 oom score 110
 
 # This could be confined
-exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/exec-line-exec
+exec ${SNAP}/@pkglibexecdir@/exec-line-exec
 
-post-start exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/zg-report-app open
+post-start exec ${SNAP}/@pkglibexecdir@/zg-report-app open
 post-stop script
-	${UBUNTU_APP_LAUNCH_LIBEXEC}/zg-report-app close
-	${UBUNTU_APP_LAUNCH_LIBEXEC}/cgroup-reap-all
+	${SNAP}/@pkglibexecdir@/zg-report-app close
+	${SNAP}/@pkglibexecdir@/cgroup-reap-all
 
 	DEVELOPER_MODE=`gdbus call --system --dest com.canonical.PropertyService --object-path /com/canonical/PropertyService --method com.canonical.PropertyService.GetProperty adb`
 	if [ "$DEVELOPER_MODE" != "(true,)" ] ; then

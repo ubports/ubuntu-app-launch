@@ -6,6 +6,4 @@ instance ${HELPER_TYPE}
 
 emits untrusted-helper-end
 
-env UBUNTU_APP_LAUNCH_LIBEXEC="${SNAP}/@pkglibexecdir@"
-
-exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/untrusted-helper-type-end
+exec ${SNAP}/@pkglibexecdir@/untrusted-helper-type-end

@@ -3,6 +3,4 @@ description "Application Failing"
 start on stopped application-legacy RESULT=failed or stopped application-click RESULT=failed or stopped application-snap RESULT=failed
 task
 
-env UBUNTU_APP_LAUNCH_LIBEXEC="${SNAP}/@pkglibexecdir@"
-
-exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/application-failed
+exec ${SNAP}/@pkglibexecdir@/application-failed
