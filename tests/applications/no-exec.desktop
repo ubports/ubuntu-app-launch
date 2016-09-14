@@ -4,3 +4,4 @@ Type=Application
 NoDisplay=false
 Hidden=false
 Terminal=false
+Icon=no-exec.png

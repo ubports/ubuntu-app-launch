@@ -21,10 +21,12 @@
 #include <click.h>
 
 #include "ubuntu-app-launch.h"
-#include "app-info.h"
+
+/* Prototypes */
+static gboolean app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
 
 /* Try and get a manifest and do a couple sanity checks on it */
-JsonObject *
+static JsonObject *
 get_manifest (const gchar * pkg, gchar ** pkgpath)
 {
 	/* Get the directory from click */
@@ -76,130 +78,6 @@ get_manifest (const gchar * pkg, gchar ** pkgpath)
 	return manifest;
 }
 
-/* Types of search we can do for an app name */
-enum _app_name_t {
-	APP_NAME_ONLY,
-	APP_NAME_FIRST,
-	APP_NAME_LAST
-};
-typedef enum _app_name_t app_name_t;
-
-/* Figure out the app name if it's one of the keywords */
-static const gchar *
-manifest_app_name (JsonObject ** manifest, const gchar * pkg, const gchar * original_app)
-{
-	app_name_t app_type = APP_NAME_FIRST;
-
-	if (original_app == NULL) {
-		/* first */
-	} else if (g_strcmp0(original_app, "first-listed-app") == 0) {
-		/* first */
-	} else if (g_strcmp0(original_app, "last-listed-app") == 0) {
-		app_type = APP_NAME_LAST;
-	} else if (g_strcmp0(original_app, "only-listed-app") == 0) {
-		app_type = APP_NAME_ONLY;
-	} else {
-		return original_app;
-	}
-
-	if (*manifest == NULL) {
-		*manifest = get_manifest(pkg, NULL);
-	}
-
-	JsonObject * hooks = json_object_get_object_member(*manifest, "hooks");
-
-	if (hooks == NULL) {
-		return NULL;
-	}
-
-	GList * apps = json_object_get_members(hooks);
-	if (apps == NULL) {
-		return NULL;
-	}
-
-	const gchar * retapp = NULL;
-
-	switch (app_type) {
-	case APP_NAME_ONLY:
-		if (g_list_length(apps) == 1) {
-			retapp = (const gchar *)apps->data;
-		}
-		break;
-	case APP_NAME_FIRST:
-		retapp = (const gchar *)apps->data;
-		break;
-	case APP_NAME_LAST:
-		retapp = (const gchar *)(g_list_last(apps)->data);
-		break;
-	default:
-		break;
-	}
-
-	g_list_free(apps);
-
-	return retapp;
-}
-
-/* Figure out the app version using the manifest */
-static const gchar *
-manifest_version (JsonObject ** manifest, const gchar * pkg, const gchar * original_ver)
-{
-	if (original_ver != NULL && g_strcmp0(original_ver, "current-user-version") != 0) {
-		return original_ver;
-	} else  {
-		if (*manifest == NULL) {
-			*manifest = get_manifest(pkg, NULL);
-		}
-		g_return_val_if_fail(*manifest != NULL, NULL);
-
-		return g_strdup(json_object_get_string_member(*manifest, "version"));
-	}
-
-	return NULL;
-}
-
-/* A click triplet can require using the Click DB and getting a
-   manifest. This code does that to look up the versions */
-gchar *
-click_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
-{
-	const gchar * version = NULL;
-	const gchar * application = NULL;
-	JsonObject * manifest = NULL;
-
-	version = manifest_version(&manifest, pkg, ver);
-	g_return_val_if_fail(version != NULL, NULL);
-
-	application = manifest_app_name(&manifest, pkg, app);
-	g_return_val_if_fail(application != NULL, NULL);
-
-	gchar * retval = g_strdup_printf("%s_%s_%s", pkg, application, version);
-
-	/* The object may hold allocation for some of our strings used above */
-	if (manifest)
-		json_object_unref(manifest);
-
-	return retval;
-}
-
-/* Build an appid how we think it should exist and then make sure
-   we can find it. Then pull it together. */
-gchar *
-libertine_triplet_to_app_id (const gchar * pkg, const gchar * app, const gchar * ver)
-{
-	if (app == NULL) {
-		return NULL;
-	}
-
-	gchar * synthappid = g_strdup_printf("%s_%s_0.0", pkg, app);
-	if (app_info_libertine(synthappid, NULL, NULL)) {
-		return synthappid;
-	} else {
-		g_free(synthappid);
-		return NULL;
-	}
-}
-
 /* Look to see if the app id results in a desktop file, if so, fill in the params */
 static gboolean
 evaluate_dir (const gchar * dir, const gchar * desktop, gchar ** appdir, gchar ** appdesktop)
@@ -224,7 +102,7 @@ evaluate_dir (const gchar * dir, const gchar * desktop, gchar ** appdir, gchar *
 }
 
 /* Handle the legacy case where we look through the data directories */
-gboolean
+static gboolean
 app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 {
 	gchar * desktop = g_strdup_printf("%s.desktop", appid);
@@ -248,7 +126,7 @@ app_info_legacy (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 }
 
 /* Handle the libertine case where we look in the container */
-gboolean
+static gboolean
 app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 {
 	char * container = NULL;
@@ -301,7 +179,7 @@ app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 }
 
 /* Get the information on where the desktop file is from libclick */
-gboolean
+static gboolean
 app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 {
 	gchar * package = NULL;
@@ -350,5 +228,50 @@ app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 	json_object_unref(manifest);
 
 	return TRUE;
+}
+
+/* Determine whether it's a click package by looking for the symlink
+   that is created by the desktop hook */
+static gboolean
+is_click (const gchar * appid)
+{
+	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
+	gchar * click_link = NULL;
+	const gchar * link_farm_dir = g_getenv("UBUNTU_APP_LAUNCH_LINK_FARM");
+	if (G_LIKELY(link_farm_dir == NULL)) {
+		click_link = g_build_filename(g_get_user_cache_dir(), "ubuntu-app-launch", "desktop", appiddesktop, NULL);
+	} else {
+		click_link = g_build_filename(link_farm_dir, appiddesktop, NULL);
+	}
+	g_free(appiddesktop);
+	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
+	g_free(click_link);
+
+	return click;
+}
+
+/* Determine whether an AppId is realated to a Libertine container by
+   checking the container and program name. */
+static gboolean
+is_libertine (const gchar * appid)
+{
+	if (app_info_libertine(appid, NULL, NULL)) {
+		g_debug("Libertine application detected: %s", appid);
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
+gboolean
+ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+	if (is_click(appid)) {
+		return app_info_click(appid, appdir, appdesktop);
+	} else if (is_libertine(appid)) {
+		return app_info_libertine(appid, appdir, appdesktop);
+	} else {
+		return app_info_legacy(appid, appdir, appdesktop);
+	}
 }
 
