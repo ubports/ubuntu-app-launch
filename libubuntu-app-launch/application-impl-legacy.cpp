@@ -56,8 +56,11 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 
     std::string rootDir = "";
     auto rootenv = g_getenv("UBUNTU_APP_LAUNCH_LEGACY_ROOT");
-    if (rootenv != nullptr)
+    if (rootenv != nullptr && /* Check that we have an alternate root available */
+        g_str_has_prefix(_basedir.c_str(), rootenv))
+    { /* And check that we found this in that root */
         rootDir = rootenv;
+    }
 
     appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, rootDir,
                                                    app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
