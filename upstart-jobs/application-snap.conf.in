@@ -15,7 +15,7 @@ env APP_XMIR_ENABLE
 env INSTANCE_ID=""
 
 env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
-export UBUNTU_APP_LAUNCH_ARCH
+env UBUNTU_APP_LAUNCH_LIBEXEC="${SNAP}/@pkglibexecdir@"
 
 # apparmor is taken care of by confine
 cgroup freezer
@@ -24,12 +24,12 @@ cgroup freezer
 oom score 100
 
 # Remember, this is confined
-exec @pkglibexecdir@/exec-line-exec
+exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/exec-line-exec
 
-post-start exec @pkglibexecdir@/zg-report-app open
+post-start exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/zg-report-app open
 post-stop script
-	@pkglibexecdir@/zg-report-app close
-	@pkglibexecdir@/cgroup-reap-all
+	${UBUNTU_APP_LAUNCH_LIBEXEC}/zg-report-app close
+	${UBUNTU_APP_LAUNCH_LIBEXEC}/cgroup-reap-all
 
 	DEVELOPER_MODE=`gdbus call --system --dest com.canonical.PropertyService --object-path /com/canonical/PropertyService --method com.canonical.PropertyService.GetProperty adb`
 	if [ "$DEVELOPER_MODE" != "(true,)" ] ; then

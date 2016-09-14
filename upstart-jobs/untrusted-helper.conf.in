@@ -12,7 +12,7 @@ env INSTANCE_ID=""
 env APP_URIS
 
 env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
-export UBUNTU_APP_LAUNCH_ARCH
+env UBUNTU_APP_LAUNCH_LIBEXEC="${SNAP}/@pkglibexecdir@"
 
 apparmor switch ${APP_ID}
 cgroup freezer
@@ -20,8 +20,8 @@ oom score 800
 
 # This is unconfined
 pre-start script
-	if [ -x "@pkglibexecdir@/${HELPER_TYPE}/exec-tool" ] ; then
-		@pkglibexecdir@/${HELPER_TYPE}/exec-tool
+	if [ -x "${UBUNTU_APP_LAUNCH_LIBEXEC}/${HELPER_TYPE}/exec-tool" ] ; then
+		${UBUNTU_APP_LAUNCH_LIBEXEC}/${HELPER_TYPE}/exec-tool
 	else
 		echo "Unable to find exec tool for ${HELPER_TYPE}"
 		exit -1
@@ -29,6 +29,6 @@ pre-start script
 end script
 
 # Remember, this is confined
-exec @pkglibexecdir@/exec-line-exec
+exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/exec-line-exec
 
-post-stop exec @pkglibexecdir@/cgroup-reap-all
+post-stop exec ${UBUNTU_APP_LAUNCH_LIBEXEC}/cgroup-reap-all
