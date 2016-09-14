@@ -88,6 +88,11 @@ public:
     static void watchingAppStarting(bool rWatching);
     static bool isWatchingAppStarting();
 
+    const std::string oomHelper()
+    {
+        return oomHelper_;
+    }
+
 private:
     Registry* _registry;
 #if 0
@@ -110,6 +115,9 @@ private:
     /** Getting the Upstart job path is relatively expensive in
         that it requires a DBus call. Worth keeping a cache of. */
     std::map<std::string, std::string> upstartJobPathCache_;
+
+    /** Path to the OOM Helper */
+    std::string oomHelper_;
 };
 
 }  // namespace app_launch

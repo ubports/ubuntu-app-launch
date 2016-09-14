@@ -508,7 +508,10 @@ void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
     GError* error = nullptr;
     std::string oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
     std::string pidstr = std::to_string(pid);
-    std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomstr.c_str(), nullptr};
+    std::array<const char*, 4> args = {registry_->impl->oomHelper().c_str(), /* helper to call */
+                                       pidstr.c_str(),                       /* PID for it to execute on */
+                                       oomstr.c_str(),                       /* value to set OOM offset to */
+                                       nullptr};
 
     g_debug("Excuting OOM Helper (pid: %d, score: %d): %s", int(pid), int(oomvalue),
             std::accumulate(args.begin(), args.end(), std::string{},
