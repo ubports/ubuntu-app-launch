@@ -100,7 +100,7 @@ std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath
     GError* error = nullptr;
     auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
     GDir* dir = g_dir_open(dirpath, 0, &error);
-    if (error != NULL)
+    if (error != nullptr)
     {
         g_error_free(error);
         g_free(dirpath);
