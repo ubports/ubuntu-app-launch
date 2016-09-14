@@ -270,7 +270,12 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         {
             auto iconName = stringFromKeyfileRequired<Application::Info::IconPath>(keyfile, "Icon",
                                                                                    "Missing icon for desktop file");
-            return registry->impl->getIconFinder(basePath)->find(iconName);
+
+            if (!iconName.value().empty() && iconName.value()[0] != '/')
+            {
+                /* If it is not a direct filename look it up */
+                return registry->impl->getIconFinder(basePath)->find(iconName);
+            }
         }
         return fileFromKeyfileRequired<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon",
                                                                     "Missing icon for desktop file");
