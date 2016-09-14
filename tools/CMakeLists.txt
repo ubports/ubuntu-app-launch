@@ -26,6 +26,15 @@ set_target_properties(ubuntu-app-info PROPERTIES OUTPUT_NAME "ubuntu-app-info")
 target_link_libraries(ubuntu-app-info ubuntu-launcher)
 install(TARGETS ubuntu-app-info RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
+###########################
+# ubuntu-app-launch-appids
+###########################
+
+add_executable(ubuntu-app-launch-appids ubuntu-app-launch-appids.cpp)
+set_target_properties(ubuntu-app-launch-appids PROPERTIES OUTPUT_NAME "ubuntu-app-launch-appids")
+target_link_libraries(ubuntu-app-launch-appids ubuntu-launcher)
+install(TARGETS ubuntu-app-launch-appids RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
 ########################
 # ubuntu-app-launch
 ########################

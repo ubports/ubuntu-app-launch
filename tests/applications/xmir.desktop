@@ -6,3 +6,4 @@ NoDisplay=false
 Hidden=false
 Terminal=false
 X-Ubuntu-XMir-Enable=true
+Icon=xmir.png

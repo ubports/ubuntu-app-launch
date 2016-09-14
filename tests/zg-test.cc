@@ -36,7 +36,7 @@ protected:
     {
         g_object_unref(bus);
 
-        EXPECT_EVENTUALLY_EQ(nullptr, bus);
+        ASSERT_EVENTUALLY_EQ(nullptr, bus);
     }
 
     void grabBus()

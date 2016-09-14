@@ -1,3 +1,16 @@
+ubuntu-app-launch (0.9+16.10.20160913.1-0ubuntu1) yakkety; urgency=medium
+
+  [ Larry Price ]
+  * Recursively sweep for desktop files for libertine applications.
+
+  [ Ted Gould ]
+  * Fixes, tools and tests related to listing applications
+  * Migrate starting and stopping applications to new classes
+  * Make find and discover use the application implementation functions.
+  * Support launching applications installed as snaps (LP: #1590445)
+
+ -- Ted Gould <ted@gould.cx>  Tue, 13 Sep 2016 17:43:33 +0000
+
 ubuntu-app-launch (0.9+16.10.20160902-0ubuntu1) yakkety; urgency=medium
 
   * Disable handshake wait with clients doing handshaking (LP: #1618540)
