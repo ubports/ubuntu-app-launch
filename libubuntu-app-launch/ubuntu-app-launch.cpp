@@ -1746,7 +1746,11 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directo
 	/* The exec value */
 	gchar * envstr = NULL;
 	if (demangler) {
-		envstr = g_strdup_printf("APP_EXEC=%s %s", DEMANGLER_PATH, execline);
+		const gchar * demangler_path = g_getenv("UBUNTU_APP_LAUNCH_DEMANGLER_PATH");
+		if (demangler_path == nullptr) {
+			demangler_path = DEMANGLER_PATH;
+		}
+		envstr = g_strdup_printf("APP_EXEC=%s %s", demangler_path, execline);
 	} else {
 		envstr = g_strdup_printf("APP_EXEC=%s", execline);
 	}
