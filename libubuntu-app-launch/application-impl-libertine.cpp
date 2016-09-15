@@ -300,7 +300,7 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
     }
 
     auto desktopexec = appinfo_->execLine().value();
-    auto execline = std::string(libertine_launch) + " \"" + _container.value() + "\" " + desktopexec;
+    auto execline = std::string(libertine_launch) + " \"--id=" + _container.value() + "\" " + desktopexec;
     retval.emplace_back(std::make_pair("APP_EXEC", execline));
 
     /* TODO: Go multi instance */
