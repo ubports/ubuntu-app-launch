@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Test Nested
+Type=Application
+Exec=test-nested
+Icon=test-nested

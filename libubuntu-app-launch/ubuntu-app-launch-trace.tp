@@ -67,10 +67,9 @@ TRACEPOINT_EVENT(ubuntu_app_launch, observer_finish,
   Second Exec tracking
  *******************************/
 TRACEPOINT_EVENT(ubuntu_app_launch, second_exec_start,
-	TP_ARGS(const char *, appid, const char *, appuris),
+	TP_ARGS(const char *, appid),
 	TP_FIELDS(
 		ctf_string(appid, appid)
-		ctf_string(appuris, appuris)
 	)
 )
 TRACEPOINT_EVENT(ubuntu_app_launch, second_exec_emit_resume,

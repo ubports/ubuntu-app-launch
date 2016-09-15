@@ -18,6 +18,7 @@
  */
 
 #include "application.h"
+#include <bitset>
 #include <glib.h>
 #include <mutex>
 
@@ -30,13 +31,20 @@ namespace app_launch
 namespace app_info
 {
 
+namespace DesktopFlags
+{
+static const std::bitset<2> NONE{"00"};
+static const std::bitset<2> ALLOW_NO_DISPLAY{"01"};
+static const std::bitset<2> XMIR_DEFAULT{"10"};
+}
+
 class Desktop : public Application::Info
 {
 public:
     Desktop(std::shared_ptr<GKeyFile> keyfile,
             const std::string& basePath,
-            std::shared_ptr<Registry> registry = nullptr,
-            bool allowNoDisplay = false);
+            std::bitset<2> flags,
+            std::shared_ptr<Registry> registry);
 
     const Application::Info::Name& name() override
     {
@@ -83,7 +91,21 @@ public:
         return _ubuntuLifecycle;
     }
 
-private:
+    struct XMirEnableTag;
+    typedef TypeTagger<XMirEnableTag, bool> XMirEnable;
+    virtual XMirEnable xMirEnable()
+    {
+        return _xMirEnable;
+    }
+
+    struct ExecTag;
+    typedef TypeTagger<ExecTag, std::string> Exec;
+    virtual Exec execLine()
+    {
+        return _exec;
+    }
+
+protected:
     std::shared_ptr<GKeyFile> _keyfile;
     std::string _basePath;
 
@@ -98,6 +120,9 @@ private:
     Application::Info::Orientations _supportedOrientations;
     Application::Info::RotatesWindow _rotatesWindow;
     Application::Info::UbuntuLifecycle _ubuntuLifecycle;
+
+    XMirEnable _xMirEnable;
+    Exec _exec;
 };
 
 }  // namespace AppInfo
