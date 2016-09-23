@@ -201,6 +201,21 @@ pid_t UpstartInstance::primaryPid()
     });
 }
 
+std::string UpstartInstance::upstartJobPath()
+{
+    std::string path = job_ + "-" + std::string(appId_);
+    if (job_ != "application-click")
+    {
+        path += "-";
+    }
+    if (!instance_.empty())
+    {
+        path += instance_;
+    }
+
+    return path;
+}
+
 /** Looks at the PIDs in the instance cgroup and checks to see if @pid
     is in the set.
 
@@ -208,7 +223,7 @@ pid_t UpstartInstance::primaryPid()
 */
 bool UpstartInstance::hasPid(pid_t pid)
 {
-    for (auto testpid : registry_->impl->pidsFromCgroup(job_, instance_))
+    for (auto testpid : registry_->impl->pidsFromCgroup(upstartJobPath()))
         if (pid == testpid)
             return true;
     return false;
@@ -217,17 +232,7 @@ bool UpstartInstance::hasPid(pid_t pid)
 /** Gets the path to the log file for this instance */
 std::string UpstartInstance::logPath()
 {
-    std::string logfile = job_ + "-" + std::string(appId_);
-    if (job_ != "application-click")
-    {
-        logfile += "-";
-    }
-    if (!instance_.empty())
-    {
-        logfile += instance_;
-    }
-
-    logfile += ".log";
+    std::string logfile = upstartJobPath() + ".log";
 
     gchar* cpath = g_build_filename(g_get_user_cache_dir(), "upstart", logfile.c_str(), nullptr);
     std::string path(cpath);
@@ -239,7 +244,7 @@ std::string UpstartInstance::logPath()
 /** Returns all the PIDs that are in the cgroup for this application */
 std::vector<pid_t> UpstartInstance::pids()
 {
-    auto pids = registry_->impl->pidsFromCgroup(job_, instance_);
+    auto pids = registry_->impl->pidsFromCgroup(upstartJobPath());
     g_debug("Got %d PIDs for AppID '%s'", int(pids.size()), std::string(appId_).c_str());
     return pids;
 }
