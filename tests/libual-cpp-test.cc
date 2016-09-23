@@ -767,7 +767,7 @@ TEST_F(LibUAL, AppIdParse)
 TEST_F(LibUAL, ApplicationList)
 {
 #ifdef ENABLE_SNAPPY
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, u8Package, u8Package, interfaces, u8Package}};
+    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 #endif
 

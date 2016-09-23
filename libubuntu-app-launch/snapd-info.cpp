@@ -74,6 +74,11 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
         return {};
     }
 
+    if (package.value().empty())
+    {
+        return {};
+    }
+
     try
     {
         auto snapnode = snapdJson("/v2/snaps/" + package.value());
