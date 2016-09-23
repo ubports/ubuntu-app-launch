@@ -331,7 +331,7 @@ std::vector<std::shared_ptr<Application::Instance>> Click::instances()
            there or return an empty vector */
         if (sappid == instancename)
         {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", sappid,
+            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", std::string{},
                                                                 std::vector<Application::URL>{}, _registry));
             break;
         }
@@ -360,14 +360,14 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
 std::shared_ptr<Application::Instance> Click::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
+    return UpstartInstance::launch(appId(), "application-click", {}, urls, _registry,
                                    UpstartInstance::launchMode::STANDARD, envfunc);
 }
 
 std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
+    return UpstartInstance::launch(appId(), "application-click", {}, urls, _registry,
                                    UpstartInstance::launchMode::TEST, envfunc);
 }
 
