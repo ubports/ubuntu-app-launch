@@ -450,8 +450,8 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appid_, "application-snap", {}, urls, _registry,
-                                   UpstartInstance::launchMode::TEST, envfunc);
+    return UpstartInstance::launch(appid_, "application-snap", {}, urls, _registry, UpstartInstance::launchMode::TEST,
+                                   envfunc);
 }
 
 }  // namespace app_impls
