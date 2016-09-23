@@ -367,8 +367,8 @@ std::shared_ptr<Application::Instance> Click::launch(const std::vector<Applicati
 std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-click", {}, urls, _registry,
-                                   UpstartInstance::launchMode::TEST, envfunc);
+    return UpstartInstance::launch(appId(), "application-click", {}, urls, _registry, UpstartInstance::launchMode::TEST,
+                                   envfunc);
 }
 
 }  // namespace app_impls
