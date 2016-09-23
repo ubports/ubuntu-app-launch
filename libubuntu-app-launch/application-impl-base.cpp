@@ -201,6 +201,12 @@ pid_t UpstartInstance::primaryPid()
     });
 }
 
+/** Generate the full name of the Upstart job for the job, the
+    instance and how all those fit together.
+
+    Handles the special case of application-click which isn't designed
+    to have multi-instance apps.
+*/
 std::string UpstartInstance::upstartJobPath()
 {
     std::string path = job_ + "-" + std::string(appId_);
