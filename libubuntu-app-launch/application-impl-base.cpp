@@ -217,10 +217,13 @@ bool UpstartInstance::hasPid(pid_t pid)
 /** Gets the path to the log file for this instance */
 std::string UpstartInstance::logPath()
 {
-    std::string logfile = job_;
-    if (!instance_.empty())
+    std::string logfile = job_ + "-" + std::string(appId_);
+    if (job_ != "application-click")
     {
         logfile += "-";
+    }
+    if (!instance_.empty())
+    {
         logfile += instance_;
     }
 
