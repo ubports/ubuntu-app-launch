@@ -30,8 +30,26 @@ class InstanceFactory
 public:
     virtual ~InstanceFactory() = default;
 
-    virtual std::shared_ptr<Application::Instance> launch();
-    virtual std::shared_ptr<Application::Instance> existing();
+    /** Flag for whether we should include the testing environment variables */
+    enum class launchMode
+    {
+        STANDARD, /**< Standard variable set */
+        TEST      /**< Include testing environment vars */
+    };
+
+    virtual std::shared_ptr<Application::Instance> launch(
+        const AppID& appId,
+        const std::string& job,
+        const std::string& instance,
+        const std::vector<Application::URL>& urls,
+        const std::shared_ptr<Registry>& registry,
+        launchMode mode,
+        std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv);
+    virtual std::shared_ptr<Application::Instance> existing(const AppID& appId,
+                                                            const std::string& job,
+                                                            const std::string& instance,
+                                                            const std::vector<Application::URL>& urls,
+                                                            const std::shared_ptr<Registry>& registry);
 
     static std::shared_ptr<InstanceFactory> determineFactory();
 };
