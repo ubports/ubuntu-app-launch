@@ -20,6 +20,7 @@
 #pragma once
 
 #include "instance-factory.h"
+#include <gio/gio.h>
 
 namespace ubuntu
 {
@@ -45,6 +46,8 @@ public:
                                                             const std::string& instance,
                                                             const std::vector<Application::URL>& urls,
                                                             const std::shared_ptr<Registry>& registry) override;
+
+private:
 };
 
 }  // namespace app_launch
