@@ -397,8 +397,8 @@ std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
     {
         if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
         {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appid_, "application-snap", std::string{},
-                                                                std::vector<Application::URL>{}, _registry));
+            vect.emplace_back(_registry->impl->instances->existing(appid_, "application-snap", std::string{},
+                                                                   std::vector<Application::URL>{}, _registry));
         }
     }
 
@@ -438,8 +438,8 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appid_, "application-snap", {}, urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->instances->launch(appid_, "application-snap", {}, urls, _registry,
+                                              InstanceFactory::launchMode::STANDARD, envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -450,8 +450,8 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appid_, "application-snap", {}, urls, _registry, UpstartInstance::launchMode::TEST,
-                                   envfunc);
+    return _registry->impl->instances->launch(appid_, "application-snap", {}, urls, _registry,
+                                              InstanceFactory::launchMode::TEST, envfunc);
 }
 
 }  // namespace app_impls
