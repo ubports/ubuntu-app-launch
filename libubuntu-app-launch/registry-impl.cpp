@@ -270,18 +270,18 @@ void Registry::Impl::initCGManager()
     all of the PIDs. It is important to note that this is an IPC call, so it can
     by its nature, be racy. Once the message has been sent the group can change.
     You should take that into account in your usage of it. */
-std::vector<pid_t> Registry::Impl::pidsFromCgroup(const std::string& job, const std::string& instance)
+std::vector<pid_t> Registry::Impl::pidsFromCgroup(const std::string& jobpath)
 {
     initCGManager();
     auto lmanager = cgManager_; /* Grab a local copy so we ensure it lasts through our lifetime */
 
-    return thread.executeOnThread<std::vector<pid_t>>([&job, &instance, lmanager]() -> std::vector<pid_t> {
+    return thread.executeOnThread<std::vector<pid_t>>([&jobpath, lmanager]() -> std::vector<pid_t> {
         GError* error = nullptr;
         const gchar* name = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME");
         std::string groupname;
-        if (!job.empty())
+        if (!jobpath.empty())
         {
-            groupname = "upstart/" + job + "-" + instance;
+            groupname = "upstart/" + jobpath;
         }
 
         g_debug("Looking for cg manager '%s' group '%s'", name, groupname.c_str());

@@ -73,7 +73,7 @@ public:
 
     void zgSendEvent(AppID appid, const std::string& eventtype);
 
-    std::vector<pid_t> pidsFromCgroup(const std::string& job, const std::string& instance);
+    std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
 
     /* Upstart Jobs */
     std::list<std::string> upstartInstancesForJob(const std::string& job);
