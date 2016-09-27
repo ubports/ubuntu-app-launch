@@ -27,7 +27,7 @@ namespace app_launch
 {
 namespace app_impls
 {
-    
+
 Libertine::Libertine(const AppID::Package& container,
                      const AppID::AppName& appname,
                      const std::shared_ptr<Registry>& registry)
@@ -83,7 +83,9 @@ std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname
     return keyfile;
 }
 
-std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath, const std::string& subpath, const std::string& filename)
+std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath,
+                                                     const std::string& subpath,
+                                                     const std::string& filename)
 {
     auto fullpath = g_build_filename(basepath.c_str(), subpath.c_str(), filename.c_str(), nullptr);
     std::string sfullpath(fullpath);
@@ -97,7 +99,8 @@ std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath
     GError* error = nullptr;
     auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
     GDir* dir = g_dir_open(dirpath, 0, &error);
-    if (error != NULL) {
+    if (error != NULL)
+    {
         g_error_free(error);
         g_free(dirpath);
         return {};

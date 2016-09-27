@@ -52,6 +52,8 @@ application-icon-finder.cpp
 helper-impl-click.cpp
 glib-thread.h
 glib-thread.cpp
+instance-factory.h
+instance-factory.cpp
 )
 
 set(LAUNCHER_SOURCES
