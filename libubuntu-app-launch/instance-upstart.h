@@ -30,7 +30,7 @@ namespace app_launch
 class InstanceUpstart : public InstanceFactory
 {
 public:
-    InstanceUpstart();
+    InstanceUpstart(std::shared_ptr<Registry> registry);
     virtual ~InstanceUpstart();
 
     virtual std::shared_ptr<Application::Instance> launch(
@@ -38,14 +38,12 @@ public:
         const std::string& job,
         const std::string& instance,
         const std::vector<Application::URL>& urls,
-        const std::shared_ptr<Registry>& registry,
         launchMode mode,
         std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv) override;
     virtual std::shared_ptr<Application::Instance> existing(const AppID& appId,
                                                             const std::string& job,
                                                             const std::string& instance,
-                                                            const std::vector<Application::URL>& urls,
-                                                            const std::shared_ptr<Registry>& registry) override;
+                                                            const std::vector<Application::URL>& urls) override;
 
 private:
 };

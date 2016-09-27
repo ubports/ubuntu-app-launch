@@ -28,6 +28,7 @@ namespace app_launch
 class InstanceFactory
 {
 public:
+    InstanceFactory(std::shared_ptr<Registry> registry);
     virtual ~InstanceFactory() = default;
 
     /** Flag for whether we should include the testing environment variables */
@@ -42,17 +43,18 @@ public:
         const std::string& job,
         const std::string& instance,
         const std::vector<Application::URL>& urls,
-        const std::shared_ptr<Registry>& registry,
         launchMode mode,
         std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv) = 0;
 
     virtual std::shared_ptr<Application::Instance> existing(const AppID& appId,
                                                             const std::string& job,
                                                             const std::string& instance,
-                                                            const std::vector<Application::URL>& urls,
-                                                            const std::shared_ptr<Registry>& registry) = 0;
+                                                            const std::vector<Application::URL>& urls) = 0;
 
-    static std::shared_ptr<InstanceFactory> determineFactory();
+    static std::shared_ptr<InstanceFactory> determineFactory(std::shared_ptr<Registry> registry);
+
+protected:
+    std::shared_ptr<Registry> registry_;
 };
 
 }  // namespace app_launch

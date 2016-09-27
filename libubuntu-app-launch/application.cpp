@@ -28,6 +28,8 @@ extern "C" {
 #include "application-impl-snap.h"
 #endif
 #include "application.h"
+#include "instance-factory.h"
+#include "registry-impl.h"
 #include "registry.h"
 
 #include <functional>
@@ -44,6 +46,11 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
     if (appid.empty())
     {
         throw std::runtime_error("AppID is empty");
+    }
+
+    if (!registry->impl->instances)
+    {
+        registry->impl->instances = InstanceFactory::determineFactory(registry);
     }
 
     if (app_impls::Click::hasAppId(appid, registry))

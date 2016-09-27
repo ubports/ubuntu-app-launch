@@ -25,9 +25,14 @@ namespace ubuntu
 namespace app_launch
 {
 
-std::shared_ptr<InstanceFactory> InstanceFactory::determineFactory()
+InstanceFactory::InstanceFactory(std::shared_ptr<Registry> registry)
+    : registry_(registry)
 {
-    return std::make_shared<InstanceUpstart>();
+}
+
+std::shared_ptr<InstanceFactory> InstanceFactory::determineFactory(std::shared_ptr<Registry> registry)
+{
+    return std::make_shared<InstanceUpstart>(registry);
 }
 
 }  // namespace app_launch

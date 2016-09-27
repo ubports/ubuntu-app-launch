@@ -744,7 +744,8 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
     delete data;
 }
 
-InstanceUpstart::InstanceUpstart()
+InstanceUpstart::InstanceUpstart(std::shared_ptr<Registry> registry)
+    : InstanceFactory(registry)
 {
 }
 
@@ -759,7 +760,6 @@ InstanceUpstart::~InstanceUpstart()
     \param job Upstart job name
     \param instance Upstart instance name
     \param urls URLs sent to the application (only on launch today)
-    \param registry Registry of persistent connections to use
     \param mode Whether or not to setup the environment for testing
     \param getenv A function to get additional environment variable when appropriate
 */
@@ -768,14 +768,13 @@ std::shared_ptr<Application::Instance> InstanceUpstart::launch(
     const std::string& job,
     const std::string& instance,
     const std::vector<Application::URL>& urls,
-    const std::shared_ptr<Registry>& registry,
     launchMode mode,
     std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv)
 {
     if (appId.empty())
         return {};
 
-    return registry->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
+    return registry_->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
         [&]() -> std::shared_ptr<UpstartInstance> {
             std::string appIdStr{appId};
             g_debug("Initializing params for an new UpstartInstance for: %s", appIdStr.c_str());
@@ -795,7 +794,7 @@ std::shared_ptr<Application::Instance> InstanceUpstart::launch(
             }
 
             /* Figure out the DBus path for the job */
-            auto jobpath = registry->impl->upstartJobPath(job);
+            auto jobpath = registry_->impl->upstartJobPath(job);
 
             /* Build up our environment */
             auto env = getenv();
@@ -852,7 +851,7 @@ std::shared_ptr<Application::Instance> InstanceUpstart::launch(
             g_variant_builder_close(&builder);
             g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
-            auto retval = std::make_shared<UpstartInstance>(appId, job, instance, urls, registry);
+            auto retval = std::make_shared<UpstartInstance>(appId, job, instance, urls, registry_);
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
 
@@ -862,18 +861,18 @@ std::shared_ptr<Application::Instance> InstanceUpstart::launch(
 
             /* Call the job start function */
             g_debug("Asking Upstart to start task for: %s", appIdStr.c_str());
-            g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
-                                   DBUS_SERVICE_UPSTART,                          /* service name */
-                                   jobpath.c_str(),                               /* Path */
-                                   DBUS_INTERFACE_UPSTART_JOB,                    /* interface */
-                                   "Start",                                       /* method */
-                                   g_variant_builder_end(&builder),               /* params */
-                                   nullptr,                                       /* return */
-                                   G_DBUS_CALL_FLAGS_NONE,                        /* flags */
-                                   -1,                                            /* default timeout */
-                                   registry->impl->thread.getCancellable().get(), /* cancellable */
-                                   UpstartInstance::application_start_cb,         /* callback */
-                                   chelper                                        /* object */
+            g_dbus_connection_call(registry_->impl->_dbus.get(),                   /* bus */
+                                   DBUS_SERVICE_UPSTART,                           /* service name */
+                                   jobpath.c_str(),                                /* Path */
+                                   DBUS_INTERFACE_UPSTART_JOB,                     /* interface */
+                                   "Start",                                        /* method */
+                                   g_variant_builder_end(&builder),                /* params */
+                                   nullptr,                                        /* return */
+                                   G_DBUS_CALL_FLAGS_NONE,                         /* flags */
+                                   -1,                                             /* default timeout */
+                                   registry_->impl->thread.getCancellable().get(), /* cancellable */
+                                   UpstartInstance::application_start_cb,          /* callback */
+                                   chelper                                         /* object */
                                    );
 
             tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
@@ -885,10 +884,9 @@ std::shared_ptr<Application::Instance> InstanceUpstart::launch(
 std::shared_ptr<Application::Instance> InstanceUpstart::existing(const AppID& appId,
                                                                  const std::string& job,
                                                                  const std::string& instance,
-                                                                 const std::vector<Application::URL>& urls,
-                                                                 const std::shared_ptr<Registry>& registry)
+                                                                 const std::vector<Application::URL>& urls)
 {
-    return std::make_shared<UpstartInstance>(appId, job, instance, urls, registry);
+    return std::make_shared<UpstartInstance>(appId, job, instance, urls, registry_);
 }
 
 }  // namespace app_launch

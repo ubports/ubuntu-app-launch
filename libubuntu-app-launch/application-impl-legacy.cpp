@@ -293,7 +293,7 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
         if (std::regex_match(instance, instanceMatch, instanceRegex_))
         {
             vect.emplace_back(_registry->impl->instances->existing(
-                appId(), "application-legacy", instanceMatch[1].str(), std::vector<Application::URL>{}, _registry));
+                appId(), "application-legacy", instanceMatch[1].str(), std::vector<Application::URL>{}));
         }
     }
 
@@ -370,7 +370,7 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return _registry->impl->instances->launch(appId(), "application-legacy", instance, urls, _registry,
+    return _registry->impl->instances->launch(appId(), "application-legacy", instance, urls,
                                               InstanceFactory::launchMode::STANDARD, envfunc);
 }
 
@@ -385,7 +385,7 @@ std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Appl
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return _registry->impl->instances->launch(appId(), "application-legacy", instance, urls, _registry,
+    return _registry->impl->instances->launch(appId(), "application-legacy", instance, urls,
                                               InstanceFactory::launchMode::TEST, envfunc);
 }
 
