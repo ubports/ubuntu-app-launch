@@ -54,6 +54,8 @@ glib-thread.h
 glib-thread.cpp
 instance-factory.h
 instance-factory.cpp
+instance-upstart.h
+instance-upstart.cpp
 )
 
 set(LAUNCHER_SOURCES

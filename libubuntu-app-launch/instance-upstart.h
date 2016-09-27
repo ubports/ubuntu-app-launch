@@ -18,24 +18,19 @@
  */
 
 #pragma once
-#include "application.h"
+
+#include "instance-factory.h"
 
 namespace ubuntu
 {
 namespace app_launch
 {
 
-class InstanceFactory
+class InstanceUpstart : public InstanceFactory
 {
 public:
-    virtual ~InstanceFactory() = default;
-
-    /** Flag for whether we should include the testing environment variables */
-    enum class launchMode
-    {
-        STANDARD, /**< Standard variable set */
-        TEST      /**< Include testing environment vars */
-    };
+    InstanceUpstart();
+    virtual ~InstanceUpstart();
 
     virtual std::shared_ptr<Application::Instance> launch(
         const AppID& appId,
@@ -44,15 +39,12 @@ public:
         const std::vector<Application::URL>& urls,
         const std::shared_ptr<Registry>& registry,
         launchMode mode,
-        std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv) = 0;
-
+        std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv) override;
     virtual std::shared_ptr<Application::Instance> existing(const AppID& appId,
                                                             const std::string& job,
                                                             const std::string& instance,
                                                             const std::vector<Application::URL>& urls,
-                                                            const std::shared_ptr<Registry>& registry) = 0;
-
-    static std::shared_ptr<InstanceFactory> determineFactory();
+                                                            const std::shared_ptr<Registry>& registry) override;
 };
 
 }  // namespace app_launch

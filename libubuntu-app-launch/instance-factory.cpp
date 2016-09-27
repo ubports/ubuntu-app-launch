@@ -18,6 +18,7 @@
  */
 
 #include "instance-factory.h"
+#include "instance-upstart.h"
 
 namespace ubuntu
 {
@@ -26,7 +27,7 @@ namespace app_launch
 
 std::shared_ptr<InstanceFactory> InstanceFactory::determineFactory()
 {
-    return {};
+    return std::make_shared<InstanceUpstart>();
 }
 
 }  // namespace app_launch
