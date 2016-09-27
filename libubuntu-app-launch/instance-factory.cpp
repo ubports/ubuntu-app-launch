@@ -25,7 +25,7 @@ namespace ubuntu
 namespace app_launch
 {
 
-InstanceFactory::InstanceFactory(std::shared_ptr<Registry> registry)
+InstanceFactory::InstanceFactory(const std::shared_ptr<Registry>& registry)
     : registry_(registry)
 {
 }

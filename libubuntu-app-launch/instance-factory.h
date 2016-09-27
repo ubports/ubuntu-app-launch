@@ -28,7 +28,7 @@ namespace app_launch
 class InstanceFactory
 {
 public:
-    InstanceFactory(std::shared_ptr<Registry> registry);
+    InstanceFactory(const std::shared_ptr<Registry>& registry);
     virtual ~InstanceFactory() = default;
 
     /** Flag for whether we should include the testing environment variables */
