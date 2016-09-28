@@ -39,6 +39,15 @@ public:
          const std::shared_ptr<Registry>& registry);
     virtual ~Base() = default;
 
+    bool isRunning() override;
+    bool hasPid(pid_t pid) override;
+    void pause() override;
+    void resume() override;
+
+    /* OOM Functions */
+    void setOomAdjustment(const oom::Score score) override;
+    const oom::Score getOomAdjustment() override;
+
 protected:
     /** Application ID */
     const AppID appId_;
@@ -51,6 +60,14 @@ protected:
     std::vector<Application::URL> urls_;
     /** A link to the registry we're using for connections */
     std::shared_ptr<Registry> registry_;
+
+private:
+    std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
+    void signalToPid(pid_t pid, int signal);
+    std::string pidToOomPath(pid_t pid);
+    void oomValueToPid(pid_t pid, const oom::Score oomvalue);
+    void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
+    void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal);
 };
 
 }  // namespace instance
