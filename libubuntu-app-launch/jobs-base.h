@@ -26,6 +26,35 @@ namespace app_launch
 {
 namespace jobs
 {
+namespace instance
+{
+
+class Base : public Application::Instance
+{
+public:
+    Base(const AppID& appId,
+         const std::string& job,
+         const std::string& instance,
+         const std::vector<Application::URL>& urls,
+         const std::shared_ptr<Registry>& registry);
+    virtual ~Base() = default;
+
+protected:
+    /** Application ID */
+    const AppID appId_;
+    /** Upstart job name */
+    const std::string job_;
+    /** Instance ID environment value, empty if none */
+    const std::string instance_;
+    /** The URLs that this was launched for. Only valid on launched jobs, we
+        should look at perhaps changing that. */
+    std::vector<Application::URL> urls_;
+    /** A link to the registry we're using for connections */
+    std::shared_ptr<Registry> registry_;
+};
+
+}  // namespace instance
+
 namespace manager
 {
 

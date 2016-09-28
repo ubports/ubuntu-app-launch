@@ -40,6 +40,25 @@ std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
 }
 
 }  // namespace manager
+
+namespace instance
+{
+
+Base::Base(const AppID& appId,
+           const std::string& job,
+           const std::string& instance,
+           const std::vector<Application::URL>& urls,
+           const std::shared_ptr<Registry>& registry)
+    : appId_(appId)
+    , job_(job)
+    , instance_(instance)
+    , urls_(urls)
+    , registry_(registry)
+{
+}
+
+}  // namespace instance
+
 }  // namespace jobs
 }  // namespace app_launch
 }  // namespace ubuntu

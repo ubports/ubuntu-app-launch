@@ -41,19 +41,21 @@ namespace app_launch
 {
 namespace jobs
 {
+namespace instance
+{
 
 /** An object that represents an instance of a job on Upstart. This
     then implements everything needed by the instance interface. Most
     applications tie into this today and use it as the backend for
     their instances. */
-class UpstartInstance : public Application::Instance
+class Upstart : public Base
 {
 public:
-    explicit UpstartInstance(const AppID& appId,
-                             const std::string& job,
-                             const std::string& instance,
-                             const std::vector<Application::URL>& urls,
-                             const std::shared_ptr<Registry>& registry);
+    explicit Upstart(const AppID& appId,
+                     const std::string& job,
+                     const std::string& instance,
+                     const std::vector<Application::URL>& urls,
+                     const std::shared_ptr<Registry>& registry);
 
     /* Query lifecycle */
     bool isRunning() override;
@@ -71,36 +73,10 @@ public:
     void setOomAdjustment(const oom::Score score) override;
     const oom::Score getOomAdjustment() override;
 
-    /** Flag for whether we should include the testing environment variables */
-    enum class launchMode
-    {
-        STANDARD, /**< Standard variable set */
-        TEST      /**< Include testing environment vars */
-    };
-    static std::shared_ptr<UpstartInstance> launch(
-        const AppID& appId,
-        const std::string& job,
-        const std::string& instance,
-        const std::vector<Application::URL>& urls,
-        const std::shared_ptr<Registry>& registry,
-        launchMode mode,
-        std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv);
-
+    /* C Callback */
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 
 private:
-    /** Application ID */
-    const AppID appId_;
-    /** Upstart job name */
-    const std::string job_;
-    /** Instance ID environment value, empty if none */
-    const std::string instance_;
-    /** The URLs that this was launched for. Only valid on launched jobs, we
-        should look at perhaps changing that. */
-    std::vector<Application::URL> urls_;
-    /** A link to the registry we're using for connections */
-    std::shared_ptr<Registry> registry_;
-
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
     void signalToPid(pid_t pid, int signal);
     std::string pidToOomPath(pid_t pid);
@@ -113,14 +89,14 @@ private:
 };
 
 /** Checks to see if we have a primary PID for the instance */
-bool UpstartInstance::isRunning()
+bool Upstart::isRunning()
 {
     return primaryPid() != 0;
 }
 
 /** Uses Upstart to get the primary PID of the instance using Upstart's
     DBus interface */
-pid_t UpstartInstance::primaryPid()
+pid_t Upstart::primaryPid()
 {
     auto jobpath = registry_->impl->upstartJobPath(job_);
     if (jobpath.empty())
@@ -229,7 +205,7 @@ pid_t UpstartInstance::primaryPid()
     Handles the special case of application-click which isn't designed
     to have multi-instance apps.
 */
-std::string UpstartInstance::upstartJobPath()
+std::string Upstart::upstartJobPath()
 {
     std::string path = job_ + "-" + std::string(appId_);
     if (job_ != "application-click")
@@ -249,7 +225,7 @@ std::string UpstartInstance::upstartJobPath()
 
     @param pid PID to look for
 */
-bool UpstartInstance::hasPid(pid_t pid)
+bool Upstart::hasPid(pid_t pid)
 {
     for (auto testpid : registry_->impl->pidsFromCgroup(upstartJobPath()))
         if (pid == testpid)
@@ -258,7 +234,7 @@ bool UpstartInstance::hasPid(pid_t pid)
 }
 
 /** Gets the path to the log file for this instance */
-std::string UpstartInstance::logPath()
+std::string Upstart::logPath()
 {
     std::string logfile = upstartJobPath() + ".log";
 
@@ -270,7 +246,7 @@ std::string UpstartInstance::logPath()
 }
 
 /** Returns all the PIDs that are in the cgroup for this application */
-std::vector<pid_t> UpstartInstance::pids()
+std::vector<pid_t> Upstart::pids()
 {
     auto pids = registry_->impl->pidsFromCgroup(upstartJobPath());
     g_debug("Got %d PIDs for AppID '%s'", int(pids.size()), std::string(appId_).c_str());
@@ -279,7 +255,7 @@ std::vector<pid_t> UpstartInstance::pids()
 
 /** Pauses this application by sending SIGSTOP to all the PIDs in the
     cgroup and tells Zeitgeist that we've left the application. */
-void UpstartInstance::pause()
+void Upstart::pause()
 {
     g_debug("Pausing application: %s", std::string(appId_).c_str());
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
@@ -296,7 +272,7 @@ void UpstartInstance::pause()
 
 /** Resumes this application by sending SIGCONT to all the PIDs in the
     cgroup and tells Zeitgeist that we're accessing the application. */
-void UpstartInstance::resume()
+void Upstart::resume()
 {
     g_debug("Resuming application: %s", std::string(appId_).c_str());
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
@@ -313,7 +289,7 @@ void UpstartInstance::resume()
 
 /** Stops this instance by asking Upstart to stop it. Upstart will then
     send a SIGTERM and five seconds later start killing things. */
-void UpstartInstance::stop()
+void Upstart::stop()
 {
     if (!registry_->impl->thread.executeOnThread<bool>([this]() {
 
@@ -378,14 +354,14 @@ void UpstartInstance::stop()
 
     \param score OOM Score to set
 */
-void UpstartInstance::setOomAdjustment(const oom::Score score)
+void Upstart::setOomAdjustment(const oom::Score score)
 {
     forAllPids([this, &score](pid_t pid) { oomValueToPid(pid, score); });
 }
 
 /** Figures out the path to the primary PID of the application and
     then reads its OOM adjustment file. */
-const oom::Score UpstartInstance::getOomAdjustment()
+const oom::Score Upstart::getOomAdjustment()
 {
     auto pid = primaryPid();
     if (pid == 0)
@@ -419,7 +395,7 @@ const oom::Score UpstartInstance::getOomAdjustment()
 
     \param eachPid Function to run on each PID
 */
-std::vector<pid_t> UpstartInstance::forAllPids(std::function<void(pid_t)> eachPid)
+std::vector<pid_t> Upstart::forAllPids(std::function<void(pid_t)> eachPid)
 {
     std::set<pid_t> seenPids;
     bool added = true;
@@ -447,7 +423,7 @@ std::vector<pid_t> UpstartInstance::forAllPids(std::function<void(pid_t)> eachPi
     \param pid PID to send the signal to
     \param signal signal to send
 */
-void UpstartInstance::signalToPid(pid_t pid, int signal)
+void Upstart::signalToPid(pid_t pid, int signal)
 {
     if (-1 == kill(pid, signal))
     {
@@ -462,7 +438,7 @@ void UpstartInstance::signalToPid(pid_t pid, int signal)
 
     \param pid PID to build path for
 */
-std::string UpstartInstance::pidToOomPath(pid_t pid)
+std::string Upstart::pidToOomPath(pid_t pid)
 {
     static std::string procpath;
     if (G_UNLIKELY(procpath.empty()))
@@ -487,7 +463,7 @@ std::string UpstartInstance::pidToOomPath(pid_t pid)
     \param pid PID to change the OOM value of
     \param oomvalue OOM value to set
 */
-void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
+void Upstart::oomValueToPid(pid_t pid, const oom::Score oomvalue)
 {
     auto oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
     auto path = pidToOomPath(pid);
@@ -539,7 +515,7 @@ void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
     \param pid PID to change the OOM value of
     \param oomvalue OOM value to set
 */
-void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
+void Upstart::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
 {
     GError* error = nullptr;
     std::string oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
@@ -587,7 +563,7 @@ void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
     \param pids List of PIDs to turn into variants to send
     \param signal Name of the DBus signal to send
 */
-void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal)
+void Upstart::pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal)
 {
     auto registry = registry_;
     auto lappid = appId_;
@@ -653,25 +629,21 @@ void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::s
     \param urls URLs sent to the application (only on launch today)
     \param registry Registry of persistent connections to use
 */
-UpstartInstance::UpstartInstance(const AppID& appId,
-                                 const std::string& job,
-                                 const std::string& instance,
-                                 const std::vector<Application::URL>& urls,
-                                 const std::shared_ptr<Registry>& registry)
-    : appId_(appId)
-    , job_(job)
-    , instance_(instance)
-    , urls_(urls)
-    , registry_(registry)
+Upstart::Upstart(const AppID& appId,
+                 const std::string& job,
+                 const std::string& instance,
+                 const std::vector<Application::URL>& urls,
+                 const std::shared_ptr<Registry>& registry)
+    : Base(appId, job, instance, urls, registry)
 {
-    g_debug("Creating a new UpstartInstance for '%s' instance '%s'", std::string(appId_).c_str(), instance.c_str());
+    g_debug("Creating a new Upstart for '%s' instance '%s'", std::string(appId).c_str(), instance.c_str());
 }
 
 /** Reformat a C++ vector of URLs into a C GStrv of strings
 
     \param urls Vector of URLs to make into C strings
 */
-std::shared_ptr<gchar*> UpstartInstance::urlsToStrv(const std::vector<Application::URL>& urls)
+std::shared_ptr<gchar*> Upstart::urlsToStrv(const std::vector<Application::URL>& urls)
 {
     if (urls.empty())
     {
@@ -693,7 +665,7 @@ std::shared_ptr<gchar*> UpstartInstance::urlsToStrv(const std::vector<Applicatio
 /** Small helper that we can new/delete to work better with C stuff */
 struct StartCHelper
 {
-    std::shared_ptr<UpstartInstance> ptr;
+    std::shared_ptr<Upstart> ptr;
 };
 
 /** Callback from starting an application. It checks to see whether the
@@ -704,7 +676,7 @@ struct StartCHelper
     \param res Async result object
     \param user_data A pointer to a StartCHelper structure
 */
-void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
+void Upstart::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
 {
     auto data = static_cast<StartCHelper*>(user_data);
     GError* error{nullptr};
@@ -746,6 +718,8 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
     delete data;
 }
 
+}  // namespace instances
+
 namespace manager
 {
 
@@ -758,7 +732,7 @@ Upstart::~Upstart()
 {
 }
 
-/** Launch an application and create a new UpstartInstance object to track
+/** Launch an application and create a new Upstart instance object to track
     its progress.
 
     \param appId Application ID
@@ -779,10 +753,10 @@ std::shared_ptr<Application::Instance> Upstart::launch(
     if (appId.empty())
         return {};
 
-    return registry_->impl->thread.executeOnThread<std::shared_ptr<UpstartInstance>>(
-        [&]() -> std::shared_ptr<UpstartInstance> {
+    return registry_->impl->thread.executeOnThread<std::shared_ptr<instance::Upstart>>(
+        [&]() -> std::shared_ptr<instance::Upstart> {
             std::string appIdStr{appId};
-            g_debug("Initializing params for an new UpstartInstance for: %s", appIdStr.c_str());
+            g_debug("Initializing params for an new instance::Upstart for: %s", appIdStr.c_str());
 
             tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
 
@@ -856,8 +830,8 @@ std::shared_ptr<Application::Instance> Upstart::launch(
             g_variant_builder_close(&builder);
             g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
-            auto retval = std::make_shared<UpstartInstance>(appId, job, instance, urls, registry_);
-            auto chelper = new StartCHelper{};
+            auto retval = std::make_shared<instance::Upstart>(appId, job, instance, urls, registry_);
+            auto chelper = new instance::StartCHelper{};
             chelper->ptr = retval;
 
             tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
@@ -876,7 +850,7 @@ std::shared_ptr<Application::Instance> Upstart::launch(
                                    G_DBUS_CALL_FLAGS_NONE,                         /* flags */
                                    -1,                                             /* default timeout */
                                    registry_->impl->thread.getCancellable().get(), /* cancellable */
-                                   UpstartInstance::application_start_cb,          /* callback */
+                                   instance::Upstart::application_start_cb,        /* callback */
                                    chelper                                         /* object */
                                    );
 
@@ -891,7 +865,7 @@ std::shared_ptr<Application::Instance> Upstart::existing(const AppID& appId,
                                                          const std::string& instance,
                                                          const std::vector<Application::URL>& urls)
 {
-    return std::make_shared<UpstartInstance>(appId, job, instance, urls, registry_);
+    return std::make_shared<instance::Upstart>(appId, job, instance, urls, registry_);
 }
 
 }  // namespace manager
