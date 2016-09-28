@@ -28,7 +28,7 @@ extern "C" {
 #include "application-impl-snap.h"
 #endif
 #include "application.h"
-#include "instance-factory.h"
+#include "jobs-base.h"
 #include "registry-impl.h"
 #include "registry.h"
 
@@ -48,9 +48,9 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         throw std::runtime_error("AppID is empty");
     }
 
-    if (!registry->impl->instances)
+    if (!registry->impl->jobs)
     {
-        registry->impl->instances = InstanceFactory::determineFactory(registry);
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
     }
 
     if (app_impls::Click::hasAppId(appid, registry))

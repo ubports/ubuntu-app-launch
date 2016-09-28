@@ -33,11 +33,13 @@ extern "C" {
 #include "ubuntu-app-launch-trace.h"
 }
 
-#include "instance-upstart.h"
+#include "jobs-upstart.h"
 
 namespace ubuntu
 {
 namespace app_launch
+{
+namespace jobs
 {
 
 /** An object that represents an instance of a job on Upstart. This
@@ -744,12 +746,15 @@ void UpstartInstance::application_start_cb(GObject* obj, GAsyncResult* res, gpoi
     delete data;
 }
 
-InstanceUpstart::InstanceUpstart(std::shared_ptr<Registry> registry)
-    : InstanceFactory(registry)
+namespace manager
+{
+
+Upstart::Upstart(std::shared_ptr<Registry> registry)
+    : Base(registry)
 {
 }
 
-InstanceUpstart::~InstanceUpstart()
+Upstart::~Upstart()
 {
 }
 
@@ -763,7 +768,7 @@ InstanceUpstart::~InstanceUpstart()
     \param mode Whether or not to setup the environment for testing
     \param getenv A function to get additional environment variable when appropriate
 */
-std::shared_ptr<Application::Instance> InstanceUpstart::launch(
+std::shared_ptr<Application::Instance> Upstart::launch(
     const AppID& appId,
     const std::string& job,
     const std::string& instance,
@@ -881,13 +886,15 @@ std::shared_ptr<Application::Instance> InstanceUpstart::launch(
         });
 }
 
-std::shared_ptr<Application::Instance> InstanceUpstart::existing(const AppID& appId,
-                                                                 const std::string& job,
-                                                                 const std::string& instance,
-                                                                 const std::vector<Application::URL>& urls)
+std::shared_ptr<Application::Instance> Upstart::existing(const AppID& appId,
+                                                         const std::string& job,
+                                                         const std::string& instance,
+                                                         const std::vector<Application::URL>& urls)
 {
     return std::make_shared<UpstartInstance>(appId, job, instance, urls, registry_);
 }
 
+}  // namespace manager
+}  // namespace jobs
 }  // namespace app_launch
 }  // namespace ubuntu

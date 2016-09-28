@@ -269,8 +269,8 @@ std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
     for (auto instancename : _registry->impl->upstartInstancesForJob("application-legacy"))
     {
         if (std::equal(sappid.begin(), sappid.end(), instancename.begin()))
-            vect.emplace_back(_registry->impl->instances->existing(appId(), "application-legacy", std::string{},
-                                                                   std::vector<Application::URL>{}));
+            vect.emplace_back(_registry->impl->jobs->existing(appId(), "application-legacy", std::string{},
+                                                              std::vector<Application::URL>{}));
     }
 
     return vect;
@@ -315,15 +315,15 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->instances->launch(appId(), "application-legacy", {}, urls,
-                                              InstanceFactory::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::STANDARD,
+                                         envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->instances->launch(appId(), "application-legacy", {}, urls,
-                                              InstanceFactory::launchMode::TEST, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls

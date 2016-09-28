@@ -17,23 +17,29 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "instance-factory.h"
-#include "instance-upstart.h"
+#include "jobs-base.h"
+#include "jobs-upstart.h"
 
 namespace ubuntu
 {
 namespace app_launch
 {
+namespace jobs
+{
+namespace manager
+{
 
-InstanceFactory::InstanceFactory(const std::shared_ptr<Registry>& registry)
+Base::Base(const std::shared_ptr<Registry>& registry)
     : registry_(registry)
 {
 }
 
-std::shared_ptr<InstanceFactory> InstanceFactory::determineFactory(std::shared_ptr<Registry> registry)
+std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
 {
-    return std::make_shared<InstanceUpstart>(registry);
+    return std::make_shared<jobs::manager::Upstart>(registry);
 }
 
+}  // namespace manager
+}  // namespace jobs
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -292,8 +292,8 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
         g_debug("Looking at legacy instance: %s", instance.c_str());
         if (std::regex_match(instance, instanceMatch, instanceRegex_))
         {
-            vect.emplace_back(_registry->impl->instances->existing(
-                appId(), "application-legacy", instanceMatch[1].str(), std::vector<Application::URL>{}));
+            vect.emplace_back(_registry->impl->jobs->existing(appId(), "application-legacy", instanceMatch[1].str(),
+                                                              std::vector<Application::URL>{}));
         }
     }
 
@@ -370,8 +370,8 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return _registry->impl->instances->launch(appId(), "application-legacy", instance, urls,
-                                              InstanceFactory::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 /** Create an UpstartInstance for this AppID using the UpstartInstance launch
@@ -385,8 +385,8 @@ std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Appl
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return _registry->impl->instances->launch(appId(), "application-legacy", instance, urls,
-                                              InstanceFactory::launchMode::TEST, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls

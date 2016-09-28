@@ -18,25 +18,24 @@
  */
 
 #pragma once
-#include "application.h"
+
+#include "jobs-base.h"
+#include <gio/gio.h>
 
 namespace ubuntu
 {
 namespace app_launch
 {
+namespace jobs
+{
+namespace manager
+{
 
-class InstanceFactory
+class Upstart : public Base
 {
 public:
-    InstanceFactory(const std::shared_ptr<Registry>& registry);
-    virtual ~InstanceFactory() = default;
-
-    /** Flag for whether we should include the testing environment variables */
-    enum class launchMode
-    {
-        STANDARD, /**< Standard variable set */
-        TEST      /**< Include testing environment vars */
-    };
+    Upstart(std::shared_ptr<Registry> registry);
+    virtual ~Upstart();
 
     virtual std::shared_ptr<Application::Instance> launch(
         const AppID& appId,
@@ -44,18 +43,16 @@ public:
         const std::string& instance,
         const std::vector<Application::URL>& urls,
         launchMode mode,
-        std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv) = 0;
-
+        std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv) override;
     virtual std::shared_ptr<Application::Instance> existing(const AppID& appId,
                                                             const std::string& job,
                                                             const std::string& instance,
-                                                            const std::vector<Application::URL>& urls) = 0;
+                                                            const std::vector<Application::URL>& urls) override;
 
-    static std::shared_ptr<InstanceFactory> determineFactory(std::shared_ptr<Registry> registry);
-
-protected:
-    std::shared_ptr<Registry> registry_;
+private:
 };
 
+}  // namespace manager
+}  // namespace jobs
 }  // namespace app_launch
 }  // namespace ubuntu

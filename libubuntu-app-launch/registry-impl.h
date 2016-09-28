@@ -18,7 +18,7 @@
  */
 
 #include "glib-thread.h"
-#include "instance-factory.h"
+#include "jobs-base.h"
 #include "registry.h"
 #include "snapd-info.h"
 #include <click.h>
@@ -70,7 +70,7 @@ public:
     snapd::Info snapdInfo;
 #endif
 
-    std::shared_ptr<InstanceFactory> instances;
+    std::shared_ptr<jobs::manager::Base> jobs;
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 

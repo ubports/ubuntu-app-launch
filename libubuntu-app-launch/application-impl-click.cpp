@@ -331,8 +331,8 @@ std::vector<std::shared_ptr<Application::Instance>> Click::instances()
            there or return an empty vector */
         if (sappid == instancename)
         {
-            vect.emplace_back(_registry->impl->instances->existing(appId(), "application-click", std::string{},
-                                                                   std::vector<Application::URL>{}));
+            vect.emplace_back(_registry->impl->jobs->existing(appId(), "application-click", std::string{},
+                                                              std::vector<Application::URL>{}));
             break;
         }
     }
@@ -360,15 +360,15 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
 std::shared_ptr<Application::Instance> Click::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->instances->launch(appId(), "application-click", {}, urls,
-                                              InstanceFactory::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-click", {}, urls, jobs::manager::launchMode::STANDARD,
+                                         envfunc);
 }
 
 std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->instances->launch(appId(), "application-click", {}, urls, InstanceFactory::launchMode::TEST,
-                                              envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-click", {}, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls
