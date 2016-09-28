@@ -1,3 +1,9 @@
+ubuntu-app-launch (0.9+16.10.20160928-0ubuntu1) yakkety; urgency=medium
+
+  * Add a try/catch inside the for loop in ::list(). (LP: #1627594)
+
+ -- Rodney Dawes <rodney.dawes@canonical.com>  Wed, 28 Sep 2016 17:43:54 +0000
+
 ubuntu-app-launch (0.9+16.10.20160913.1-0ubuntu1) yakkety; urgency=medium
 
   [ Larry Price ]
