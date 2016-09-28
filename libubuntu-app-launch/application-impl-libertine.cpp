@@ -239,9 +239,17 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
         for (int j = 0; apps.get()[j] != nullptr; j++)
         {
-            auto appid = AppID::parse(apps.get()[j]);
-            auto sapp = std::make_shared<Libertine>(appid.package, appid.appname, registry);
-            applist.push_back(sapp);
+            try
+            {
+                auto appid = AppID::parse(apps.get()[j]);
+                auto sapp = std::make_shared<Libertine>(appid.package, appid.appname, registry);
+                applist.emplace_back(sapp);
+            }
+            catch (std::runtime_error& e)
+            {
+                g_debug("Unable to create application for libertine appname '%s': %s",
+                        apps.get()[j], e.what());
+            }
         }
     }
 
