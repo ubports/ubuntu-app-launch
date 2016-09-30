@@ -263,17 +263,8 @@ std::shared_ptr<Application::Info> Libertine::info()
 
 std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    std::string sappid = appId();
-
-    for (auto instancename : _registry->impl->upstartInstancesForJob("application-legacy"))
-    {
-        if (std::equal(sappid.begin(), sappid.end(), instancename.begin()))
-            vect.emplace_back(_registry->impl->jobs->existing(appId(), "application-legacy", std::string{},
-                                                              std::vector<Application::URL>{}));
-    }
-
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-legacy");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment variables for the application to

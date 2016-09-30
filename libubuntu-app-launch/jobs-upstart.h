@@ -21,6 +21,7 @@
 
 #include "jobs-base.h"
 #include <gio/gio.h>
+#include <map>
 
 namespace ubuntu
 {
@@ -49,7 +50,23 @@ public:
                                                             const std::string& instance,
                                                             const std::vector<Application::URL>& urls) override;
 
+    virtual std::list<std::shared_ptr<Application>> runningApps() override;
+
+    virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
+
+    std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
+
+    std::list<std::string> upstartInstancesForJob(const std::string& job);
+    std::string upstartJobPath(const std::string& job);
+
 private:
+    void initCGManager();
+
+    std::shared_ptr<GDBusConnection> cgManager_;
+
+    /** Getting the Upstart job path is relatively expensive in
+        that it requires a DBus call. Worth keeping a cache of. */
+    std::map<std::string, std::string> upstartJobPathCache_;
 };
 
 }  // namespace manager

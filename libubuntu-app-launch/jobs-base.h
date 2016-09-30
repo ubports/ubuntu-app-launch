@@ -101,6 +101,10 @@ public:
                                                             const std::string& instance,
                                                             const std::vector<Application::URL>& urls) = 0;
 
+    virtual std::list<std::shared_ptr<Application>> runningApps() = 0;
+
+    virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
+
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
 
 protected:

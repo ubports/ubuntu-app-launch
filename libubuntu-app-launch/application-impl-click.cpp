@@ -322,21 +322,8 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
 
 std::vector<std::shared_ptr<Application::Instance>> Click::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    std::string sappid = appId();
-
-    for (auto instancename : _registry->impl->upstartInstancesForJob("application-click"))
-    {
-        /* There an be only one, but we want to make sure it is
-           there or return an empty vector */
-        if (sappid == instancename)
-        {
-            vect.emplace_back(_registry->impl->jobs->existing(appId(), "application-click", std::string{},
-                                                              std::vector<Application::URL>{}));
-            break;
-        }
-    }
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-click");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment variables for the application to

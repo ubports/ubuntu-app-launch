@@ -33,9 +33,6 @@ namespace app_impls
 /** Path that snapd puts desktop files, we don't want to read those directly
     in the Legacy backend. We want to use the snap backend. */
 const std::string snappyDesktopPath{"/var/lib/snapd"};
-/** Special characters that could be an application name that
-    would activate in a regex */
-const static std::regex regexCharacters("([\\.\\-])");
 
 /***********************************
    Prototypes
@@ -69,14 +66,6 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     {
         throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
     }
-
-    /* Build a regex that'll match instances of the applications which
-       roughly looks like: $(appid)-2345345
-
-       It is important to filter out the special characters that are in
-       the appid.
-    */
-    instanceRegex_ = std::regex("^(?:" + std::regex_replace(_appname.value(), regexCharacters, "\\$&") + ")\\-(\\d*)$");
 }
 
 std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name)
@@ -283,23 +272,8 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
 
 std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    auto startsWith = std::string(appId()) + "-";
-
-    for (auto instance : _registry->impl->upstartInstancesForJob("application-legacy"))
-    {
-        std::smatch instanceMatch;
-        g_debug("Looking at legacy instance: %s", instance.c_str());
-        if (std::regex_match(instance, instanceMatch, instanceRegex_))
-        {
-            vect.emplace_back(_registry->impl->jobs->existing(appId(), "application-legacy", instanceMatch[1].str(),
-                                                              std::vector<Application::URL>{}));
-        }
-    }
-
-    g_debug("Legacy app '%s' has %d instances", std::string(appId()).c_str(), int(vect.size()));
-
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-legacy");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment for a legacy app. Mostly this consists of

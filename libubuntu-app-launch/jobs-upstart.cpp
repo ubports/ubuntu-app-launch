@@ -22,7 +22,9 @@
 #include <cstring>
 #include <map>
 #include <numeric>
+#include <regex>
 
+#include <cgmanager/cgmanager.h>
 #include <upstart.h>
 
 #include "helpers.h"
@@ -69,7 +71,8 @@ public:
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 
 private:
-    std::string upstartJobPath();
+    std::string upstartJobPath(const std::string& job);
+    std::string upstartName();
 
     static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
 };
@@ -78,7 +81,7 @@ private:
     DBus interface */
 pid_t Upstart::primaryPid()
 {
-    auto jobpath = registry_->impl->upstartJobPath(job_);
+    auto jobpath = upstartJobPath(job_);
     if (jobpath.empty())
     {
         g_debug("Unable to get a valid job path");
@@ -185,7 +188,7 @@ pid_t Upstart::primaryPid()
     Handles the special case of application-click which isn't designed
     to have multi-instance apps.
 */
-std::string Upstart::upstartJobPath()
+std::string Upstart::upstartName()
 {
     std::string path = job_ + "-" + std::string(appId_);
     if (job_ != "application-click")
@@ -203,7 +206,7 @@ std::string Upstart::upstartJobPath()
 /** Gets the path to the log file for this instance */
 std::string Upstart::logPath()
 {
-    std::string logfile = upstartJobPath() + ".log";
+    std::string logfile = upstartName() + ".log";
 
     gchar* cpath = g_build_filename(g_get_user_cache_dir(), "upstart", logfile.c_str(), nullptr);
     std::string path(cpath);
@@ -215,7 +218,8 @@ std::string Upstart::logPath()
 /** Returns all the PIDs that are in the cgroup for this application */
 std::vector<pid_t> Upstart::pids()
 {
-    auto pids = registry_->impl->pidsFromCgroup(upstartJobPath());
+    auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry_->impl->jobs);
+    auto pids = manager->pidsFromCgroup(upstartName());
     g_debug("Got %d PIDs for AppID '%s'", int(pids.size()), std::string(appId_).c_str());
     return pids;
 }
@@ -225,11 +229,12 @@ std::vector<pid_t> Upstart::pids()
 void Upstart::stop()
 {
     if (!registry_->impl->thread.executeOnThread<bool>([this]() {
+            auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry_->impl->jobs);
 
             g_debug("Stopping job %s app_id %s instance_id %s", job_.c_str(), std::string(appId_).c_str(),
                     instance_.c_str());
 
-            auto jobpath = registry_->impl->upstartJobPath(job_);
+            auto jobpath = manager->upstartJobPath(job_);
             if (jobpath.empty())
             {
                 throw new std::runtime_error("Unable to get job path for Upstart job '" + job_ + "'");
@@ -380,6 +385,12 @@ void Upstart::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
     delete data;
 }
 
+std::string Upstart::upstartJobPath(const std::string& job)
+{
+    auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry_->impl->jobs);
+    return manager->upstartJobPath(job);
+}
+
 }  // namespace instances
 
 namespace manager
@@ -417,6 +428,7 @@ std::shared_ptr<Application::Instance> Upstart::launch(
 
     return registry_->impl->thread.executeOnThread<std::shared_ptr<instance::Upstart>>(
         [&]() -> std::shared_ptr<instance::Upstart> {
+            auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry_->impl->jobs);
             std::string appIdStr{appId};
             g_debug("Initializing params for an new instance::Upstart for: %s", appIdStr.c_str());
 
@@ -435,7 +447,7 @@ std::shared_ptr<Application::Instance> Upstart::launch(
             }
 
             /* Figure out the DBus path for the job */
-            auto jobpath = registry_->impl->upstartJobPath(job);
+            auto jobpath = manager->upstartJobPath(job);
 
             /* Build up our environment */
             auto env = getenv();
@@ -522,12 +534,355 @@ std::shared_ptr<Application::Instance> Upstart::launch(
         });
 }
 
+/** Special characters that could be an application name that
+    would activate in a regex */
+const static std::regex regexCharacters("([\\.\\-])");
+
 std::shared_ptr<Application::Instance> Upstart::existing(const AppID& appId,
                                                          const std::string& job,
                                                          const std::string& instance,
                                                          const std::vector<Application::URL>& urls)
 {
     return std::make_shared<instance::Upstart>(appId, job, instance, urls, registry_);
+}
+
+std::vector<std::shared_ptr<instance::Base>> Upstart::instances(const AppID& appID, const std::string& job)
+{
+    std::vector<std::shared_ptr<instance::Base>> vect;
+    auto startsWith = std::string(appID);
+    if (job != "application-click")
+    {
+        startsWith += "-";
+    }
+
+    auto instanceRegex = std::regex("^(?:" + std::regex_replace(startsWith, regexCharacters, "\\$&") + ")\\-(\\d*)$");
+
+    for (auto instance : upstartInstancesForJob(job))
+    {
+        std::smatch instanceMatch;
+        g_debug("Looking at job '%s' instance: %s", job.c_str(), instance.c_str());
+        if (std::regex_match(instance, instanceMatch, instanceRegex))
+        {
+            auto app = existing(appID, job, instanceMatch[1].str(), {});
+            vect.emplace_back(std::dynamic_pointer_cast<instance::Base>(app));
+        }
+    }
+
+    g_debug("App '%s' has %d instances", std::string(appID).c_str(), int(vect.size()));
+
+    return vect;
+}
+
+/** Initialize the CGManager connection, including a timeout to disconnect
+    as CGManager doesn't free resources entirely well. So it's better if
+    we connect and disconnect occationally */
+void Upstart::initCGManager()
+{
+    if (cgManager_)
+        return;
+
+    std::promise<std::shared_ptr<GDBusConnection>> promise;
+    auto future = promise.get_future();
+
+    registry_->impl->thread.executeOnThread([this, &promise]() {
+        bool use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != nullptr;
+        if (use_session_bus)
+        {
+            /* For working dbusmock */
+            g_debug("Connecting to CG Manager on session bus");
+            promise.set_value(registry_->impl->_dbus);
+            return;
+        }
+
+        auto cancel =
+            std::shared_ptr<GCancellable>(g_cancellable_new(), [](GCancellable* cancel) { g_clear_object(&cancel); });
+
+        /* Ensure that we do not wait for more than a second */
+        registry_->impl->thread.timeoutSeconds(std::chrono::seconds{1},
+                                               [cancel]() { g_cancellable_cancel(cancel.get()); });
+
+        g_dbus_connection_new_for_address(
+            CGMANAGER_DBUS_PATH,                           /* cgmanager path */
+            G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, /* flags */
+            nullptr,                                       /* Auth Observer */
+            cancel.get(),                                  /* Cancellable */
+            [](GObject* obj, GAsyncResult* res, gpointer data) -> void {
+                GError* error = nullptr;
+                auto promise = reinterpret_cast<std::promise<std::shared_ptr<GDBusConnection>>*>(data);
+
+                auto gcon = g_dbus_connection_new_for_address_finish(res, &error);
+                if (error != nullptr)
+                {
+                    g_error_free(error);
+                }
+
+                auto con = std::shared_ptr<GDBusConnection>(gcon, [](GDBusConnection* con) { g_clear_object(&con); });
+                promise->set_value(con);
+            },
+            &promise);
+    });
+
+    cgManager_ = future.get();
+    registry_->impl->thread.timeoutSeconds(std::chrono::seconds{10}, [this]() { cgManager_.reset(); });
+}
+
+/** Get a list of PIDs from a CGroup, uses the CGManager connection to list
+    all of the PIDs. It is important to note that this is an IPC call, so it can
+    by its nature, be racy. Once the message has been sent the group can change.
+    You should take that into account in your usage of it. */
+std::vector<pid_t> Upstart::pidsFromCgroup(const std::string& jobpath)
+{
+    initCGManager();
+    auto lmanager = cgManager_; /* Grab a local copy so we ensure it lasts through our lifetime */
+
+    return registry_->impl->thread.executeOnThread<std::vector<pid_t>>([&jobpath, lmanager]() -> std::vector<pid_t> {
+        GError* error = nullptr;
+        const gchar* name = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME");
+        std::string groupname;
+        if (!jobpath.empty())
+        {
+            groupname = "upstart/" + jobpath;
+        }
+
+        g_debug("Looking for cg manager '%s' group '%s'", name, groupname.c_str());
+
+        GVariant* vtpids = g_dbus_connection_call_sync(
+            lmanager.get(),                     /* connection */
+            name,                               /* bus name for direct connection is NULL */
+            "/org/linuxcontainers/cgmanager",   /* object */
+            "org.linuxcontainers.cgmanager0_0", /* interface */
+            "GetTasksRecursive",                /* method */
+            g_variant_new("(ss)", "freezer", groupname.empty() ? "" : groupname.c_str()), /* params */
+            G_VARIANT_TYPE("(ai)"),                                                       /* output */
+            G_DBUS_CALL_FLAGS_NONE,                                                       /* flags */
+            -1,                                                                           /* default timeout */
+            nullptr,                                                                      /* cancellable */
+            &error);                                                                      /* error */
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to get PID list from cgroup manager: %s", error->message);
+            g_error_free(error);
+            return {};
+        }
+
+        GVariant* vpids = g_variant_get_child_value(vtpids, 0);
+        GVariantIter iter;
+        g_variant_iter_init(&iter, vpids);
+        gint32 pid;
+        std::vector<pid_t> pids;
+
+        while (g_variant_iter_loop(&iter, "i", &pid))
+        {
+            pids.push_back(pid);
+        }
+
+        g_variant_unref(vpids);
+        g_variant_unref(vtpids);
+
+        return pids;
+    });
+}
+
+/** Looks to find the Upstart object path for a specific Upstart job. This first
+    checks the cache, and otherwise does the lookup on DBus. */
+std::string Upstart::upstartJobPath(const std::string& job)
+{
+    try
+    {
+        return upstartJobPathCache_.at(job);
+    }
+    catch (std::out_of_range& e)
+    {
+        auto path = registry_->impl->thread.executeOnThread<std::string>([this, &job]() -> std::string {
+            GError* error = nullptr;
+            GVariant* job_path_variant =
+                g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* connection */
+                                            DBUS_SERVICE_UPSTART,                           /* service */
+                                            DBUS_PATH_UPSTART,                              /* path */
+                                            DBUS_INTERFACE_UPSTART,                         /* iface */
+                                            "GetJobByName",                                 /* method */
+                                            g_variant_new("(s)", job.c_str()),              /* params */
+                                            G_VARIANT_TYPE("(o)"),                          /* return */
+                                            G_DBUS_CALL_FLAGS_NONE,                         /* flags */
+                                            -1,                                             /* timeout: default */
+                                            registry_->impl->thread.getCancellable().get(), /* cancellable */
+                                            &error);                                        /* error */
+
+            if (error != nullptr)
+            {
+                g_warning("Unable to find job '%s': %s", job.c_str(), error->message);
+                g_error_free(error);
+                return {};
+            }
+
+            gchar* job_path = nullptr;
+            g_variant_get(job_path_variant, "(o)", &job_path);
+            g_variant_unref(job_path_variant);
+
+            if (job_path != nullptr)
+            {
+                std::string path(job_path);
+                g_free(job_path);
+                return path;
+            }
+            else
+            {
+                return {};
+            }
+        });
+
+        upstartJobPathCache_[job] = path;
+        return path;
+    }
+}
+
+/** Queries Upstart to get all the instances of a given job. This
+    can take a while as the number of dbus calls is n+1. It is
+    rare that apps have many instances though. */
+std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
+{
+    std::string jobpath = upstartJobPath(job);
+    if (jobpath.empty())
+    {
+        return {};
+    }
+
+    return registry_->impl->thread.executeOnThread<std::list<std::string>>(
+        [this, &job, &jobpath]() -> std::list<std::string> {
+            GError* error = nullptr;
+            GVariant* instance_tuple =
+                g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* connection */
+                                            DBUS_SERVICE_UPSTART,                           /* service */
+                                            jobpath.c_str(),                                /* object path */
+                                            DBUS_INTERFACE_UPSTART_JOB,                     /* iface */
+                                            "GetAllInstances",                              /* method */
+                                            nullptr,                                        /* params */
+                                            G_VARIANT_TYPE("(ao)"),                         /* return type */
+                                            G_DBUS_CALL_FLAGS_NONE,                         /* flags */
+                                            -1,                                             /* timeout: default */
+                                            registry_->impl->thread.getCancellable().get(), /* cancellable */
+                                            &error);
+
+            if (error != nullptr)
+            {
+                g_warning("Unable to get instances of job '%s': %s", job.c_str(), error->message);
+                g_error_free(error);
+                return {};
+            }
+
+            if (instance_tuple == nullptr)
+            {
+                return {};
+            }
+
+            GVariant* instance_list = g_variant_get_child_value(instance_tuple, 0);
+            g_variant_unref(instance_tuple);
+
+            GVariantIter instance_iter;
+            g_variant_iter_init(&instance_iter, instance_list);
+            const gchar* instance_path = nullptr;
+            std::list<std::string> instances;
+
+            while (g_variant_iter_loop(&instance_iter, "&o", &instance_path))
+            {
+                GVariant* props_tuple =
+                    g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                          /* connection */
+                                                DBUS_SERVICE_UPSTART,                                  /* service */
+                                                instance_path,                                         /* object path */
+                                                "org.freedesktop.DBus.Properties",                     /* interface */
+                                                "GetAll",                                              /* method */
+                                                g_variant_new("(s)", DBUS_INTERFACE_UPSTART_INSTANCE), /* params */
+                                                G_VARIANT_TYPE("(a{sv})"),                             /* return type */
+                                                G_DBUS_CALL_FLAGS_NONE,                                /* flags */
+                                                -1,                                             /* timeout: default */
+                                                registry_->impl->thread.getCancellable().get(), /* cancellable */
+                                                &error);
+
+                if (error != nullptr)
+                {
+                    g_warning("Unable to name of instance '%s': %s", instance_path, error->message);
+                    g_error_free(error);
+                    error = nullptr;
+                    continue;
+                }
+
+                GVariant* props_dict = g_variant_get_child_value(props_tuple, 0);
+
+                GVariant* namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+                if (namev != nullptr)
+                {
+                    auto name = g_variant_get_string(namev, NULL);
+                    g_debug("Adding instance for job '%s': %s", job.c_str(), name);
+                    instances.push_back(name);
+                    g_variant_unref(namev);
+                }
+
+                g_variant_unref(props_dict);
+                g_variant_unref(props_tuple);
+            }
+
+            g_variant_unref(instance_list);
+
+            return instances;
+        });
+}
+
+std::list<std::shared_ptr<Application>> Upstart::runningApps()
+{
+    std::list<std::string> instances;
+
+    /* Get all the legacy instances */
+    instances.splice(instances.begin(), upstartInstancesForJob("application-legacy"));
+    /* Get all the snap instances */
+    instances.splice(instances.begin(), upstartInstancesForJob("application-snap"));
+
+    /* Remove the instance ID */
+    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string& instancename) -> std::string {
+        static const std::regex instanceregex("^(.*)-[0-9]*$");
+        std::smatch match;
+        if (std::regex_match(instancename, match, instanceregex))
+        {
+            return match[1].str();
+        }
+        else
+        {
+            g_warning("Unable to match instance name: %s", instancename.c_str());
+            return {};
+        }
+    });
+
+    /* Deduplicate Set */
+    std::set<std::string> instanceset;
+    for (auto instance : instances)
+    {
+        if (!instance.empty())
+            instanceset.insert(instance);
+    }
+
+    /* Add in the click instances */
+    for (auto instance : upstartInstancesForJob("application-click"))
+    {
+        instanceset.insert(instance);
+    }
+
+    g_debug("Overall there are %d instances: %s", int(instanceset.size()),
+            std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
+                            [](const std::string& instr, std::string instance) {
+                                return instr.empty() ? instance : instr + ", " + instance;
+                            })
+                .c_str());
+
+    /* Convert to Applications */
+    std::list<std::shared_ptr<Application>> apps;
+    for (auto instance : instanceset)
+    {
+        auto appid = AppID::find(registry_, instance);
+        auto app = Application::create(appid, registry_);
+        apps.push_back(app);
+    }
+
+    return apps;
 }
 
 }  // namespace manager
