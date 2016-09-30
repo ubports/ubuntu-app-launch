@@ -23,8 +23,6 @@
 #include <map>
 #include <numeric>
 
-#include <upstart.h>
-
 #include "application-impl-base.h"
 #include "helpers.h"
 #include "registry-impl.h"
