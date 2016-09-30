@@ -426,9 +426,10 @@ std::shared_ptr<Application::Instance> Upstart::launch(
     if (appId.empty())
         return {};
 
-    return registry_->impl->thread.executeOnThread<std::shared_ptr<instance::Upstart>>(
+    auto registry = registry_.lock();
+    return registry->impl->thread.executeOnThread<std::shared_ptr<instance::Upstart>>(
         [&]() -> std::shared_ptr<instance::Upstart> {
-            auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry_->impl->jobs);
+            auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry->impl->jobs);
             std::string appIdStr{appId};
             g_debug("Initializing params for an new instance::Upstart for: %s", appIdStr.c_str());
 
@@ -504,7 +505,7 @@ std::shared_ptr<Application::Instance> Upstart::launch(
             g_variant_builder_close(&builder);
             g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
 
-            auto retval = std::make_shared<instance::Upstart>(appId, job, instance, urls, registry_);
+            auto retval = std::make_shared<instance::Upstart>(appId, job, instance, urls, registry);
             auto chelper = new instance::StartCHelper{};
             chelper->ptr = retval;
 
@@ -514,18 +515,18 @@ std::shared_ptr<Application::Instance> Upstart::launch(
 
             /* Call the job start function */
             g_debug("Asking Upstart to start task for: %s", appIdStr.c_str());
-            g_dbus_connection_call(registry_->impl->_dbus.get(),                   /* bus */
-                                   DBUS_SERVICE_UPSTART,                           /* service name */
-                                   jobpath.c_str(),                                /* Path */
-                                   DBUS_INTERFACE_UPSTART_JOB,                     /* interface */
-                                   "Start",                                        /* method */
-                                   g_variant_builder_end(&builder),                /* params */
-                                   nullptr,                                        /* return */
-                                   G_DBUS_CALL_FLAGS_NONE,                         /* flags */
-                                   -1,                                             /* default timeout */
-                                   registry_->impl->thread.getCancellable().get(), /* cancellable */
-                                   instance::Upstart::application_start_cb,        /* callback */
-                                   chelper                                         /* object */
+            g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
+                                   DBUS_SERVICE_UPSTART,                          /* service name */
+                                   jobpath.c_str(),                               /* Path */
+                                   DBUS_INTERFACE_UPSTART_JOB,                    /* interface */
+                                   "Start",                                       /* method */
+                                   g_variant_builder_end(&builder),               /* params */
+                                   nullptr,                                       /* return */
+                                   G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                   -1,                                            /* default timeout */
+                                   registry->impl->thread.getCancellable().get(), /* cancellable */
+                                   instance::Upstart::application_start_cb,       /* callback */
+                                   chelper                                        /* object */
                                    );
 
             tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
@@ -543,7 +544,7 @@ std::shared_ptr<Application::Instance> Upstart::existing(const AppID& appId,
                                                          const std::string& instance,
                                                          const std::vector<Application::URL>& urls)
 {
-    return std::make_shared<instance::Upstart>(appId, job, instance, urls, registry_);
+    return std::make_shared<instance::Upstart>(appId, job, instance, urls, registry_.lock());
 }
 
 std::vector<std::shared_ptr<instance::Base>> Upstart::instances(const AppID& appID, const std::string& job)
@@ -583,14 +584,15 @@ void Upstart::initCGManager()
 
     std::promise<std::shared_ptr<GDBusConnection>> promise;
     auto future = promise.get_future();
+    auto registry = registry_.lock();
 
-    registry_->impl->thread.executeOnThread([this, &promise]() {
+    registry->impl->thread.executeOnThread([this, &promise, &registry]() {
         bool use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != nullptr;
         if (use_session_bus)
         {
             /* For working dbusmock */
             g_debug("Connecting to CG Manager on session bus");
-            promise.set_value(registry_->impl->_dbus);
+            promise.set_value(registry->impl->_dbus);
             return;
         }
 
@@ -598,8 +600,8 @@ void Upstart::initCGManager()
             std::shared_ptr<GCancellable>(g_cancellable_new(), [](GCancellable* cancel) { g_clear_object(&cancel); });
 
         /* Ensure that we do not wait for more than a second */
-        registry_->impl->thread.timeoutSeconds(std::chrono::seconds{1},
-                                               [cancel]() { g_cancellable_cancel(cancel.get()); });
+        registry->impl->thread.timeoutSeconds(std::chrono::seconds{1},
+                                              [cancel]() { g_cancellable_cancel(cancel.get()); });
 
         g_dbus_connection_new_for_address(
             CGMANAGER_DBUS_PATH,                           /* cgmanager path */
@@ -623,7 +625,7 @@ void Upstart::initCGManager()
     });
 
     cgManager_ = future.get();
-    registry_->impl->thread.timeoutSeconds(std::chrono::seconds{10}, [this]() { cgManager_.reset(); });
+    registry->impl->thread.timeoutSeconds(std::chrono::seconds{10}, [this]() { cgManager_.reset(); });
 }
 
 /** Get a list of PIDs from a CGroup, uses the CGManager connection to list
@@ -634,8 +636,9 @@ std::vector<pid_t> Upstart::pidsFromCgroup(const std::string& jobpath)
 {
     initCGManager();
     auto lmanager = cgManager_; /* Grab a local copy so we ensure it lasts through our lifetime */
+    auto registry = registry_.lock();
 
-    return registry_->impl->thread.executeOnThread<std::vector<pid_t>>([&jobpath, lmanager]() -> std::vector<pid_t> {
+    return registry->impl->thread.executeOnThread<std::vector<pid_t>>([&jobpath, lmanager]() -> std::vector<pid_t> {
         GError* error = nullptr;
         const gchar* name = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME");
         std::string groupname;
@@ -694,20 +697,21 @@ std::string Upstart::upstartJobPath(const std::string& job)
     }
     catch (std::out_of_range& e)
     {
-        auto path = registry_->impl->thread.executeOnThread<std::string>([this, &job]() -> std::string {
+        auto registry = registry_.lock();
+        auto path = registry->impl->thread.executeOnThread<std::string>([this, &job, &registry]() -> std::string {
             GError* error = nullptr;
             GVariant* job_path_variant =
-                g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* connection */
-                                            DBUS_SERVICE_UPSTART,                           /* service */
-                                            DBUS_PATH_UPSTART,                              /* path */
-                                            DBUS_INTERFACE_UPSTART,                         /* iface */
-                                            "GetJobByName",                                 /* method */
-                                            g_variant_new("(s)", job.c_str()),              /* params */
-                                            G_VARIANT_TYPE("(o)"),                          /* return */
-                                            G_DBUS_CALL_FLAGS_NONE,                         /* flags */
-                                            -1,                                             /* timeout: default */
-                                            registry_->impl->thread.getCancellable().get(), /* cancellable */
-                                            &error);                                        /* error */
+                g_dbus_connection_call_sync(registry->impl->_dbus.get(),                   /* connection */
+                                            DBUS_SERVICE_UPSTART,                          /* service */
+                                            DBUS_PATH_UPSTART,                             /* path */
+                                            DBUS_INTERFACE_UPSTART,                        /* iface */
+                                            "GetJobByName",                                /* method */
+                                            g_variant_new("(s)", job.c_str()),             /* params */
+                                            G_VARIANT_TYPE("(o)"),                         /* return */
+                                            G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                            -1,                                            /* timeout: default */
+                                            registry->impl->thread.getCancellable().get(), /* cancellable */
+                                            &error);                                       /* error */
 
             if (error != nullptr)
             {
@@ -748,20 +752,21 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
         return {};
     }
 
-    return registry_->impl->thread.executeOnThread<std::list<std::string>>(
-        [this, &job, &jobpath]() -> std::list<std::string> {
+    auto registry = registry_.lock();
+    return registry->impl->thread.executeOnThread<std::list<std::string>>(
+        [this, &job, &jobpath, &registry]() -> std::list<std::string> {
             GError* error = nullptr;
             GVariant* instance_tuple =
-                g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* connection */
-                                            DBUS_SERVICE_UPSTART,                           /* service */
-                                            jobpath.c_str(),                                /* object path */
-                                            DBUS_INTERFACE_UPSTART_JOB,                     /* iface */
-                                            "GetAllInstances",                              /* method */
-                                            nullptr,                                        /* params */
-                                            G_VARIANT_TYPE("(ao)"),                         /* return type */
-                                            G_DBUS_CALL_FLAGS_NONE,                         /* flags */
-                                            -1,                                             /* timeout: default */
-                                            registry_->impl->thread.getCancellable().get(), /* cancellable */
+                g_dbus_connection_call_sync(registry->impl->_dbus.get(),                   /* connection */
+                                            DBUS_SERVICE_UPSTART,                          /* service */
+                                            jobpath.c_str(),                               /* object path */
+                                            DBUS_INTERFACE_UPSTART_JOB,                    /* iface */
+                                            "GetAllInstances",                             /* method */
+                                            nullptr,                                       /* params */
+                                            G_VARIANT_TYPE("(ao)"),                        /* return type */
+                                            G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                            -1,                                            /* timeout: default */
+                                            registry->impl->thread.getCancellable().get(), /* cancellable */
                                             &error);
 
             if (error != nullptr)
@@ -787,7 +792,7 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
             while (g_variant_iter_loop(&instance_iter, "&o", &instance_path))
             {
                 GVariant* props_tuple =
-                    g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                          /* connection */
+                    g_dbus_connection_call_sync(registry->impl->_dbus.get(),                           /* connection */
                                                 DBUS_SERVICE_UPSTART,                                  /* service */
                                                 instance_path,                                         /* object path */
                                                 "org.freedesktop.DBus.Properties",                     /* interface */
@@ -795,8 +800,8 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
                                                 g_variant_new("(s)", DBUS_INTERFACE_UPSTART_INSTANCE), /* params */
                                                 G_VARIANT_TYPE("(a{sv})"),                             /* return type */
                                                 G_DBUS_CALL_FLAGS_NONE,                                /* flags */
-                                                -1,                                             /* timeout: default */
-                                                registry_->impl->thread.getCancellable().get(), /* cancellable */
+                                                -1,                                            /* timeout: default */
+                                                registry->impl->thread.getCancellable().get(), /* cancellable */
                                                 &error);
 
                 if (error != nullptr)
@@ -874,11 +879,12 @@ std::list<std::shared_ptr<Application>> Upstart::runningApps()
                 .c_str());
 
     /* Convert to Applications */
+    auto registry = registry_.lock();
     std::list<std::shared_ptr<Application>> apps;
     for (auto instance : instanceset)
     {
-        auto appid = AppID::find(registry_, instance);
-        auto app = Application::create(appid, registry_);
+        auto appid = AppID::find(registry, instance);
+        auto app = Application::create(appid, registry);
         apps.push_back(app);
     }
 

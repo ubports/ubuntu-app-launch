@@ -108,7 +108,7 @@ public:
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
 
 protected:
-    std::shared_ptr<Registry> registry_;
+    std::weak_ptr<Registry> registry_;
 };
 
 }  // namespace manager
