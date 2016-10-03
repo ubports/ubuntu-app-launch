@@ -556,7 +556,9 @@ std::vector<std::shared_ptr<instance::Base>> Upstart::instances(const AppID& app
         startsWith += "-";
     }
 
-    auto instanceRegex = std::regex("^(?:" + std::regex_replace(startsWith, regexCharacters, "\\$&") + ")\\-(\\d*)$");
+    auto regexstr =
+        std::string{"^(?:"} + std::regex_replace(startsWith, regexCharacters, "\\$&") + std::string{")(\\d*)$"};
+    auto instanceRegex = std::regex(regexstr);
 
     for (auto instance : upstartInstancesForJob(job))
     {
