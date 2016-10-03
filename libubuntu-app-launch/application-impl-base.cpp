@@ -116,6 +116,13 @@ pid_t UpstartInstance::primaryPid()
 
     return registry_->impl->thread.executeOnThread<pid_t>([this, &jobpath]() -> pid_t {
         GError* error = nullptr;
+
+        std::string instancename = std::string(appId_);
+        if (job_ != "application-click")
+        {
+            instancename += "-" + instance_;
+        }
+
         g_debug("Getting instance by name: %s", instance_.c_str());
         GVariant* vinstance_path =
             g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* connection */
@@ -123,7 +130,7 @@ pid_t UpstartInstance::primaryPid()
                                         jobpath.c_str(),                                /* object path */
                                         DBUS_INTERFACE_UPSTART_JOB,                     /* iface */
                                         "GetInstanceByName",                            /* method */
-                                        g_variant_new("(s)", instance_.c_str()),        /* params */
+                                        g_variant_new("(s)", instancename.c_str()),     /* params */
                                         G_VARIANT_TYPE("(o)"),                          /* return type */
                                         G_DBUS_CALL_FLAGS_NONE,                         /* flags */
                                         -1,                                             /* timeout: default */
@@ -201,6 +208,27 @@ pid_t UpstartInstance::primaryPid()
     });
 }
 
+/** Generate the full name of the Upstart job for the job, the
+    instance and how all those fit together.
+
+    Handles the special case of application-click which isn't designed
+    to have multi-instance apps.
+*/
+std::string UpstartInstance::upstartJobPath()
+{
+    std::string path = job_ + "-" + std::string(appId_);
+    if (job_ != "application-click")
+    {
+        path += "-";
+    }
+    if (!instance_.empty())
+    {
+        path += instance_;
+    }
+
+    return path;
+}
+
 /** Looks at the PIDs in the instance cgroup and checks to see if @pid
     is in the set.
 
@@ -208,7 +236,7 @@ pid_t UpstartInstance::primaryPid()
 */
 bool UpstartInstance::hasPid(pid_t pid)
 {
-    for (auto testpid : registry_->impl->pidsFromCgroup(job_, instance_))
+    for (auto testpid : registry_->impl->pidsFromCgroup(upstartJobPath()))
         if (pid == testpid)
             return true;
     return false;
@@ -217,14 +245,7 @@ bool UpstartInstance::hasPid(pid_t pid)
 /** Gets the path to the log file for this instance */
 std::string UpstartInstance::logPath()
 {
-    std::string logfile = job_;
-    if (!instance_.empty())
-    {
-        logfile += "-";
-        logfile += instance_;
-    }
-
-    logfile += ".log";
+    std::string logfile = upstartJobPath() + ".log";
 
     gchar* cpath = g_build_filename(g_get_user_cache_dir(), "upstart", logfile.c_str(), nullptr);
     std::string path(cpath);
@@ -236,7 +257,7 @@ std::string UpstartInstance::logPath()
 /** Returns all the PIDs that are in the cgroup for this application */
 std::vector<pid_t> UpstartInstance::pids()
 {
-    auto pids = registry_->impl->pidsFromCgroup(job_, instance_);
+    auto pids = registry_->impl->pidsFromCgroup(upstartJobPath());
     g_debug("Got %d PIDs for AppID '%s'", int(pids.size()), std::string(appId_).c_str());
     return pids;
 }

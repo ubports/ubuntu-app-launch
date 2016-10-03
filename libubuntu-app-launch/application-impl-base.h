@@ -114,6 +114,7 @@ private:
     void oomValueToPid(pid_t pid, const oom::Score oomvalue);
     void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
     void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal);
+    std::string upstartJobPath();
 
     static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
