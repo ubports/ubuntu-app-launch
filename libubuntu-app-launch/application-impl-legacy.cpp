@@ -311,7 +311,23 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
-    retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
+    if (appinfo_->xMirEnable())
+    {
+        /* If we're setting up XMir we also need the other helpers
+           that libertine is helping with */
+        auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+        if (libertine_launch == nullptr)
+        {
+            libertine_launch = LIBERTINE_LAUNCH;
+        }
+
+        retval.emplace_back(
+            std::make_pair("APP_EXEC", std::string(libertine_launch) + " " + appinfo_->execLine().value()));
+    }
+    else
+    {
+        retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
+    }
 
     /* Honor the 'Path' key if it is in the desktop file */
     if (g_key_file_has_key(_keyfile.get(), "Desktop Entry", "Path", nullptr))
