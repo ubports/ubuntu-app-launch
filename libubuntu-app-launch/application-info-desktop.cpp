@@ -67,7 +67,8 @@ auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key
 
 template <typename T>
 auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
-                     const std::string basePath,
+                     const std::string& basePath,
+                     const std::string& rootDir,
                      const std::string& key,
                      const std::string& exceptionText = {}) -> T
 {
@@ -89,6 +90,14 @@ auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
     if (keyval[0] == '/')
     {
         T retval = T::from_raw(keyval);
+
+        if (!rootDir.empty())
+        {
+            auto fullpath = g_build_filename(rootDir.c_str(), keyval, nullptr);
+            retval = T::from_raw(fullpath);
+            g_free(fullpath);
+        }
+
         g_free(keyval);
         return retval;
     }
@@ -187,6 +196,7 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
 
 Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
                  const std::string& basePath,
+                 const std::string& rootDir,
                  std::bitset<2> flags,
                  std::shared_ptr<Registry> registry)
     : _keyfile([keyfile, flags]() {
@@ -222,26 +232,33 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         return keyfile;
     }())
     , _basePath(basePath)
+    , _rootDir(rootDir)
     , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
-    , _iconPath([keyfile, basePath, registry]() {
+    , _iconPath([keyfile, basePath, rootDir, registry]() {
         if (registry != nullptr)
         {
             auto iconName =
                 stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon", "Missing icon for desktop file");
-            return registry->impl->getIconFinder(basePath)->find(iconName);
+
+            if (!iconName.value().empty() && iconName.value()[0] != '/')
+            {
+                /* If it is not a direct filename look it up */
+                return registry->impl->getIconFinder(basePath)->find(iconName);
+            }
         }
-        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon",
+                                                            "Missing icon for desktop file");
     }())
     , _defaultDepartment(
           stringFromKeyfile<Application::Info::DefaultDepartment>(keyfile, "X-Ubuntu-Default-Department-ID"))
-    , _screenshotPath([keyfile, basePath]() {
-        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "X-Screenshot");
+    , _screenshotPath([keyfile, basePath, rootDir]() {
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "X-Screenshot");
     }())
     , _keywords(stringlistFromKeyfile<Application::Info::Keywords>(keyfile, "Keywords"))
     , _splashInfo(
           {stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
-           fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
+           fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, rootDir, "X-Ubuntu-Splash-Image"),
            stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color"),
            stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Header"),
            stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Footer"),

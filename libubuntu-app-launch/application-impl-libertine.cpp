@@ -27,7 +27,7 @@ namespace app_launch
 {
 namespace app_impls
 {
-    
+
 Libertine::Libertine(const AppID::Package& container,
                      const AppID::AppName& appname,
                      const std::shared_ptr<Registry>& registry)
@@ -35,13 +35,18 @@ Libertine::Libertine(const AppID::Package& container,
     , _container(container)
     , _appname(appname)
 {
+    auto gcontainer_path = libertine_container_path(container.value().c_str());
+    if (gcontainer_path != nullptr)
+    {
+        _container_path = gcontainer_path;
+        g_free(gcontainer_path);
+    }
+
     if (!_keyfile)
     {
-        auto container_path = libertine_container_path(container.value().c_str());
-        auto system_app_path = g_build_filename(container_path, "usr", "share", nullptr);
+        auto system_app_path = g_build_filename(_container_path.c_str(), "usr", "share", nullptr);
         _basedir = system_app_path;
         g_free(system_app_path);
-        g_free(container_path);
 
         _keyfile = findDesktopFile(_basedir, "applications", appname.value() + ".desktop");
     }
@@ -83,7 +88,9 @@ std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname
     return keyfile;
 }
 
-std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath, const std::string& subpath, const std::string& filename)
+std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath,
+                                                     const std::string& subpath,
+                                                     const std::string& filename)
 {
     auto fullpath = g_build_filename(basepath.c_str(), subpath.c_str(), filename.c_str(), nullptr);
     std::string sfullpath(fullpath);
@@ -97,7 +104,8 @@ std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath
     GError* error = nullptr;
     auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
     GDir* dir = g_dir_open(dirpath, 0, &error);
-    if (error != NULL) {
+    if (error != nullptr)
+    {
         g_error_free(error);
         g_free(dirpath);
         return {};
@@ -260,8 +268,8 @@ std::shared_ptr<Application::Info> Libertine::info()
 {
     if (!appinfo_)
     {
-        appinfo_ =
-            std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::XMIR_DEFAULT, _registry);
+        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path,
+                                                       app_info::DesktopFlags::XMIR_DEFAULT, _registry);
     }
     return appinfo_;
 }

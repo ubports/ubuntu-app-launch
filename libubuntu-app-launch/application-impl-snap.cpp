@@ -80,6 +80,7 @@ public:
                   return keyfile;
               }(),
               snapDir,
+              snapDir,
               app_info::DesktopFlags::NONE,
               registry)
         , interface_(interface)
