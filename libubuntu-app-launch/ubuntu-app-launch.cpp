@@ -1214,7 +1214,7 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 {
 	static gboolean final_cleanup = FALSE;
 	if (!final_cleanup) {
-		g_atexit(proxy_cleanup_list);
+		std::atexit(proxy_cleanup_list);
 		final_cleanup = TRUE;
 	}
 
