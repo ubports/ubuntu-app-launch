@@ -286,6 +286,11 @@ bool Snap::checkPkgInfo(const std::shared_ptr<snapd::Info::PkgInfo>& pkginfo, co
 */
 bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry)
 {
+    if (appId.package.value().empty() || appId.version.value().empty())
+    {
+        return false;
+    }
+
     if (!std::regex_match(appId.appname.value(), appnameRegex))
     {
         return false;
