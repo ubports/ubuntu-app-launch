@@ -19,21 +19,30 @@
 
 #include "jobs-base.h"
 #include "appid.h"
+#include "registry-impl.h"
 #include "registry.h"
 
 #include "eventually-fixture.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-class JobBaseTest : public EventuallyFixture
+class RegistryImplMock : public ubuntu::app_launch::Registry::Impl
 {
-protected:
-    virtual void SetUp()
+public:
+    RegistryImplMock(ubuntu::app_launch::Registry* reg)
+        : ubuntu::app_launch::Registry::Impl(reg)
     {
     }
 
-    virtual void TearDown()
+    MOCK_METHOD2(zgSendEvent, void(ubuntu::app_launch::AppID, const std::string& eventtype));
+};
+
+class RegistryMock : public ubuntu::app_launch::Registry
+{
+public:
+    RegistryMock()
     {
+        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(this));
     }
 };
 
@@ -56,14 +65,51 @@ public:
     MOCK_METHOD0(stop, void());
 };
 
+class JobBaseTest : public EventuallyFixture
+{
+protected:
+    std::shared_ptr<RegistryMock> registry;
+
+    virtual void SetUp()
+    {
+        registry = std::make_shared<RegistryMock>();
+    }
+
+    virtual void TearDown()
+    {
+        registry.reset();
+    }
+
+    std::shared_ptr<instanceMock> simpleInstance()
+    {
+        return std::make_shared<instanceMock>(
+            ubuntu::app_launch::AppID{ubuntu::app_launch::AppID::Package::from_raw("package"),
+                                      ubuntu::app_launch::AppID::AppName::from_raw("appname"),
+                                      ubuntu::app_launch::AppID::Version::from_raw("version")},
+            "application-job", "1234567890", std::vector<ubuntu::app_launch::Application::URL>{}, registry);
+    }
+};
+
 TEST_F(JobBaseTest, InitTest)
 {
-    auto instance = std::make_shared<instanceMock>(
-        ubuntu::app_launch::AppID{ubuntu::app_launch::AppID::Package::from_raw("package"),
-                                  ubuntu::app_launch::AppID::AppName::from_raw("appname"),
-                                  ubuntu::app_launch::AppID::Version::from_raw("version")},
-        "application-job", "1234567890", std::vector<ubuntu::app_launch::Application::URL>{},
-        std::shared_ptr<ubuntu::app_launch::Registry>{});
+    auto instance = simpleInstance();
 
     instance.reset();
+}
+
+TEST_F(JobBaseTest, isRunning)
+{
+    auto instance = simpleInstance();
+
+    EXPECT_CALL(*instance, primaryPid()).WillOnce(testing::Return(0));
+
+    EXPECT_FALSE(instance->isRunning());
+
+    EXPECT_CALL(*instance, primaryPid()).WillOnce(testing::Return(100));
+
+    EXPECT_TRUE(instance->isRunning());
+}
+
+TEST_F(JobBaseTest, pause)
+{
 }
