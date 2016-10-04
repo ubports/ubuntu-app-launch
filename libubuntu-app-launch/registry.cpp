@@ -47,61 +47,14 @@ Registry::~Registry()
 {
 }
 
-std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> connection)
+std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> registry)
 {
-    std::list<std::string> instances;
-
-    /* Get all the legacy instances */
-    instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-legacy"));
-    /* Get all the snap instances */
-    instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-snap"));
-
-    /* Remove the instance ID */
-    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string &instancename) -> std::string {
-        static const std::regex instanceregex("^(.*)-[0-9]*$");
-        std::smatch match;
-        if (std::regex_match(instancename, match, instanceregex))
-        {
-            return match[1].str();
-        }
-        else
-        {
-            g_warning("Unable to match instance name: %s", instancename.c_str());
-            return {};
-        }
-    });
-
-    /* Deduplicate Set */
-    std::set<std::string> instanceset;
-    for (auto instance : instances)
+    if (!registry->impl->jobs)
     {
-        if (!instance.empty())
-            instanceset.insert(instance);
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
     }
 
-    /* Add in the click instances */
-    for (auto instance : connection->impl->upstartInstancesForJob("application-click"))
-    {
-        instanceset.insert(instance);
-    }
-
-    g_debug("Overall there are %d instances: %s", int(instanceset.size()),
-            std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
-                            [](const std::string &instr, std::string instance) {
-                                return instr.empty() ? instance : instr + ", " + instance;
-                            })
-                .c_str());
-
-    /* Convert to Applications */
-    std::list<std::shared_ptr<Application>> apps;
-    for (auto instance : instanceset)
-    {
-        auto appid = AppID::find(connection, instance);
-        auto app = Application::create(appid, connection);
-        apps.push_back(app);
-    }
-
-    return apps;
+    return registry->impl->jobs->runningApps();
 }
 
 std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<Registry> connection)

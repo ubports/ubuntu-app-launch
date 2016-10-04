@@ -272,22 +272,8 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
 
 std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    auto startsWith = std::string(appId()) + "-";
-
-    for (auto instance : _registry->impl->upstartInstancesForJob("application-legacy"))
-    {
-        g_debug("Looking at legacy instance: %s", instance.c_str());
-        if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
-        {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", instance,
-                                                                std::vector<Application::URL>{}, _registry));
-        }
-    }
-
-    g_debug("Legacy app '%s' has %d instances", std::string(appId()).c_str(), int(vect.size()));
-
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-legacy");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment for a legacy app. Mostly this consists of
@@ -358,8 +344,8 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls,
-                                   _registry, UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 /** Create an UpstartInstance for this AppID using the UpstartInstance launch
@@ -373,8 +359,8 @@ std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Appl
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls,
-                                   _registry, UpstartInstance::launchMode::TEST, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls
