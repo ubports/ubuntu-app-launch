@@ -279,3 +279,86 @@ TEST_F(JobBaseTest, pauseResume)
 
     EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
 }
+
+TEST_F(JobBaseTest, pauseResumeNone)
+{
+    std::vector<pid_t> pids{};
+
+    /* Build our instance */
+    auto instance = simpleInstance();
+    EXPECT_CALL(*instance, pids()).WillRepeatedly(testing::Return(pids));
+
+    /* Setup registry */
+    EXPECT_CALL(dynamic_cast<RegistryImplMock&>(*registry->impl), zgSendEvent(simpleAppID(), ZEITGEIST_ZG_LEAVE_EVENT))
+        .WillOnce(testing::Return());
+
+    /*** Do Pause ***/
+    instance->pause();
+
+    /* Setup for Resume */
+    EXPECT_CALL(dynamic_cast<RegistryImplMock&>(*registry->impl), zgSendEvent(simpleAppID(), ZEITGEIST_ZG_ACCESS_EVENT))
+        .WillOnce(testing::Return());
+
+    /*** Do Resume ***/
+    instance->resume();
+}
+
+TEST_F(JobBaseTest, pauseResumeMany)
+{
+    g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/jobs-base-proc", TRUE);
+
+    /* Setup some A TON OF spew */
+    std::array<SpewMaster, 50> spews;
+    std::vector<pid_t> pids(50);
+    std::transform(spews.begin(), spews.end(), pids.begin(), [](SpewMaster& spew) { return spew.pid(); });
+
+    /* Build our instance */
+    auto instance = simpleInstance();
+    EXPECT_CALL(*instance, pids()).WillRepeatedly(testing::Return(pids));
+
+    /* Setup registry */
+    EXPECT_CALL(dynamic_cast<RegistryImplMock&>(*registry->impl), zgSendEvent(simpleAppID(), ZEITGEIST_ZG_LEAVE_EVENT))
+        .WillOnce(testing::Return());
+
+    /* Make sure it is running */
+    for (auto& spew : spews)
+    {
+        EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+    }
+
+    /*** Do Pause ***/
+    instance->pause();
+
+    for (auto& spew : spews)
+    {
+        spew.reset();
+    }
+    pause(100);  // give spew a chance to send data if it is running
+
+    for (auto& spew : spews)
+    {
+        EXPECT_EQ(0, spew.dataCnt());
+
+        EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::paused())), spew.oomScore());
+    }
+
+    /* Setup for Resume */
+    EXPECT_CALL(dynamic_cast<RegistryImplMock&>(*registry->impl), zgSendEvent(simpleAppID(), ZEITGEIST_ZG_ACCESS_EVENT))
+        .WillOnce(testing::Return());
+
+    for (auto& spew : spews)
+    {
+        spew.reset();
+        EXPECT_EQ(0, spew.dataCnt());
+    }
+
+    /*** Do Resume ***/
+    instance->resume();
+
+    for (auto& spew : spews)
+    {
+        EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+
+        EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
+    }
+}
