@@ -156,8 +156,9 @@ public:
             g_warning("Unable to clear mainloop on reset");
     }
 
-private:
     std::atomic<gsize> datacnt_;
+
+private:
     GPid pid_ = 0;
     gchar* oomadjfile = nullptr;
     GIOChannel* spewoutchan = nullptr;
@@ -201,13 +202,17 @@ protected:
         registry.reset();
     }
 
+    ubuntu::app_launch::AppID simpleAppID()
+    {
+        return {ubuntu::app_launch::AppID::Package::from_raw("package"),
+                ubuntu::app_launch::AppID::AppName::from_raw("appname"),
+                ubuntu::app_launch::AppID::Version::from_raw("version")};
+    }
+
     std::shared_ptr<instanceMock> simpleInstance()
     {
-        return std::make_shared<instanceMock>(
-            ubuntu::app_launch::AppID{ubuntu::app_launch::AppID::Package::from_raw("package"),
-                                      ubuntu::app_launch::AppID::AppName::from_raw("appname"),
-                                      ubuntu::app_launch::AppID::Version::from_raw("version")},
-            "application-job", "1234567890", std::vector<ubuntu::app_launch::Application::URL>{}, registry);
+        return std::make_shared<instanceMock>(simpleAppID(), "application-job", "1234567890",
+                                              std::vector<ubuntu::app_launch::Application::URL>{}, registry);
     }
 };
 
@@ -231,9 +236,9 @@ TEST_F(JobBaseTest, isRunning)
     EXPECT_TRUE(instance->isRunning());
 }
 
-TEST_F(JobBaseTest, pause)
+TEST_F(JobBaseTest, pauseResume)
 {
-    g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/jobs-base-proc", 1);
+    g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/jobs-base-proc", TRUE);
 
     /* Setup some spew */
     SpewMaster spew;
@@ -244,8 +249,33 @@ TEST_F(JobBaseTest, pause)
     EXPECT_CALL(*instance, pids()).WillRepeatedly(testing::Return(pids));
 
     /* Setup registry */
-    EXPECT_CALL(dynamic_cast<RegistryImplMock&>(*registry->impl), zgSendEvent(::testing::_, ::testing::_))
+    EXPECT_CALL(dynamic_cast<RegistryImplMock&>(*registry->impl), zgSendEvent(simpleAppID(), ZEITGEIST_ZG_LEAVE_EVENT))
         .WillOnce(testing::Return());
 
+    /* Make sure it is running */
+    EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+
+    /*** Do Pause ***/
     instance->pause();
+
+    spew.reset();
+    pause(100);  // give spew a chance to send data if it is running
+
+    EXPECT_EQ(0, spew.dataCnt());
+
+    EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::paused())), spew.oomScore());
+
+    /* Setup for Resume */
+    EXPECT_CALL(dynamic_cast<RegistryImplMock&>(*registry->impl), zgSendEvent(simpleAppID(), ZEITGEIST_ZG_ACCESS_EVENT))
+        .WillOnce(testing::Return());
+
+    spew.reset();
+    EXPECT_EQ(0, spew.dataCnt());
+
+    /*** Do Resume ***/
+    instance->resume();
+
+    EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+
+    EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
 }
