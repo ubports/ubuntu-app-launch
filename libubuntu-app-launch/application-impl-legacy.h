@@ -18,6 +18,7 @@
  */
 
 #include <gio/gdesktopappinfo.h>
+#include <regex>
 
 #include "application-impl-base.h"
 #include "application-info-desktop.h"
@@ -82,6 +83,7 @@ private:
     std::shared_ptr<GKeyFile> _keyfile;
     std::shared_ptr<app_info::Desktop> appinfo_;
     std::string desktopPath_;
+    std::regex instanceRegex_;
 
     std::list<std::pair<std::string, std::string>> launchEnv(const std::string& instance);
     std::string getInstance();

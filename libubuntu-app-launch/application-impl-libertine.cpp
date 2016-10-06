@@ -27,7 +27,7 @@ namespace app_launch
 {
 namespace app_impls
 {
-    
+
 Libertine::Libertine(const AppID::Package& container,
                      const AppID::AppName& appname,
                      const std::shared_ptr<Registry>& registry)
@@ -83,7 +83,9 @@ std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname
     return keyfile;
 }
 
-std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath, const std::string& subpath, const std::string& filename)
+std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath,
+                                                     const std::string& subpath,
+                                                     const std::string& filename)
 {
     auto fullpath = g_build_filename(basepath.c_str(), subpath.c_str(), filename.c_str(), nullptr);
     std::string sfullpath(fullpath);
@@ -97,7 +99,8 @@ std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath
     GError* error = nullptr;
     auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
     GDir* dir = g_dir_open(dirpath, 0, &error);
-    if (error != NULL) {
+    if (error != NULL)
+    {
         g_error_free(error);
         g_free(dirpath);
         return {};
@@ -268,17 +271,8 @@ std::shared_ptr<Application::Info> Libertine::info()
 
 std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    std::string sappid = appId();
-
-    for (auto instancename : _registry->impl->upstartInstancesForJob("application-legacy"))
-    {
-        if (std::equal(sappid.begin(), sappid.end(), instancename.begin()))
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", sappid + "-",
-                                                                std::vector<Application::URL>{}, _registry));
-    }
-
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-legacy");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment variables for the application to
@@ -320,15 +314,15 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::STANDARD,
+                                         envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls
