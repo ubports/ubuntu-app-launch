@@ -250,8 +250,7 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
             }
             catch (std::runtime_error& e)
             {
-                g_debug("Unable to create application for libertine appname '%s': %s",
-                        apps.get()[j], e.what());
+                g_debug("Unable to create application for libertine appname '%s': %s", apps.get()[j], e.what());
             }
         }
     }

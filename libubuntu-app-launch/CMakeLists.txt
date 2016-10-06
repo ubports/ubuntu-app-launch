@@ -54,6 +54,8 @@ glib-thread.h
 glib-thread.cpp
 jobs-base.h
 jobs-base.cpp
+jobs-systemd.h
+jobs-systemd.cpp
 jobs-upstart.h
 jobs-upstart.cpp
 )
