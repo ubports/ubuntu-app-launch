@@ -17,7 +17,12 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <gio/gio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "jobs-systemd.h"
+#include "registry-impl.h"
 
 namespace ubuntu
 {
@@ -83,6 +88,27 @@ namespace manager
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
 {
+    auto cancel = registry->impl->thread.getCancellable();
+    userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
+        GError* error = nullptr;
+        auto bus = std::shared_ptr<GDBusConnection>(
+            g_dbus_connection_new_for_address_sync(
+                ("unix:path=" + userBusPath()).c_str(),         /* path to the user bus */
+                G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION, /* It is a message bus */
+                nullptr,                                        /* observer */
+                cancel.get(),                                   /* cancellable from the thread */
+                &error),                                        /* error */
+            [](GDBusConnection* bus) { g_clear_object(&bus); });
+
+        if (error != nullptr)
+        {
+            std::string message = std::string("Unable to connect to user bus: ") + error->message;
+            g_error_free(error);
+            throw std::runtime_error(message);
+        }
+
+        return bus;
+    });
 }
 
 SystemD::~SystemD()
@@ -116,6 +142,11 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
 std::list<std::shared_ptr<Application>> SystemD::runningApps()
 {
     return {};
+}
+
+std::string SystemD::userBusPath()
+{
+    return std::string{"/run/user/"} + std::to_string(getuid()) + std::string{"/bus"};
 }
 
 }  // namespace manager

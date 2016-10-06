@@ -53,6 +53,11 @@ public:
     virtual std::list<std::shared_ptr<Application>> runningApps() override;
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
+
+    static std::string userBusPath();
+
+private:
+    std::shared_ptr<GDBusConnection> userbus_;
 };
 
 }  // namespace manager
