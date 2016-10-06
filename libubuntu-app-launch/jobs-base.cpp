@@ -22,6 +22,7 @@
 #include <cstring>
 
 #include "jobs-base.h"
+#include "jobs-systemd.h"
 #include "jobs-upstart.h"
 #include "registry-impl.h"
 
@@ -41,7 +42,20 @@ Base::Base(const std::shared_ptr<Registry>& registry)
 
 std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
 {
-    return std::make_shared<jobs::manager::Upstart>(registry);
+    /* Checking to see if we have a user bus, that is only started
+       by systemd so we're in good shape if we have one. We're using
+       the path instead of the RUNTIME variable because we want to work
+       around the case of being relocated by the snappy environment */
+    const std::string dbususerpath{"/run/user/1001/bus"};
+
+    if (g_file_test(dbususerpath.c_str(), G_FILE_TEST_EXISTS))
+    {
+        return std::make_shared<jobs::manager::SystemD>(registry);
+    }
+    else
+    {
+        return std::make_shared<jobs::manager::Upstart>(registry);
+    }
 }
 
 }  // namespace manager
