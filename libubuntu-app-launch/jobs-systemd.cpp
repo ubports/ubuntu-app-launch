@@ -131,7 +131,7 @@ std::shared_ptr<Application::Instance> SystemD::existing(const AppID& appId,
                                                          const std::string& instance,
                                                          const std::vector<Application::URL>& urls)
 {
-    return {};
+    return std::make_shared<instance::SystemD>(appId, job, instance, urls, registry_.lock());
 }
 
 std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& appID, const std::string& job)
@@ -147,6 +147,57 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
 std::string SystemD::userBusPath()
 {
     return std::string{"/run/user/"} + std::to_string(getuid()) + std::string{"/bus"};
+}
+
+std::list<SystemD::UnitEntry> SystemD::listUnits()
+{
+    auto registry = registry_.lock();
+    return registry->impl->thread.executeOnThread<std::list<SystemD::UnitEntry>>([this, registry]() {
+        GError* error{nullptr};
+        std::list<SystemD::UnitEntry> ret;
+
+        GVariant* call = g_dbus_connection_call_sync(userbus_.get(),                                /* user bus */
+                                                     "org.systemd1",                                /* bus name */
+                                                     "/org",                                        /* path */
+                                                     "org.system",                                  /* interface */
+                                                     "ListUnits",                                   /* method */
+                                                     nullptr,                                       /* params */
+                                                     G_VARIANT_TYPE("a(ssssssouso)"),               /* ret type */
+                                                     G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                                     -1,                                            /* timeout */
+                                                     registry->impl->thread.getCancellable().get(), /* cancellable */
+                                                     &error);
+
+        if (error != nullptr)
+        {
+            auto message = std::string{"Unable to list SystemD units: "} + error->message;
+            g_error_free(error);
+            throw std::runtime_error(message);
+        }
+
+        const gchar* id;
+        const gchar* description;
+        const gchar* loadState;
+        const gchar* activeState;
+        const gchar* subState;
+        const gchar* following;
+        const gchar* path;
+        guint32 jobId;
+        const gchar* jobType;
+        const gchar* jobPath;
+        auto iter = g_variant_iter_new(call);
+        while (g_variant_iter_loop(iter, "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState,
+                                   &subState, &following, &path, &jobId, &jobType, &jobPath))
+        {
+            ret.emplace_back(SystemD::UnitEntry{id, description, loadState, activeState, subState, following, path,
+                                                jobId, jobType, jobPath});
+        }
+
+        g_variant_iter_free(iter);
+        g_variant_unref(call);
+
+        return ret;
+    });
 }
 
 }  // namespace manager

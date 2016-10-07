@@ -58,6 +58,22 @@ public:
 
 private:
     std::shared_ptr<GDBusConnection> userbus_;
+
+    /* ssssssouso */
+    struct UnitEntry
+    {
+        std::string id;
+        std::string description;
+        std::string loadState;
+        std::string activeState;
+        std::string subState;
+        std::string following;
+        std::string path;
+        std::uint32_t jobId;
+        std::string jobType;
+        std::string jobPath;
+    };
+    std::list<UnitEntry> listUnits();
 };
 
 }  // namespace manager
