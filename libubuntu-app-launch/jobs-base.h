@@ -19,6 +19,7 @@
 
 #pragma once
 #include "application.h"
+#include <set>
 
 namespace ubuntu
 {
@@ -105,10 +106,13 @@ public:
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
 
+    const std::set<std::string>& getAllJobs();
+
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
 
 protected:
     std::weak_ptr<Registry> registry_;
+    std::set<std::string> allJobs_;
 };
 
 }  // namespace manager
