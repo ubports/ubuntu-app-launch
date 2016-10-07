@@ -74,6 +74,15 @@ private:
         std::string jobPath;
     };
     std::list<UnitEntry> listUnits();
+
+    struct UnitInfo
+    {
+        std::string job;
+        std::string appid;
+        std::string inst;
+    };
+    UnitInfo parseUnit(const std::string& unit);
+    std::string unitName(const UnitInfo& info);
 };
 
 }  // namespace manager

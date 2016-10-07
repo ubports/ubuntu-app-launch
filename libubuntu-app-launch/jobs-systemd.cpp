@@ -18,6 +18,7 @@
  */
 
 #include <gio/gio.h>
+#include <regex>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -198,6 +199,25 @@ std::list<SystemD::UnitEntry> SystemD::listUnits()
 
         return ret;
     });
+}
+
+/* TODO: Application job names */
+const std::regex unitNaming{"^ubuntu\\-app\\-launch\\-(application\\-.*)\\-(.*)\\-([0-9]*)$"};
+
+SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
+{
+    std::smatch match;
+    if (!std::regex_match(unit, match, unitNaming))
+    {
+        throw std::runtime_error{"Unable to parse unit name: " + unit};
+    }
+
+    return {match[1].str(), match[2].str(), match[3].str()};
+}
+
+std::string SystemD::unitName(const SystemD::UnitInfo& info)
+{
+    return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst;
 }
 
 }  // namespace manager
