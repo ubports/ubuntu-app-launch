@@ -57,6 +57,11 @@ std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
     }
 }
 
+const std::set<std::string>& Base::getAllJobs()
+{
+    return allJobs_;
+}
+
 }  // namespace manager
 
 namespace instance

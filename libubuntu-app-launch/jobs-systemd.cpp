@@ -137,12 +137,80 @@ std::shared_ptr<Application::Instance> SystemD::existing(const AppID& appId,
 
 std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& appID, const std::string& job)
 {
-    return {};
+    std::vector<std::shared_ptr<instance::Base>> instances;
+    auto registry = registry_.lock();
+    std::vector<Application::URL> urls;
+
+    for (const auto& unit : listUnits())
+    {
+        SystemD::UnitInfo unitinfo;
+
+        try
+        {
+            unitinfo = parseUnit(unit.id);
+        }
+        catch (std::runtime_error& e)
+        {
+            continue;
+        }
+
+        if (job != unitinfo.job)
+        {
+            continue;
+        }
+
+        if (std::string(appID) != unitinfo.appid)
+        {
+            continue;
+        }
+
+        instances.emplace_back(std::make_shared<instance::SystemD>(appID, job, unitinfo.inst, urls, registry));
+    }
+
+    return instances;
 }
 
 std::list<std::shared_ptr<Application>> SystemD::runningApps()
 {
-    return {};
+    auto allJobs = getAllJobs();
+    auto registry = registry_.lock();
+    std::set<std::string> appids;
+
+    for (const auto& unit : listUnits())
+    {
+        SystemD::UnitInfo unitinfo;
+
+        try
+        {
+            unitinfo = parseUnit(unit.id);
+        }
+        catch (std::runtime_error& e)
+        {
+            continue;
+        }
+
+        if (allJobs.find(unitinfo.job) == allJobs.end())
+        {
+            continue;
+        }
+
+        appids.insert(unitinfo.appid);
+    }
+
+    std::list<std::shared_ptr<Application>> apps;
+    for (const auto& appid : appids)
+    {
+        auto id = AppID::find(appid);
+        if (id.empty())
+        {
+            g_debug("Unable to handle AppID: %s", appid.c_str());
+            continue;
+        }
+
+        apps.emplace_back(Application::create(id, registry));
+    }
+
+    return apps;
 }
 
 std::string SystemD::userBusPath()
