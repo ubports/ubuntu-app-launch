@@ -56,6 +56,10 @@ public:
 
     static std::string userBusPath();
 
+    pid_t unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance);
+    std::vector<pid_t> unitPids(const AppID& appId, const std::string& job, const std::string& instance);
+    void stopUnit(const AppID& appId, const std::string& job, const std::string& instance);
+
 private:
     std::shared_ptr<GDBusConnection> userbus_;
 

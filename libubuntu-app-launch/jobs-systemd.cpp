@@ -64,21 +64,26 @@ SystemD::SystemD(const AppID& appId,
 
 pid_t SystemD::primaryPid()
 {
-    return {};
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
+    return manager->unitPrimaryPid(appId_, job_, instance_);
 }
 
 std::string SystemD::logPath()
 {
+    /* NOTE: We can never get this for systemd */
     return {};
 }
 
 std::vector<pid_t> SystemD::pids()
 {
-    return {};
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
+    return manager->unitPids(appId_, job_, instance_);
 }
 
 void SystemD::stop()
 {
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
+    return manager->stopUnit(appId_, job_, instance_);
 }
 
 }  // namespace instance
@@ -286,6 +291,20 @@ SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
 std::string SystemD::unitName(const SystemD::UnitInfo& info)
 {
     return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst;
+}
+
+pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
+{
+    return 0;
+}
+
+std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job, const std::string& instance)
+{
+    return {};
+}
+
+void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::string& instance)
+{
 }
 
 }  // namespace manager
