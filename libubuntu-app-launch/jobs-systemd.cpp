@@ -427,8 +427,77 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
 
 std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job, const std::string& instance)
 {
+    auto registry = registry_.lock();
     auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
-    return {};
+    auto unitpath = unitPath(unitname);
+
+    auto cgrouppath = registry->impl->thread.executeOnThread<std::string>([this, registry, unitname, unitpath]() {
+        GError* error{nullptr};
+        GVariant* call = g_dbus_connection_call_sync(
+            userbus_.get(),                                                            /* user bus */
+            SYSTEMD_DBUS_ADDRESS.c_str(),                                              /* bus name */
+            unitpath.c_str(),                                                          /* path */
+            "org.freedesktop.DBus.Properties",                                         /* interface */
+            "Get",                                                                     /* method */
+            g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE.c_str(), "ControlGroup"), /* params */
+            G_VARIANT_TYPE("(<s>)"),                                                   /* ret type */
+            G_DBUS_CALL_FLAGS_NONE,                                                    /* flags */
+            -1,                                                                        /* timeout */
+            registry->impl->thread.getCancellable().get(),                             /* cancellable */
+            &error);
+
+        if (error != nullptr)
+        {
+            auto message = std::string{"Unable to get SystemD Control Group for '"} + unitname + std::string{"': "} +
+                           error->message;
+            g_error_free(error);
+            throw std::runtime_error(message);
+        }
+
+        /* Parse variant */
+        std::string group;
+        const gchar* ggroup = nullptr;
+        g_variant_get(call, "(<&s>)", &ggroup);
+        if (ggroup != nullptr)
+        {
+            group = ggroup;
+        }
+
+        g_variant_unref(call);
+
+        return group;
+    });
+
+    gchar* fullpath =
+        g_build_filename("", "sys", "fs", "cgroup", "systemd", cgrouppath.c_str(), "cgroup.procs", nullptr);
+    gchar* pidstr = nullptr;
+    GError* error = nullptr;
+
+    g_debug("Getting PIDs from %s", fullpath);
+    g_file_get_contents(fullpath, &pidstr, nullptr, &error);
+    g_free(fullpath);
+
+    if (error != nullptr)
+    {
+        auto message = std::string{"Unable to read cgroup PID list: "} + error->message;
+        g_error_free(error);
+        throw std::runtime_error(message);
+    }
+
+    gchar** pidlines = g_strsplit(pidstr, "\n", -1);
+    g_free(pidstr);
+    std::vector<pid_t> pids;
+
+    for (auto i = 0; pidlines[i] != nullptr; i++)
+    {
+        const gchar* pidline = pidlines[i];
+        auto pid = std::atoi(pidline);
+        pids.emplace_back(pid);
+    }
+
+    g_strfreev(pidlines);
+
+    return pids;
 }
 
 void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::string& instance)
