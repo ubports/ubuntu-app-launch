@@ -433,7 +433,35 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
 
 void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::string& instance)
 {
+    auto registry = registry_.lock();
     auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
+
+    registry->impl->thread.executeOnThread<bool>([this, registry, unitname] {
+        GError* error{nullptr};
+        GVariant* call = g_dbus_connection_call_sync(userbus_.get(),                                  /* user bus */
+                                                     SYSTEMD_DBUS_ADDRESS.c_str(),                    /* bus name */
+                                                     SYSTEMD_DBUS_PATH_MANAGER.c_str(),               /* path */
+                                                     SYSTEMD_DBUS_IFACE_MANAGER.c_str(),              /* interface */
+                                                     "StopUnit",                                      /* method */
+                                                     g_variant_new("(ss)", unitname.c_str(), "fail"), /* params */
+                                                     G_VARIANT_TYPE("(o)"),                           /* ret type */
+                                                     G_DBUS_CALL_FLAGS_NONE,                          /* flags */
+                                                     -1,                                              /* timeout */
+                                                     registry->impl->thread.getCancellable().get(),   /* cancellable */
+                                                     &error);
+
+        if (error != nullptr)
+        {
+            auto message =
+                std::string{"Unable to get SystemD to stop '"} + unitname + std::string{"': "} + error->message;
+            g_error_free(error);
+            throw std::runtime_error(message);
+        }
+
+        g_variant_unref(call);
+
+        return true;
+    });
 }
 
 }  // namespace manager
