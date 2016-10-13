@@ -20,8 +20,10 @@
 #pragma once
 
 #include "jobs-base.h"
+#include <chrono>
 #include <gio/gio.h>
 #include <map>
+#include <mutex>
 
 namespace ubuntu
 {
@@ -81,12 +83,22 @@ private:
 
     struct UnitInfo
     {
-        std::string job;
         std::string appid;
+        std::string job;
         std::string inst;
     };
     UnitInfo parseUnit(const std::string& unit);
     std::string unitName(const UnitInfo& info);
+
+    struct UnitPath
+    {
+        std::string unitName;
+        std::string unitPath;
+        std::chrono::time_point<std::chrono::system_clock> timeStamp;
+    };
+    std::list<UnitPath> unitPaths_;
+    std::mutex unitPathsMutex_;
+    std::string unitPath(const std::string& unitName);
 };
 
 }  // namespace manager

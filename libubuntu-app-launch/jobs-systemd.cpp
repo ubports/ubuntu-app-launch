@@ -91,6 +91,11 @@ void SystemD::stop()
 namespace manager
 {
 
+static const std::string SYSTEMD_DBUS_ADDRESS{"org.freedesktop.systemd1"};
+static const std::string SYSTEMD_DBUS_IFACE_MANAGER{"org.freedesktop.systemd1.Manager"};
+static const std::string SYSTEMD_DBUS_PATH_MANAGER{"/org/freedesktop/systemd1"};
+static const std::string SYSTEMD_DBUS_IFACE_UNIT{"org.freedesktop.systemd1.Unit"};
+
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
 {
@@ -231,9 +236,9 @@ std::list<SystemD::UnitEntry> SystemD::listUnits()
         std::list<SystemD::UnitEntry> ret;
 
         GVariant* call = g_dbus_connection_call_sync(userbus_.get(),                                /* user bus */
-                                                     "org.systemd1",                                /* bus name */
-                                                     "/org",                                        /* path */
-                                                     "org.system",                                  /* interface */
+                                                     SYSTEMD_DBUS_ADDRESS.c_str(),                  /* bus name */
+                                                     SYSTEMD_DBUS_PATH_MANAGER.c_str(),             /* path */
+                                                     SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
                                                      "ListUnits",                                   /* method */
                                                      nullptr,                                       /* params */
                                                      G_VARIANT_TYPE("a(ssssssouso)"),               /* ret type */
@@ -285,7 +290,7 @@ SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
         throw std::runtime_error{"Unable to parse unit name: " + unit};
     }
 
-    return {match[1].str(), match[2].str(), match[3].str()};
+    return {match[2].str(), match[1].str(), match[3].str()};
 }
 
 std::string SystemD::unitName(const SystemD::UnitInfo& info)
@@ -293,18 +298,96 @@ std::string SystemD::unitName(const SystemD::UnitInfo& info)
     return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst;
 }
 
+std::string SystemD::unitPath(const std::string& unitName)
+{
+    auto registry = registry_.lock();
+    std::string retval;
+
+    if (true)
+    {
+        /* Create a context for the gaurd */
+        std::lock_guard<std::mutex> guard(unitPathsMutex_);
+        auto iter = std::find_if(unitPaths_.begin(), unitPaths_.end(),
+                                 [&unitName](const SystemD::UnitPath& entry) { return entry.unitName == unitName; });
+
+        if (iter != unitPaths_.end())
+        {
+            retval = iter->unitPath;
+            iter->timeStamp = std::chrono::system_clock::now();
+        }
+    }
+
+    if (retval.empty())
+    {
+        retval = registry->impl->thread.executeOnThread<std::string>([this, registry, unitName]() {
+            std::string path;
+            GError* error{nullptr};
+            GVariant* call =
+                g_dbus_connection_call_sync(userbus_.get(),                                /* user bus */
+                                            SYSTEMD_DBUS_ADDRESS.c_str(),                  /* bus name */
+                                            SYSTEMD_DBUS_PATH_MANAGER.c_str(),             /* path */
+                                            SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
+                                            "GetUnit",                                     /* method */
+                                            g_variant_new("(s)", unitName.c_str()),        /* params */
+                                            G_VARIANT_TYPE("(o)"),                         /* ret type */
+                                            G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                            -1,                                            /* timeout */
+                                            registry->impl->thread.getCancellable().get(), /* cancellable */
+                                            &error);
+
+            if (error != nullptr)
+            {
+                auto message = std::string{"Unable to get SystemD unit path for '"} + unitName + std::string{"': "} +
+                               error->message;
+                g_error_free(error);
+                throw std::runtime_error(message);
+            }
+
+            /* Parse variant */
+            gchar* gpath = nullptr;
+            g_variant_get(call, "(o)", &gpath);
+            if (gpath != nullptr)
+            {
+                path = gpath;
+                unitPaths_.emplace_back(SystemD::UnitPath{unitName, path, std::chrono::system_clock::now()});
+            }
+
+            g_variant_unref(call);
+
+            return path;
+        });
+    }
+
+    /* Queue a possible cleanup */
+    if (unitPaths_.size() > 50)
+    {
+        registry->impl->thread.executeOnThread([this] {
+            std::lock_guard<std::mutex> guard(unitPathsMutex_);
+            std::remove_if(unitPaths_.begin(), unitPaths_.end(), [](const SystemD::UnitPath& entry) -> bool {
+                auto age = std::chrono::system_clock::now() - entry.timeStamp;
+                return age > std::chrono::hours{1};
+            });
+        });
+    }
+
+    return retval;
+}
+
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
 {
+    auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
     return 0;
 }
 
 std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job, const std::string& instance)
 {
+    auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
     return {};
 }
 
 void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::string& instance)
 {
+    auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
 }
 
 }  // namespace manager
