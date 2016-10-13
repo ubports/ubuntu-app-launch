@@ -95,6 +95,7 @@ static const std::string SYSTEMD_DBUS_ADDRESS{"org.freedesktop.systemd1"};
 static const std::string SYSTEMD_DBUS_IFACE_MANAGER{"org.freedesktop.systemd1.Manager"};
 static const std::string SYSTEMD_DBUS_PATH_MANAGER{"/org/freedesktop/systemd1"};
 static const std::string SYSTEMD_DBUS_IFACE_UNIT{"org.freedesktop.systemd1.Unit"};
+static const std::string SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Service"};
 
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
@@ -387,8 +388,41 @@ std::string SystemD::unitPath(const std::string& unitName)
 
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
 {
+    auto registry = registry_.lock();
     auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
-    return 0;
+    auto unitpath = unitPath(unitname);
+
+    return registry->impl->thread.executeOnThread<pid_t>([this, registry, unitname, unitpath]() {
+        pid_t pid;
+        GError* error{nullptr};
+        GVariant* call = g_dbus_connection_call_sync(
+            userbus_.get(),                                                       /* user bus */
+            SYSTEMD_DBUS_ADDRESS.c_str(),                                         /* bus name */
+            unitpath.c_str(),                                                     /* path */
+            "org.freedesktop.DBus.Properties",                                    /* interface */
+            "Get",                                                                /* method */
+            g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE.c_str(), "MainPID"), /* params */
+            G_VARIANT_TYPE("(<u>)"),                                              /* ret type */
+            G_DBUS_CALL_FLAGS_NONE,                                               /* flags */
+            -1,                                                                   /* timeout */
+            registry->impl->thread.getCancellable().get(),                        /* cancellable */
+            &error);
+
+        if (error != nullptr)
+        {
+            auto message =
+                std::string{"Unable to get SystemD PID for '"} + unitname + std::string{"': "} + error->message;
+            g_error_free(error);
+            throw std::runtime_error(message);
+        }
+
+        /* Parse variant */
+        g_variant_get(call, "(<u>)", &pid);
+
+        g_variant_unref(call);
+
+        return pid;
+    });
 }
 
 std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job, const std::string& instance)
