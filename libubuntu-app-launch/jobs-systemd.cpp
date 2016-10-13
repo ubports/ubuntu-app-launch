@@ -348,6 +348,7 @@ std::string SystemD::unitPath(const std::string& unitName)
             g_variant_get(call, "(o)", &gpath);
             if (gpath != nullptr)
             {
+                std::lock_guard<std::mutex> guard(unitPathsMutex_);
                 path = gpath;
                 unitPaths_.emplace_back(SystemD::UnitPath{unitName, path, std::chrono::system_clock::now()});
             }
