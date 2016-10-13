@@ -298,6 +298,15 @@ std::string SystemD::unitName(const SystemD::UnitInfo& info)
     return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst;
 }
 
+/** Function that uses and maintains the cache of the paths for units
+    on the systemd dbus connection. If we already have the entry in the
+    cache we just return the path and this function is fast. If not we have
+    to ask systemd for it and that can take a bit longer.
+
+    After getting the data we throw a small background task in to clean
+    up the cache if it has more than 50 entries. We delete those who
+    haven't be used for an hour.
+*/
 std::string SystemD::unitPath(const std::string& unitName)
 {
     auto registry = registry_.lock();
@@ -362,6 +371,8 @@ std::string SystemD::unitPath(const std::string& unitName)
     /* Queue a possible cleanup */
     if (unitPaths_.size() > 50)
     {
+        /* TODO: We should look at UnitRemoved as well */
+        /* TODO: Add to cache on UnitNew */
         registry->impl->thread.executeOnThread([this] {
             std::lock_guard<std::mutex> guard(unitPathsMutex_);
             std::remove_if(unitPaths_.begin(), unitPaths_.end(), [](const SystemD::UnitPath& entry) -> bool {
