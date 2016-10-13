@@ -218,7 +218,7 @@ TEST_F(ExecUtil, DesktopMir)
 {
 	StartCheckEnv("xmir", {
 		{"APP_EXEC", [](const gchar * value) {
-			EXPECT_STREQ("xfoo", value); }},
+			EXPECT_STREQ("libertine-launch xfoo", value); }},
 		{"APP_DESKTOP_FILE_PATH", [](const gchar * value) {
 			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/xmir.desktop", value); }},
 		{"APP_EXEC_POLICY", [](const gchar * value) {
@@ -300,7 +300,7 @@ TEST_F(ExecUtil, LibertineExec)
 {
 	StartCheckEnv("container-name_test_0.0", {
 		{"APP_EXEC", [](const gchar * value) {
-			EXPECT_STREQ("libertine-launch \"container-name\" test", value); }},
+			EXPECT_STREQ("libertine-launch \"--id=container-name\" test", value); }},
 		{"APP_EXEC_POLICY", [](const gchar * value) {
 			EXPECT_STREQ("unconfined", value); }},
 		{"APP_ID", [](const gchar * value) {
@@ -317,7 +317,7 @@ TEST_F(ExecUtil, LibertineExecUser)
 {
 	StartCheckEnv("container-name_user-app_0.0", {
 		{"APP_EXEC", [](const gchar * value) {
-			EXPECT_STREQ("libertine-launch \"container-name\" user-app", value); }},
+			EXPECT_STREQ("libertine-launch \"--id=container-name\" user-app", value); }},
 		{"APP_EXEC_POLICY", [](const gchar * value) {
 			EXPECT_STREQ("unconfined", value); }},
 		{"APP_ID", [](const gchar * value) {

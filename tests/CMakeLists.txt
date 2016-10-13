@@ -163,6 +163,7 @@ add_test (xmir-helper-test xmir-helper-test)
 
 add_custom_target(format-tests
 	COMMAND clang-format -i -style=file
+	application-info-desktop.cpp
 	libual-cpp-test.cc
 	list-apps.cpp
 	eventually-fixture.h

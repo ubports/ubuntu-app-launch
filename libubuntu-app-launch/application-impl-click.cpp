@@ -171,7 +171,8 @@ std::shared_ptr<Application::Info> Click::info()
 {
     if (!_info)
     {
-        _info = std::make_shared<app_info::Desktop>(_keyfile, _clickDir, app_info::DesktopFlags::NONE, nullptr);
+        _info =
+            std::make_shared<app_info::Desktop>(_keyfile, _clickDir, _clickDir, app_info::DesktopFlags::NONE, nullptr);
     }
 
     return _info;

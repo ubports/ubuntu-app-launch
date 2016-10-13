@@ -54,8 +54,16 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 {
     std::tie(_basedir, _keyfile, desktopPath_) = keyfileForApp(appname);
 
-    appinfo_ =
-        std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
+    std::string rootDir = "";
+    auto rootenv = g_getenv("UBUNTU_APP_LAUNCH_LEGACY_ROOT");
+    if (rootenv != nullptr && /* Check that we have an alternate root available */
+        g_str_has_prefix(_basedir.c_str(), rootenv))
+    { /* And check that we found this in that root */
+        rootDir = rootenv;
+    }
+
+    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, rootDir,
+                                                   app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
 
     if (!_keyfile)
     {
@@ -289,7 +297,23 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
-    retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
+    if (appinfo_->xMirEnable())
+    {
+        /* If we're setting up XMir we also need the other helpers
+           that libertine is helping with */
+        auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+        if (libertine_launch == nullptr)
+        {
+            libertine_launch = LIBERTINE_LAUNCH;
+        }
+
+        retval.emplace_back(
+            std::make_pair("APP_EXEC", std::string(libertine_launch) + " " + appinfo_->execLine().value()));
+    }
+    else
+    {
+        retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
+    }
 
     /* Honor the 'Path' key if it is in the desktop file */
     if (g_key_file_has_key(_keyfile.get(), "Desktop Entry", "Path", nullptr))
