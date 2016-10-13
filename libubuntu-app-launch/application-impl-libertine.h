@@ -84,6 +84,7 @@ public:
 private:
     AppID::Package _container;
     AppID::AppName _appname;
+    std::string _container_path;
     std::shared_ptr<GKeyFile> _keyfile;
     std::string _basedir;
     std::shared_ptr<app_info::Desktop> appinfo_;

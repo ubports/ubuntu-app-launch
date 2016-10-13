@@ -74,6 +74,11 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
         return {};
     }
 
+    if (package.value().empty())
+    {
+        return {};
+    }
+
     try
     {
         auto snapnode = snapdJson("/v2/snaps/" + package.value());
@@ -398,7 +403,7 @@ std::set<AppID> Info::appsForInterface(const std::string &in_interface) const
             std::string revision = pkginfo->revision;
 
             auto apps = json_object_get_array_member(ifaceobj, "apps");
-            for (unsigned int k = 0; k < json_array_get_length(apps); k++)
+            for (unsigned int k = 0; apps != nullptr && k < json_array_get_length(apps); k++)
             {
                 std::string appname = json_array_get_string_element(apps, k);
 

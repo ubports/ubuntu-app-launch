@@ -35,13 +35,18 @@ Libertine::Libertine(const AppID::Package& container,
     , _container(container)
     , _appname(appname)
 {
+    auto gcontainer_path = libertine_container_path(container.value().c_str());
+    if (gcontainer_path != nullptr)
+    {
+        _container_path = gcontainer_path;
+        g_free(gcontainer_path);
+    }
+
     if (!_keyfile)
     {
-        auto container_path = libertine_container_path(container.value().c_str());
-        auto system_app_path = g_build_filename(container_path, "usr", "share", nullptr);
+        auto system_app_path = g_build_filename(_container_path.c_str(), "usr", "share", nullptr);
         _basedir = system_app_path;
         g_free(system_app_path);
-        g_free(container_path);
 
         _keyfile = findDesktopFile(_basedir, "applications", appname.value() + ".desktop");
     }
@@ -99,7 +104,7 @@ std::shared_ptr<GKeyFile> Libertine::findDesktopFile(const std::string& basepath
     GError* error = nullptr;
     auto dirpath = g_build_filename(basepath.c_str(), subpath.c_str(), nullptr);
     GDir* dir = g_dir_open(dirpath, 0, &error);
-    if (error != NULL)
+    if (error != nullptr)
     {
         g_error_free(error);
         g_free(dirpath);
@@ -242,9 +247,17 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
         for (int j = 0; apps.get()[j] != nullptr; j++)
         {
-            auto appid = AppID::parse(apps.get()[j]);
-            auto sapp = std::make_shared<Libertine>(appid.package, appid.appname, registry);
-            applist.push_back(sapp);
+            try
+            {
+                auto appid = AppID::parse(apps.get()[j]);
+                auto sapp = std::make_shared<Libertine>(appid.package, appid.appname, registry);
+                applist.emplace_back(sapp);
+            }
+            catch (std::runtime_error& e)
+            {
+                g_debug("Unable to create application for libertine appname '%s': %s",
+                        apps.get()[j], e.what());
+            }
         }
     }
 
@@ -255,8 +268,8 @@ std::shared_ptr<Application::Info> Libertine::info()
 {
     if (!appinfo_)
     {
-        appinfo_ =
-            std::make_shared<app_info::Desktop>(_keyfile, _basedir, app_info::DesktopFlags::XMIR_DEFAULT, _registry);
+        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path,
+                                                       app_info::DesktopFlags::XMIR_DEFAULT, _registry);
     }
     return appinfo_;
 }
@@ -294,7 +307,7 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
     }
 
     auto desktopexec = appinfo_->execLine().value();
-    auto execline = std::string(libertine_launch) + " \"" + _container.value() + "\" " + desktopexec;
+    auto execline = std::string(libertine_launch) + " \"--id=" + _container.value() + "\" " + desktopexec;
     retval.emplace_back(std::make_pair("APP_EXEC", execline));
 
     /* TODO: Go multi instance */
