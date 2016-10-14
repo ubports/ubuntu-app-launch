@@ -316,7 +316,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 
             /* Environment */
-            g_variant_builder_open(&builder, G_VARIANT_TYPE_DICT_ENTRY);
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
             g_variant_builder_add_value(&builder, g_variant_new_string("Environment"));
             g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
             g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
@@ -332,29 +332,23 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
             /* ExecStart */
             auto commands = parseExec(env);
-            if (!commands.empty())
+            gchar* pathexec{nullptr};
+            if (!commands.empty() && ((pathexec = g_find_program_in_path(commands[0].c_str())) != nullptr))
             {
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_DICT_ENTRY);
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
                 g_variant_builder_add_value(&builder, g_variant_new_string("ExecStart"));
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-                g_variant_builder_add_value(&builder, g_variant_new_string(commands[0].c_str()));
+                g_variant_builder_add_value(&builder, g_variant_new_take_string(pathexec));
 
-                if (commands.size() > 1)
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+                for (auto param : commands)
                 {
-                    g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-                    for (auto param = std::next(commands.begin()); param != commands.end(); param = std::next(param))
-                    {
-                        g_variant_builder_add_value(&builder, g_variant_new_string(param->c_str()));
-                    }
-                    g_variant_builder_close(&builder);
+                    g_variant_builder_add_value(&builder, g_variant_new_string(param.c_str()));
                 }
-                else
-                {
-                    g_variant_builder_add_value(&builder, g_variant_new_array(G_VARIANT_TYPE_STRING, nullptr, 0));
-                }
+                g_variant_builder_close(&builder);
 
                 g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
 
@@ -368,7 +362,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_close(&builder);
 
             /* Dependent Units (none) */
-            g_variant_builder_add_value(&builder, g_variant_new_array(G_VARIANT_TYPE("(sa{sv})"), nullptr, 0));
+            g_variant_builder_add_value(&builder, g_variant_new_array(G_VARIANT_TYPE("(sa(sv))"), nullptr, 0));
 
             auto retval = std::make_shared<instance::SystemD>(appId, job, instance, urls, registry);
             auto chelper = new instance::StartCHelper{};
@@ -543,7 +537,7 @@ std::list<SystemD::UnitEntry> SystemD::listUnits()
 }
 
 /* TODO: Application job names */
-const std::regex unitNaming{"^ubuntu\\-app\\-launch\\-(application\\-.*)\\-(.*)\\-([0-9]*)$"};
+const std::regex unitNaming{"^ubuntu\\-app\\-launch\\-(application\\-.*)\\-(.*)\\-([0-9]*)\\.service$"};
 
 SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
 {
@@ -558,7 +552,7 @@ SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
 
 std::string SystemD::unitName(const SystemD::UnitInfo& info)
 {
-    return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst;
+    return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst + ".service";
 }
 
 /** Function that uses and maintains the cache of the paths for units
