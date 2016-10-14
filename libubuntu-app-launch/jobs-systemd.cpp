@@ -161,11 +161,12 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
         GError* error = nullptr;
         auto bus = std::shared_ptr<GDBusConnection>(
             g_dbus_connection_new_for_address_sync(
-                ("unix:path=" + userBusPath()).c_str(),         /* path to the user bus */
-                G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION, /* It is a message bus */
-                nullptr,                                        /* observer */
-                cancel.get(),                                   /* cancellable from the thread */
-                &error),                                        /* error */
+                ("unix:path=" + userBusPath()).c_str(), /* path to the user bus */
+                (GDBusConnectionFlags)(G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
+                                       G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION), /* It is a message bus */
+                nullptr,                                                                /* observer */
+                cancel.get(), /* cancellable from the thread */
+                &error),      /* error */
             [](GDBusConnection* bus) { g_clear_object(&bus); });
 
         if (error != nullptr)
