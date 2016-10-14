@@ -22,8 +22,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "helpers.h"
 #include "jobs-systemd.h"
 #include "registry-impl.h"
+#include "second-exec-core.h"
+
+extern "C" {
+#include "ubuntu-app-launch-trace.h"
+}
 
 namespace ubuntu
 {
@@ -50,6 +56,8 @@ public:
 
     /* Manage lifecycle */
     void stop() override;
+
+    static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 };  // class SystemD
 
 SystemD::SystemD(const AppID& appId,
@@ -84,6 +92,54 @@ void SystemD::stop()
 {
     auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
     return manager->stopUnit(appId_, job_, instance_);
+}
+
+/** Small helper that we can new/delete to work better with C stuff */
+struct StartCHelper
+{
+    std::shared_ptr<SystemD> ptr;
+};
+
+void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
+{
+    auto data = static_cast<StartCHelper*>(user_data);
+    GError* error{nullptr};
+    GVariant* result{nullptr};
+
+    tracepoint(ubuntu_app_launch, libual_start_message_callback, std::string(data->ptr->appId_).c_str());
+
+    g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
+
+    result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+
+    g_clear_pointer(&result, g_variant_unref);
+
+    if (error != nullptr)
+    {
+        if (g_dbus_error_is_remote_error(error))
+        {
+            gchar* remote_error = g_dbus_error_get_remote_error(error);
+            g_debug("Remote error: %s", remote_error);
+            if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0)
+            {
+                auto urls = urlsToStrv(data->ptr->urls_);
+                second_exec(data->ptr->registry_->impl->_dbus.get(),                   /* DBus */
+                            data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
+                            data->ptr->primaryPid(),                                   /* primary pid */
+                            std::string(data->ptr->appId_).c_str(),                    /* appid */
+                            urls.get());                                               /* urls */
+            }
+
+            g_free(remote_error);
+        }
+        else
+        {
+            g_warning("Unable to emit event to start application: %s", error->message);
+        }
+        g_error_free(error);
+    }
+
+    delete data;
 }
 
 }  // namespace instance
@@ -135,7 +191,116 @@ std::shared_ptr<Application::Instance> SystemD::launch(
     launchMode mode,
     std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv)
 {
-    return {};
+    if (appId.empty())
+        return {};
+
+    auto registry = registry_.lock();
+    return registry->impl->thread.executeOnThread<std::shared_ptr<instance::SystemD>>(
+        [&]() -> std::shared_ptr<instance::SystemD> {
+            auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry->impl->jobs);
+            std::string appIdStr{appId};
+            g_debug("Initializing params for an new instance::SystemD for: %s", appIdStr.c_str());
+
+            tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
+
+            int timeout = 1;
+            if (ubuntu::app_launch::Registry::Impl::isWatchingAppStarting())
+            {
+                timeout = 0;
+            }
+
+            auto handshake = starting_handshake_start(appIdStr.c_str(), timeout);
+            if (handshake == nullptr)
+            {
+                g_warning("Unable to setup starting handshake");
+            }
+
+            /* Figure out the DBus path for the job */
+            auto jobpath = manager->unitPath(unitName(SystemD::UnitInfo{appIdStr, job, instance}));
+
+            /* Build up our environment */
+            auto env = getenv();
+
+            env.emplace_back(std::make_pair("APP_ID", appIdStr));                           /* Application ID */
+            env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
+
+            if (!urls.empty())
+            {
+                auto accumfunc = [](const std::string& prev, Application::URL thisurl) -> std::string {
+                    gchar* gescaped = g_shell_quote(thisurl.value().c_str());
+                    std::string escaped;
+                    if (gescaped != nullptr)
+                    {
+                        escaped = gescaped;
+                        g_free(gescaped);
+                    }
+                    else
+                    {
+                        g_warning("Unable to escape URL: %s", thisurl.value().c_str());
+                        return prev;
+                    }
+
+                    if (prev.empty())
+                    {
+                        return escaped;
+                    }
+                    else
+                    {
+                        return prev + " " + escaped;
+                    }
+                };
+                auto urlstring = std::accumulate(urls.begin(), urls.end(), std::string{}, accumfunc);
+                env.emplace_back(std::make_pair("APP_URIS", urlstring));
+            }
+
+            if (mode == launchMode::TEST)
+            {
+                env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
+            }
+
+            /* Convert to GVariant */
+            GVariantBuilder builder;
+            g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
+
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+            for (const auto& envvar : env)
+            {
+                g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
+                                                          "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
+            }
+
+            g_variant_builder_close(&builder);
+            g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
+
+            auto retval = std::make_shared<instance::SystemD>(appId, job, instance, urls, registry);
+            auto chelper = new instance::StartCHelper{};
+            chelper->ptr = retval;
+
+            tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
+            starting_handshake_wait(handshake);
+            tracepoint(ubuntu_app_launch, handshake_complete, appIdStr.c_str());
+
+            /* Call the job start function */
+            g_debug("Asking systemd to start task for: %s", appIdStr.c_str());
+            g_dbus_connection_call(manager->userbus_.get(),                       /* bus */
+                                   SYSTEMD_DBUS_ADDRESS.c_str(),                  /* service name */
+                                   jobpath.c_str(),                               /* Path */
+                                   SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
+                                   "StartTransientUnit",                          /* method */
+                                   g_variant_builder_end(&builder),               /* params */
+                                   nullptr,                                       /* return */
+                                   G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                   -1,                                            /* default timeout */
+                                   registry->impl->thread.getCancellable().get(), /* cancellable */
+                                   nullptr,  // TODO: instance::Upstart::application_start_cb,       /* callback */
+                                   chelper   /* object */
+                                   );
+
+            tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
+
+            return retval;
+        });
 }
 
 std::shared_ptr<Application::Instance> SystemD::existing(const AppID& appId,

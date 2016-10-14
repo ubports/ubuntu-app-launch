@@ -19,6 +19,7 @@
 
 #pragma once
 #include "application.h"
+#include <glib.h>
 #include <set>
 
 namespace ubuntu
@@ -61,6 +62,8 @@ protected:
     std::vector<Application::URL> urls_;
     /** A link to the registry we're using for connections */
     std::shared_ptr<Registry> registry_;
+
+    static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
 
 private:
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
