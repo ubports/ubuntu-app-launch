@@ -99,6 +99,9 @@ private:
     std::list<UnitPath> unitPaths_;
     std::mutex unitPathsMutex_;
     std::string unitPath(const std::string& unitName);
+
+    static std::string findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
+    static std::vector<std::string> parseExec(std::list<std::pair<std::string, std::string>>& env);
 };
 
 }  // namespace manager

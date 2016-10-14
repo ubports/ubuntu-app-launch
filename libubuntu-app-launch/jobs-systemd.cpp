@@ -184,12 +184,59 @@ SystemD::~SystemD()
 {
 }
 
+std::string SystemD::findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env)
+{
+    std::string retval;
+    auto entry = std::find_if(env.begin(), env.end(),
+                              [&value](std::pair<std::string, std::string>& entry) { return entry.first == value; });
+
+    if (entry != env.end())
+    {
+        retval = entry->second;
+    }
+
+    return retval;
+}
+
+std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std::string>>& env)
+{
+    auto exec = findEnv("APP_EXEC", env);
+    if (exec.empty())
+    {
+        return {};
+    }
+    auto uris = findEnv("APP_URIS", env);
+
+    auto execarray = desktop_exec_parse(exec.c_str(), uris.c_str());
+
+    if (findEnv("APP_XMIR_ENABLE", env) == "1")
+    {
+        auto appid = g_strdup(findEnv("APP_ID", env).c_str());
+        g_array_prepend_val(execarray, appid);
+        auto xmirhelper = g_strdup(XMIR_HELPER);
+        g_array_prepend_val(execarray, xmirhelper);
+    }
+
+    std::vector<std::string> retval;
+    retval.reserve(execarray->len);
+    for (unsigned int i = 0; i < execarray->len; i++)
+    {
+        retval.emplace_back(g_array_index(execarray, gchar*, i));
+    }
+
+    g_array_set_clear_func(execarray, g_free);
+    g_array_free(execarray, TRUE);
+
+    return retval;
+}
+
 std::shared_ptr<Application::Instance> SystemD::launch(
     const AppID& appId,
     const std::string& job,
     const std::string& instance,
     const std::vector<Application::URL>& urls,
     launchMode mode,
+
     std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv)
 {
     if (appId.empty())
@@ -265,7 +312,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
 
             g_variant_builder_add_value(&builder, g_variant_new_string(unitname.c_str()));
-            g_variant_builder_add_value(&builder, g_variant_new_string("notsure"));
+            g_variant_builder_add_value(&builder, g_variant_new_string("fail"));  // Job mode
 
             /* Parameter Array */
             g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
@@ -284,6 +331,32 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_close(&builder);
             g_variant_builder_close(&builder);
             g_variant_builder_close(&builder);
+
+            /* ExecStart */
+            auto commands = parseExec(env);
+            if (!commands.empty())
+            {
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_DICT_ENTRY);
+                g_variant_builder_add_value(&builder, g_variant_new_string("ExecStart"));
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+                g_variant_builder_add_value(&builder, g_variant_new_string(commands[0].c_str()));
+
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+                for (auto param = std::next(commands.begin()); param != commands.end(); param = std::next(param))
+                {
+                    g_variant_builder_add_value(&builder, g_variant_new_string(param->c_str()));
+                }
+                g_variant_builder_close(&builder);
+                g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
+
+                g_variant_builder_close(&builder);
+                g_variant_builder_close(&builder);
+                g_variant_builder_close(&builder);
+                g_variant_builder_close(&builder);
+            }
 
             /* Parameter Array */
             g_variant_builder_close(&builder);
