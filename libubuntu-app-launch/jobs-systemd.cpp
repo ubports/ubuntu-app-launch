@@ -225,7 +225,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     }
 
     g_array_set_clear_func(execarray, g_free);
-    g_array_free(execarray, TRUE);
+    g_array_free(execarray, FALSE); /* TODO: Not TRUE? */
 
     return retval;
 }
@@ -236,7 +236,6 @@ std::shared_ptr<Application::Instance> SystemD::launch(
     const std::string& instance,
     const std::vector<Application::URL>& urls,
     launchMode mode,
-
     std::function<std::list<std::pair<std::string, std::string>>(void)>& getenv)
 {
     if (appId.empty())
@@ -263,9 +262,8 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 g_warning("Unable to setup starting handshake");
             }
 
-            /* Figure out the DBus path for the job */
+            /* Figure out the unit name for the job */
             auto unitname = unitName(SystemD::UnitInfo{appIdStr, job, instance});
-            auto jobpath = manager->unitPath(unitname);
 
             /* Build up our environment */
             auto env = getenv();
@@ -344,12 +342,20 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
                 g_variant_builder_add_value(&builder, g_variant_new_string(commands[0].c_str()));
 
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-                for (auto param = std::next(commands.begin()); param != commands.end(); param = std::next(param))
+                if (commands.size() > 1)
                 {
-                    g_variant_builder_add_value(&builder, g_variant_new_string(param->c_str()));
+                    g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+                    for (auto param = std::next(commands.begin()); param != commands.end(); param = std::next(param))
+                    {
+                        g_variant_builder_add_value(&builder, g_variant_new_string(param->c_str()));
+                    }
+                    g_variant_builder_close(&builder);
                 }
-                g_variant_builder_close(&builder);
+                else
+                {
+                    g_variant_builder_add_value(&builder, g_variant_new_array(G_VARIANT_TYPE_STRING, nullptr, 0));
+                }
+
                 g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
 
                 g_variant_builder_close(&builder);
@@ -376,7 +382,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_debug("Asking systemd to start task for: %s", appIdStr.c_str());
             g_dbus_connection_call(manager->userbus_.get(),                       /* bus */
                                    SYSTEMD_DBUS_ADDRESS.c_str(),                  /* service name */
-                                   jobpath.c_str(),                               /* Path */
+                                   SYSTEMD_DBUS_PATH_MANAGER.c_str(),             /* Path */
                                    SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
                                    "StartTransientUnit",                          /* method */
                                    g_variant_builder_end(&builder),               /* params */
