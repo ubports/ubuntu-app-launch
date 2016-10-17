@@ -17,6 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include <algorithm>
 #include <gio/gio.h>
 #include <regex>
 #include <sys/types.h>
@@ -230,6 +231,43 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     return retval;
 }
 
+void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env)
+{
+    auto cvalue = getenv(envname.c_str());
+	g_debug("Copying Environment: %s", envname.c_str());
+    if (cvalue != nullptr)
+    {
+        std::string value = getenv(envname.c_str());
+        env.emplace_back(std::make_pair(envname, value));
+    }
+    else
+    {
+        g_debug("Unable to copy environment '%s'", envname.c_str());
+    }
+}
+
+void copyEnvByPrefix(const std::string& prefix, std::list<std::pair<std::string, std::string>>& env)
+{
+    for (unsigned int i = 0; environ[i] != nullptr; i++)
+    {
+        if (g_str_has_prefix(environ[i], prefix.c_str()))
+        {
+            std::string envfull = environ[i];
+            std::string envname;
+            bool seenequal = false;
+            std::remove_copy_if(envfull.begin(), envfull.end(), std::back_inserter(envname),
+                                [&seenequal](const char c) {
+                                    if (c == '=')
+                                    {
+                                        seenequal = true;
+                                    }
+                                    return seenequal;
+                                });
+            copyEnv(envname, env);
+        }
+    }
+}
+
 std::shared_ptr<Application::Instance> SystemD::launch(
     const AppID& appId,
     const std::string& job,
@@ -270,6 +308,10 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
             env.emplace_back(std::make_pair("APP_ID", appIdStr));                           /* Application ID */
             env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
+
+            copyEnvByPrefix("MIR_", env);
+            copyEnvByPrefix("QT_", env);
+            copyEnvByPrefix("XDG_", env);
 
             if (!urls.empty())
             {
