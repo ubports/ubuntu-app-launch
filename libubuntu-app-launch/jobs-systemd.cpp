@@ -234,7 +234,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
 void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env)
 {
     auto cvalue = getenv(envname.c_str());
-	g_debug("Copying Environment: %s", envname.c_str());
+    g_debug("Copying Environment: %s", envname.c_str());
     if (cvalue != nullptr)
     {
         std::string value = getenv(envname.c_str());
@@ -524,6 +524,11 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
 
 std::string SystemD::userBusPath()
 {
+    auto cpath = getenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH");
+    if (cpath != nullptr)
+    {
+        return cpath;
+    }
     return std::string{"/run/user/"} + std::to_string(getuid()) + std::string{"/bus"};
 }
 
