@@ -492,17 +492,17 @@ std::list<SystemD::UnitEntry> SystemD::listUnits()
         GError* error{nullptr};
         std::list<SystemD::UnitEntry> ret;
 
-        GVariant* call = g_dbus_connection_call_sync(userbus_.get(),                                /* user bus */
-                                                     SYSTEMD_DBUS_ADDRESS.c_str(),                  /* bus name */
-                                                     SYSTEMD_DBUS_PATH_MANAGER.c_str(),             /* path */
-                                                     SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
-                                                     "ListUnits",                                   /* method */
-                                                     nullptr,                                       /* params */
-                                                     G_VARIANT_TYPE("a(ssssssouso)"),               /* ret type */
-                                                     G_DBUS_CALL_FLAGS_NONE,                        /* flags */
-                                                     -1,                                            /* timeout */
-                                                     registry->impl->thread.getCancellable().get(), /* cancellable */
-                                                     &error);
+        GVariant* callt = g_dbus_connection_call_sync(userbus_.get(),                                /* user bus */
+                                                      SYSTEMD_DBUS_ADDRESS.c_str(),                  /* bus name */
+                                                      SYSTEMD_DBUS_PATH_MANAGER.c_str(),             /* path */
+                                                      SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
+                                                      "ListUnits",                                   /* method */
+                                                      nullptr,                                       /* params */
+                                                      G_VARIANT_TYPE("(a(ssssssouso))"),             /* ret type */
+                                                      G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                                      -1,                                            /* timeout */
+                                                      registry->impl->thread.getCancellable().get(), /* cancellable */
+                                                      &error);
 
         if (error != nullptr)
         {
@@ -510,6 +510,9 @@ std::list<SystemD::UnitEntry> SystemD::listUnits()
             g_error_free(error);
             throw std::runtime_error(message);
         }
+
+        GVariant* call = g_variant_get_child_value(callt, 0);
+        g_variant_unref(callt);
 
         const gchar* id;
         const gchar* description;
