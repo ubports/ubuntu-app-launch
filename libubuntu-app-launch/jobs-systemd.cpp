@@ -699,7 +699,6 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
     auto unitpath = unitPath(unitname);
 
     return registry->impl->thread.executeOnThread<pid_t>([this, registry, unitname, unitpath]() {
-        pid_t pid;
         GError* error{nullptr};
         GVariant* call = g_dbus_connection_call_sync(
             userbus_.get(),                                                       /* user bus */
@@ -708,7 +707,7 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
             "org.freedesktop.DBus.Properties",                                    /* interface */
             "Get",                                                                /* method */
             g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE.c_str(), "MainPID"), /* params */
-            G_VARIANT_TYPE("(<u>)"),                                              /* ret type */
+            G_VARIANT_TYPE("(v)"),                                                /* ret type */
             G_DBUS_CALL_FLAGS_NONE,                                               /* flags */
             -1,                                                                   /* timeout */
             registry->impl->thread.getCancellable().get(),                        /* cancellable */
@@ -723,9 +722,13 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
         }
 
         /* Parse variant */
-        g_variant_get(call, "(<u>)", &pid);
-
+        GVariant* vpid{nullptr};
+        g_variant_get(call, "(v)", &vpid);
         g_variant_unref(call);
+
+        pid_t pid;
+        pid = g_variant_get_uint32(vpid);
+        g_variant_unref(vpid);
 
         return pid;
     });
@@ -746,7 +749,7 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
             "org.freedesktop.DBus.Properties",                                         /* interface */
             "Get",                                                                     /* method */
             g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE.c_str(), "ControlGroup"), /* params */
-            G_VARIANT_TYPE("(<s>)"),                                                   /* ret type */
+            G_VARIANT_TYPE("(v)"),                                                     /* ret type */
             G_DBUS_CALL_FLAGS_NONE,                                                    /* flags */
             -1,                                                                        /* timeout */
             registry->impl->thread.getCancellable().get(),                             /* cancellable */
@@ -761,21 +764,27 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         }
 
         /* Parse variant */
+        GVariant* vstring = nullptr;
+        g_variant_get(call, "(v)", &vstring);
+        g_variant_unref(call);
+
+        if (vstring == nullptr)
+        {
+            return std::string{};
+        }
+
         std::string group;
-        const gchar* ggroup = nullptr;
-        g_variant_get(call, "(<&s>)", &ggroup);
+        auto ggroup = g_variant_get_string(vstring, nullptr);
         if (ggroup != nullptr)
         {
             group = ggroup;
         }
-
-        g_variant_unref(call);
+        g_variant_unref(vstring);
 
         return group;
     });
 
-    gchar* fullpath =
-        g_build_filename("", "sys", "fs", "cgroup", "systemd", cgrouppath.c_str(), "cgroup.procs", nullptr);
+    gchar* fullpath = g_build_filename("/sys", "fs", "cgroup", "systemd", cgrouppath.c_str(), "tasks", nullptr);
     gchar* pidstr = nullptr;
     GError* error = nullptr;
 
@@ -797,8 +806,14 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
     for (auto i = 0; pidlines[i] != nullptr; i++)
     {
         const gchar* pidline = pidlines[i];
-        auto pid = std::atoi(pidline);
-        pids.emplace_back(pid);
+        if (pidline[0] != '\n')
+        {
+            auto pid = std::atoi(pidline);
+            if (pid != 0)
+            {
+                pids.emplace_back(pid);
+            }
+        }
     }
 
     g_strfreev(pidlines);
