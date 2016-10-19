@@ -43,6 +43,8 @@ namespace instance
 
 class SystemD : public Base
 {
+    friend class manager::SystemD;
+
 public:
     explicit SystemD(const AppID& appId,
                      const std::string& job,
@@ -58,7 +60,6 @@ public:
     /* Manage lifecycle */
     void stop() override;
 
-    static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 };  // class SystemD
 
 SystemD::SystemD(const AppID& appId,
@@ -93,54 +94,6 @@ void SystemD::stop()
 {
     auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
     return manager->stopUnit(appId_, job_, instance_);
-}
-
-/** Small helper that we can new/delete to work better with C stuff */
-struct StartCHelper
-{
-    std::shared_ptr<SystemD> ptr;
-};
-
-void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
-{
-    auto data = static_cast<StartCHelper*>(user_data);
-    GError* error{nullptr};
-    GVariant* result{nullptr};
-
-    tracepoint(ubuntu_app_launch, libual_start_message_callback, std::string(data->ptr->appId_).c_str());
-
-    g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
-
-    result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
-
-    g_clear_pointer(&result, g_variant_unref);
-
-    if (error != nullptr)
-    {
-        if (g_dbus_error_is_remote_error(error))
-        {
-            gchar* remote_error = g_dbus_error_get_remote_error(error);
-            g_debug("Remote error: %s", remote_error);
-            if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0)
-            {
-                auto urls = urlsToStrv(data->ptr->urls_);
-                second_exec(data->ptr->registry_->impl->_dbus.get(),                   /* DBus */
-                            data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
-                            data->ptr->primaryPid(),                                   /* primary pid */
-                            std::string(data->ptr->appId_).c_str(),                    /* appid */
-                            urls.get());                                               /* urls */
-            }
-
-            g_free(remote_error);
-        }
-        else
-        {
-            g_warning("Unable to emit event to start application: %s", error->message);
-        }
-        g_error_free(error);
-    }
-
-    delete data;
 }
 
 }  // namespace instance
@@ -231,6 +184,55 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     return retval;
 }
 
+/** Small helper that we can new/delete to work better with C stuff */
+struct StartCHelper
+{
+    std::shared_ptr<instance::SystemD> ptr;
+    std::shared_ptr<GDBusConnection> bus;
+};
+
+void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
+{
+    auto data = static_cast<StartCHelper*>(user_data);
+    GError* error{nullptr};
+    GVariant* result{nullptr};
+
+    tracepoint(ubuntu_app_launch, libual_start_message_callback, std::string(data->ptr->appId_).c_str());
+
+    g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
+
+    result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+
+    g_clear_pointer(&result, g_variant_unref);
+
+    if (error != nullptr)
+    {
+        if (g_dbus_error_is_remote_error(error))
+        {
+            gchar* remote_error = g_dbus_error_get_remote_error(error);
+            g_debug("Remote error: %s", remote_error);
+            if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0)
+            {
+                auto urls = instance::SystemD::urlsToStrv(data->ptr->urls_);
+                second_exec(data->bus.get(),                                           /* DBus */
+                            data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
+                            data->ptr->primaryPid(),                                   /* primary pid */
+                            std::string(data->ptr->appId_).c_str(),                    /* appid */
+                            urls.get());                                               /* urls */
+            }
+
+            g_free(remote_error);
+        }
+        else
+        {
+            g_warning("Unable to emit event to start application: %s", error->message);
+        }
+        g_error_free(error);
+    }
+
+    delete data;
+}
+
 void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env)
 {
     auto cvalue = getenv(envname.c_str());
@@ -309,8 +311,11 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             env.emplace_back(std::make_pair("APP_ID", appIdStr));                           /* Application ID */
             env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
 
+            copyEnv("DISPLAY", env);
+            copyEnvByPrefix("DBUS_", env);
             copyEnvByPrefix("MIR_", env);
             copyEnvByPrefix("QT_", env);
+            copyEnvByPrefix("UBUNTU_", env);
             copyEnvByPrefix("XDG_", env);
 
             if (!urls.empty())
@@ -352,7 +357,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
 
             g_variant_builder_add_value(&builder, g_variant_new_string(unitname.c_str()));
-            g_variant_builder_add_value(&builder, g_variant_new_string("fail"));  // Job mode
+            g_variant_builder_add_value(&builder, g_variant_new_string("replace"));  // Job mode
 
             /* Parameter Array */
             g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
@@ -400,6 +405,14 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 g_variant_builder_close(&builder);
             }
 
+            /* RemainAfterExit */
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+            g_variant_builder_add_value(&builder, g_variant_new_string("RemainAfterExit"));
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
+            g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
+            g_variant_builder_close(&builder);
+            g_variant_builder_close(&builder);
+
             /* Parameter Array */
             g_variant_builder_close(&builder);
 
@@ -407,8 +420,9 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_add_value(&builder, g_variant_new_array(G_VARIANT_TYPE("(sa(sv))"), nullptr, 0));
 
             auto retval = std::make_shared<instance::SystemD>(appId, job, instance, urls, registry);
-            auto chelper = new instance::StartCHelper{};
+            auto chelper = new StartCHelper{};
             chelper->ptr = retval;
+            chelper->bus = manager->userbus_;
 
             tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
             starting_handshake_wait(handshake);
@@ -426,7 +440,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                                    G_DBUS_CALL_FLAGS_NONE,                        /* flags */
                                    -1,                                            /* default timeout */
                                    registry->impl->thread.getCancellable().get(), /* cancellable */
-                                   instance::SystemD::application_start_cb,       /* callback */
+                                   application_start_cb,                          /* callback */
                                    chelper                                        /* object */
                                    );
 
