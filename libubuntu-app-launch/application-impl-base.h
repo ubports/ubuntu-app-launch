@@ -17,6 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include "application-info-desktop.h"
 #include "application.h"
 
 extern "C" {
@@ -42,6 +43,8 @@ public:
     Base(const std::shared_ptr<Registry>& registry);
 
     bool hasInstances() override;
+
+    std::string getInstance(const std::shared_ptr<app_info::Desktop>& desktop);
 
 protected:
     /** Pointer to the registry so we can ask it for things */

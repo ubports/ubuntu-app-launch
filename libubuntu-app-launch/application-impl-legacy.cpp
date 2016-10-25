@@ -342,21 +342,6 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     return retval;
 }
 
-/** Generates an instance string based on the clock if we're a multi-instance
-    application. */
-std::string Legacy::getInstance()
-{
-    auto single = g_key_file_get_boolean(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Single-Instance", nullptr);
-    if (single)
-    {
-        return {};
-    }
-    else
-    {
-        return std::to_string(g_get_real_time());
-    }
-}
-
 /** Create an UpstartInstance for this AppID using the UpstartInstance launch
     function.
 
@@ -364,7 +349,7 @@ std::string Legacy::getInstance()
 */
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
-    std::string instance = getInstance();
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
@@ -379,7 +364,7 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
 */
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
-    std::string instance = getInstance();
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };

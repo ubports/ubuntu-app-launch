@@ -95,6 +95,20 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
     return retval;
 }
 
+/** Generates an instance string based on the clock if we're a multi-instance
+    application. */
+std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop)
+{
+    if (desktop->singleInstance())
+    {
+        return {};
+    }
+    else
+    {
+        return std::to_string(g_get_real_time());
+    }
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu
