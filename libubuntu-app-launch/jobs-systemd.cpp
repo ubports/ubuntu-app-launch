@@ -157,13 +157,14 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     auto exec = findEnv("APP_EXEC", env);
     if (exec.empty())
     {
+        g_debug("Application exec line is empty?!?!?");
         return {};
     }
     auto uris = findEnv("APP_URIS", env);
 
     auto execarray = desktop_exec_parse(exec.c_str(), uris.c_str());
 
-    if (findEnv("APP_XMIR_ENABLE", env) == "1")
+    if (findEnv("APP_XMIR_ENABLE", env) == "1" && getenv("DISPLAY") == nullptr)
     {
         auto appid = g_strdup(findEnv("APP_ID", env).c_str());
         g_array_prepend_val(execarray, appid);
