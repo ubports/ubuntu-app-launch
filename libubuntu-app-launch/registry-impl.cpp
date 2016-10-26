@@ -143,7 +143,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
         if (error != nullptr)
         {
             auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            g_critical("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
+            g_debug("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
             return std::shared_ptr<JsonObject>();
         }
 
