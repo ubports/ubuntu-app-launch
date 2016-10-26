@@ -606,7 +606,7 @@ std::list<SystemD::UnitEntry> SystemD::listUnits()
 }
 
 /* TODO: Application job names */
-const std::regex unitNaming{"^ubuntu\\-app\\-launch\\-(application\\-.*)\\-(.*)\\-([0-9]*)\\.service$"};
+const std::regex unitNaming{"^ubuntu\\-app\\-launch\\-(application\\-(?:click|legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
 
 SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
 {
