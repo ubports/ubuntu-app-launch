@@ -68,6 +68,9 @@ Libertine::Libertine(const AppID::Package& container,
 
     appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path,
                                                    app_info::DesktopFlags::XMIR_DEFAULT, _registry);
+
+    g_debug("Application Libertine object for container '%s' app '%s'", container.value().c_str(),
+            appname.value().c_str());
 }
 
 std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname)

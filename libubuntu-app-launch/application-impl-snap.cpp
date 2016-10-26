@@ -196,6 +196,8 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
     }
 
     info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
+
+    g_debug("Application Snap object for AppID '%s'", std::string(appid).c_str());
 }
 
 /** Uses the findInterface() function to find the interface if we don't
