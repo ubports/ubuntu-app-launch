@@ -339,6 +339,8 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
     retval.emplace_back(std::make_pair("APP_DIR", _clickDir));
     retval.emplace_back(std::make_pair("APP_DESKTOP_FILE_PATH", desktopPath_));
 
+    retval.emplace_back(std::make_pair("QML2_IMPORT_PATH", _clickDir + "/lib/" + UBUNTU_APP_LAUNCH_ARCH + "/qml"));
+
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", _info->xMirEnable().value() ? "1" : "0"));
