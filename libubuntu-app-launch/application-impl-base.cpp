@@ -99,6 +99,12 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
     application. */
 std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop)
 {
+    if (!desktop)
+    {
+        g_warning("Invalid desktop file passed to getInstance");
+        return {};
+    }
+
     if (desktop->singleInstance())
     {
         return {};

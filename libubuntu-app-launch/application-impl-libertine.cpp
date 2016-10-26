@@ -65,6 +65,9 @@ Libertine::Libertine(const AppID::Package& container,
     if (!_keyfile)
         throw std::runtime_error{"Unable to find a keyfile for application '" + appname.value() + "' in container '" +
                                  container.value() + "'"};
+
+    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path,
+                                                   app_info::DesktopFlags::XMIR_DEFAULT, _registry);
 }
 
 std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname)
@@ -265,11 +268,6 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
 std::shared_ptr<Application::Info> Libertine::info()
 {
-    if (!appinfo_)
-    {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path,
-                                                       app_info::DesktopFlags::XMIR_DEFAULT, _registry);
-    }
     return appinfo_;
 }
 
