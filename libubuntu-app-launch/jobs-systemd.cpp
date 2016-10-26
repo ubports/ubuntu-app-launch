@@ -164,15 +164,6 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
 
     auto execarray = desktop_exec_parse(exec.c_str(), uris.c_str());
 
-    if (findEnv("APP_XMIR_ENABLE", env) == "1" && getenv("DISPLAY") == nullptr)
-    {
-        auto appid = g_strdup(findEnv("APP_ID", env).c_str());
-        g_array_prepend_val(execarray, appid);
-
-        auto xmirhelper = g_strdup(XMIR_HELPER);
-        g_array_prepend_val(execarray, xmirhelper);
-    }
-
     std::vector<std::string> retval;
     retval.reserve(execarray->len);
     for (unsigned int i = 0; i < execarray->len; i++)
@@ -180,6 +171,17 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         retval.emplace_back(g_array_index(execarray, gchar*, i));
     }
 
+    g_array_set_clear_func(execarray, g_free);
+    g_array_free(execarray, FALSE); /* TODO: Not TRUE? */
+
+    /* See if we need the xmir helper */
+    if (findEnv("APP_XMIR_ENABLE", env) == "1" && getenv("DISPLAY") == nullptr)
+    {
+        retval.emplace(retval.begin(), findEnv("APP_ID", env));
+        retval.emplace(retval.begin(), XMIR_HELPER);
+    }
+
+    /* See if we're doing apparmor by hand */
     auto appexecpolicy = findEnv("APP_EXEC_POLICY", env);
     if (!appexecpolicy.empty() && appexecpolicy != "unconfined")
     {
@@ -187,9 +189,6 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         retval.emplace(retval.begin(), "-p");
         retval.emplace(retval.begin(), "aa-exec");
     }
-
-    g_array_set_clear_func(execarray, g_free);
-    g_array_free(execarray, FALSE); /* TODO: Not TRUE? */
 
     return retval;
 }
