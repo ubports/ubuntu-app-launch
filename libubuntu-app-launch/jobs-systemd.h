@@ -101,6 +101,9 @@ private:
     std::string unitPath(const std::string& unitName);
 
     static std::string findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
+    static void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env);
+    static void copyEnvByPrefix(const std::string& prefix, std::list<std::pair<std::string, std::string>>& env);
+
     static std::vector<std::string> parseExec(std::list<std::pair<std::string, std::string>>& env);
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 };

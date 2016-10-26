@@ -253,7 +253,7 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
             if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false) ||
                 !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
             {
-                g_warning("Application is not shown in Unity");
+                g_debug("Application is not shown in current desktop: %s", xdg_current_desktop);
                 // Exception removed for OTA11 as a temporary fix
                 // throw std::runtime_error("Application is not shown in Unity");
             }

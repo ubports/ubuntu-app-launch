@@ -235,8 +235,14 @@ void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
     delete data;
 }
 
-void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env)
+void SystemD::copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env)
 {
+    if (!findEnv(envname, env).empty())
+    {
+        g_debug("Already a value set for '%s' ignoring", envname.c_str());
+        return;
+    }
+
     auto cvalue = getenv(envname.c_str());
     g_debug("Copying Environment: %s", envname.c_str());
     if (cvalue != nullptr)
@@ -250,7 +256,7 @@ void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::s
     }
 }
 
-void copyEnvByPrefix(const std::string& prefix, std::list<std::pair<std::string, std::string>>& env)
+void SystemD::copyEnvByPrefix(const std::string& prefix, std::list<std::pair<std::string, std::string>>& env)
 {
     for (unsigned int i = 0; environ[i] != nullptr; i++)
     {
@@ -372,8 +378,12 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
             for (const auto& envvar : env)
             {
-                g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
-                                                          "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
+                if (!envvar.first.empty() && !envvar.second.empty())
+                {
+                    g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
+                                                              "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
+                    // g_debug("Setting environment: %s=%s", envvar.first.c_str(), envvar.second.c_str());
+                }
             }
 
             g_variant_builder_close(&builder);
