@@ -180,6 +180,14 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         retval.emplace_back(g_array_index(execarray, gchar*, i));
     }
 
+    auto appexecpolicy = findEnv("APP_EXEC_POLICY", env);
+    if (!appexecpolicy.empty() && appexecpolicy != "unconfined")
+    {
+        retval.emplace(retval.begin(), appexecpolicy);
+        retval.emplace(retval.begin(), "-p");
+        retval.emplace(retval.begin(), "aa-exec");
+    }
+
     g_array_set_clear_func(execarray, g_free);
     g_array_free(execarray, FALSE); /* TODO: Not TRUE? */
 
@@ -425,17 +433,6 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
             g_variant_builder_close(&builder);
             g_variant_builder_close(&builder);
-
-            /* AppArmorProfile */
-            if (!findEnv("APP_EXEC_POLICY", env).empty())
-            {
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-                g_variant_builder_add_value(&builder, g_variant_new_string("AppArmorProfile"));
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
-                g_variant_builder_add_value(&builder, g_variant_new_string(findEnv("APP_EXEC_POLICY", env).c_str()));
-                g_variant_builder_close(&builder);
-                g_variant_builder_close(&builder);
-            }
 
             /* Type */
             g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
