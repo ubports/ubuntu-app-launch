@@ -94,7 +94,9 @@ bool Base::isRunning()
 bool Base::hasPid(pid_t pid)
 {
     auto vpids = pids();
-    return std::find(vpids.begin(), vpids.end(), pid) != vpids.end();
+    bool hasit = std::find(vpids.begin(), vpids.end(), pid) != vpids.end();
+    g_debug("Checking for PID %d on AppID '%s' result: %s", pid, std::string(appId_).c_str(), hasit ? "YES" : "NO");
+    return hasit;
 }
 
 /** Pauses this application by sending SIGSTOP to all the PIDs in the
