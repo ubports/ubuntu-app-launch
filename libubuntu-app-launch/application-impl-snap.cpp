@@ -436,9 +436,10 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 */
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appid_, "application-snap", {}, urls, jobs::manager::launchMode::STANDARD,
-                                         envfunc);
+    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -448,8 +449,9 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 */
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appid_, "application-snap", {}, urls, jobs::manager::launchMode::TEST,
+    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::TEST,
                                          envfunc);
 }
 

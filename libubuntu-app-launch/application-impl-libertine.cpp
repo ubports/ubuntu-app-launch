@@ -317,15 +317,17 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::STANDARD,
-                                         envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::TEST,
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
                                          envfunc);
 }
 
