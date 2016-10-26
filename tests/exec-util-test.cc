@@ -185,12 +185,15 @@ TEST_F(ExecUtil, ClickExec)
 			EXPECT_STREQ("grep", value); }},
 		{"APP_ID", [](const gchar * value) {
 			EXPECT_STREQ("com.test.good_application_1.2.3", value); }},
+		{"APP_EXEC_POLICY", [](const gchar * value) {
+			EXPECT_STREQ("com.test.good_application_1.2.3", value); }},
 		{"APP_LAUNCHER_PID", [](const gchar * value) {
 			EXPECT_EQ(getpid(), atoi(value)); }},
 		{"APP_DESKTOP_FILE_PATH", [](const gchar * value) {
 			EXPECT_STREQ(APP_DIR "/application.desktop", value); }},
 		{"APP_XMIR_ENABLE", [](const gchar * value) {
 			EXPECT_STREQ("0", value); }},
+		{"QML2_IMPORT_PATH", nocheck},
 	});
 
 #undef APP_DIR
@@ -268,10 +271,13 @@ TEST_F(ExecUtil, ClickMir)
 		{"APP_EXEC", nocheck},
 		{"APP_ID", [](const gchar * value) {
 			EXPECT_STREQ("com.test.mir_mir_1", value); }},
+		{"APP_EXEC_POLICY", [](const gchar * value) {
+			EXPECT_STREQ("com.test.mir_mir_1", value); }},
 		{"APP_LAUNCHER_PID", nocheck},
 		{"APP_DESKTOP_FILE_PATH", nocheck},
 		{"APP_XMIR_ENABLE", [](const gchar * value) {
 			EXPECT_STREQ("1", value); }},
+		{"QML2_IMPORT_PATH", nocheck},
 	});
 }
 
@@ -290,10 +296,13 @@ TEST_F(ExecUtil, ClickNoMir)
 		{"APP_EXEC", nocheck},
 		{"APP_ID", [](const gchar * value) {
 			EXPECT_STREQ("com.test.mir_nomir_1", value); }},
+		{"APP_EXEC_POLICY", [](const gchar * value) {
+			EXPECT_STREQ("com.test.mir_nomir_1", value); }},
 		{"APP_LAUNCHER_PID", nocheck},
 		{"APP_DESKTOP_FILE_PATH", nocheck},
 		{"APP_XMIR_ENABLE", [](const gchar * value) {
 			EXPECT_STREQ("0", value); }},
+		{"QML2_IMPORT_PATH", nocheck},
 	});
 }
 
