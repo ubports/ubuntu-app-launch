@@ -493,6 +493,8 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
         instances.emplace_back(std::make_shared<instance::SystemD>(appID, job, unitinfo.inst, urls, registry));
     }
 
+    g_debug("Found %d instances for AppID '%s'", int(instances.size()), std::string(appID).c_str());
+
     return instances;
 }
 
