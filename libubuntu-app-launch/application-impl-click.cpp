@@ -344,6 +344,8 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", _info->xMirEnable().value() ? "1" : "0"));
     retval.emplace_back(std::make_pair("APP_EXEC", _info->execLine().value()));
 
+    retval.emplace_back(std::make_pair("APP_EXEC_POLICY", std::string(appId())));
+
     return retval;
 }
 

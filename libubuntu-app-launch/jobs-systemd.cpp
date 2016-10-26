@@ -416,6 +416,17 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_close(&builder);
             g_variant_builder_close(&builder);
 
+            /* ApparmorProfile */
+            if (!findEnv("APP_EXEC_POLICY", env).empty())
+            {
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+                g_variant_builder_add_value(&builder, g_variant_new_string("ApparmorProfile"));
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
+                g_variant_builder_add_value(&builder, g_variant_new_string(findEnv("APP_EXEC_POLICY", env).c_str()));
+                g_variant_builder_close(&builder);
+                g_variant_builder_close(&builder);
+            }
+
             /* Parameter Array */
             g_variant_builder_close(&builder);
 
@@ -606,7 +617,8 @@ std::list<SystemD::UnitEntry> SystemD::listUnits()
 }
 
 /* TODO: Application job names */
-const std::regex unitNaming{"^ubuntu\\-app\\-launch\\-(application\\-(?:click|legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
+const std::regex unitNaming{
+    "^ubuntu\\-app\\-launch\\-(application\\-(?:click|legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
 
 SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
 {
