@@ -168,8 +168,18 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     {
         auto appid = g_strdup(findEnv("APP_ID", env).c_str());
         g_array_prepend_val(execarray, appid);
-        auto xmirhelper = g_strdup(XMIR_HELPER);
-        g_array_prepend_val(execarray, xmirhelper);
+
+        auto xmirpath = getenv("UBUNTU_APP_LAUNCH_XMIR_PATH");
+        if (xmirpath == nullptr)
+        {
+            auto xmirhelper = g_strdup(XMIR_HELPER);
+            g_array_prepend_val(execarray, xmirhelper);
+        }
+        else
+        {
+            auto xmirdup = g_strdup(xmirpath);
+            g_array_prepend_val(execarray, xmirdup);
+        }
     }
 
     std::vector<std::string> retval;
@@ -317,6 +327,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             copyEnvByPrefix("MIR_", env);
             copyEnvByPrefix("QT_", env);
             copyEnvByPrefix("UBUNTU_", env);
+            copyEnvByPrefix("UNITY_", env);
             copyEnvByPrefix("XDG_", env);
 
             if (!urls.empty())
