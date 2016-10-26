@@ -213,7 +213,7 @@ void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
         {
             gchar* remote_error = g_dbus_error_get_remote_error(error);
             g_debug("Remote error: %s", remote_error);
-            if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0)
+            if (g_strcmp0(remote_error, "org.freedesktop.systemd1.UnitExists") == 0)
             {
                 auto urls = instance::SystemD::urlsToStrv(data->ptr->urls_);
                 second_exec(data->bus.get(),                                           /* DBus */
