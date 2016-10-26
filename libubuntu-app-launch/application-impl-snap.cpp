@@ -231,7 +231,7 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
             }
             catch (std::runtime_error& e)
             {
-                g_warning("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
+                g_debug("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
             }
         }
     }
