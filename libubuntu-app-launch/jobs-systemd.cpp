@@ -169,17 +169,8 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         auto appid = g_strdup(findEnv("APP_ID", env).c_str());
         g_array_prepend_val(execarray, appid);
 
-        auto xmirpath = getenv("UBUNTU_APP_LAUNCH_XMIR_PATH");
-        if (xmirpath == nullptr)
-        {
-            auto xmirhelper = g_strdup(XMIR_HELPER);
-            g_array_prepend_val(execarray, xmirhelper);
-        }
-        else
-        {
-            auto xmirdup = g_strdup(xmirpath);
-            g_array_prepend_val(execarray, xmirdup);
-        }
+        auto xmirhelper = g_strdup(XMIR_HELPER);
+        g_array_prepend_val(execarray, xmirhelper);
     }
 
     std::vector<std::string> retval;
