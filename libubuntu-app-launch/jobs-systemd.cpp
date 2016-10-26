@@ -435,6 +435,17 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             g_variant_builder_close(&builder);
             g_variant_builder_close(&builder);
 
+            /* Working Directory */
+            if (!findEnv("APP_DIR", env).empty())
+            {
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+                g_variant_builder_add_value(&builder, g_variant_new_string("WorkingDirectory"));
+                g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
+                g_variant_builder_add_value(&builder, g_variant_new_string(findEnv("APP_DIR", env).c_str()));
+                g_variant_builder_close(&builder);
+                g_variant_builder_close(&builder);
+            }
+
             /* Parameter Array */
             g_variant_builder_close(&builder);
 
