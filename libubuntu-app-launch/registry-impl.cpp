@@ -20,6 +20,7 @@
 #include "registry-impl.h"
 #include "application-icon-finder.h"
 #include <cgmanager/cgmanager.h>
+#include <regex>
 #include <upstart.h>
 
 namespace ubuntu
@@ -35,6 +36,20 @@ Registry::Impl::Impl(Registry* registry)
 
                  zgLog_.reset();
                  cgManager_.reset();
+
+                 auto dohandle = [&](guint& handle) {
+                     if (handle != 0)
+                     {
+                         g_dbus_connection_signal_unsubscribe(_dbus.get(), handle);
+                         handle = 0;
+                     }
+                 };
+
+                 dohandle(handle_appStarted);
+                 dohandle(handle_appStopped);
+                 dohandle(handle_appFailed);
+                 dohandle(handle_appPaused);
+                 dohandle(handle_appResumed);
 
                  if (_dbus)
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
@@ -572,16 +587,102 @@ bool Registry::Impl::isWatchingAppStarting()
     return watchingAppStarting_;
 }
 
+std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
+std::regex instanceenv_regex{"^INSTANCE=(.*)\\-?([0-9]*)$"};
+
+void Registry::Impl::upstartEventEmitted(
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
+    std::shared_ptr<GVariant> params)
+{
+    std::string jobname;
+    std::string sappid;
+    std::string instance;
+
+    gchar* env = nullptr;
+    GVariant* envs = g_variant_get_child_value(params.get(), 1);
+    GVariantIter iter;
+    g_variant_iter_init(&iter, envs);
+
+    while (g_variant_iter_loop(&iter, "s", &env))
+    {
+        std::smatch match;
+        std::string senv = env;
+
+        if (std::regex_match(senv, match, jobenv_regex))
+        {
+            jobname = match[1].str();
+        }
+        else if (std::regex_match(senv, match, instanceenv_regex))
+        {
+            sappid = match[1].str();
+            instance = match[2].str();
+        }
+    }
+
+    g_variant_unref(envs);
+
+    if (jobname.empty())
+    {
+        return;
+    }
+
+    auto appid = AppID::find(sappid);
+    auto app = Application::create(appid, {});
+
+    // TODO: Figure out shared registry pointer
+    // TODO: Figure otu creating instances
+
+    signal(app, {});
+}
+
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted()
 {
-    std::call_once(flag_appStarted, [&]() { return; });
+    std::call_once(flag_appStarted, [&]() {
+        thread.executeOnThread([&]() {
+            handle_appStarted = g_dbus_connection_signal_subscribe(
+                _dbus.get(),            /* bus */
+                nullptr,                /* sender */
+                DBUS_INTERFACE_UPSTART, /* interface */
+                "EventEmitted",         /* signal */
+                DBUS_PATH_UPSTART,      /* path */
+                "started",              /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto pthis = reinterpret_cast<Registry::Impl*>(user_data);
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    pthis->upstartEventEmitted(pthis->sig_appStarted, sparams);
+                },        /* callback */
+                this,     /* user data */
+                nullptr); /* user data destroy */
+        });
+    });
 
     return sig_appStarted;
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped()
 {
-    std::call_once(flag_appStopped, [&]() { return; });
+    std::call_once(flag_appStopped, [&]() {
+        thread.executeOnThread([&]() {
+            handle_appStopped = g_dbus_connection_signal_subscribe(
+                _dbus.get(),            /* bus */
+                nullptr,                /* sender */
+                DBUS_INTERFACE_UPSTART, /* interface */
+                "EventEmitted",         /* signal */
+                DBUS_PATH_UPSTART,      /* path */
+                "stopped",              /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto pthis = reinterpret_cast<Registry::Impl*>(user_data);
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    pthis->upstartEventEmitted(pthis->sig_appStopped, sparams);
+                },        /* callback */
+                this,     /* user data */
+                nullptr); /* user data destroy */
+        });
+    });
 
     return sig_appStopped;
 }

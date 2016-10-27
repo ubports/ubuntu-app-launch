@@ -106,11 +106,20 @@ private:
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appPaused;
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appResumed;
 
+    guint handle_appStarted{0};
+    guint handle_appStopped{0};
+    guint handle_appFailed{0};
+    guint handle_appPaused{0};
+    guint handle_appResumed{0};
+
     std::once_flag flag_appStarted;
     std::once_flag flag_appStopped;
     std::once_flag flag_appFailed;
     std::once_flag flag_appPaused;
     std::once_flag flag_appResumed;
+
+    void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
+                             std::shared_ptr<GVariant> params);
 
     void initClick();
 
