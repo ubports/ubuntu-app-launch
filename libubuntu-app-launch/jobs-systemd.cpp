@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <gio/gio.h>
+#include <numeric>
 #include <regex>
 #include <sys/types.h>
 #include <unistd.h>
