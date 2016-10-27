@@ -35,7 +35,8 @@ main (int argc, char * argv[])
 	}
 
 	gchar * appid = g_strdup(instance);
-	if (g_strcmp0(job, "application-legacy") == 0) {
+	if (g_strcmp0(job, "application-legacy") == 0
+			|| g_strcmp0(job, "application-snap") == 0) {
 		gchar * lasthyphenstanding = g_strrstr(appid, "-");
 		if (lasthyphenstanding != NULL) {
 			lasthyphenstanding[0] = '\0';

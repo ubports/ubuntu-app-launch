@@ -18,15 +18,19 @@
  */
 
 extern "C" {
-#include "app-info.h"
 #include "ubuntu-app-launch.h"
 }
 
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
+#ifdef ENABLE_SNAPPY
+#include "application-impl-snap.h"
+#endif
 #include "application.h"
+#include "registry.h"
 
+#include <functional>
 #include <iostream>
 #include <regex>
 
@@ -42,22 +46,27 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         throw std::runtime_error("AppID is empty");
     }
 
-    std::string sappid = appid;
-    if (app_info_click(sappid.c_str(), NULL, NULL))
+    if (app_impls::Click::hasAppId(appid, registry))
     {
         return std::make_shared<app_impls::Click>(appid, registry);
     }
-    else if (app_info_libertine(sappid.c_str(), NULL, NULL))
+#ifdef ENABLE_SNAPPY
+    else if (app_impls::Snap::hasAppId(appid, registry))
+    {
+        return std::make_shared<app_impls::Snap>(appid, registry);
+    }
+#endif
+    else if (app_impls::Libertine::hasAppId(appid, registry))
     {
         return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
     }
-    else if (app_info_legacy(sappid.c_str(), NULL, NULL))
+    else if (app_impls::Legacy::hasAppId(appid, registry))
     {
         return std::make_shared<app_impls::Legacy>(appid.appname, registry);
     }
     else
     {
-        throw std::runtime_error("Invalid app ID: " + sappid);
+        throw std::runtime_error("Invalid app ID: " + std::string(appid));
     }
 }
 
@@ -106,6 +115,12 @@ bool AppID::valid(const std::string& sappid)
 
 AppID AppID::find(const std::string& sappid)
 {
+    auto registry = Registry::getDefault();
+    return find(registry, sappid);
+}
+
+AppID AppID::find(const std::shared_ptr<Registry>& registry, const std::string& sappid)
+{
     std::smatch match;
 
     if (std::regex_match(sappid, match, full_appid_regex))
@@ -115,7 +130,7 @@ AppID AppID::find(const std::string& sappid)
     }
     else if (std::regex_match(sappid, match, short_appid_regex))
     {
-        return discover(match[1].str(), match[2].str());
+        return discover(registry, match[1].str(), match[2].str());
     }
     else if (std::regex_match(sappid, match, legacy_appid_regex))
     {
@@ -156,68 +171,228 @@ bool operator!=(const AppID& a, const AppID& b)
            a.version.value() != b.version.value();
 }
 
+/** Convert each AppID to a string and then compare the strings */
+bool operator<(const AppID& a, const AppID& b)
+{
+    return std::string(a) < std::string(b);
+}
+
 bool AppID::empty() const
 {
     return package.value().empty() && appname.value().empty() && version.value().empty();
 }
 
-std::string app_wildcard(AppID::ApplicationWildcard card)
+/** Basically we're making our own VTable of static functions. Static
+    functions don't go in the normal VTables, so we can't use our class
+    inheritance here to help. So we're just packing these puppies into
+    a data structure and iterating over it. */
+struct DiscoverTools
 {
-    switch (card)
+    std::function<bool(const AppID::Package& package, const std::shared_ptr<Registry>& registry)> verifyPackage;
+    std::function<bool(
+        const AppID::Package& package, const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)>
+        verifyAppname;
+    std::function<AppID::AppName(
+        const AppID::Package& package, AppID::ApplicationWildcard card, const std::shared_ptr<Registry>& registry)>
+        findAppname;
+    std::function<AppID::Version(
+        const AppID::Package& package, const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)>
+        findVersion;
+    std::function<bool(const AppID& appid, const std::shared_ptr<Registry>& registry)> hasAppId;
+};
+
+/** The tools in order that they should be used */
+static const std::vector<DiscoverTools> discoverTools{
+    /* Click */
+    {app_impls::Click::verifyPackage, app_impls::Click::verifyAppname, app_impls::Click::findAppname,
+     app_impls::Click::findVersion, app_impls::Click::hasAppId},
+#ifdef ENABLE_SNAPPY
+    /* Snap */
+    {app_impls::Snap::verifyPackage, app_impls::Snap::verifyAppname, app_impls::Snap::findAppname,
+     app_impls::Snap::findVersion, app_impls::Snap::hasAppId},
+#endif
+    /* Libertine */
+    {app_impls::Libertine::verifyPackage, app_impls::Libertine::verifyAppname, app_impls::Libertine::findAppname,
+     app_impls::Libertine::findVersion, app_impls::Libertine::hasAppId},
+    /* Legacy */
+    {app_impls::Legacy::verifyPackage, app_impls::Legacy::verifyAppname, app_impls::Legacy::findAppname,
+     app_impls::Legacy::findVersion, app_impls::Legacy::hasAppId}};
+
+AppID AppID::discover(const std::shared_ptr<Registry>& registry,
+                      const std::string& package,
+                      const std::string& appname,
+                      const std::string& version)
+{
+    auto pkg = AppID::Package::from_raw(package);
+
+    for (const auto& tools : discoverTools)
     {
-        case AppID::ApplicationWildcard::FIRST_LISTED:
-            return "first-listed-app";
-        case AppID::ApplicationWildcard::LAST_LISTED:
-            return "last-listed-app";
-        case AppID::ApplicationWildcard::ONLY_LISTED:
-            return "only-listed-app";
+        /* Figure out which type we have */
+        try
+        {
+            if (tools.verifyPackage(pkg, registry))
+            {
+                auto app = AppID::AppName::from_raw({});
+
+                if (appname.empty() || appname == "first-listed-app")
+                {
+                    app = tools.findAppname(pkg, ApplicationWildcard::FIRST_LISTED, registry);
+                }
+                else if (appname == "last-listed-app")
+                {
+                    app = tools.findAppname(pkg, ApplicationWildcard::LAST_LISTED, registry);
+                }
+                else if (appname == "only-listed-app")
+                {
+                    app = tools.findAppname(pkg, ApplicationWildcard::ONLY_LISTED, registry);
+                }
+                else
+                {
+                    app = AppID::AppName::from_raw(appname);
+                    if (!tools.verifyAppname(pkg, app, registry))
+                    {
+                        throw std::runtime_error("App name passed in is not valid for this package type");
+                    }
+                }
+
+                auto ver = AppID::Version::from_raw({});
+                if (version.empty() || version == "current-user-version")
+                {
+                    ver = tools.findVersion(pkg, app, registry);
+                }
+                else
+                {
+                    ver = AppID::Version::from_raw(version);
+                    if (!tools.hasAppId({pkg, app, ver}, registry))
+                    {
+                        throw std::runtime_error("Invalid version passed for this package type");
+                    }
+                }
+
+                return AppID{pkg, app, ver};
+            }
+        }
+        catch (std::runtime_error& e)
+        {
+            continue;
+        }
     }
 
-    return "";
+    return {};
 }
 
-std::string ver_wildcard(AppID::VersionWildcard card)
+AppID AppID::discover(const std::shared_ptr<Registry>& registry,
+                      const std::string& package,
+                      ApplicationWildcard appwildcard,
+                      VersionWildcard versionwildcard)
 {
-    switch (card)
+    auto pkg = AppID::Package::from_raw(package);
+
+    for (const auto& tools : discoverTools)
     {
-        case AppID::VersionWildcard::CURRENT_USER_VERSION:
-            return "current-user-version";
+        try
+        {
+            if (tools.verifyPackage(pkg, registry))
+            {
+                auto app = tools.findAppname(pkg, appwildcard, registry);
+                auto ver = tools.findVersion(pkg, app, registry);
+                return AppID{pkg, app, ver};
+            }
+        }
+        catch (std::runtime_error& e)
+        {
+            /* Normal, try another */
+            continue;
+        }
     }
 
-    return "";
+    return {};
+}
+
+AppID AppID::discover(const std::shared_ptr<Registry>& registry,
+                      const std::string& package,
+                      const std::string& appname,
+                      VersionWildcard versionwildcard)
+{
+    auto pkg = AppID::Package::from_raw(package);
+    auto app = AppID::AppName::from_raw(appname);
+
+    for (const auto& tools : discoverTools)
+    {
+        try
+        {
+            if (tools.verifyPackage(pkg, registry) && tools.verifyAppname(pkg, app, registry))
+            {
+                auto ver = tools.findVersion(pkg, app, registry);
+                return AppID{pkg, app, ver};
+            }
+        }
+        catch (std::runtime_error& e)
+        {
+            /* Normal, try another */
+            continue;
+        }
+    }
+
+    return {};
 }
 
 AppID AppID::discover(const std::string& package, const std::string& appname, const std::string& version)
 {
-    auto cappid = ubuntu_app_launch_triplet_to_app_id(package.c_str(), appname.c_str(), version.c_str());
-
-    auto appid = cappid != nullptr ? AppID::parse(cappid) : AppID::parse("");
-
-    g_free(cappid);
-
-    return appid;
+    auto registry = Registry::getDefault();
+    return discover(registry, package, appname, version);
 }
 
 AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
 {
-    return discover(package, app_wildcard(appwildcard), ver_wildcard(versionwildcard));
+    auto registry = Registry::getDefault();
+    return discover(registry, package, appwildcard, versionwildcard);
 }
 
 AppID AppID::discover(const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
 {
-    auto appid = discover(package, appname, ver_wildcard(versionwildcard));
-
-    if (appid.empty())
-    {
-        /* If we weren't able to go that route, we can see if it's libertine */
-        if (app_info_libertine((package + "_" + appname + "_0.0").c_str(), nullptr, nullptr))
-        {
-            appid = AppID(Package::from_raw(package), AppName::from_raw(appname), Version::from_raw("0.0"));
-        }
-    }
-
-    return appid;
+    auto registry = Registry::getDefault();
+    return discover(registry, package, appname, versionwildcard);
 }
 
-};  // namespace app_launch
-};  // namespace ubuntu
+enum class oom::Score : std::int32_t
+{
+    FOCUSED = 100,
+    UNTRUSTED_HELPER = 200,
+    PAUSED = 900,
+};
+
+const oom::Score oom::focused()
+{
+    return oom::Score::FOCUSED;
+}
+
+const oom::Score oom::paused()
+{
+    return oom::Score::PAUSED;
+}
+
+const oom::Score oom::fromLabelAndValue(std::int32_t value, const std::string& label)
+{
+    g_debug("Creating new OOM value type '%s' with a value of: '%d'", label.c_str(), value);
+
+    if (value < static_cast<std::int32_t>(oom::Score::FOCUSED))
+    {
+        g_warning("The new OOM type '%s' is giving higher priority than focused apps!", label.c_str());
+    }
+    if (value > static_cast<std::int32_t>(oom::Score::PAUSED))
+    {
+        g_warning("The new OOM type '%s' is giving lower priority than paused apps!", label.c_str());
+    }
+
+    if (value < -1000 || value > 1000)
+    {
+        throw std::runtime_error("OOM type '" + label + "' is not in the valid range of [-1000, 1000] at " +
+                                 std::to_string(value));
+    }
+
+    return static_cast<oom::Score>(value);
+}
+
+}  // namespace app_launch
+}  // namespace ubuntu

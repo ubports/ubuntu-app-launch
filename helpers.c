@@ -269,10 +269,12 @@ desktop_exec_segment_parse (GArray * finalarray, const gchar * execsegment, gcha
 
 	/* Handle %F and %U as an argument on their own as per the spec */
 	if (g_strcmp0(execsegment, "%U") == 0) {
-		return file_list_handling(finalarray, uri_list, g_strdup);
+		file_list_handling(finalarray, uri_list, g_strdup);
+		return;
 	}
 	if (g_strcmp0(execsegment, "%F") == 0) {
-		return file_list_handling(finalarray, uri_list, uri2file);
+		file_list_handling(finalarray, uri_list, uri2file);
+		return;
 	}
 
 	/* Start looking at individual codes */
@@ -488,7 +490,7 @@ struct _handshake_t {
 	GDBusConnection * con;
 	GMainLoop * mainloop;
 	guint signal_subscribe;
-	guint timeout;
+	GSource * timeout;
 };
 
 static gboolean
@@ -496,17 +498,19 @@ unity_too_slow_cb (gpointer user_data)
 {
 	handshake_t * handshake = (handshake_t *)user_data;
 	g_main_loop_quit(handshake->mainloop);
-	handshake->timeout = 0;
+	handshake->timeout = NULL;
 	return G_SOURCE_REMOVE;
 }
 
 handshake_t *
-starting_handshake_start (const gchar *   app_id)
+starting_handshake_start (const gchar *   app_id, int timeout_s)
 {
 	GError * error = NULL;
 	handshake_t * handshake = g_new0(handshake_t, 1);
 
-	handshake->mainloop = g_main_loop_new(NULL, FALSE);
+	GMainContext * context = g_main_context_get_thread_default();
+
+	handshake->mainloop = g_main_loop_new(context, FALSE);
 	handshake->con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 
 	if (error != NULL) {
@@ -537,7 +541,9 @@ starting_handshake_start (const gchar *   app_id)
 		&error);
 
 	/* Really, Unity? */
-	handshake->timeout = g_timeout_add_seconds(1, unity_too_slow_cb, handshake);
+	handshake->timeout = g_timeout_source_new_seconds(timeout_s);
+	g_source_set_callback(handshake->timeout, unity_too_slow_cb, handshake, NULL);
+	g_source_attach(handshake->timeout, context);
 
 	return handshake;
 }
@@ -550,8 +556,11 @@ starting_handshake_wait (handshake_t * handshake)
 
 	g_main_loop_run(handshake->mainloop);
 
-	if (handshake->timeout != 0)
-		g_source_remove(handshake->timeout);
+	if (handshake->timeout != NULL) {
+		g_source_destroy(handshake->timeout);
+		g_source_unref(handshake->timeout);
+		handshake->timeout = NULL;
+	}
 	g_main_loop_unref(handshake->mainloop);
 	g_dbus_connection_signal_unsubscribe(handshake->con, handshake->signal_subscribe);
 	g_object_unref(handshake->con);

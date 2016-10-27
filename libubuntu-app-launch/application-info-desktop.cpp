@@ -43,8 +43,9 @@ typedef TypeTagger<NoDisplayTag, bool> NoDisplay;
 }  // anonymous namespace
 
 template <typename T>
-auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, const std::string& exceptionText = {})
-    -> T
+auto stringFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
+                               const std::string& key,
+                               const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
@@ -66,10 +67,17 @@ auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key
 }
 
 template <typename T>
-auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
-                     const std::string basePath,
-                     const std::string& key,
-                     const std::string& exceptionText = {}) -> T
+auto stringFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const std::string& key) -> T
+{
+    return stringFromKeyfileRequired<T>(keyfile, key, {});
+}
+
+template <typename T>
+auto fileFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
+                             const std::string& basePath,
+                             const std::string& rootDir,
+                             const std::string& key,
+                             const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
@@ -89,6 +97,14 @@ auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
     if (keyval[0] == '/')
     {
         T retval = T::from_raw(keyval);
+
+        if (!rootDir.empty())
+        {
+            auto fullpath = g_build_filename(rootDir.c_str(), keyval, nullptr);
+            retval = T::from_raw(fullpath);
+            g_free(fullpath);
+        }
+
         g_free(keyval);
         return retval;
     }
@@ -104,13 +120,52 @@ auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
-                     const std::string& key,
-                     bool defaultReturn,
-                     const std::string& exceptionText = {}) -> T
+auto fileFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile,
+                     const std::string& basePath,
+                     const std::string& rootDir,
+                     const std::string& key) -> T
+{
+    return fileFromKeyfileRequired<T>(keyfile, basePath, rootDir, key, {});
+}
+
+template <typename T>
+auto boolFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
+                             const std::string& key,
+                             const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_boolean(keyfile.get(), DESKTOP_GROUP, key.c_str(), &error);
+
+    if (error != nullptr)
+    {
+        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        throw std::runtime_error(exceptionText + perror.get()->message);
+    }
+
+    T retval = T::from_raw(keyval == TRUE);
+    return retval;
+}
+
+template <typename T>
+auto boolFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const std::string& key, bool defaultReturn) -> T
+{
+    try
+    {
+        return boolFromKeyfileRequired<T>(keyfile, key, "Boolean value not available, but not required");
+    }
+    catch (std::runtime_error& e)
+    {
+        return T::from_raw(defaultReturn);
+    }
+}
+
+template <typename T>
+auto stringlistFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
+                                   const gchar* key,
+                                   const std::string& exceptionText) -> T
+{
+    GError* error = nullptr;
+    auto keyval = g_key_file_get_locale_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, nullptr, &error);
 
     if (error != nullptr)
     {
@@ -120,14 +175,29 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
             throw std::runtime_error(exceptionText + perror.get()->message);
         }
 
-        return T::from_raw(defaultReturn);
+        return T::from_raw({});
     }
 
-    T retval = T::from_raw(keyval == TRUE);
-    return retval;
+    std::vector<std::string> results;
+    for (auto i = 0; keyval[i] != nullptr; ++i)
+    {
+        if (strlen(keyval[i]) != 0)
+        {
+            results.emplace_back(keyval[i]);
+        }
+    }
+    g_strfreev(keyval);
+
+    return T::from_raw(results);
 }
 
-bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
+template <typename T>
+auto stringlistFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const gchar* key) -> T
+{
+    return stringlistFromKeyfileRequired<T>(keyfile, key, {});
+}
+
+bool stringlistFromKeyfileContains(const std::shared_ptr<GKeyFile>& keyfile,
                                    const gchar* key,
                                    const std::string& match,
                                    bool defaultValue)
@@ -154,11 +224,12 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
     return result;
 }
 
-Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
+Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
                  const std::string& basePath,
-                 std::shared_ptr<Registry> registry,
-                 bool allowNoDisplay)
-    : _keyfile([keyfile, allowNoDisplay]() {
+                 const std::string& rootDir,
+                 std::bitset<2> flags,
+                 std::shared_ptr<Registry> registry)
+    : _keyfile([keyfile, flags]() {
         if (!keyfile)
         {
             throw std::runtime_error("Can not build a desktop application info object with a null keyfile");
@@ -167,7 +238,8 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         {
             throw std::runtime_error("Keyfile does not represent application type");
         }
-        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value() && !allowNoDisplay)
+        if (boolFromKeyfile<NoDisplay>(keyfile, "NoDisplay", false).value() &&
+            (flags & DesktopFlags::ALLOW_NO_DISPLAY).none())
         {
             throw std::runtime_error("Application is not meant to be displayed");
         }
@@ -190,28 +262,37 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
         return keyfile;
     }())
     , _basePath(basePath)
-    , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
+    , _rootDir(rootDir)
+    , _name(stringFromKeyfileRequired<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
-    , _iconPath([keyfile, basePath, registry]() {
+    , _iconPath([keyfile, basePath, rootDir, registry]() {
         if (registry != nullptr)
         {
-            auto iconName =
-                stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon", "Missing icon for desktop file");
-            return registry->impl->getIconFinder(basePath)->find(iconName);
+            auto iconName = stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon");
+
+            if (!iconName.value().empty() && iconName.value()[0] != '/')
+            {
+                /* If it is not a direct filename look it up */
+                return registry->impl->getIconFinder(basePath)->find(iconName);
+            }
         }
-        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, "Icon", "Missing icon for desktop file");
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon");
     }())
-    , _splashInfo({
-        title : stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
-        image : fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, "X-Ubuntu-Splash-Image"),
-        backgroundColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color"),
-        headerColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Header"),
-        footerColor : stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
-        showHeader :
-            boolFromKeyfile<Application::Info::Splash::ShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)
-    })
+    , _defaultDepartment(
+          stringFromKeyfile<Application::Info::DefaultDepartment>(keyfile, "X-Ubuntu-Default-Department-ID"))
+    , _screenshotPath([keyfile, basePath, rootDir]() {
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "X-Screenshot");
+    }())
+    , _keywords(stringlistFromKeyfile<Application::Info::Keywords>(keyfile, "Keywords"))
+    , _splashInfo(
+          {stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
+           fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, rootDir, "X-Ubuntu-Splash-Image"),
+           stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color"),
+           stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Header"),
+           stringFromKeyfile<Application::Info::Splash::Color>(keyfile, "X-Ubuntu-Splash-Color-Footer"),
+           boolFromKeyfile<Application::Info::Splash::ShowHeader>(keyfile, "X-Ubuntu-Splash-Show-Header", false)})
     , _supportedOrientations([keyfile]() {
-        Orientations all = {portrait : true, landscape : true, invertedPortrait : true, invertedLandscape : true};
+        Orientations all = {true, true, true, true};
 
         GError* error = nullptr;
         auto orientationStrv = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP,
@@ -223,8 +304,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
             return all;
         }
 
-        Orientations retval =
-            {portrait : false, landscape : false, invertedPortrait : false, invertedLandscape : false};
+        Orientations retval = {false, false, false, false};
 
         try
         {
@@ -269,9 +349,12 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
     , _rotatesWindow(
           boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Contents", false))
     , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
+    , _xMirEnable(
+          boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", (flags & DesktopFlags::XMIR_DEFAULT).any()))
+    , _exec(stringFromKeyfile<Exec>(keyfile, "Exec"))
 {
 }
 
-};  // namespace app_info
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_info
+}  // namespace app_launch
+}  // namespace ubuntu

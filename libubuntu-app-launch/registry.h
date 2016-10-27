@@ -49,9 +49,9 @@ public:
         failed. */
     enum class FailureType
     {
-        CRASH,         /**< The application was running, but failed while running. */
-        START_FAILURE, /**< Something in the configuration of the application made it impossible to start the
-                          application */
+        CRASH,        /**< The application was running, but failed while running. */
+        START_FAILURE /**< Something in the configuration of the application made it impossible to start the
+                         application */
     };
 
     Registry();
@@ -122,7 +122,7 @@ public:
     std::unique_ptr<Impl> impl;
 };
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu
 
 #pragma GCC visibility pop

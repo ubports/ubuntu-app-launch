@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "appid.h"
+#include "oom.h"
 #include "type-tagger.h"
 
 #pragma once
@@ -61,6 +62,8 @@ public:
     */
     static std::shared_ptr<Application> create(const AppID& appid, const std::shared_ptr<Registry>& registry);
 
+    virtual ~Application() = default;
+
     /* System level info */
     /** Get the Application ID of this Application */
     virtual AppID appId() = 0;
@@ -83,6 +86,10 @@ public:
         struct DescriptionTag;
         /** \private */
         struct IconPathTag;
+        /** \private */
+        struct DefaultDepartmentTag;
+        /** \private */
+        struct KeywordsTag;
 
         /** \private */
         typedef TypeTagger<NameTag, std::string> Name;
@@ -90,6 +97,12 @@ public:
         typedef TypeTagger<DescriptionTag, std::string> Description;
         /** \private */
         typedef TypeTagger<IconPathTag, std::string> IconPath;
+        /** \private */
+        typedef TypeTagger<DefaultDepartmentTag, std::string> DefaultDepartment;
+        /** \private */
+        typedef TypeTagger<KeywordsTag, std::vector<std::string>> Keywords;
+
+        virtual ~Info() = default;
 
         /** Name of the application */
         virtual const Name& name() = 0;
@@ -97,6 +110,12 @@ public:
         virtual const Description& description() = 0;
         /** Path to the icon that represents the application */
         virtual const IconPath& iconPath() = 0;
+        /** Default department of the application */
+        virtual const DefaultDepartment& defaultDepartment() = 0;
+        /** Path to the screenshot of the application */
+        virtual const IconPath& screenshotPath() = 0;
+        /** List of keywords for the application */
+        virtual const Keywords& keywords() = 0;
 
         /** Information to be shown on the app splash screen */
         struct Splash
@@ -188,6 +207,8 @@ public:
     class Instance
     {
     public:
+        virtual ~Instance() = default;
+
         /* Query lifecycle */
         /** Check to see if the instance is currently running. The object can
             exist even after the instance has stopped running. */
@@ -209,6 +230,18 @@ public:
         virtual bool hasPid(pid_t pid) = 0;
         /** Check to see if a specific PID is part of this Application::Instance */
         virtual std::vector<pid_t> pids() = 0;
+
+        /* OOM Adjustment */
+        /** Sets the value of the OOM Adjust kernel property for the all of
+            the processes this instance. */
+        virtual void setOomAdjustment(const oom::Score score) = 0;
+        /** Gets the value of the OOM Adjust kernel property for the primary process
+            of this instance.
+
+            \note This function does not check all the processes and ensure they are
+                  consistent, it just checks the primary and assumes that.
+        */
+        virtual const oom::Score getOomAdjustment() = 0;
 
         /* Manage lifecycle */
         /** Pause, or send SIGSTOP, to the PIDs in this Application::Instance */
@@ -238,7 +271,7 @@ public:
     virtual std::shared_ptr<Instance> launchTest(const std::vector<URL>& urls = {}) = 0;
 };
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu
 
 #pragma GCC visibility pop

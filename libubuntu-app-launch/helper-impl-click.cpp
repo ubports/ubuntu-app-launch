@@ -135,8 +135,9 @@ std::shared_ptr<Click::Instance> Click::launch(std::vector<Helper::URL> urls)
     return _registry->impl->thread.executeOnThread<std::shared_ptr<Click::Instance>>([this, urlstrv]() {
         auto instanceid = ubuntu_app_launch_start_multiple_helper(_type.value().c_str(), ((std::string)_appid).c_str(),
                                                                   urlstrv.get());
-
-        return std::make_shared<ClickInstance>(_appid, _type, instanceid, _registry);
+        auto ret = std::make_shared<ClickInstance>(_appid, _type, instanceid, _registry);
+        g_free(instanceid);
+        return ret;
     });
 }
 
@@ -170,6 +171,6 @@ std::list<std::shared_ptr<Helper>> Click::running(Helper::Type type, std::shared
     });
 }
 
-};  // namespace helper_impl
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace helper_impl
+}  // namespace app_launch
+}  // namespace ubuntu

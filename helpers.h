@@ -19,6 +19,8 @@
 
 #include <gio/gio.h>
 
+G_BEGIN_DECLS
+
 typedef struct _EnvHandle EnvHandle;
 
 gboolean  app_id_to_triplet      (const gchar *   app_id,
@@ -45,7 +47,8 @@ void        env_handle_add       (EnvHandle *     handle,
 void        env_handle_finish    (EnvHandle *     handle);
 
 typedef struct _handshake_t handshake_t;
-handshake_t * starting_handshake_start   (const gchar *   app_id);
+handshake_t * starting_handshake_start   (const gchar *   app_id,
+                                          int timeout_s);
 void      starting_handshake_wait        (handshake_t *   handshake);
 
 GDBusConnection * cgroup_manager_connection (void);
@@ -56,3 +59,6 @@ GList *   pids_from_cgroup       (GDBusConnection * cgmanager,
 
 gboolean   verify_keyfile        (GKeyFile *    inkeyfile,
                                   const gchar * desktop);
+
+G_END_DECLS
+

@@ -19,10 +19,13 @@
 
 #include "glib-thread.h"
 #include "registry.h"
+#include "snapd-info.h"
 #include <click.h>
 #include <gio/gio.h>
 #include <json-glib/json-glib.h>
+#include <map>
 #include <unordered_map>
+#include <zeitgeist.h>
 
 #pragma once
 
@@ -53,7 +56,16 @@ public:
     void setManager (Registry::Manager* manager);
     void clearManager ();
 
+    /** Shared context thread for events and background tasks
+        that UAL subtasks are doing */
     GLib::ContextThread thread;
+    /** DBus shared connection for the session bus */
+    std::shared_ptr<GDBusConnection> _dbus;
+
+#ifdef ENABLE_SNAPPY
+    /** Snapd information object */
+    snapd::Info snapdInfo;
+#endif
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
@@ -63,6 +75,23 @@ public:
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appPaused;
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appResumed;
 
+    void zgSendEvent(AppID appid, const std::string& eventtype);
+
+    std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
+
+    /* Upstart Jobs */
+    std::list<std::string> upstartInstancesForJob(const std::string& job);
+    std::string upstartJobPath(const std::string& job);
+
+    static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
+    static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
+
+    /* Signal Hints */
+    /* NOTE: Static because we don't have registry instances in the C
+       code right now. We want these to not be static in the future */
+    static void watchingAppStarting(bool rWatching);
+    static bool isWatchingAppStarting();
+
 private:
     Registry* _registry;
     Registry::Manager* _manager;
@@ -70,12 +99,20 @@ private:
     std::shared_ptr<ClickDB> _clickDB;
     std::shared_ptr<ClickUser> _clickUser;
 
-    std::shared_ptr<GDBusConnection> _dbus;
-
     void initClick();
 
+    std::shared_ptr<ZeitgeistLog> zgLog_;
+
+    std::shared_ptr<GDBusConnection> cgManager_;
+
+    void initCGManager();
+
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
+
+    /** Getting the Upstart job path is relatively expensive in
+        that it requires a DBus call. Worth keeping a cache of. */
+    std::map<std::string, std::string> upstartJobPathCache_;
 };
 
-};  // namespace app_launch
-};  // namespace ubuntu
+}  // namespace app_launch
+}  // namespace ubuntu

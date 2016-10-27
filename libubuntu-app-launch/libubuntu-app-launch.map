@@ -15,6 +15,7 @@ global:
 		typeinfo?for?ubuntu::app_launch::Helper;
 		typeinfo?name?for?ubuntu::app_launch::Helper;
 		ubuntu::app_launch::operator*;
+		ubuntu::app_launch::oom::*;
 	};
 local:
 	*;
