@@ -106,6 +106,12 @@ private:
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appPaused;
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appResumed;
 
+    std::once_flag flag_appStarted;
+    std::once_flag flag_appStopped;
+    std::once_flag flag_appFailed;
+    std::once_flag flag_appPaused;
+    std::once_flag flag_appResumed;
+
     void initClick();
 
     std::shared_ptr<ZeitgeistLog> zgLog_;

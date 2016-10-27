@@ -574,27 +574,37 @@ bool Registry::Impl::isWatchingAppStarting()
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted()
 {
+    std::call_once(flag_appStarted, [&]() { return; });
+
     return sig_appStarted;
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped()
 {
+    std::call_once(flag_appStopped, [&]() { return; });
+
     return sig_appStopped;
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
     Registry::Impl::appFailed()
 {
+    std::call_once(flag_appFailed, [&]() { return; });
+
     return sig_appFailed;
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appPaused()
 {
+    std::call_once(flag_appPaused, [&]() { return; });
+
     return sig_appPaused;
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appResumed()
 {
+    std::call_once(flag_appResumed, [&]() { return; });
+
     return sig_appResumed;
 }
 
