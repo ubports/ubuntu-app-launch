@@ -57,7 +57,7 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
     instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-snap"));
 
     /* Remove the instance ID */
-    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string &instancename) -> std::string {
+    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string& instancename) -> std::string {
         static const std::regex instanceregex("^(.*)-[0-9]*$");
         std::smatch match;
         if (std::regex_match(instancename, match, instanceregex))
@@ -87,7 +87,7 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
 
     g_debug("Overall there are %d instances: %s", int(instanceset.size()),
             std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
-                            [](const std::string &instr, std::string instance) {
+                            [](const std::string& instr, std::string instance) {
                                 return instr.empty() ? instance : instr + ", " + instance;
                             })
                 .c_str());
@@ -155,28 +155,28 @@ void Registry::clearDefault()
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted()
 {
-    return impl->sig_appStarted;
+    return impl->appStarted();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped()
 {
-    return impl->sig_appStopped;
+    return impl->appStopped();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
     Registry::appFailed()
 {
-    return impl->sig_appFailed;
+    return impl->appFailed();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appPaused()
 {
-    return impl->sig_appPaused;
+    return impl->appPaused();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appResumed()
 {
-    return impl->sig_appResumed;
+    return impl->appResumed();
 }
 
 }  // namespace app_launch

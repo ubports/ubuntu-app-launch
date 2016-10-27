@@ -572,5 +572,31 @@ bool Registry::Impl::isWatchingAppStarting()
     return watchingAppStarting_;
 }
 
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted()
+{
+    return sig_appStarted;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped()
+{
+    return sig_appStopped;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    Registry::Impl::appFailed()
+{
+    return sig_appFailed;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appPaused()
+{
+    return sig_appPaused;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appResumed()
+{
+    return sig_appResumed;
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -53,8 +53,8 @@ public:
     std::list<AppID::Package> getClickPackages();
     std::string getClickDir(const std::string& package);
 
-    void setManager (Registry::Manager* manager);
-    void clearManager ();
+    void setManager(Registry::Manager* manager);
+    void clearManager();
 
     /** Shared context thread for events and background tasks
         that UAL subtasks are doing */
@@ -69,12 +69,6 @@ public:
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStarted;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStopped;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> sig_appFailed;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appPaused;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appResumed;
-
     void zgSendEvent(AppID appid, const std::string& eventtype);
 
     std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
@@ -85,6 +79,13 @@ public:
 
     static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
     static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
+
+    /* Signals to discover what is happening to apps */
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted();
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped();
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed();
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appPaused();
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appResumed();
 
     /* Signal Hints */
     /* NOTE: Static because we don't have registry instances in the C
@@ -98,6 +99,12 @@ private:
 
     std::shared_ptr<ClickDB> _clickDB;
     std::shared_ptr<ClickUser> _clickUser;
+
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStarted;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStopped;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> sig_appFailed;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appPaused;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appResumed;
 
     void initClick();
 
