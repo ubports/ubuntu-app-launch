@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
+#include <numeric>
 
 #include "jobs-base.h"
 #include "jobs-upstart.h"
