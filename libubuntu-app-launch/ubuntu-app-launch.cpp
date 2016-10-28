@@ -283,108 +283,78 @@ struct _paused_resumed_observer_t {
 
 /* The lists of Observers */
 static GList * starting_array = NULL;
-static GList * started_array = NULL;
-static GList * stop_array = NULL;
 static GList * focus_array = NULL;
 static GList * resume_array = NULL;
 static GList * failed_array = NULL;
 static GList * paused_array = NULL;
 static GList * resumed_array = NULL;
 
-static void
-observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> appStartedObservers;
+
+gboolean
+ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	observer_t * observer = (observer_t *)user_data;
+	auto registry = ubuntu::app_launch::Registry::getDefault();
+	// TODO: put on thread default context
 
-	const gchar * signalname = NULL;
-	g_variant_get_child(params, 0, "&s", &signalname);
-
-	ual_tracepoint(observer_start, signalname);
-
-	gchar * env = NULL;
-	GVariant * envs = g_variant_get_child_value(params, 1);
-	GVariantIter iter;
-	g_variant_iter_init(&iter, envs);
-
-	gboolean job_found = FALSE;
-	gboolean job_legacy = FALSE;
-	gchar * instance = NULL;
-
-	while (g_variant_iter_loop(&iter, "s", &env)) {
-		if (g_strcmp0(env, "JOB=application-click") == 0) {
-			job_found = TRUE;
-		} else if (g_strcmp0(env, "JOB=application-legacy") == 0) {
-			job_found = TRUE;
-			job_legacy = TRUE;
-		} else if (g_strcmp0(env, "JOB=application-snap") == 0) {
-			job_found = TRUE;
-			job_legacy = TRUE;
-		} else if (g_str_has_prefix(env, "INSTANCE=")) {
-			instance = g_strdup(env + strlen("INSTANCE="));
-		}
-	}
-
-	g_variant_unref(envs);
-
-	if (job_legacy && instance != NULL) {
-		gchar * dash = g_strrstr(instance, "-");
-		if (dash != NULL) {
-			dash[0] = '\0';
-		}
-	}
-
-	if (job_found && instance != NULL) {
-		observer->func(instance, observer->user_data);
-	}
-
-	ual_tracepoint(observer_finish, signalname);
-
-	g_free(instance);
-}
-
-/* Creates the observer structure and registers for the signal with
-   GDBus so that we can get a callback */
-static gboolean
-add_app_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, const gchar * signal, GList ** list)
-{
-	GDBusConnection * conn = gdbus_upstart_ref();
-
-	if (conn == NULL) {
-		return FALSE;
-	}
-
-	observer_t * observert = g_new0(observer_t, 1);
-
-	observert->conn = conn;
-	observert->func = observer;
-	observert->user_data = user_data;
-
-	*list = g_list_prepend(*list, observert);
-
-	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
-		NULL, /* sender */
-		DBUS_INTERFACE_UPSTART, /* interface */
-		"EventEmitted", /* signal */
-		DBUS_PATH_UPSTART, /* path */
-		signal, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NONE,
-		observer_cb,
-		observert,
-		NULL); /* user data destroy */
+	appStartedObservers.emplace(std::make_pair(
+		std::make_pair(observer, user_data),
+			core::ScopedConnection(
+				registry->appStarted().connect([observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+					std::string appid = app->appId();
+					observer(appid.c_str(), user_data);
+				})
+			)
+		));
 
 	return TRUE;
 }
 
 gboolean
-ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+ubuntu_app_launch_observer_delete_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return add_app_generic(observer, user_data, "started", &started_array);
+	auto iter = appStartedObservers.find(std::make_pair(observer, user_data));
+
+	if (iter == appStartedObservers.end()) {
+		return FALSE;
+	}
+
+	appStartedObservers.erase(iter);
+	return TRUE;
 }
+
+static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> appStoppedObservers;
 
 gboolean
 ubuntu_app_launch_observer_add_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return add_app_generic(observer, user_data, "stopped", &stop_array);
+	auto registry = ubuntu::app_launch::Registry::getDefault();
+	// TODO: put on thread default context
+
+	appStoppedObservers.emplace(std::make_pair(
+		std::make_pair(observer, user_data),
+			core::ScopedConnection(
+				registry->appStopped().connect([observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+					std::string appid = app->appId();
+					observer(appid.c_str(), user_data);
+				})
+			)
+		));
+
+	return TRUE;
+}
+
+gboolean
+ubuntu_app_launch_observer_delete_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+{
+	auto iter = appStoppedObservers.find(std::make_pair(observer, user_data));
+
+	if (iter == appStoppedObservers.end()) {
+		return FALSE;
+	}
+
+	appStoppedObservers.erase(iter);
+	return TRUE;
 }
 
 /* Creates the observer structure and registers for the signal with
@@ -672,18 +642,6 @@ delete_app_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, GLi
 	*list = g_list_delete_link(*list, look);
 
 	return TRUE;
-}
-
-gboolean
-ubuntu_app_launch_observer_delete_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
-{
-	return delete_app_generic(observer, user_data, &started_array);
-}
-
-gboolean
-ubuntu_app_launch_observer_delete_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
-{
-	return delete_app_generic(observer, user_data, &stop_array);
 }
 
 gboolean
