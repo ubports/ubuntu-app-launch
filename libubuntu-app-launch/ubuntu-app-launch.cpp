@@ -294,13 +294,12 @@ static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedCon
 gboolean
 ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto registry = ubuntu::app_launch::Registry::getDefault();
 	// TODO: put on thread default context
 
 	appStartedObservers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
 			core::ScopedConnection(
-				registry->appStarted().connect([observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+				ubuntu::app_launch::Registry::appStarted().connect([observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
 					std::string appid = app->appId();
 					observer(appid.c_str(), user_data);
 				})
@@ -328,13 +327,12 @@ static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedCon
 gboolean
 ubuntu_app_launch_observer_add_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto registry = ubuntu::app_launch::Registry::getDefault();
 	// TODO: put on thread default context
 
 	appStoppedObservers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
 			core::ScopedConnection(
-				registry->appStopped().connect([observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+				ubuntu::app_launch::Registry::appStopped().connect([observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
 					std::string appid = app->appId();
 					observer(appid.c_str(), user_data);
 				})

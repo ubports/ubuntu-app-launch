@@ -153,30 +153,34 @@ void Registry::clearDefault()
     defaultRegistry.reset();
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted()
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted(
+    const std::shared_ptr<Registry>& reg)
 {
-    return impl->appStarted();
+    return reg->impl->appStarted(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped()
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped(
+    const std::shared_ptr<Registry>& reg)
 {
-    return impl->appStopped();
+    return reg->impl->appStopped(reg);
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
-    Registry::appFailed()
+    Registry::appFailed(const std::shared_ptr<Registry>& reg)
 {
-    return impl->appFailed();
+    return reg->impl->appFailed(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appPaused()
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appPaused(
+    const std::shared_ptr<Registry>& reg)
 {
-    return impl->appPaused();
+    return reg->impl->appPaused(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appResumed()
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appResumed(
+    const std::shared_ptr<Registry>& reg)
 {
-    return impl->appResumed();
+    return reg->impl->appResumed(reg);
 }
 
 }  // namespace app_launch

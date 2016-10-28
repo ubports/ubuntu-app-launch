@@ -592,7 +592,8 @@ std::regex instanceenv_regex{"^INSTANCE=(.*)\\-?([0-9]*)$"};
 
 void Registry::Impl::upstartEventEmitted(
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
-    std::shared_ptr<GVariant> params)
+    std::shared_ptr<GVariant> params,
+    const std::shared_ptr<Registry>& reg)
 {
     std::string jobname;
     std::string sappid;
@@ -626,19 +627,28 @@ void Registry::Impl::upstartEventEmitted(
         return;
     }
 
-    auto appid = AppID::find(sappid);
-    auto app = Application::create(appid, {});
+    g_debug("Upstart Event for job '%s' appid '%s' instance '%s'", jobname.c_str(), sappid.c_str(), instance.c_str());
 
-    // TODO: Figure out shared registry pointer
+    auto appid = AppID::find(sappid);
+    auto app = Application::create(appid, reg);
+
     // TODO: Figure otu creating instances
 
     signal(app, {});
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted()
+struct upstartEventData
+{
+    std::shared_ptr<Registry> reg;
+};
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted(
+    const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appStarted, [&]() {
         thread.executeOnThread([&]() {
+            upstartEventData* data = new upstartEventData{reg};
+
             handle_appStarted = g_dbus_connection_signal_subscribe(
                 _dbus.get(),            /* bus */
                 nullptr,                /* sender */
@@ -649,22 +659,28 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) -> void {
-                    auto pthis = reinterpret_cast<Registry::Impl*>(user_data);
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    pthis->upstartEventEmitted(pthis->sig_appStarted, sparams);
-                },        /* callback */
-                this,     /* user data */
-                nullptr); /* user data destroy */
+                    data->reg->impl->upstartEventEmitted(data->reg->impl->sig_appStarted, sparams, data->reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
         });
     });
 
     return sig_appStarted;
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped()
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped(
+    const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appStopped, [&]() {
         thread.executeOnThread([&]() {
+            upstartEventData* data = new upstartEventData{reg};
+
             handle_appStopped = g_dbus_connection_signal_subscribe(
                 _dbus.get(),            /* bus */
                 nullptr,                /* sender */
@@ -675,12 +691,15 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) -> void {
-                    auto pthis = reinterpret_cast<Registry::Impl*>(user_data);
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    pthis->upstartEventEmitted(pthis->sig_appStopped, sparams);
-                },        /* callback */
-                this,     /* user data */
-                nullptr); /* user data destroy */
+                    data->reg->impl->upstartEventEmitted(data->reg->impl->sig_appStopped, sparams, data->reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
         });
     });
 
@@ -688,21 +707,23 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
-    Registry::Impl::appFailed()
+    Registry::Impl::appFailed(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appFailed, [&]() { return; });
 
     return sig_appFailed;
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appPaused()
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appPaused(
+    const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appPaused, [&]() { return; });
 
     return sig_appPaused;
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appResumed()
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appResumed(
+    const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appResumed, [&]() { return; });
 

@@ -74,11 +74,16 @@ public:
     static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Registry> registry = getDefault());
 
     /* Signals to discover what is happening to apps */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted();
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped();
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed();
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appPaused();
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appResumed();
+    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted(
+        const std::shared_ptr<Registry>& reg = getDefault());
+    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped(
+        const std::shared_ptr<Registry>& reg = getDefault());
+    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed(
+        const std::shared_ptr<Registry>& reg = getDefault());
+    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appPaused(
+        const std::shared_ptr<Registry>& reg = getDefault());
+    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appResumed(
+        const std::shared_ptr<Registry>& reg = getDefault());
 
     /* The Application Manager, almost always if you're not Unity8, don't
        use this API. Testing is a special case. */

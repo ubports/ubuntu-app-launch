@@ -81,11 +81,16 @@ public:
     static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
 
     /* Signals to discover what is happening to apps */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted();
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped();
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed();
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appPaused();
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appResumed();
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted(
+        const std::shared_ptr<Registry>& reg);
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped(
+        const std::shared_ptr<Registry>& reg);
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed(
+        const std::shared_ptr<Registry>& reg);
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appPaused(
+        const std::shared_ptr<Registry>& reg);
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appResumed(
+        const std::shared_ptr<Registry>& reg);
 
     /* Signal Hints */
     /* NOTE: Static because we don't have registry instances in the C
@@ -119,7 +124,8 @@ private:
     std::once_flag flag_appResumed;
 
     void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
-                             std::shared_ptr<GVariant> params);
+                             std::shared_ptr<GVariant> params,
+                             const std::shared_ptr<Registry>& reg);
 
     void initClick();
 
