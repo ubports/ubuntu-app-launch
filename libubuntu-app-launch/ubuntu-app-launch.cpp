@@ -289,19 +289,46 @@ static GList * failed_array = NULL;
 static GList * paused_array = NULL;
 static GList * resumed_array = NULL;
 
+static void executeOnContext (std::shared_ptr<GMainContext> context, std::function<void()> work)
+{
+	if (!context) {
+		work();
+		return;
+	}
+
+    auto heapWork = new std::function<void()>(work);
+
+    auto source = std::shared_ptr<GSource>(g_idle_source_new(), [](GSource* src) { g_clear_pointer(&src, g_source_unref); });
+    g_source_set_callback(source.get(),
+                          [](gpointer data) {
+                              auto heapWork = static_cast<std::function<void()>*>(data);
+                              (*heapWork)();
+                              return G_SOURCE_REMOVE;
+                          },
+                          heapWork,
+                          [](gpointer data) {
+                              auto heapWork = static_cast<std::function<void()>*>(data);
+                              delete heapWork;
+                          });
+
+    g_source_attach(source.get(), context.get());
+}
+
 static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> appStartedObservers;
 
 gboolean
 ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	// TODO: put on thread default context
+	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
 	appStartedObservers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
 			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appStarted().connect([observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+				ubuntu::app_launch::Registry::appStarted().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
 					std::string appid = app->appId();
-					observer(appid.c_str(), user_data);
+					executeOnContext(context, [appid, observer, user_data]() {
+						observer(appid.c_str(), user_data);
+					});
 				})
 			)
 		));
@@ -327,14 +354,16 @@ static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedCon
 gboolean
 ubuntu_app_launch_observer_add_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	// TODO: put on thread default context
+	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
 	appStoppedObservers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
 			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appStopped().connect([observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+				ubuntu::app_launch::Registry::appStopped().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
 					std::string appid = app->appId();
-					observer(appid.c_str(), user_data);
+					executeOnContext(context, [appid, observer, user_data]() {
+						observer(appid.c_str(), user_data);
+					});
 				})
 			)
 		));
