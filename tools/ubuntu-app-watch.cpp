@@ -38,12 +38,12 @@ int main(int argc, char* argv[])
                                     std::cout << "Stopped: " << (std::string)app->appId() << std::endl;
                                 });
     registry.appPaused().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                  std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
+                                  std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, std::vector<pid_t> &pids)
                                {
                                    std::cout << "Paused:  " << (std::string)app->appId() << std::endl;
                                });
     registry.appResumed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
+                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, std::vector<pid_t> &pids)
                                 {
                                     std::cout << "Resumed: " << (std::string)app->appId() << std::endl;
                                 });
