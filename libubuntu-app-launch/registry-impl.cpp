@@ -645,12 +645,12 @@ struct upstartEventData
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted(
     const std::shared_ptr<Registry>& reg)
 {
-    std::call_once(flag_appStarted, [&]() {
-        thread.executeOnThread([&]() {
+    std::call_once(flag_appStarted, [reg]() {
+        reg->impl->thread.executeOnThread([reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appStarted = g_dbus_connection_signal_subscribe(
-                _dbus.get(),            /* bus */
+            reg->impl->handle_appStarted = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(), /* bus */
                 nullptr,                /* sender */
                 DBUS_INTERFACE_UPSTART, /* interface */
                 "EventEmitted",         /* signal */
@@ -677,12 +677,12 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped(
     const std::shared_ptr<Registry>& reg)
 {
-    std::call_once(flag_appStopped, [&]() {
-        thread.executeOnThread([&]() {
+    std::call_once(flag_appStopped, [reg]() {
+        reg->impl->thread.executeOnThread([reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appStopped = g_dbus_connection_signal_subscribe(
-                _dbus.get(),            /* bus */
+            reg->impl->handle_appStopped = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(), /* bus */
                 nullptr,                /* sender */
                 DBUS_INTERFACE_UPSTART, /* interface */
                 "EventEmitted",         /* signal */
