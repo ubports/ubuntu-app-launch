@@ -639,7 +639,9 @@ void Registry::Impl::upstartEventEmitted(
 
 struct upstartEventData
 {
-    std::shared_ptr<Registry> reg;
+    /* Keeping a weak pointer because the handle is held by
+       the registry implementation. */
+    std::weak_ptr<Registry> weakReg;
 };
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted(
@@ -660,8 +662,9 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    data->reg->impl->upstartEventEmitted(data->reg->impl->sig_appStarted, sparams, data->reg);
+                    reg->impl->upstartEventEmitted(reg->impl->sig_appStarted, sparams, reg);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
@@ -692,8 +695,9 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    data->reg->impl->upstartEventEmitted(data->reg->impl->sig_appStopped, sparams, data->reg);
+                    reg->impl->upstartEventEmitted(reg->impl->sig_appStopped, sparams, reg);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
