@@ -588,7 +588,7 @@ bool Registry::Impl::isWatchingAppStarting()
 }
 
 std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
-std::regex instanceenv_regex{"^INSTANCE=(.*)\\-?([0-9]*)$"};
+std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
 
 void Registry::Impl::upstartEventEmitted(
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
