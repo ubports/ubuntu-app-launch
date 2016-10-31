@@ -87,9 +87,9 @@ public:
         const std::shared_ptr<Registry>& reg);
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed(
         const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appPaused(
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& appPaused(
         const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appResumed(
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& appResumed(
         const std::shared_ptr<Registry>& reg);
 
     /* Signal Hints */
@@ -108,8 +108,10 @@ private:
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStarted;
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStopped;
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> sig_appFailed;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appPaused;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appResumed;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>
+        sig_appPaused;
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>
+        sig_appResumed;
 
     guint handle_appStarted{0};
     guint handle_appStopped{0};
@@ -126,6 +128,10 @@ private:
     void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
                              std::shared_ptr<GVariant> params,
                              const std::shared_ptr<Registry>& reg);
+    void pauseEventEmitted(
+        core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
+        const std::shared_ptr<GVariant>& params,
+        const std::shared_ptr<Registry>& reg);
 
     void initClick();
 

@@ -171,14 +171,14 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     return reg->impl->appFailed(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appPaused(
-    const std::shared_ptr<Registry>& reg)
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Registry::appPaused(const std::shared_ptr<Registry>& reg)
 {
     return reg->impl->appPaused(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appResumed(
-    const std::shared_ptr<Registry>& reg)
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Registry::appResumed(const std::shared_ptr<Registry>& reg)
 {
     return reg->impl->appResumed(reg);
 }

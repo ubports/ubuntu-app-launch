@@ -80,10 +80,10 @@ public:
         const std::shared_ptr<Registry>& reg = getDefault());
     static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed(
         const std::shared_ptr<Registry>& reg = getDefault());
-    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appPaused(
-        const std::shared_ptr<Registry>& reg = getDefault());
-    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appResumed(
-        const std::shared_ptr<Registry>& reg = getDefault());
+    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+        appPaused(const std::shared_ptr<Registry>& reg = getDefault());
+    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+        appResumed(const std::shared_ptr<Registry>& reg = getDefault());
 
     /* The Application Manager, almost always if you're not Unity8, don't
        use this API. Testing is a special case. */

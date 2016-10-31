@@ -718,18 +718,98 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     return sig_appFailed;
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appPaused(
+void Registry::Impl::pauseEventEmitted(
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
+    const std::shared_ptr<GVariant>& params,
     const std::shared_ptr<Registry>& reg)
 {
-    std::call_once(flag_appPaused, [&]() { return; });
+    std::vector<pid_t> pids;
+    GVariant* vappid = g_variant_get_child_value(params.get(), 0);
+    GVariant* vpids = g_variant_get_child_value(params.get(), 1);
+    guint64 pid;
+    GVariantIter thispid;
+    g_variant_iter_init(&thispid, vpids);
+
+    while (g_variant_iter_loop(&thispid, "t", &pid))
+    {
+        pids.emplace_back(pid);
+    }
+
+    auto cappid = g_variant_get_string(vappid, NULL);
+    auto appid = ubuntu::app_launch::AppID::find(cappid);
+    auto app = Application::create(appid, reg);
+
+    /* TODO: Instance */
+    signal(app, {}, pids);
+
+    g_variant_unref(vappid);
+    g_variant_unref(vpids);
+
+    return;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Registry::Impl::appPaused(const std::shared_ptr<Registry>& reg)
+{
+    std::call_once(flag_appPaused, [&]() {
+        reg->impl->thread.executeOnThread([reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            reg->impl->handle_appPaused = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "ApplicationPaused",             /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    reg->impl->pauseEventEmitted(reg->impl->sig_appPaused, sparams, reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+        });
+    });
 
     return sig_appPaused;
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appResumed(
-    const std::shared_ptr<Registry>& reg)
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Registry::Impl::appResumed(const std::shared_ptr<Registry>& reg)
 {
-    std::call_once(flag_appResumed, [&]() { return; });
+    std::call_once(flag_appResumed, [&]() {
+        reg->impl->thread.executeOnThread([reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            reg->impl->handle_appResumed = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "ApplicationResumed",            /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    reg->impl->pauseEventEmitted(reg->impl->sig_appResumed, sparams, reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+        });
+    });
 
     return sig_appResumed;
 }
