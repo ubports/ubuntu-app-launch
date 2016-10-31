@@ -713,6 +713,57 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
     Registry::Impl::appFailed(const std::shared_ptr<Registry>& reg)
 {
+    std::call_once(flag_appFailed, [reg]() {
+        reg->impl->thread.executeOnThread([reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            reg->impl->handle_appFailed = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "ApplicationFailed",             /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+
+                    const gchar* sappid = NULL;
+                    const gchar* typestr = NULL;
+
+                    Registry::FailureType type = Registry::FailureType::CRASH;
+                    g_variant_get(params, "(&s&s)", &sappid, &typestr);
+
+                    if (g_strcmp0("crash", typestr) == 0)
+                    {
+                        type = Registry::FailureType::CRASH;
+                    }
+                    else if (g_strcmp0("start-failure", typestr) == 0)
+                    {
+                        type = Registry::FailureType::START_FAILURE;
+                    }
+                    else
+                    {
+                        g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
+                    }
+
+                    auto appid = AppID::find(sappid);
+                    auto app = Application::create(appid, reg);
+
+                    /* TODO: Instance issues */
+
+                    reg->impl->sig_appFailed(app, {}, type);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+        });
+    });
+
     std::call_once(flag_appFailed, [&]() { return; });
 
     return sig_appFailed;

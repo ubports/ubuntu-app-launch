@@ -276,7 +276,6 @@ struct _failed_observer_t {
 static GList * starting_array = NULL;
 static GList * focus_array = NULL;
 static GList * resume_array = NULL;
-static GList * failed_array = NULL;
 
 /* Function to take a work function and have it execute on a given
    GMainContext */
@@ -503,62 +502,50 @@ ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
 
-/* Handle the failed signal when it occurs, call the observer */
-static void
-failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	failed_observer_t * observer = (failed_observer_t *)user_data;
-	const gchar * appid = NULL;
-	const gchar * typestr = NULL;
-
-	ual_tracepoint(observer_start, "failed");
-
-	if (observer->func != NULL) {
-		UbuntuAppLaunchAppFailed type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
-		g_variant_get(params, "(&s&s)", &appid, &typestr);
-
-		if (g_strcmp0("crash", typestr) == 0) {
-			type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
-		} else if (g_strcmp0("start-failure", typestr) == 0) {
-			type = UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE;
-		} else {
-			g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
-		}
-
-		observer->func(appid, type, observer->user_data);
-	}
-
-	ual_tracepoint(observer_finish, "failed");
-}
+/* Map of all the observers listening for app stopped */
+static std::map<std::pair<UbuntuAppLaunchAppFailedObserver, gpointer>, core::ScopedConnection> appFailedObservers;
 
 gboolean
 ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
 {
-	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
-	if (conn == NULL) {
+	appFailedObservers.emplace(std::make_pair(
+		std::make_pair(observer, user_data),
+			core::ScopedConnection(
+				ubuntu::app_launch::Registry::appFailed().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
+					std::string appid = app->appId();
+					executeOnContext(context, [appid, type, observer, user_data]() {
+						UbuntuAppLaunchAppFailed ctype;
+
+						switch (type) {
+						case ubuntu::app_launch::Registry::FailureType::CRASH:
+							ctype = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
+							break;
+						case ubuntu::app_launch::Registry::FailureType::START_FAILURE:
+							ctype = UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE;
+							break;
+						}
+
+						observer(appid.c_str(), ctype, user_data);
+					});
+				})
+			)
+		));
+
+	return TRUE;
+}
+
+gboolean
+ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
+{
+	auto iter = appFailedObservers.find(std::make_pair(observer, user_data));
+
+	if (iter == appFailedObservers.end()) {
 		return FALSE;
 	}
 
-	failed_observer_t * observert = g_new0(failed_observer_t, 1);
-
-	observert->conn = conn;
-	observert->func = observer;
-	observert->user_data = user_data;
-
-	failed_array = g_list_prepend(failed_array, observert);
-
-	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
-		NULL, /* sender */
-		"com.canonical.UbuntuAppLaunch", /* interface */
-		"ApplicationFailed", /* signal */
-		"/", /* path */
-		NULL, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NONE,
-		failed_signal_cb,
-		observert,
-		NULL); /* user data destroy */
-
+	appFailedObservers.erase(iter);
 	return TRUE;
 }
 
@@ -684,33 +671,6 @@ ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver obser
 {
 	ubuntu::app_launch::Registry::Impl::watchingAppStarting(false);
 	return delete_app_generic(observer, user_data, &starting_array);
-}
-
-gboolean
-ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
-{
-	failed_observer_t * observert = NULL;
-	GList * look;
-
-	for (look = failed_array; look != NULL; look = g_list_next(look)) {
-		observert = (failed_observer_t *)look->data;
-
-		if (observert->func == observer && observert->user_data == user_data) {
-			break;
-		}
-	}
-
-	if (look == NULL) {
-		return FALSE;
-	}
-
-	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
-	g_object_unref(observert->conn);
-
-	g_free(observert);
-	failed_array = g_list_delete_link(failed_array, look);
-
-	return TRUE;
 }
 
 
