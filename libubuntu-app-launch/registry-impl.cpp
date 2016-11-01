@@ -52,6 +52,7 @@ Registry::Impl::Impl(Registry* registry)
                  dohandle(handle_appResumed);
                  dohandle(handle_managerSignalFocus);
                  dohandle(handle_managerSignalResume);
+                 dohandle(handle_managerSignalStarting);
 
                  if (_dbus)
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
@@ -588,7 +589,9 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
         reg->impl->thread.executeOnThread([reg]() {
             upstartEventData* focusdata = new upstartEventData{reg};
             upstartEventData* resumedata = new upstartEventData{reg};
+            upstartEventData* startingdata = new upstartEventData{reg};
 
+            /**** FOCUS ****/
             reg->impl->handle_managerSignalFocus = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
                 nullptr,                         /* sender */
@@ -622,6 +625,54 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
                     delete data;
                 }); /* user data destroy */
 
+            /**** STARTING ****/
+            reg->impl->handle_managerSignalResume = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "UnityStartingBroadcast",        /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*,
+                   GVariant* params, gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+
+                    if (!reg->impl->manager_)
+                    {
+                        return;
+                    }
+
+                    auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto conn =
+                        std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
+                                                         [](GDBusConnection* con) { g_clear_object(&con); });
+                    std::string sender = csender;
+                    std::shared_ptr<Application> app;
+                    std::shared_ptr<Application::Instance> instance;
+
+                    std::tie(app, instance) = managerParams(vparams, reg);
+
+                    reg->impl->manager_->startingRequest(app, instance, [conn, sender, vparams](bool response) {
+                        if (response)
+                        {
+                            g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                          "/",                             /* path */
+                                                          "com.canonical.UbuntuAppLaunch", /* interface */
+                                                          "UnityStartingSignal",           /* signal */
+                                                          vparams.get(),                   /* params, the same */
+                                                          nullptr);                        /* error */
+                        }
+                    });
+                },
+                startingdata,
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            /**** RESUME ****/
             reg->impl->handle_managerSignalResume = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
                 nullptr,                         /* sender */

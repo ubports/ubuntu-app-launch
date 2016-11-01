@@ -120,6 +120,7 @@ private:
     guint handle_appResumed{0};
     guint handle_managerSignalFocus{0};
     guint handle_managerSignalResume{0};
+    guint handle_managerSignalStarting{0};
 
     std::once_flag flag_appStarted;
     std::once_flag flag_appStopped;
