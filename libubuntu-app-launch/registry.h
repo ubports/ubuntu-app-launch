@@ -104,7 +104,7 @@ public:
         Manager() = default;
     };
 
-    void setManager(Manager* manager);
+    static void setManager(std::shared_ptr<Manager> manager, std::shared_ptr<Registry> registry);
     void clearManager();
 
     /* Helper Lists */

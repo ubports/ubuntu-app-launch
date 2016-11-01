@@ -58,7 +58,6 @@ Registry::Impl::Impl(Registry* registry)
                  _dbus.reset();
              })
     , _registry(registry)
-    , _manager(nullptr)
     , _iconFinders()
 {
     auto cancel = thread.getCancellable();
@@ -553,8 +552,15 @@ std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
     return _iconFinders[basePath];
 }
 
+struct upstartEventData
+{
+    /* Keeping a weak pointer because the handle is held by
+       the registry implementation. */
+    std::weak_ptr<Registry> weakReg;
+};
+
 std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> Registry::Impl::managerParams(
-    std::shared_ptr<GVariant> params)
+    const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry>& reg)
 {
     std::shared_ptr<Application> app;
     std::shared_ptr<Application::Instance> instance;
@@ -563,25 +569,28 @@ std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>
     g_variant_get(params.get(), "(&s)", &cappid);
 
     auto appid = ubuntu::app_launch::AppID::find(cappid);
-    app = ubuntu::app_launch::Application::create(appid, {});
+    app = ubuntu::app_launch::Application::create(appid, reg);
 
     return std::make_tuple(app, instance);
 }
 
-void Registry::Impl::setManager(Registry::Manager* manager)
+void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std::shared_ptr<Registry> reg)
 {
-    if (_manager != nullptr)
+    if (reg->impl->manager_)
     {
         throw std::runtime_error("Already have a manager and trying to set another");
     }
 
     g_debug("Setting a new manager");
-    _manager = manager;
+    reg->impl->manager_ = manager;
 
-    std::call_once(flag_managerSignals, [this]() {
-        thread.executeOnThread([this]() {
-            handle_managerSignalFocus =
-                g_dbus_connection_signal_subscribe(_dbus.get(),                     /* bus */
+    std::call_once(reg->impl->flag_managerSignals, [reg]() {
+        reg->impl->thread.executeOnThread([reg]() {
+            upstartEventData* focusdata = new upstartEventData{reg};
+            upstartEventData* resumedata = new upstartEventData{reg};
+
+            reg->impl->handle_managerSignalFocus =
+                g_dbus_connection_signal_subscribe(reg->impl->_dbus.get(),          /* bus */
                                                    nullptr,                         /* sender */
                                                    "com.canonical.UbuntuAppLaunch", /* interface */
                                                    "UnityFocusRequest",             /* signal */
@@ -592,10 +601,14 @@ void Registry::Impl::setManager(Registry::Manager* manager)
                                                       const gchar*, GVariant* params, gpointer user_data) -> void {
 
                                                    },
-                                                   this, nullptr); /* user data destroy */
+                                                   focusdata,
+                                                   [](gpointer user_data) {
+                                                       auto data = reinterpret_cast<upstartEventData*>(user_data);
+                                                       delete data;
+                                                   }); /* user data destroy */
 
-            handle_managerSignalResume = g_dbus_connection_signal_subscribe(
-                _dbus.get(),                     /* bus */
+            reg->impl->handle_managerSignalResume = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
                 nullptr,                         /* sender */
                 "com.canonical.UbuntuAppLaunch", /* interface */
                 "UnityResumeRequest",            /* signal */
@@ -604,9 +617,10 @@ void Registry::Impl::setManager(Registry::Manager* manager)
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*,
                    GVariant* params, gpointer user_data) -> void {
-                    auto pthis = reinterpret_cast<Registry::Impl*>(user_data);
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
 
-                    if (pthis->_manager == nullptr)
+                    if (!reg->impl->manager_)
                     {
                         return;
                     }
@@ -619,9 +633,9 @@ void Registry::Impl::setManager(Registry::Manager* manager)
                     std::shared_ptr<Application> app;
                     std::shared_ptr<Application::Instance> instance;
 
-                    std::tie(app, instance) = managerParams(vparams);
+                    std::tie(app, instance) = managerParams(vparams, reg);
 
-                    pthis->_manager->resumeRequest(app, instance, [conn, sender, vparams](bool response) {
+                    reg->impl->manager_->resumeRequest(app, instance, [conn, sender, vparams](bool response) {
                         if (response)
                         {
                             g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
@@ -633,7 +647,11 @@ void Registry::Impl::setManager(Registry::Manager* manager)
                         }
                     });
                 },
-                this, nullptr); /* user data destroy */
+                resumedata,
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
         });
     });
 }
@@ -641,7 +659,7 @@ void Registry::Impl::setManager(Registry::Manager* manager)
 void Registry::Impl::clearManager()
 {
     g_debug("Clearing the manager");
-    _manager = nullptr;
+    manager_.reset();
 }
 
 /** App start watching, if we're registered for the signal we
@@ -714,13 +732,6 @@ void Registry::Impl::upstartEventEmitted(
 
     signal(app, {});
 }
-
-struct upstartEventData
-{
-    /* Keeping a weak pointer because the handle is held by
-       the registry implementation. */
-    std::weak_ptr<Registry> weakReg;
-};
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted(
     const std::shared_ptr<Registry>& reg)
