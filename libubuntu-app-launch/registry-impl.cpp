@@ -589,23 +589,38 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
             upstartEventData* focusdata = new upstartEventData{reg};
             upstartEventData* resumedata = new upstartEventData{reg};
 
-            reg->impl->handle_managerSignalFocus =
-                g_dbus_connection_signal_subscribe(reg->impl->_dbus.get(),          /* bus */
-                                                   nullptr,                         /* sender */
-                                                   "com.canonical.UbuntuAppLaunch", /* interface */
-                                                   "UnityFocusRequest",             /* signal */
-                                                   "/",                             /* path */
-                                                   nullptr,                         /* arg0 */
-                                                   G_DBUS_SIGNAL_FLAGS_NONE,
-                                                   [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
-                                                      const gchar*, GVariant* params, gpointer user_data) -> void {
+            reg->impl->handle_managerSignalFocus = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "UnityFocusRequest",             /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
 
-                                                   },
-                                                   focusdata,
-                                                   [](gpointer user_data) {
-                                                       auto data = reinterpret_cast<upstartEventData*>(user_data);
-                                                       delete data;
-                                                   }); /* user data destroy */
+                    if (!reg->impl->manager_)
+                    {
+                        return;
+                    }
+
+                    auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+
+                    std::shared_ptr<Application> app;
+                    std::shared_ptr<Application::Instance> instance;
+
+                    std::tie(app, instance) = managerParams(vparams, reg);
+
+                    reg->impl->manager_->focusRequest(app, instance, [](bool response) {});
+                },
+                focusdata,
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
 
             reg->impl->handle_managerSignalResume = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
