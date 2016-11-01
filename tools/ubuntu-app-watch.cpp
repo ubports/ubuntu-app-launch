@@ -35,14 +35,30 @@ int main(int argc, char *argv[])
                                      std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
         std::cout << "Stopped: " << (std::string)app->appId() << std::endl;
     });
-    registry.appPaused().connect(
-        [](std::shared_ptr<ubuntu::app_launch::Application> app,
-           std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
-           std::vector<pid_t> &pids) { std::cout << "Paused:  " << (std::string)app->appId() << std::endl; });
-    registry.appResumed().connect(
-        [](std::shared_ptr<ubuntu::app_launch::Application> app,
-           std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
-           std::vector<pid_t> &pids) { std::cout << "Resumed: " << (std::string)app->appId() << std::endl; });
+    registry.appPaused().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                                    std::vector<pid_t> &pids) {
+        std::cout << "Paused:  " << (std::string)app->appId() << " (";
+
+        for (auto pid : pids)
+        {
+            std::cout << std::to_string(pid) << " ";
+        }
+
+        std::cout << ")" << std::endl;
+    });
+    registry.appResumed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                                     std::vector<pid_t> &pids) {
+        std::cout << "Resumed: " << (std::string)app->appId() << " (";
+
+        for (auto pid : pids)
+        {
+            std::cout << std::to_string(pid) << " ";
+        }
+
+        std::cout << ")" << std::endl;
+    });
     registry.appFailed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
                                     ubuntu::app_launch::Registry::FailureType type) {
@@ -59,6 +75,6 @@ int main(int argc, char *argv[])
         std::cout << std::endl;
     });
 
-    std::signal(SIGTERM, [](int signal) -> void { retval.set_value(0); });
+    std::signal(SIGTERM, [](int signal) -> void { retval.set_value(EXIT_SUCCESS); });
     return retval.get_future().get();
 }
