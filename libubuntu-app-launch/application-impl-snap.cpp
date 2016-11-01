@@ -196,6 +196,8 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
     }
 
     info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
+
+    g_debug("Application Snap object for AppID '%s'", std::string(appid).c_str());
 }
 
 /** Uses the findInterface() function to find the interface if we don't
@@ -229,7 +231,7 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
             }
             catch (std::runtime_error& e)
             {
-                g_warning("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
+                g_debug("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
             }
         }
     }
@@ -286,6 +288,11 @@ bool Snap::checkPkgInfo(const std::shared_ptr<snapd::Info::PkgInfo>& pkginfo, co
 */
 bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry)
 {
+    if (appId.package.value().empty() || appId.version.value().empty())
+    {
+        return false;
+    }
+
     if (!std::regex_match(appId.appname.value(), appnameRegex))
     {
         return false;
@@ -391,19 +398,8 @@ std::shared_ptr<Application::Info> Snap::info()
 /** Get all of the instances of this snap package that are running */
 std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    auto startsWith = std::string(appid_) + "-";
-
-    for (const auto& instance : _registry->impl->upstartInstancesForJob("application-snap"))
-    {
-        if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
-        {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appid_, "application-snap", instance,
-                                                                std::vector<Application::URL>{}, _registry));
-        }
-    }
-
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-snap");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Return the launch environment for this snap. That includes whether
@@ -419,10 +415,14 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     {
         /* If we're setting up XMir we also need the other helpers
            that libertine is helping with */
-        /* retval.emplace_back(std::make_pair("APP_EXEC", "libertine-launch --no-container " +
-         * info_->execLine().value())); */
-        /* Not yet */
-        retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
+        auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+        if (libertine_launch == nullptr)
+        {
+            libertine_launch = LIBERTINE_LAUNCH;
+        }
+
+        retval.emplace_back(
+            std::make_pair("APP_EXEC", std::string(libertine_launch) + " " + info_->execLine().value()));
     }
     else
     {
@@ -438,9 +438,10 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 */
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appid_, "application-snap", std::string(appid_) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -450,9 +451,10 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 */
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appid_, "application-snap", std::string(appid_) + "-", urls, _registry,
-                                   UpstartInstance::launchMode::TEST, envfunc);
+    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls

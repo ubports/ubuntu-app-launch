@@ -51,6 +51,8 @@ Click::Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, co
     std::tie(_keyfile, desktopPath_) = manifestAppDesktop(_manifest, appid.package, appid.appname, _clickDir);
     if (!_keyfile)
         throw std::runtime_error{"No keyfile found for click application: " + std::string(appid)};
+
+    g_debug("Application Click object for appid '%s'", std::string(appid).c_str());
 }
 
 AppID Click::appId()
@@ -323,21 +325,8 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
 
 std::vector<std::shared_ptr<Application::Instance>> Click::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    std::string sappid = appId();
-
-    for (auto instancename : _registry->impl->upstartInstancesForJob("application-click"))
-    {
-        /* There an be only one, but we want to make sure it is
-           there or return an empty vector */
-        if (sappid == instancename)
-        {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", sappid,
-                                                                std::vector<Application::URL>{}, _registry));
-            break;
-        }
-    }
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-click");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment variables for the application to
@@ -350,10 +339,14 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
     retval.emplace_back(std::make_pair("APP_DIR", _clickDir));
     retval.emplace_back(std::make_pair("APP_DESKTOP_FILE_PATH", desktopPath_));
 
+    retval.emplace_back(std::make_pair("QML2_IMPORT_PATH", _clickDir + "/lib/" + UBUNTU_APP_LAUNCH_ARCH + "/qml"));
+
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", _info->xMirEnable().value() ? "1" : "0"));
     retval.emplace_back(std::make_pair("APP_EXEC", _info->execLine().value()));
+
+    retval.emplace_back(std::make_pair("APP_EXEC_POLICY", std::string(appId())));
 
     return retval;
 }
@@ -361,15 +354,15 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
 std::shared_ptr<Application::Instance> Click::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-click", {}, urls, jobs::manager::launchMode::STANDARD,
+                                         envfunc);
 }
 
 std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-click", std::string(appId()), urls, _registry,
-                                   UpstartInstance::launchMode::TEST, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-click", {}, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls

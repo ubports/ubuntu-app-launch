@@ -56,8 +56,11 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 
     std::string rootDir = "";
     auto rootenv = g_getenv("UBUNTU_APP_LAUNCH_LEGACY_ROOT");
-    if (rootenv != nullptr)
+    if (rootenv != nullptr && /* Check that we have an alternate root available */
+        g_str_has_prefix(_basedir.c_str(), rootenv))
+    { /* And check that we found this in that root */
         rootDir = rootenv;
+    }
 
     appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, rootDir,
                                                    app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
@@ -71,6 +74,8 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     {
         throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
     }
+
+    g_debug("Application Legacy object for app '%s'", appname.value().c_str());
 }
 
 std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name)
@@ -277,22 +282,8 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
 
 std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    auto startsWith = std::string(appId()) + "-";
-
-    for (auto instance : _registry->impl->upstartInstancesForJob("application-legacy"))
-    {
-        g_debug("Looking at legacy instance: %s", instance.c_str());
-        if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
-        {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", instance,
-                                                                std::vector<Application::URL>{}, _registry));
-        }
-    }
-
-    g_debug("Legacy app '%s' has %d instances", std::string(appId()).c_str(), int(vect.size()));
-
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-legacy");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment for a legacy app. Mostly this consists of
@@ -308,7 +299,23 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
-    retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
+    if (appinfo_->xMirEnable())
+    {
+        /* If we're setting up XMir we also need the other helpers
+           that libertine is helping with */
+        auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+        if (libertine_launch == nullptr)
+        {
+            libertine_launch = LIBERTINE_LAUNCH;
+        }
+
+        retval.emplace_back(
+            std::make_pair("APP_EXEC", std::string(libertine_launch) + " " + appinfo_->execLine().value()));
+    }
+    else
+    {
+        retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
+    }
 
     /* Honor the 'Path' key if it is in the desktop file */
     if (g_key_file_has_key(_keyfile.get(), "Desktop Entry", "Path", nullptr))
@@ -337,21 +344,6 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     return retval;
 }
 
-/** Generates an instance string based on the clock if we're a multi-instance
-    application. */
-std::string Legacy::getInstance()
-{
-    auto single = g_key_file_get_boolean(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Single-Instance", nullptr);
-    if (single)
-    {
-        return {};
-    }
-    else
-    {
-        return std::to_string(g_get_real_time());
-    }
-}
-
 /** Create an UpstartInstance for this AppID using the UpstartInstance launch
     function.
 
@@ -359,12 +351,12 @@ std::string Legacy::getInstance()
 */
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
-    std::string instance = getInstance();
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls,
-                                   _registry, UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 /** Create an UpstartInstance for this AppID using the UpstartInstance launch
@@ -374,12 +366,12 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
 */
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
-    std::string instance = getInstance();
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return UpstartInstance::launch(appId(), "application-legacy", std::string(appId()) + "-" + instance, urls,
-                                   _registry, UpstartInstance::launchMode::TEST, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls

@@ -113,6 +113,7 @@ protected:
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
         g_unlink(SNAPD_TEST_SOCKET);
 #endif
+        g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH", "/this/should/not/exist", TRUE);
 
         service = dbus_test_service_new(NULL);
 
@@ -767,7 +768,7 @@ TEST_F(LibUAL, AppIdParse)
 TEST_F(LibUAL, ApplicationList)
 {
 #ifdef ENABLE_SNAPPY
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, u8Package, u8Package, interfaces, u8Package}};
+    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 #endif
 

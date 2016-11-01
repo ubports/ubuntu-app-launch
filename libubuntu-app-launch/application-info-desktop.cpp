@@ -43,8 +43,9 @@ typedef TypeTagger<NoDisplayTag, bool> NoDisplay;
 }  // anonymous namespace
 
 template <typename T>
-auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key, const std::string& exceptionText = {})
-    -> T
+auto stringFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
+                               const std::string& key,
+                               const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
@@ -66,11 +67,17 @@ auto stringFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const std::string& key
 }
 
 template <typename T>
-auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
-                     const std::string& basePath,
-                     const std::string& rootDir,
-                     const std::string& key,
-                     const std::string& exceptionText = {}) -> T
+auto stringFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const std::string& key) -> T
+{
+    return stringFromKeyfileRequired<T>(keyfile, key, {});
+}
+
+template <typename T>
+auto fileFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
+                             const std::string& basePath,
+                             const std::string& rootDir,
+                             const std::string& key,
+                             const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
@@ -113,10 +120,18 @@ auto fileFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
-                     const std::string& key,
-                     bool defaultReturn,
-                     const std::string& exceptionText = {}) -> T
+auto fileFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile,
+                     const std::string& basePath,
+                     const std::string& rootDir,
+                     const std::string& key) -> T
+{
+    return fileFromKeyfileRequired<T>(keyfile, basePath, rootDir, key, {});
+}
+
+template <typename T>
+auto boolFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
+                             const std::string& key,
+                             const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_boolean(keyfile.get(), DESKTOP_GROUP, key.c_str(), &error);
@@ -124,12 +139,7 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
     if (error != nullptr)
     {
         auto perror = std::shared_ptr<GError>(error, g_error_free);
-        if (!exceptionText.empty())
-        {
-            throw std::runtime_error(exceptionText + perror.get()->message);
-        }
-
-        return T::from_raw(defaultReturn);
+        throw std::runtime_error(exceptionText + perror.get()->message);
     }
 
     T retval = T::from_raw(keyval == TRUE);
@@ -137,8 +147,22 @@ auto boolFromKeyfile(std::shared_ptr<GKeyFile> keyfile,
 }
 
 template <typename T>
-auto stringlistFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const gchar* key, const std::string& exceptionText = {})
-    -> T
+auto boolFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const std::string& key, bool defaultReturn) -> T
+{
+    try
+    {
+        return boolFromKeyfileRequired<T>(keyfile, key, "Boolean value not available, but not required");
+    }
+    catch (std::runtime_error& e)
+    {
+        return T::from_raw(defaultReturn);
+    }
+}
+
+template <typename T>
+auto stringlistFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
+                                   const gchar* key,
+                                   const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
     auto keyval = g_key_file_get_locale_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, nullptr, &error);
@@ -167,7 +191,13 @@ auto stringlistFromKeyfile(std::shared_ptr<GKeyFile> keyfile, const gchar* key, 
     return T::from_raw(results);
 }
 
-bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
+template <typename T>
+auto stringlistFromKeyfile(const std::shared_ptr<GKeyFile>& keyfile, const gchar* key) -> T
+{
+    return stringlistFromKeyfileRequired<T>(keyfile, key, {});
+}
+
+bool stringlistFromKeyfileContains(const std::shared_ptr<GKeyFile>& keyfile,
                                    const gchar* key,
                                    const std::string& match,
                                    bool defaultValue)
@@ -194,7 +224,7 @@ bool stringlistFromKeyfileContains(std::shared_ptr<GKeyFile> keyfile,
     return result;
 }
 
-Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
+Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
                  const std::string& basePath,
                  const std::string& rootDir,
                  std::bitset<2> flags,
@@ -223,7 +253,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
             if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false) ||
                 !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
             {
-                g_warning("Application is not shown in Unity");
+                g_debug("Application is not shown in current desktop: %s", xdg_current_desktop);
                 // Exception removed for OTA11 as a temporary fix
                 // throw std::runtime_error("Application is not shown in Unity");
             }
@@ -233,13 +263,12 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
     }())
     , _basePath(basePath)
     , _rootDir(rootDir)
-    , _name(stringFromKeyfile<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
+    , _name(stringFromKeyfileRequired<Application::Info::Name>(keyfile, "Name", "Unable to get name from keyfile"))
     , _description(stringFromKeyfile<Application::Info::Description>(keyfile, "Comment"))
     , _iconPath([keyfile, basePath, rootDir, registry]() {
         if (registry != nullptr)
         {
-            auto iconName =
-                stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon", "Missing icon for desktop file");
+            auto iconName = stringFromKeyfile<Application::Info::IconPath>(keyfile, "Icon");
 
             if (!iconName.value().empty() && iconName.value()[0] != '/')
             {
@@ -247,8 +276,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
                 return registry->impl->getIconFinder(basePath)->find(iconName);
             }
         }
-        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon",
-                                                            "Missing icon for desktop file");
+        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon");
     }())
     , _defaultDepartment(
           stringFromKeyfile<Application::Info::DefaultDepartment>(keyfile, "X-Ubuntu-Default-Department-ID"))
@@ -324,6 +352,7 @@ Desktop::Desktop(std::shared_ptr<GKeyFile> keyfile,
     , _xMirEnable(
           boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", (flags & DesktopFlags::XMIR_DEFAULT).any()))
     , _exec(stringFromKeyfile<Exec>(keyfile, "Exec"))
+    , _singleInstance(boolFromKeyfile<SingleInstance>(keyfile, "X-Ubuntu-Single-Instance", false))
 {
 }
 

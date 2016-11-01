@@ -41,7 +41,7 @@ static const std::bitset<2> XMIR_DEFAULT{"10"};
 class Desktop : public Application::Info
 {
 public:
-    Desktop(std::shared_ptr<GKeyFile> keyfile,
+    Desktop(const std::shared_ptr<GKeyFile>& keyfile,
             const std::string& basePath,
             const std::string& rootDir,
             std::bitset<2> flags,
@@ -106,6 +106,13 @@ public:
         return _exec;
     }
 
+    struct SingleInstanceTag;
+    typedef TypeTagger<SingleInstanceTag, bool> SingleInstance;
+    virtual SingleInstance singleInstance()
+    {
+        return _singleInstance;
+    }
+
 protected:
     std::shared_ptr<GKeyFile> _keyfile;
     std::string _basePath;
@@ -125,6 +132,7 @@ protected:
 
     XMirEnable _xMirEnable;
     Exec _exec;
+    SingleInstance _singleInstance;
 };
 
 }  // namespace AppInfo

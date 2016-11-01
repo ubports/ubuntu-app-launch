@@ -18,6 +18,7 @@
  */
 
 #include "glib-thread.h"
+#include "jobs-base.h"
 #include "registry.h"
 #include "snapd-info.h"
 #include <click.h>
@@ -69,15 +70,11 @@ public:
     snapd::Info snapdInfo;
 #endif
 
+    std::shared_ptr<jobs::manager::Base> jobs;
+
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
-    void zgSendEvent(AppID appid, const std::string& eventtype);
-
-    std::vector<pid_t> pidsFromCgroup(const std::string& job, const std::string& instance);
-
-    /* Upstart Jobs */
-    std::list<std::string> upstartInstancesForJob(const std::string& job);
-    std::string upstartJobPath(const std::string& job);
+    virtual void zgSendEvent(AppID appid, const std::string& eventtype);
 
     static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
     static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
@@ -105,10 +102,6 @@ private:
     void initClick();
 
     std::shared_ptr<ZeitgeistLog> zgLog_;
-
-    std::shared_ptr<GDBusConnection> cgManager_;
-
-    void initCGManager();
 
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 

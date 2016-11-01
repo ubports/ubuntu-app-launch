@@ -12,23 +12,21 @@ endif()
 
 include_directories(${GTEST_INCLUDE_DIR})
 
-add_library (gtest STATIC
-             ${GTEST_SOURCE_DIR}/gtest-all.cc
-             ${GTEST_SOURCE_DIR}/gtest_main.cc)
+add_subdirectory("/usr/src/gmock" gmock)
 
 # Helper test
 
 add_executable (helper-test helper-test.cc)
 add_definitions ( -DCMAKE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}" )
 add_definitions ( -DCMAKE_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}" )
-target_link_libraries (helper-test helpers gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES})
+target_link_libraries (helper-test helpers gtest_main ${GTEST_LIBS} ${DBUSTEST_LIBRARIES})
 
 add_test (helper-test helper-test)
 
 # Helper test
 
 add_executable (helper-handshake-test helper-handshake-test.cc)
-target_link_libraries (helper-handshake-test helpers gtest ${GTEST_LIBS})
+target_link_libraries (helper-handshake-test helpers gtest_main ${GTEST_LIBS})
 
 add_test (helper-handshake-test helper-handshake-test)
 
@@ -45,13 +43,13 @@ add_definitions ( -DSNAP_BASEDIR="${CMAKE_CURRENT_SOURCE_DIR}/snap-basedir" )
 add_executable (libual-test
 	libual-test.cc
 	mir-mock.cpp)
-target_link_libraries (libual-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+target_link_libraries (libual-test gtest_main ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
 
 add_executable (libual-cpp-test
 	libual-cpp-test.cc
 	${CMAKE_SOURCE_DIR}/libubuntu-app-launch/glib-thread.cpp
 	mir-mock.cpp)
-target_link_libraries (libual-cpp-test gtest ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+target_link_libraries (libual-cpp-test gtest_main ${GTEST_LIBS} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
 
 add_executable (data-spew
 	data-spew.c)
@@ -63,13 +61,21 @@ add_executable (socket-tool
 add_test (NAME libual-test COMMAND libual-test)
 add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
+# Jobs Base Test
+
+add_executable (jobs-base-test
+	jobs-base-test.cpp)
+target_link_libraries (jobs-base-test gmock_main ${GTEST_LIBS} launcher-static)
+
+add_test(NAME jobs-base-test COMMAND jobs-base-test)
+
 # Snapd Info Test
 
 if(CURL_FOUND)
 add_definitions ( -DSNAPD_TEST_SOCKET="/tmp/snapd-test-socket" )
 add_executable (snapd-info-test
 	snapd-info-test.cpp)
-target_link_libraries (snapd-info-test gtest ${GTEST_LIBS} launcher-static)
+target_link_libraries (snapd-info-test gtest_main ${GTEST_LIBS} launcher-static)
 add_test (NAME snapd-info-test COMMAND snapd-info-test)
 endif()
 
@@ -77,7 +83,7 @@ endif()
 
 add_executable (list-apps
 	list-apps.cpp)
-target_link_libraries (list-apps gtest ${GTEST_LIBS} launcher-static)
+target_link_libraries (list-apps gtest_main ${GTEST_LIBS} launcher-static)
 add_test (NAME list-apps COMMAND ${CMAKE_CURRENT_BINARY_DIR}/list-apps)
 
 # Application Info Desktop
@@ -85,7 +91,7 @@ add_test (NAME list-apps COMMAND ${CMAKE_CURRENT_BINARY_DIR}/list-apps)
 add_executable (application-info-desktop-test
   application-info-desktop.cpp
 )
-target_link_libraries (application-info-desktop-test gtest ${GTEST_LIBS} launcher-static)
+target_link_libraries (application-info-desktop-test gtest_main ${GTEST_LIBS} launcher-static)
 
 add_test (NAME application-info-desktop-test COMMAND application-info-desktop-test)
 
@@ -97,7 +103,7 @@ add_executable (application-icon-finder-test
 
   #sources
   ${CMAKE_SOURCE_DIR}/libubuntu-app-launch/application-icon-finder.cpp)
-target_link_libraries (application-icon-finder-test gtest ${GTEST_LIBS} ubuntu-launcher)
+target_link_libraries (application-icon-finder-test gtest_main ${GTEST_LIBS} ubuntu-launcher)
 
 add_test (NAME application-icon-finder-test COMMAND application-icon-finder-test)
 
@@ -109,7 +115,7 @@ add_definitions ( -DAPP_FAILED_TOOL="${CMAKE_BINARY_DIR}/application-failed" )
 
 add_executable (failure-test
 	failure-test.cc)
-target_link_libraries (failure-test gtest ${GTEST_LIBS} ubuntu-launcher)
+target_link_libraries (failure-test gtest_main ${GTEST_LIBS} ubuntu-launcher)
 add_test (failure-test failure-test)
 
 # ZG Test
@@ -118,7 +124,7 @@ add_definitions ( -DZG_EVENT_TOOL="${CMAKE_BINARY_DIR}/zg-report-app" )
 
 add_executable (zg-test
 	zg-test.cc)
-target_link_libraries (zg-test gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
+target_link_libraries (zg-test gtest_main ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (zg-test zg-test)
 
 # Exec Line Exec Test
@@ -130,7 +136,7 @@ add_test (exec-test "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh")
 
 add_executable (exec-util-test
 	exec-util-test.cc)
-target_link_libraries (exec-util-test gtest ubuntu-launcher ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
+target_link_libraries (exec-util-test gtest_main ubuntu-launcher ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (exec-util-test exec-util-test)
 
 # CGroup Reap Test
@@ -139,7 +145,7 @@ add_definitions ( -DCG_REAP_TOOL="${CMAKE_BINARY_DIR}/cgroup-reap-all" )
 
 add_executable (cgroup-reap-test
 	cgroup-reap-test.cc)
-target_link_libraries (cgroup-reap-test gtest ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
+target_link_libraries (cgroup-reap-test gtest_main ${GTEST_LIBS} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (cgroup-reap-test cgroup-reap-test)
 
 # Desktop Hook Test
@@ -157,9 +163,11 @@ add_test (xmir-helper-test xmir-helper-test)
 
 add_custom_target(format-tests
 	COMMAND clang-format -i -style=file
+	application-info-desktop.cpp
 	libual-cpp-test.cc
 	list-apps.cpp
 	eventually-fixture.h
+	jobs-base-test.cpp
 	snapd-info-test.cpp
 	snapd-mock.h
 	zg-test.cc
