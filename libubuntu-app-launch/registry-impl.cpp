@@ -50,6 +50,8 @@ Registry::Impl::Impl(Registry* registry)
                  dohandle(handle_appFailed);
                  dohandle(handle_appPaused);
                  dohandle(handle_appResumed);
+                 dohandle(handle_managerSignalFocus);
+                 dohandle(handle_managerSignalResume);
 
                  if (_dbus)
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
@@ -558,11 +560,50 @@ void Registry::Impl::setManager(Registry::Manager* manager)
         throw std::runtime_error("Already have a manager and trying to set another");
     }
 
+    g_debug("Setting a new manager");
     _manager = manager;
+
+    std::call_once(flag_managerSignals, [this]() {
+        thread.executeOnThread([this]() {
+            handle_managerSignalFocus =
+                g_dbus_connection_signal_subscribe(_dbus.get(),                     /* bus */
+                                                   nullptr,                         /* sender */
+                                                   "com.canonical.UbuntuAppLaunch", /* interface */
+                                                   "UnityFocusRequest",             /* signal */
+                                                   "/",                             /* path */
+                                                   nullptr,                         /* arg0 */
+                                                   G_DBUS_SIGNAL_FLAGS_NONE,
+                                                   [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
+                                                      const gchar*, GVariant* params, gpointer user_data) -> void {
+
+                                                   },
+                                                   this, nullptr); /* user data destroy */
+
+            handle_managerSignalResume = g_dbus_connection_signal_subscribe(
+                _dbus.get(),                     /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "UnityResumeRequest",            /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection* conn, const gchar* sender, const gchar*, const gchar*, const gchar*,
+                   GVariant* params, gpointer user_data) -> void {
+                    g_dbus_connection_emit_signal(conn, sender,                    /* destination */
+                                                  "/",                             /* path */
+                                                  "com.canonical.UbuntuAppLaunch", /* interface */
+                                                  "UnityResumeResponse",           /* signal */
+                                                  params,                          /* params, the same */
+                                                  nullptr);                        /* error */
+                },
+                this, nullptr); /* user data destroy */
+        });
+    });
 }
 
 void Registry::Impl::clearManager()
 {
+    g_debug("Clearing the manager");
     _manager = nullptr;
 }
 

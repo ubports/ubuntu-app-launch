@@ -118,12 +118,15 @@ private:
     guint handle_appFailed{0};
     guint handle_appPaused{0};
     guint handle_appResumed{0};
+    guint handle_managerSignalFocus{0};
+    guint handle_managerSignalResume{0};
 
     std::once_flag flag_appStarted;
     std::once_flag flag_appStopped;
     std::once_flag flag_appFailed;
     std::once_flag flag_appPaused;
     std::once_flag flag_appResumed;
+    std::once_flag flag_managerSignals;
 
     void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
                              std::shared_ptr<GVariant> params,
