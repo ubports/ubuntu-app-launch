@@ -116,3 +116,22 @@ set_target_properties(ubuntu-app-usage PROPERTIES OUTPUT_NAME "ubuntu-app-usage"
 target_link_libraries(ubuntu-app-usage ubuntu-launcher)
 install(TARGETS ubuntu-app-usage RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
+########################
+# Formatting
+########################
+
+add_custom_target(format-tools
+	COMMAND clang-format -i -style=file
+    ubuntu-app-info.cpp
+    ubuntu-app-launch-appids.cpp
+    ubuntu-app-launch.cpp
+    ubuntu-app-list.cpp
+    ubuntu-app-list-pids.cpp
+    ubuntu-app-pid.cpp
+    ubuntu-app-stop.cpp
+    ubuntu-app-triplet.cpp
+    ubuntu-app-watch.cpp
+    ubuntu-helper-list.cpp
+    ubuntu-helper-start.cpp
+    ubuntu-helper-stop.cpp
+)

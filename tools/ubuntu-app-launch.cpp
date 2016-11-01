@@ -17,11 +17,11 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <iostream>
-#include <future>
-#include <csignal>
 #include "libubuntu-app-launch/application.h"
 #include "libubuntu-app-launch/registry.h"
+#include <csignal>
+#include <future>
+#include <iostream>
 
 ubuntu::app_launch::AppID global_appid;
 std::promise<int> retval;
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    global_appid = ubuntu::app_launch::AppID::parse(argv[1]);
+    global_appid = ubuntu::app_launch::AppID::find(argv[1]);
 
     std::vector<ubuntu::app_launch::Application::URL> urls;
     for (int i = 2; i < argc; i++)
@@ -42,39 +42,34 @@ int main(int argc, char* argv[])
         urls.push_back(ubuntu::app_launch::Application::URL::from_raw(argv[i]));
     }
 
-    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
+    ubuntu::app_launch::Registry::appStarted().connect(
+        [](std::shared_ptr<ubuntu::app_launch::Application> app,
+           std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+            if (app->appId() != global_appid)
+            {
+                return;
+            }
 
-    registry->appStarted().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance)
-                                 {
-                                     if (app->appId() != global_appid)
-                                     {
-                                         return;
-                                     }
+            std::cout << "Started: " << (std::string)app->appId() << std::endl;
+            retval.set_value(EXIT_SUCCESS);
+        });
 
-                                     std::cout << "Started: " << (std::string)app->appId() << std::endl;
-                                     retval.set_value(0);
-                                 });
+    ubuntu::app_launch::Registry::appFailed().connect(
+        [](std::shared_ptr<ubuntu::app_launch::Application> app,
+           std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+           ubuntu::app_launch::Registry::FailureType type) {
+            if (app->appId() != global_appid)
+            {
+                return;
+            }
 
-    registry->appFailed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
-                                   ubuntu::app_launch::Registry::FailureType type)
-                                {
-                                    if (app->appId() != global_appid)
-                                    {
-                                        return;
-                                    }
+            std::cout << "Failed:  " << (std::string)app->appId() << std::endl;
+            retval.set_value(EXIT_FAILURE);
+        });
 
-                                    std::cout << "Failed:  " << (std::string)app->appId() << std::endl;
-                                    retval.set_value(-1);
-                                });
-
-    auto app = ubuntu::app_launch::Application::create(global_appid, registry);
+    auto app = ubuntu::app_launch::Application::create(global_appid, ubuntu::app_launch::Registry::getDefault());
     app->launch(urls);
 
-    std::signal(SIGTERM, [](int signal) -> void
-                         {
-                             retval.set_value(0);
-                         });
+    std::signal(SIGTERM, [](int signal) -> void { retval.set_value(EXIT_SUCCESS); });
     return retval.get_future().get();
 }
