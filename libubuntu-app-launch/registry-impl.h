@@ -135,6 +135,8 @@ private:
         core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
         const std::shared_ptr<GVariant>& params,
         const std::shared_ptr<Registry>& reg);
+    static std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> managerParams(
+        std::shared_ptr<GVariant> params);
 
     void initClick();
 

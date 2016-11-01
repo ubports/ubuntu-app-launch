@@ -89,12 +89,16 @@ public:
        use this API. Testing is a special case. */
     class Manager
     {
-        virtual void focusRequest(std::shared_ptr<Application> app,
-                                  std::shared_ptr<Application::Instance> instance,
-                                  std::function<void(bool)> reply) = 0;
+    public:
         virtual void startingRequest(std::shared_ptr<Application> app,
                                      std::shared_ptr<Application::Instance> instance,
                                      std::function<void(bool)> reply) = 0;
+        virtual void focusRequest(std::shared_ptr<Application> app,
+                                  std::shared_ptr<Application::Instance> instance,
+                                  std::function<void(bool)> reply) = 0;
+        virtual void resumeRequest(std::shared_ptr<Application> app,
+                                   std::shared_ptr<Application::Instance> instance,
+                                   std::function<void(bool)> reply) = 0;
 
     protected:
         Manager() = default;

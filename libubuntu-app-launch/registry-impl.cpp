@@ -553,6 +553,21 @@ std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
     return _iconFinders[basePath];
 }
 
+std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> Registry::Impl::managerParams(
+    std::shared_ptr<GVariant> params)
+{
+    std::shared_ptr<Application> app;
+    std::shared_ptr<Application::Instance> instance;
+
+    const gchar* cappid = nullptr;
+    g_variant_get(params.get(), "(&s)", &cappid);
+
+    auto appid = ubuntu::app_launch::AppID::find(cappid);
+    app = ubuntu::app_launch::Application::create(appid, {});
+
+    return std::make_tuple(app, instance);
+}
+
 void Registry::Impl::setManager(Registry::Manager* manager)
 {
     if (_manager != nullptr)
@@ -587,14 +602,36 @@ void Registry::Impl::setManager(Registry::Manager* manager)
                 "/",                             /* path */
                 nullptr,                         /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
-                [](GDBusConnection* conn, const gchar* sender, const gchar*, const gchar*, const gchar*,
+                [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*,
                    GVariant* params, gpointer user_data) -> void {
-                    g_dbus_connection_emit_signal(conn, sender,                    /* destination */
-                                                  "/",                             /* path */
-                                                  "com.canonical.UbuntuAppLaunch", /* interface */
-                                                  "UnityResumeResponse",           /* signal */
-                                                  params,                          /* params, the same */
-                                                  nullptr);                        /* error */
+                    auto pthis = reinterpret_cast<Registry::Impl*>(user_data);
+
+                    if (pthis->_manager == nullptr)
+                    {
+                        return;
+                    }
+
+                    auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto conn =
+                        std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
+                                                         [](GDBusConnection* con) { g_clear_object(&con); });
+                    std::string sender = csender;
+                    std::shared_ptr<Application> app;
+                    std::shared_ptr<Application::Instance> instance;
+
+                    std::tie(app, instance) = managerParams(vparams);
+
+                    pthis->_manager->resumeRequest(app, instance, [conn, sender, vparams](bool response) {
+                        if (response)
+                        {
+                            g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                          "/",                             /* path */
+                                                          "com.canonical.UbuntuAppLaunch", /* interface */
+                                                          "UnityResumeResponse",           /* signal */
+                                                          vparams.get(),                   /* params, the same */
+                                                          nullptr);                        /* error */
+                        }
+                    });
                 },
                 this, nullptr); /* user data destroy */
         });
