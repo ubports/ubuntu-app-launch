@@ -492,72 +492,84 @@ generic_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * o
 gboolean
 ubuntu_app_launch_observer_add_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	if (cmanager.expired()) {
-		auto manager = std::make_shared<CManager>();
+	auto manager = cmanager.lock();
+
+	if (!manager) {
+		manager = std::make_shared<CManager>();
 		ubuntu::app_launch::Registry::setManager(manager, ubuntu::app_launch::Registry::getDefault());
 		cmanager = manager;
 	}
 
-	cmanager.lock()->addFocus(observer, user_data);
+	manager->addFocus(observer, user_data);
 	return TRUE;
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	if (cmanager.expired()) {
+	auto manager = cmanager.lock();
+
+	if (!manager) {
 		return FALSE;
 	}
 
-	return cmanager.lock()->deleteFocus(observer, user_data) ? TRUE : FALSE;
+	return manager->deleteFocus(observer, user_data) ? TRUE : FALSE;
 }
 
 gboolean
 ubuntu_app_launch_observer_add_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	if (cmanager.expired()) {
-		auto manager = std::make_shared<CManager>();
+	auto manager = cmanager.lock();
+
+	if (!manager) {
+		manager = std::make_shared<CManager>();
 		ubuntu::app_launch::Registry::setManager(manager, ubuntu::app_launch::Registry::getDefault());
 		cmanager = manager;
 	}
 
-	cmanager.lock()->addResume(observer, user_data);
+	manager->addResume(observer, user_data);
 	return TRUE;
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	if (cmanager.expired()) {
+	auto manager = cmanager.lock();
+
+	if (!manager) {
 		return FALSE;
 	}
 
-	return cmanager.lock()->deleteResume(observer, user_data) ? TRUE : FALSE;
+	return manager->deleteResume(observer, user_data) ? TRUE : FALSE;
 }
 
 gboolean
 ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	if (cmanager.expired()) {
-		auto manager = std::make_shared<CManager>();
+	auto manager = cmanager.lock();
+
+	if (!manager) {
+		manager = std::make_shared<CManager>();
 		ubuntu::app_launch::Registry::setManager(manager, ubuntu::app_launch::Registry::getDefault());
 		cmanager = manager;
 	}
 
 	ubuntu::app_launch::Registry::Impl::watchingAppStarting(true);
-	cmanager.lock()->addStarting(observer, user_data);
+	manager->addStarting(observer, user_data);
 	return TRUE;
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	if (cmanager.expired()) {
+	auto manager = cmanager.lock();
+
+	if (!manager) {
 		return FALSE;
 	}
 
 	ubuntu::app_launch::Registry::Impl::watchingAppStarting(false);
-	return cmanager.lock()->deleteStarting(observer, user_data) ? TRUE : FALSE;
+	return manager->deleteStarting(observer, user_data) ? TRUE : FALSE;
 }
 
 /* Map of all the observers listening for app stopped */
