@@ -655,7 +655,12 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
                        const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
                        const std::shared_ptr<GVariant>& params) {
                         /* Nothing to do today */
-                        reg->impl->manager_->focusRequest(app, instance, [](bool response) {});
+                        reg->impl->manager_->focusRequest(app, instance, [](bool response) {
+                            /* NOTE: We have no clue what thread this is gonna be
+                               executed on, but since we're just talking to the GDBus
+                               thread it isn't an issue today. Be careful in changing
+                               this code. */
+                        });
                     });
                 reg->impl->handle_managerSignalStarting = managerSignalHelper(
                     reg, "UnityStartingBroadcast",
@@ -665,6 +670,10 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
                        const std::shared_ptr<GVariant>& params) {
 
                         reg->impl->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
+                            /* NOTE: We have no clue what thread this is gonna be
+                               executed on, but since we're just talking to the GDBus
+                               thread it isn't an issue today. Be careful in changing
+                               this code. */
                             if (response)
                             {
                                 g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
@@ -683,6 +692,10 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
                        const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
                        const std::shared_ptr<GVariant>& params) {
                         reg->impl->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
+                            /* NOTE: We have no clue what thread this is gonna be
+                               executed on, but since we're just talking to the GDBus
+                               thread it isn't an issue today. Be careful in changing
+                               this code. */
                             if (response)
                             {
                                 g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
