@@ -580,15 +580,23 @@ struct managerEventData
     /* Keeping a weak pointer because the handle is held by
        the registry implementation. */
     std::weak_ptr<Registry> weakReg;
-    std::function<void(std::shared_ptr<GDBusConnection>, std::string, std::shared_ptr<GVariant>, bool)> func;
+    std::function<void(const std::shared_ptr<Registry>& reg,
+                       const std::shared_ptr<Application>& app,
+                       const std::shared_ptr<Application::Instance>& instance,
+                       const std::shared_ptr<GDBusConnection>&,
+                       const std::string&,
+                       const std::shared_ptr<GVariant>&)>
+        func;
 };
 
-guint Registry::Impl::managerSignalHelper(
-    const std::shared_ptr<Registry>& reg,
-    const std::string& signalname,
-    std::function<
-        void(const std::shared_ptr<GDBusConnection>&, const std::string&, const std::shared_ptr<GVariant>&, bool)>
-        responsefunc)
+guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
+                                          const std::string& signalname,
+                                          std::function<void(const std::shared_ptr<Registry>& reg,
+                                                             const std::shared_ptr<Application>& app,
+                                                             const std::shared_ptr<Application::Instance>& instance,
+                                                             const std::shared_ptr<GDBusConnection>&,
+                                                             const std::string&,
+                                                             const std::shared_ptr<GVariant>&)> responsefunc)
 {
     managerEventData* focusdata = new managerEventData{reg, responsefunc};
 
@@ -619,11 +627,7 @@ guint Registry::Impl::managerSignalHelper(
 
             std::tie(app, instance) = managerParams(vparams, reg);
 
-            auto lfunc = data->func;
-
-            reg->impl->manager_->startingRequest(app, instance, [conn, sender, vparams, lfunc](bool response) {
-                lfunc(conn, sender, vparams, response);
-            });
+            data->func(reg, app, instance, conn, sender, vparams);
         },
         focusdata,
         [](gpointer user_data) {
@@ -645,36 +649,47 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
     std::call_once(reg->impl->flag_managerSignals, [reg]() {
         reg->impl->thread.executeOnThread([reg]() {
             reg->impl->handle_managerSignalFocus = managerSignalHelper(
-                reg, "UnityFocusRequest", [](const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
-                                             const std::shared_ptr<GVariant>& params, bool response) {
+                reg, "UnityFocusRequest",
+                [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                   const std::shared_ptr<Application::Instance>& instance, const std::shared_ptr<GDBusConnection>& conn,
+                   const std::string& sender, const std::shared_ptr<GVariant>& params) {
                     /* Nothing to do today */
+                    reg->impl->manager_->focusRequest(app, instance, [](bool response) {});
                 });
             reg->impl->handle_managerSignalStarting = managerSignalHelper(
                 reg, "UnityStartingBroadcast",
-                [](const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
-                   const std::shared_ptr<GVariant>& params, bool response) {
-                    if (response)
-                    {
-                        g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
-                                                      "/",                             /* path */
-                                                      "com.canonical.UbuntuAppLaunch", /* interface */
-                                                      "UnityStartingSignal",           /* signal */
-                                                      params.get(),                    /* params, the same */
-                                                      nullptr);                        /* error */
-                    }
+                [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                   const std::shared_ptr<Application::Instance>& instance, const std::shared_ptr<GDBusConnection>& conn,
+                   const std::string& sender, const std::shared_ptr<GVariant>& params) {
+
+                    reg->impl->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
+                        if (response)
+                        {
+                            g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                          "/",                             /* path */
+                                                          "com.canonical.UbuntuAppLaunch", /* interface */
+                                                          "UnityStartingSignal",           /* signal */
+                                                          params.get(),                    /* params, the same */
+                                                          nullptr);                        /* error */
+                        }
+                    });
                 });
             reg->impl->handle_managerSignalResume = managerSignalHelper(
-                reg, "UnityResumeRequest", [](const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
-                                              const std::shared_ptr<GVariant>& params, bool response) {
-                    if (response)
-                    {
-                        g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
-                                                      "/",                             /* path */
-                                                      "com.canonical.UbuntuAppLaunch", /* interface */
-                                                      "UnityResumeResponse",           /* signal */
-                                                      params.get(),                    /* params, the same */
-                                                      nullptr);                        /* error */
-                    }
+                reg, "UnityResumeRequest",
+                [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                   const std::shared_ptr<Application::Instance>& instance, const std::shared_ptr<GDBusConnection>& conn,
+                   const std::string& sender, const std::shared_ptr<GVariant>& params) {
+                    reg->impl->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
+                        if (response)
+                        {
+                            g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                          "/",                             /* path */
+                                                          "com.canonical.UbuntuAppLaunch", /* interface */
+                                                          "UnityResumeResponse",           /* signal */
+                                                          params.get(),                    /* params, the same */
+                                                          nullptr);                        /* error */
+                        }
+                    });
                 });
         });
     });

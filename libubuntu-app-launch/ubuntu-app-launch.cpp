@@ -373,10 +373,16 @@ ubuntu_app_launch_observer_delete_app_stop (UbuntuAppLaunchAppObserver observer,
 
 class CManager : public ubuntu::app_launch::Registry::Manager
 {
+public:
+	CManager () {
+		g_debug("Creating the CManager object");
+	}
+
 	void startingRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
                                      std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
                                      std::function<void(bool)> reply) override {
 		std::string sappid = app->appId();
+		g_debug("CManager starting: %s", sappid.c_str());
 
 		for (auto observer : startingList) {
 			observer.first(sappid.c_str(), observer.second);
@@ -389,6 +395,7 @@ class CManager : public ubuntu::app_launch::Registry::Manager
                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
                                   std::function<void(bool)> reply) override {
 		std::string sappid = app->appId();
+		g_debug("CManager focus: %s", sappid.c_str());
 
 		for (auto observer : focusList) {
 			observer.first(sappid.c_str(), observer.second);
@@ -401,6 +408,7 @@ class CManager : public ubuntu::app_launch::Registry::Manager
                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
                                    std::function<void(bool)> reply) override {
 		std::string sappid = app->appId();
+		g_debug("CManager resume: %s", sappid.c_str());
 
 		for (auto observer : resumeList) {
 			observer.first(sappid.c_str(), observer.second);

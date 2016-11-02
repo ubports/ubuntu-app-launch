@@ -138,12 +138,14 @@ private:
         const std::shared_ptr<Registry>& reg);
     static std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> managerParams(
         const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry>& reg);
-    static guint managerSignalHelper(
-        const std::shared_ptr<Registry>& reg,
-        const std::string& signalname,
-        std::function<
-            void(const std::shared_ptr<GDBusConnection>&, const std::string&, const std::shared_ptr<GVariant>&, bool)>
-            responsefunc);
+    static guint managerSignalHelper(const std::shared_ptr<Registry>& reg,
+                                     const std::string& signalname,
+                                     std::function<void(const std::shared_ptr<Registry>& reg,
+                                                        const std::shared_ptr<Application>& app,
+                                                        const std::shared_ptr<Application::Instance>& instance,
+                                                        const std::shared_ptr<GDBusConnection>&,
+                                                        const std::string&,
+                                                        const std::shared_ptr<GVariant>&)> responsefunc);
 
     void initClick();
 
