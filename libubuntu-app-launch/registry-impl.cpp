@@ -647,51 +647,59 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
     reg->impl->manager_ = manager;
 
     std::call_once(reg->impl->flag_managerSignals, [reg]() {
-        reg->impl->thread.executeOnThread([reg]() {
-            reg->impl->handle_managerSignalFocus = managerSignalHelper(
-                reg, "UnityFocusRequest",
-                [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
-                   const std::shared_ptr<Application::Instance>& instance, const std::shared_ptr<GDBusConnection>& conn,
-                   const std::string& sender, const std::shared_ptr<GVariant>& params) {
-                    /* Nothing to do today */
-                    reg->impl->manager_->focusRequest(app, instance, [](bool response) {});
-                });
-            reg->impl->handle_managerSignalStarting = managerSignalHelper(
-                reg, "UnityStartingBroadcast",
-                [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
-                   const std::shared_ptr<Application::Instance>& instance, const std::shared_ptr<GDBusConnection>& conn,
-                   const std::string& sender, const std::shared_ptr<GVariant>& params) {
+        if (!reg->impl->thread.executeOnThread<bool>([reg]() {
+                reg->impl->handle_managerSignalFocus = managerSignalHelper(
+                    reg, "UnityFocusRequest",
+                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                       const std::shared_ptr<Application::Instance>& instance,
+                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                       const std::shared_ptr<GVariant>& params) {
+                        /* Nothing to do today */
+                        reg->impl->manager_->focusRequest(app, instance, [](bool response) {});
+                    });
+                reg->impl->handle_managerSignalStarting = managerSignalHelper(
+                    reg, "UnityStartingBroadcast",
+                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                       const std::shared_ptr<Application::Instance>& instance,
+                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                       const std::shared_ptr<GVariant>& params) {
 
-                    reg->impl->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
-                        if (response)
-                        {
-                            g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
-                                                          "/",                             /* path */
-                                                          "com.canonical.UbuntuAppLaunch", /* interface */
-                                                          "UnityStartingSignal",           /* signal */
-                                                          params.get(),                    /* params, the same */
-                                                          nullptr);                        /* error */
-                        }
+                        reg->impl->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
+                            if (response)
+                            {
+                                g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                              "/",                             /* path */
+                                                              "com.canonical.UbuntuAppLaunch", /* interface */
+                                                              "UnityStartingSignal",           /* signal */
+                                                              params.get(),                    /* params, the same */
+                                                              nullptr);                        /* error */
+                            }
+                        });
                     });
-                });
-            reg->impl->handle_managerSignalResume = managerSignalHelper(
-                reg, "UnityResumeRequest",
-                [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
-                   const std::shared_ptr<Application::Instance>& instance, const std::shared_ptr<GDBusConnection>& conn,
-                   const std::string& sender, const std::shared_ptr<GVariant>& params) {
-                    reg->impl->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
-                        if (response)
-                        {
-                            g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
-                                                          "/",                             /* path */
-                                                          "com.canonical.UbuntuAppLaunch", /* interface */
-                                                          "UnityResumeResponse",           /* signal */
-                                                          params.get(),                    /* params, the same */
-                                                          nullptr);                        /* error */
-                        }
+                reg->impl->handle_managerSignalResume = managerSignalHelper(
+                    reg, "UnityResumeRequest",
+                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                       const std::shared_ptr<Application::Instance>& instance,
+                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                       const std::shared_ptr<GVariant>& params) {
+                        reg->impl->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
+                            if (response)
+                            {
+                                g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                              "/",                             /* path */
+                                                              "com.canonical.UbuntuAppLaunch", /* interface */
+                                                              "UnityResumeResponse",           /* signal */
+                                                              params.get(),                    /* params, the same */
+                                                              nullptr);                        /* error */
+                            }
+                        });
                     });
-                });
-        });
+
+                return true;
+            }))
+        {
+            g_warning("Unable to install manager signals");
+        }
     });
 }
 
