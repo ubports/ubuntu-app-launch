@@ -384,8 +384,10 @@ public:
 		std::string sappid = app->appId();
 		g_debug("CManager starting: %s", sappid.c_str());
 
-		for (auto observer : startingList) {
-			observer.first(sappid.c_str(), observer.second);
+		for (const auto &data : startingList) {
+			executeOnContext(data.context, [data, sappid]() {
+				data.observer(sappid.c_str(), data.user_data);
+			});
 		}
 
 		reply(true);
@@ -397,8 +399,10 @@ public:
 		std::string sappid = app->appId();
 		g_debug("CManager focus: %s", sappid.c_str());
 
-		for (auto observer : focusList) {
-			observer.first(sappid.c_str(), observer.second);
+		for (const auto &data : focusList) {
+			executeOnContext(data.context, [data, sappid]() {
+				data.observer(sappid.c_str(), data.user_data);
+			});
 		}
 
 		reply(true);
@@ -410,21 +414,36 @@ public:
 		std::string sappid = app->appId();
 		g_debug("CManager resume: %s", sappid.c_str());
 
-		for (auto observer : resumeList) {
-			observer.first(sappid.c_str(), observer.second);
+		for (const auto &data : resumeList) {
+			executeOnContext(data.context, [data, sappid]() {
+				data.observer(sappid.c_str(), data.user_data);
+			});
 		}
 
 		reply(true);
 	}
 
-
 private:
-	std::list<std::pair<UbuntuAppLaunchAppObserver, gpointer>> focusList;
-	std::list<std::pair<UbuntuAppLaunchAppObserver, gpointer>> resumeList;
-	std::list<std::pair<UbuntuAppLaunchAppObserver, gpointer>> startingList;
+	struct ObserverData {
+		UbuntuAppLaunchAppObserver observer;
+		gpointer user_data;
+		std::shared_ptr<GMainContext> context;
 
-	bool removeList (std::list<std::pair<UbuntuAppLaunchAppObserver, gpointer>> &list, UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		auto iter = std::find(list.begin(), list.end(), std::make_pair(observer, user_data));
+		ObserverData(UbuntuAppLaunchAppObserver obs, gpointer ud)
+			: observer(obs)
+			, user_data(ud) {
+			context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+		}
+	};
+
+	std::list<ObserverData> focusList;
+	std::list<ObserverData> resumeList;
+	std::list<ObserverData> startingList;
+
+	bool removeList (std::list<ObserverData> &list, UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+		auto iter = std::find_if(list.begin(), list.end(), [observer, user_data](const ObserverData &data) {
+			return data.observer == observer && data.user_data == user_data;
+		});
 
 		if (iter == list.end()) {
 			return false;
@@ -436,13 +455,13 @@ private:
 
 public:
 	void addFocus (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		focusList.emplace_back(std::make_pair(observer, user_data));
+		focusList.emplace_back(ObserverData(observer, user_data));
 	}
 	void addResume (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		resumeList.emplace_back(std::make_pair(observer, user_data));
+		resumeList.emplace_back(ObserverData(observer, user_data));
 	}
 	void addStarting (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		startingList.emplace_back(std::make_pair(observer, user_data));
+		startingList.emplace_back(ObserverData(observer, user_data));
 	}
 	bool deleteFocus (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
 		return removeList(focusList, observer, user_data);
