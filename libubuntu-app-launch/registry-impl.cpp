@@ -575,6 +575,63 @@ std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>
     return std::make_tuple(app, instance);
 }
 
+struct managerEventData
+{
+    /* Keeping a weak pointer because the handle is held by
+       the registry implementation. */
+    std::weak_ptr<Registry> weakReg;
+    std::function<void(std::shared_ptr<GDBusConnection>, std::string, std::shared_ptr<GVariant>, bool)> func;
+};
+
+guint Registry::Impl::managerSignalHelper(
+    const std::shared_ptr<Registry>& reg,
+    const std::string& signalname,
+    std::function<
+        void(const std::shared_ptr<GDBusConnection>&, const std::string&, const std::shared_ptr<GVariant>&, bool)>
+        responsefunc)
+{
+    managerEventData* focusdata = new managerEventData{reg, responsefunc};
+
+    return g_dbus_connection_signal_subscribe(
+        reg->impl->_dbus.get(),          /* bus */
+        nullptr,                         /* sender */
+        "com.canonical.UbuntuAppLaunch", /* interface */
+        signalname.c_str(),              /* signal */
+        "/",                             /* path */
+        nullptr,                         /* arg0 */
+        G_DBUS_SIGNAL_FLAGS_NONE,
+        [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*, GVariant* params,
+           gpointer user_data) -> void {
+            auto data = reinterpret_cast<managerEventData*>(user_data);
+            auto reg = data->weakReg.lock();
+
+            if (!reg->impl->manager_)
+            {
+                return;
+            }
+
+            auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+            auto conn = std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
+                                                         [](GDBusConnection* con) { g_clear_object(&con); });
+            std::string sender = csender;
+            std::shared_ptr<Application> app;
+            std::shared_ptr<Application::Instance> instance;
+
+            std::tie(app, instance) = managerParams(vparams, reg);
+
+            auto lfunc = data->func;
+
+            reg->impl->manager_->startingRequest(app, instance, [conn, sender, vparams, lfunc](bool response) {
+                lfunc(conn, sender, vparams, response);
+            });
+        },
+        focusdata,
+        [](gpointer user_data) {
+            auto data = reinterpret_cast<managerEventData*>(user_data);
+            delete data;
+        }); /* user data destroy */
+}
+
 void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std::shared_ptr<Registry> reg)
 {
     if (reg->impl->manager_)
@@ -587,137 +644,38 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
 
     std::call_once(reg->impl->flag_managerSignals, [reg]() {
         reg->impl->thread.executeOnThread([reg]() {
-            upstartEventData* focusdata = new upstartEventData{reg};
-            upstartEventData* resumedata = new upstartEventData{reg};
-            upstartEventData* startingdata = new upstartEventData{reg};
-
-            /**** FOCUS ****/
-            reg->impl->handle_managerSignalFocus = g_dbus_connection_signal_subscribe(
-                reg->impl->_dbus.get(),          /* bus */
-                nullptr,                         /* sender */
-                "com.canonical.UbuntuAppLaunch", /* interface */
-                "UnityFocusRequest",             /* signal */
-                "/",                             /* path */
-                nullptr,                         /* arg0 */
-                G_DBUS_SIGNAL_FLAGS_NONE,
-                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    auto reg = data->weakReg.lock();
-
-                    if (!reg->impl->manager_)
+            reg->impl->handle_managerSignalFocus = managerSignalHelper(
+                reg, "UnityFocusRequest", [](const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                                             const std::shared_ptr<GVariant>& params, bool response) {
+                    /* Nothing to do today */
+                });
+            reg->impl->handle_managerSignalStarting = managerSignalHelper(
+                reg, "UnityStartingBroadcast",
+                [](const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                   const std::shared_ptr<GVariant>& params, bool response) {
+                    if (response)
                     {
-                        return;
+                        g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                      "/",                             /* path */
+                                                      "com.canonical.UbuntuAppLaunch", /* interface */
+                                                      "UnityStartingSignal",           /* signal */
+                                                      params.get(),                    /* params, the same */
+                                                      nullptr);                        /* error */
                     }
-
-                    auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-
-                    std::shared_ptr<Application> app;
-                    std::shared_ptr<Application::Instance> instance;
-
-                    std::tie(app, instance) = managerParams(vparams, reg);
-
-                    reg->impl->manager_->focusRequest(app, instance, [](bool response) {});
-                },
-                focusdata,
-                [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    delete data;
-                }); /* user data destroy */
-
-            /**** STARTING ****/
-            reg->impl->handle_managerSignalResume = g_dbus_connection_signal_subscribe(
-                reg->impl->_dbus.get(),          /* bus */
-                nullptr,                         /* sender */
-                "com.canonical.UbuntuAppLaunch", /* interface */
-                "UnityStartingBroadcast",        /* signal */
-                "/",                             /* path */
-                nullptr,                         /* arg0 */
-                G_DBUS_SIGNAL_FLAGS_NONE,
-                [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*,
-                   GVariant* params, gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    auto reg = data->weakReg.lock();
-
-                    if (!reg->impl->manager_)
+                });
+            reg->impl->handle_managerSignalResume = managerSignalHelper(
+                reg, "UnityResumeRequest", [](const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                                              const std::shared_ptr<GVariant>& params, bool response) {
+                    if (response)
                     {
-                        return;
+                        g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                      "/",                             /* path */
+                                                      "com.canonical.UbuntuAppLaunch", /* interface */
+                                                      "UnityResumeResponse",           /* signal */
+                                                      params.get(),                    /* params, the same */
+                                                      nullptr);                        /* error */
                     }
-
-                    auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    auto conn =
-                        std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
-                                                         [](GDBusConnection* con) { g_clear_object(&con); });
-                    std::string sender = csender;
-                    std::shared_ptr<Application> app;
-                    std::shared_ptr<Application::Instance> instance;
-
-                    std::tie(app, instance) = managerParams(vparams, reg);
-
-                    reg->impl->manager_->startingRequest(app, instance, [conn, sender, vparams](bool response) {
-                        if (response)
-                        {
-                            g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
-                                                          "/",                             /* path */
-                                                          "com.canonical.UbuntuAppLaunch", /* interface */
-                                                          "UnityStartingSignal",           /* signal */
-                                                          vparams.get(),                   /* params, the same */
-                                                          nullptr);                        /* error */
-                        }
-                    });
-                },
-                startingdata,
-                [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    delete data;
-                }); /* user data destroy */
-
-            /**** RESUME ****/
-            reg->impl->handle_managerSignalResume = g_dbus_connection_signal_subscribe(
-                reg->impl->_dbus.get(),          /* bus */
-                nullptr,                         /* sender */
-                "com.canonical.UbuntuAppLaunch", /* interface */
-                "UnityResumeRequest",            /* signal */
-                "/",                             /* path */
-                nullptr,                         /* arg0 */
-                G_DBUS_SIGNAL_FLAGS_NONE,
-                [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*,
-                   GVariant* params, gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    auto reg = data->weakReg.lock();
-
-                    if (!reg->impl->manager_)
-                    {
-                        return;
-                    }
-
-                    auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    auto conn =
-                        std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
-                                                         [](GDBusConnection* con) { g_clear_object(&con); });
-                    std::string sender = csender;
-                    std::shared_ptr<Application> app;
-                    std::shared_ptr<Application::Instance> instance;
-
-                    std::tie(app, instance) = managerParams(vparams, reg);
-
-                    reg->impl->manager_->resumeRequest(app, instance, [conn, sender, vparams](bool response) {
-                        if (response)
-                        {
-                            g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
-                                                          "/",                             /* path */
-                                                          "com.canonical.UbuntuAppLaunch", /* interface */
-                                                          "UnityResumeResponse",           /* signal */
-                                                          vparams.get(),                   /* params, the same */
-                                                          nullptr);                        /* error */
-                        }
-                    });
-                },
-                resumedata,
-                [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    delete data;
-                }); /* user data destroy */
+                });
         });
     });
 }
