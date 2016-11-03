@@ -569,7 +569,7 @@ std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>
     const gchar* cappid = nullptr;
     g_variant_get(params.get(), "(&s)", &cappid);
 
-    auto appid = ubuntu::app_launch::AppID::find(cappid);
+    auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
     app = ubuntu::app_launch::Application::create(appid, reg);
 
     return std::make_tuple(app, instance);
@@ -785,7 +785,7 @@ void Registry::Impl::upstartEventEmitted(
 
     g_debug("Upstart Event for job '%s' appid '%s' instance '%s'", jobname.c_str(), sappid.c_str(), instance.c_str());
 
-    auto appid = AppID::find(sappid);
+    auto appid = AppID::find(reg, sappid);
     auto app = Application::create(appid, reg);
 
     // TODO: Figure otu creating instances
@@ -898,7 +898,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                         g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
                     }
 
-                    auto appid = AppID::find(sappid);
+                    auto appid = AppID::find(reg, sappid);
                     auto app = Application::create(appid, reg);
 
                     /* TODO: Instance issues */
@@ -936,7 +936,7 @@ void Registry::Impl::pauseEventEmitted(
     }
 
     auto cappid = g_variant_get_string(vappid, NULL);
-    auto appid = ubuntu::app_launch::AppID::find(cappid);
+    auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
     auto app = Application::create(appid, reg);
 
     /* TODO: Instance */

@@ -49,32 +49,66 @@ protected:
     DbusTestDbusMock* mock = NULL;
     DbusTestDbusMock* cgmock = NULL;
     GDBusConnection* bus = NULL;
-    std::string last_focus_appid;
-    std::string last_resume_appid;
     guint resume_timeout = 0;
     std::shared_ptr<ubuntu::app_launch::Registry> registry;
 
-private:
-    static void focus_cb(const gchar* appid, gpointer user_data)
+    class ManagerMock : public ubuntu::app_launch::Registry::Manager
     {
-        g_debug("Focus Callback: %s", appid);
-        LibUAL* _this = static_cast<LibUAL*>(user_data);
-        _this->last_focus_appid = appid;
-    }
+        GLib::ContextThread thread;
 
-    static void resume_cb(const gchar* appid, gpointer user_data)
-    {
-        g_debug("Resume Callback: %s", appid);
-        LibUAL* _this = static_cast<LibUAL*>(user_data);
-        _this->last_resume_appid = appid;
+    public:
+		ManagerMock() {
+			g_debug("Building a Manager Mock");
+		}
 
-        if (_this->resume_timeout > 0)
+		~ManagerMock() {
+			g_debug("Freeing a Manager Mock");
+		}
+
+        ubuntu::app_launch::AppID lastStartedApp;
+        ubuntu::app_launch::AppID lastFocusedApp;
+        ubuntu::app_launch::AppID lastResumedApp;
+
+        bool startingResponse{true};
+        bool focusResponse{true};
+        bool resumeResponse{true};
+
+        std::chrono::milliseconds startingTimeout{0};
+        std::chrono::milliseconds focusTimeout{0};
+        std::chrono::milliseconds resumeTimeout{0};
+
+        void startingRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
+                             std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                             std::function<void(bool)> reply) override
         {
-            _this->pause(_this->resume_timeout);
+            thread.timeout(startingTimeout, [this, app, instance, reply]() {
+                lastStartedApp = app->appId();
+                reply(startingResponse);
+            });
         }
-    }
 
-protected:
+        void focusRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
+                          std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                          std::function<void(bool)> reply) override
+        {
+            thread.timeout(focusTimeout, [this, app, instance, reply]() {
+                lastFocusedApp = app->appId();
+                reply(focusResponse);
+            });
+        }
+
+        void resumeRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
+                           std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                           std::function<void(bool)> reply) override
+        {
+            thread.timeout(resumeTimeout, [this, app, instance, reply]() {
+                lastResumedApp = app->appId();
+                reply(resumeResponse);
+            });
+        }
+    };
+    std::weak_ptr<ManagerMock> manager;
+
     /* Useful debugging stuff, but not on by default.  You really want to
        not get all this noise typically */
     void debugConnection()
@@ -272,18 +306,17 @@ protected:
         /* Make sure we pretend the CG manager is just on our bus */
         g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS", "YES", TRUE);
 
-        ASSERT_TRUE(ubuntu_app_launch_observer_add_app_focus(focus_cb, this));
-        ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resume(resume_cb, this));
-
         registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+        auto smanager = std::make_shared<ManagerMock>();
+        manager = smanager;
+        ubuntu::app_launch::Registry::setManager(smanager, registry);
     }
 
     virtual void TearDown()
     {
-        ubuntu_app_launch_observer_delete_app_focus(focus_cb, this);
-        ubuntu_app_launch_observer_delete_app_resume(resume_cb, this);
-
         registry.reset();
+		//ubuntu::app_launch::Registry::clearDefault();
 
         g_clear_object(&mock);
         g_clear_object(&cgmock);
@@ -947,8 +980,10 @@ TEST_F(LibUAL, AppIdTest)
     auto app = ubuntu::app_launch::Application::create(appid, registry);
     app->launch();
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 }
 
 GDBusMessage* filter_func_good(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -982,8 +1017,10 @@ TEST_F(LibUAL, UrlSendTest)
 
     app->launch(uris);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 
     g_dbus_connection_remove_filter(session, filter);
 
@@ -1015,8 +1052,10 @@ TEST_F(LibUAL, UrlSendNoObjectTest)
 
     app->launch(uris);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 }
 
 TEST_F(LibUAL, UnityTimeoutTest)
@@ -1028,8 +1067,10 @@ TEST_F(LibUAL, UnityTimeoutTest)
 
     app->launch();
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
 }
 
 TEST_F(LibUAL, UnityTimeoutUriTest)
@@ -1043,8 +1084,10 @@ TEST_F(LibUAL, UnityTimeoutUriTest)
 
     app->launch(uris);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 }
 
 GDBusMessage* filter_respawn(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -1077,8 +1120,10 @@ TEST_F(LibUAL, UnityLostTest)
     g_debug("Start call time: %d ms", (end - start) / 1000);
     EXPECT_LT(end - start, 2000 * 1000);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 
     g_dbus_connection_remove_filter(session, filter);
     g_object_unref(session);
