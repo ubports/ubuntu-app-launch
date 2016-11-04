@@ -553,13 +553,18 @@ std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
     return _iconFinders[basePath];
 }
 
+/** Structure to track the data needed for upstart events. This cleans
+    up the lifecycle as we're passing this as a pointer through the
+    GLib calls. */
 struct upstartEventData
 {
-    /* Keeping a weak pointer because the handle is held by
-       the registry implementation. */
+    /** Keeping a weak pointer because the handle is held by
+        the registry implementation. */
     std::weak_ptr<Registry> weakReg;
 };
 
+/** Take the GVariant of parameters and turn them into an application and
+    and instance. Easier to read in the smaller function */
 std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> Registry::Impl::managerParams(
     const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry>& reg)
 {
@@ -575,6 +580,8 @@ std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>
     return std::make_tuple(app, instance);
 }
 
+/** Used to store data for manager based signal handlers. Has a link to the
+    registry and the callback to use in a C++ style. */
 struct managerEventData
 {
     /* Keeping a weak pointer because the handle is held by
@@ -589,6 +596,10 @@ struct managerEventData
         func;
 };
 
+/** Register for a signal for the manager. All of the signals needed this same
+    code so it got pulled out into a function. Takes the same of the signal, the registry
+    that we're using and a function to call after we've messaged all the parameters
+    into being something C++-ish. */
 guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
                                           const std::string& signalname,
                                           std::function<void(const std::shared_ptr<Registry>& reg,
@@ -613,6 +624,8 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
             auto data = reinterpret_cast<managerEventData*>(user_data);
             auto reg = data->weakReg.lock();
 
+            /* If we're still conneted and the manager has been cleared
+               we'll just be a no-op */
             if (!reg->impl->manager_)
             {
                 return;
@@ -636,6 +649,11 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
         }); /* user data destroy */
 }
 
+/** Set the manager for the registry. This includes tracking the pointer
+    as well as setting up the signals to call back into the manager. The
+    signals are only setup once per registry even if the manager is cleared
+    and changed again. They will just be no-op's in those cases.
+*/
 void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std::shared_ptr<Registry> reg)
 {
     if (reg->impl->manager_)
@@ -716,6 +734,7 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
     });
 }
 
+/** Clear the manager pointer */
 void Registry::Impl::clearManager()
 {
     g_debug("Clearing the manager");
@@ -743,9 +762,14 @@ bool Registry::Impl::isWatchingAppStarting()
     return watchingAppStarting_;
 }
 
+/** Regex to parse the JOB environment variable from Upstart */
 std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
+/** Regex to parse the INSTANCE environment variable from Upstart */
 std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
 
+/** Core of most of the events that come from Upstart directly. Includes parsing of the
+    Upstart event environment and calling the appropriate signal with the right Application
+    object and eventually its instance */
 void Registry::Impl::upstartEventEmitted(
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
     std::shared_ptr<GVariant> params,
@@ -793,6 +817,8 @@ void Registry::Impl::upstartEventEmitted(
     signal(app, {});
 }
 
+/** Grab the signal object for application startup. If we're not already listing for
+    those signals this sets up a listener for them. */
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted(
     const std::shared_ptr<Registry>& reg)
 {
@@ -826,6 +852,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     return sig_appStarted;
 }
 
+/** Grab the signal object for application stopping. If we're not already listing for
+    those signals this sets up a listener for them. */
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped(
     const std::shared_ptr<Registry>& reg)
 {
@@ -859,6 +887,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     return sig_appStopped;
 }
 
+/** Grab the signal object for application failing. If we're not already listing for
+    those signals this sets up a listener for them. */
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
     Registry::Impl::appFailed(const std::shared_ptr<Registry>& reg)
 {
@@ -918,6 +948,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     return sig_appFailed;
 }
 
+/** Core handler for pause and resume events. Includes turning the GVariant
+    pid list into a std::vector and getting the application object. */
 void Registry::Impl::pauseEventEmitted(
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
     const std::shared_ptr<GVariant>& params,
@@ -948,6 +980,8 @@ void Registry::Impl::pauseEventEmitted(
     return;
 }
 
+/** Grab the signal object for application paused. If we're not already listing for
+    those signals this sets up a listener for them. */
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
     Registry::Impl::appPaused(const std::shared_ptr<Registry>& reg)
 {
@@ -981,6 +1015,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     return sig_appPaused;
 }
 
+/** Grab the signal object for application resumed. If we're not already listing for
+    those signals this sets up a listener for them. */
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
     Registry::Impl::appResumed(const std::shared_ptr<Registry>& reg)
 {
