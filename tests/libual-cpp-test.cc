@@ -163,13 +163,13 @@ protected:
 
         dbus_test_dbus_mock_object_add_method(mock, obj, "GetJobByName", G_VARIANT_TYPE("s"), G_VARIANT_TYPE("o"),
                                               "if args[0] == 'application-click':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/application_click')\n"
+                                              "    ret = dbus.ObjectPath('/com/test/application_click')\n"
                                               "elif args[0] == 'application-snap':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/application_snap')\n"
+                                              "    ret = dbus.ObjectPath('/com/test/application_snap')\n"
                                               "elif args[0] == 'application-legacy':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/application_legacy')\n"
+                                              "    ret = dbus.ObjectPath('/com/test/application_legacy')\n"
                                               "elif args[0] == 'untrusted-helper':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/untrusted/helper')\n",
+                                              "    ret = dbus.ObjectPath('/com/test/untrusted/helper')\n",
                                               NULL);
 
         dbus_test_dbus_mock_object_add_method(mock, obj, "SetEnv", G_VARIANT_TYPE("(assb)"), NULL, "", NULL);
@@ -318,6 +318,11 @@ protected:
     virtual void TearDown()
     {
         registry.reset();
+
+        // NOTE: This should generally always be commented out, but
+        // it is useful for debugging common errors, so leaving it
+        // as a comment to make debugging those eaiser.
+        //
         // ubuntu::app_launch::Registry::clearDefault();
 
         g_clear_object(&mock);
