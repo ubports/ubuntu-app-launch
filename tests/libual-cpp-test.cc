@@ -929,38 +929,29 @@ TEST_F(LibUAL, StartStopObserver)
     EXPECT_EVENTUALLY_EQ(1, stop_count);
 }
 
-static GDBusMessage* filter_starting(GDBusConnection* conn,
-                                     GDBusMessage* message,
-                                     gboolean incomming,
-                                     gpointer user_data)
-{
-    if (g_strcmp0(g_dbus_message_get_member(message), "UnityStartingSignal") == 0)
-    {
-        unsigned int* count = static_cast<unsigned int*>(user_data);
-        (*count)++;
-        g_object_unref(message);
-        return NULL;
-    }
-
-    return message;
-}
-
-static void starting_observer(const gchar* appid, gpointer user_data)
-{
-    std::string* last = static_cast<std::string*>(user_data);
-    *last = appid;
-    return;
-}
-
 TEST_F(LibUAL, StartingResponses)
 {
-    std::string last_observer;
-    unsigned int starting_count = 0;
+    /* Get Bus */
     GDBusConnection* session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-    guint filter = g_dbus_connection_add_filter(session, filter_starting, &starting_count, NULL);
 
-    EXPECT_TRUE(ubuntu_app_launch_observer_add_app_starting(starting_observer, &last_observer));
+    /* Setup filter to count signals out */
+    unsigned int starting_count = 0;
+    guint filter = g_dbus_connection_add_filter(
+        session,
+        [](GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data) -> GDBusMessage* {
+            if (g_strcmp0(g_dbus_message_get_member(message), "UnityStartingSignal") == 0)
+            {
+                unsigned int* count = static_cast<unsigned int*>(user_data);
+                (*count)++;
+                g_object_unref(message);
+                return NULL;
+            }
 
+            return message;
+        },
+        &starting_count, NULL);
+
+    /* Emit a signal */
     g_dbus_connection_emit_signal(session, NULL,                                           /* destination */
                                   "/",                                                     /* path */
                                   "com.canonical.UbuntuAppLaunch",                         /* interface */
@@ -968,10 +959,14 @@ TEST_F(LibUAL, StartingResponses)
                                   g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
                                   NULL);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
-    EXPECT_EVENTUALLY_EQ(1, starting_count);
+    /* Make sure we run our observer */
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw("com.test.good"),
+                                                   ubuntu::app_launch::AppID::AppName::from_raw("application"),
+                                                   ubuntu::app_launch::AppID::Version::from_raw("1.2.3")),
+                         manager.lock()->lastStartedApp);
 
-    EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
+    /* Make sure we return */
+    EXPECT_EVENTUALLY_EQ(1, starting_count);
 
     g_dbus_connection_remove_filter(session, filter);
     g_object_unref(session);
