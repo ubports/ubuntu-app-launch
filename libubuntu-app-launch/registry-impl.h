@@ -99,35 +99,46 @@ public:
     static bool isWatchingAppStarting();
 
 private:
-    Registry* _registry;
-    std::shared_ptr<Registry::Manager> manager_;
+    Registry* _registry;                         /**< The Registry that we're spawned from */
+    std::shared_ptr<Registry::Manager> manager_; /**< Application manager if registered */
 
-    std::shared_ptr<ClickDB> _clickDB;
-    std::shared_ptr<ClickUser> _clickUser;
+    std::shared_ptr<ClickDB> _clickDB;     /**< Shared instance of the Click Database */
+    std::shared_ptr<ClickUser> _clickUser; /**< Click database filtered by the current user */
 
+    /** Signal object for applications started */
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStarted;
+    /** Signal object for applications stopped */
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStopped;
+    /** Signal object for applications failed */
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> sig_appFailed;
+    /** Signal object for applications paused */
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>
         sig_appPaused;
+    /** Signal object for applications resumed */
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>
         sig_appResumed;
 
-    guint handle_appStarted{0};
-    guint handle_appStopped{0};
-    guint handle_appFailed{0};
-    guint handle_appPaused{0};
-    guint handle_appResumed{0};
-    guint handle_managerSignalFocus{0};
-    guint handle_managerSignalResume{0};
-    guint handle_managerSignalStarting{0};
+    guint handle_appStarted{0};            /**< GDBus signal watcher handle for app started signal */
+    guint handle_appStopped{0};            /**< GDBus signal watcher handle for app stopped signal */
+    guint handle_appFailed{0};             /**< GDBus signal watcher handle for app failed signal */
+    guint handle_appPaused{0};             /**< GDBus signal watcher handle for app paused signal */
+    guint handle_appResumed{0};            /**< GDBus signal watcher handle for app resumed signal */
+    guint handle_managerSignalFocus{0};    /**< GDBus signal watcher handle for app focused signal */
+    guint handle_managerSignalResume{0};   /**< GDBus signal watcher handle for app resumed signal */
+    guint handle_managerSignalStarting{0}; /**< GDBus signal watcher handle for app starting signal */
 
-    std::once_flag flag_appStarted;
-    std::once_flag flag_appStopped;
-    std::once_flag flag_appFailed;
-    std::once_flag flag_appPaused;
-    std::once_flag flag_appResumed;
-    std::once_flag flag_managerSignals;
+    std::once_flag flag_appStarted; /**< Variable to track to see if signal handlers are installed for application
+                                       started */
+    std::once_flag flag_appStopped; /**< Variable to track to see if signal handlers are installed for application
+                                       stopped */
+    std::once_flag
+        flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
+    std::once_flag
+        flag_appPaused; /**< Variable to track to see if signal handlers are installed for application paused */
+    std::once_flag flag_appResumed;     /**< Variable to track to see if signal handlers are installed for application
+                                           resumed */
+    std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
+                                           signals of focused, resumed and starting */
 
     void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
                              std::shared_ptr<GVariant> params,
@@ -149,12 +160,16 @@ private:
 
     void initClick();
 
+    /** Shared instance of the Zeitgeist Log */
     std::shared_ptr<ZeitgeistLog> zgLog_;
 
+    /** Shared connection to CGManager */
     std::shared_ptr<GDBusConnection> cgManager_;
 
     void initCGManager();
 
+    /** All of our icon finders based on the path that they're looking
+        into */
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 
     /** Getting the Upstart job path is relatively expensive in
