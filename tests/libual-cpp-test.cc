@@ -1181,22 +1181,20 @@ TEST_F(LibUAL, LegacySingleInstance)
     g_variant_unref(env);
 }
 
-static void failed_observer(const gchar* appid, UbuntuAppLaunchAppFailed reason, gpointer user_data)
-{
-    if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_CRASH)
-    {
-        std::string* last = static_cast<std::string*>(user_data);
-        *last = appid;
-    }
-    return;
-}
-
 TEST_F(LibUAL, FailingObserver)
 {
-    std::string last_observer;
-    GDBusConnection* session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+    ubuntu::app_launch::AppID lastFailedApp;
+    ubuntu::app_launch::Registry::FailureType lastFailedType;
 
-    EXPECT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+    ubuntu::app_launch::Registry::appFailed(registry).connect(
+        [&lastFailedApp, &lastFailedType](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                          std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                                          ubuntu::app_launch::Registry::FailureType type) {
+            lastFailedApp = app->appId();
+            lastFailedType = type;
+        });
+
+    GDBusConnection* session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
     g_dbus_connection_emit_signal(
         session, NULL,                                                     /* destination */
@@ -1206,9 +1204,10 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "crash"), /* params, the same */
         NULL);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"), lastFailedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::Registry::FailureType::CRASH, lastFailedType);
 
-    last_observer.clear();
+    lastFailedApp = ubuntu::app_launch::AppID();
 
     g_dbus_connection_emit_signal(
         session, NULL,                                                        /* destination */
@@ -1218,9 +1217,9 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "blahblah"), /* params, the same */
         NULL);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"), lastFailedApp);
 
-    last_observer.clear();
+    lastFailedApp = ubuntu::app_launch::AppID();
 
     g_dbus_connection_emit_signal(
         session, NULL,                                                             /* destination */
@@ -1230,9 +1229,7 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "start-failure"), /* params, the same */
         NULL);
 
-    EXPECT_EVENTUALLY_EQ(true, last_observer.empty());
-
-    EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::Registry::FailureType::START_FAILURE, lastFailedType);
 
     g_object_unref(session);
 }
