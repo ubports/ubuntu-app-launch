@@ -54,6 +54,20 @@ public:
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
 
+    /* Signals to apps */
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted() override;
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped() override;
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+        appFailed() override;
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+        appPaused() override;
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+        appResumed() override;
+
+    /* App manager */
+    virtual void setManager(std::shared_ptr<Registry::Manager> manager) override;
+    virtual void clearManager() override;
+
     std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
 
     std::list<std::string> upstartInstancesForJob(const std::string& job);

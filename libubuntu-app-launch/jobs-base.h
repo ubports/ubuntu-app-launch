@@ -18,7 +18,11 @@
  */
 
 #pragma once
+
 #include "application.h"
+#include "registry.h"
+
+#include <core/signal.h>
 
 namespace ubuntu
 {
@@ -106,6 +110,20 @@ public:
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
 
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
+
+    /* Signals to apps */
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted() = 0;
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped() = 0;
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+        appFailed() = 0;
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+        appPaused() = 0;
+    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+        appResumed() = 0;
+
+    /* App manager */
+    virtual void setManager(std::shared_ptr<Registry::Manager> manager) = 0;
+    virtual void clearManager() = 0;
 
 protected:
     std::weak_ptr<Registry> registry_;

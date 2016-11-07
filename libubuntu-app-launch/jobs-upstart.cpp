@@ -576,6 +576,44 @@ std::vector<std::shared_ptr<instance::Base>> Upstart::instances(const AppID& app
     return vect;
 }
 
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Upstart::appStarted()
+{
+    throw std::runtime_error("Not implemented");
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Upstart::appStopped()
+{
+    throw std::runtime_error("Not implemented");
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    Upstart::appFailed()
+{
+    throw std::runtime_error("Not implemented");
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Upstart::appPaused()
+{
+    throw std::runtime_error("Not implemented");
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Upstart::appResumed()
+{
+    throw std::runtime_error("Not implemented");
+}
+
+void Upstart::setManager(std::shared_ptr<Registry::Manager> manager)
+{
+    throw std::runtime_error("Not implemented");
+}
+
+void Upstart::clearManager()
+{
+    throw std::runtime_error("Not implemented");
+}
+
 /** Initialize the CGManager connection, including a timeout to disconnect
     as CGManager doesn't free resources entirely well. So it's better if
     we connect and disconnect occationally */
