@@ -146,6 +146,46 @@ Helper Implementation Click
    :private-members:
    :undoc-members:
 
+Jobs Manager Base
+-----------------
+
+.. doxygenclass:: ubuntu::app_launch::jobs::manager::Base
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Jobs Instance Base
+------------------
+
+.. doxygenclass:: ubuntu::app_launch::jobs::instance::Base
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Jobs Manager Upstart
+--------------------
+
+.. doxygenclass:: ubuntu::app_launch::jobs::manager::Upstart
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Jobs Instance Upstart
+---------------------
+
+.. doxygenclass:: ubuntu::app_launch::jobs::instance::Upstart
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
 Registry Implementation
 -----------------------
 
@@ -170,16 +210,6 @@ Type Tagger
 -----------
 
 .. doxygenclass:: ubuntu::app_launch::TypeTagger
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Upstart Instance
-----------------
-
-.. doxygenclass:: ubuntu::app_launch::app_impls::UpstartInstance
    :project: libubuntu-app-launch
    :members:
    :protected-members:

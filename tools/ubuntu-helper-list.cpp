@@ -17,8 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <iostream>
 #include "libubuntu-app-launch/registry.h"
+#include <iostream>
 
 int main(int argc, char* argv[])
 {
