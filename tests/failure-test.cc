@@ -20,34 +20,30 @@
 #include <gtest/gtest.h>
 #include <glib/gstdio.h>
 #include <gio/gio.h>
-#include <ubuntu-app-launch.h>
+#include "registry.h"
 #include "eventually-fixture.h"
 
 class FailureTest : public EventuallyFixture
 {
 	private:
 		GTestDBus * testbus = NULL;
+		std::shared_ptr<ubuntu::app_launch::Registry> registry;
 
 	protected:
 		virtual void SetUp() {
 			testbus = g_test_dbus_new(G_TEST_DBUS_NONE);
 			g_test_dbus_up(testbus);
+
+			registry = std::make_shared<ubuntu::app_launch::Registry>();
 		}
 
 		virtual void TearDown() {
+			registry.reset();
+
 			g_test_dbus_down(testbus);
 			g_clear_object(&testbus);
 		}
 };
-
-static void
-failed_observer (const gchar * appid, UbuntuAppLaunchAppFailed reason, gpointer user_data)
-{
-	if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_CRASH) {
-		std::string * last = static_cast<std::string *>(user_data);
-		*last = appid;
-	}
-}
 
 TEST_F(FailureTest, CrashTest)
 {
@@ -56,7 +52,11 @@ TEST_F(FailureTest, CrashTest)
 	g_setenv("INSTANCE", "foo", TRUE);
 
 	std::string last_observer;
-	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+	ubuntu::app_launch::Registry::appFailed().connect([&last_observer](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
+		if (type == ubuntu::app_launch::Registry::FailureType::CRASH) {
+			last_observer = app->appId();
+		}
+	});
 
 	/* Status based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
@@ -71,8 +71,6 @@ TEST_F(FailureTest, CrashTest)
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
 
 	EXPECT_EVENTUALLY_EQ("foo", last_observer);
-
-	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 }
 
 TEST_F(FailureTest, LegacyTest)
@@ -82,14 +80,16 @@ TEST_F(FailureTest, LegacyTest)
 	g_setenv("INSTANCE", "foo-1234", TRUE);
 
 	std::string last_observer;
-	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+	ubuntu::app_launch::Registry::appFailed().connect([&last_observer](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
+		if (type == ubuntu::app_launch::Registry::FailureType::CRASH) {
+			last_observer = app->appId();
+		}
+	});
 
 	/* Status based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
 
 	EXPECT_EVENTUALLY_EQ("foo", last_observer);
-
-	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
 }
 
 TEST_F(FailureTest, SnapTest)
@@ -99,23 +99,16 @@ TEST_F(FailureTest, SnapTest)
 	g_setenv("INSTANCE", "foo_bar_x123-1234", TRUE);
 
 	std::string last_observer;
-	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+	ubuntu::app_launch::Registry::appFailed().connect([&last_observer](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
+		if (type == ubuntu::app_launch::Registry::FailureType::CRASH) {
+			last_observer = app->appId();
+		}
+	});
 
 	/* Status based */
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
 
 	EXPECT_EVENTUALLY_EQ("foo_bar_x123", last_observer);
-
-	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
-}
-
-static void
-failed_start_observer (const gchar * appid, UbuntuAppLaunchAppFailed reason, gpointer user_data)
-{
-	if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE) {
-		std::string * last = static_cast<std::string *>(user_data);
-		*last = appid;
-	}
 }
 
 TEST_F(FailureTest, StartTest)
@@ -126,11 +119,13 @@ TEST_F(FailureTest, StartTest)
 	g_unsetenv("EXIT_SIGNAL");
 
 	std::string last_observer;
-	ASSERT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_start_observer, &last_observer));
+	ubuntu::app_launch::Registry::appFailed().connect([&last_observer](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
+		if (type == ubuntu::app_launch::Registry::FailureType::START_FAILURE) {
+			last_observer = app->appId();
+		}
+	});
 
 	ASSERT_TRUE(g_spawn_command_line_sync(APP_FAILED_TOOL, NULL, NULL, NULL, NULL));
 
 	EXPECT_EVENTUALLY_EQ("foo", last_observer);
-
-	ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_start_observer, &last_observer));
 }
