@@ -80,14 +80,29 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
     return list;
 }
 
+/* Quick little helper to bundle up standard code */
+inline void setJobs(const std::shared_ptr<Registry>& registry)
+{
+    if (!registry->impl->jobs)
+    {
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
+    }
+}
+
 void Registry::setManager(std::shared_ptr<Manager> manager, std::shared_ptr<Registry> registry)
 {
-    Registry::Impl::setManager(manager, registry);
+    setJobs(registry);
+    registry->impl->jobs->setManager(manager);
 }
 
 void Registry::clearManager()
 {
-    impl->clearManager();
+    if (!impl->jobs)
+    {
+        return;
+    }
+
+    impl->jobs->clearManager();
 }
 
 std::shared_ptr<Registry> defaultRegistry;
@@ -109,31 +124,36 @@ void Registry::clearDefault()
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted(
     const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appStarted(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appStarted();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped(
     const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appStopped(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appStopped();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
     Registry::appFailed(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appFailed(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appFailed();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
     Registry::appPaused(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appPaused(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appPaused();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
     Registry::appResumed(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appResumed(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appResumed();
 }
 
 }  // namespace app_launch
