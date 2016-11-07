@@ -57,7 +57,7 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
     instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-snap"));
 
     /* Remove the instance ID */
-    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string &instancename) -> std::string {
+    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string& instancename) -> std::string {
         static const std::regex instanceregex("^(.*)-[0-9]*$");
         std::smatch match;
         if (std::regex_match(instancename, match, instanceregex))
@@ -87,7 +87,7 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
 
     g_debug("Overall there are %d instances: %s", int(instanceset.size()),
             std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
-                            [](const std::string &instr, std::string instance) {
+                            [](const std::string& instr, std::string instance) {
                                 return instr.empty() ? instance : instr + ", " + instance;
                             })
                 .c_str());
@@ -127,6 +127,16 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
     return list;
 }
 
+void Registry::setManager(std::shared_ptr<Manager> manager, std::shared_ptr<Registry> registry)
+{
+    Registry::Impl::setManager(manager, registry);
+}
+
+void Registry::clearManager()
+{
+    impl->clearManager();
+}
+
 std::shared_ptr<Registry> defaultRegistry;
 std::shared_ptr<Registry> Registry::getDefault()
 {
@@ -141,6 +151,36 @@ std::shared_ptr<Registry> Registry::getDefault()
 void Registry::clearDefault()
 {
     defaultRegistry.reset();
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted(
+    const std::shared_ptr<Registry>& reg)
+{
+    return reg->impl->appStarted(reg);
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped(
+    const std::shared_ptr<Registry>& reg)
+{
+    return reg->impl->appStopped(reg);
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    Registry::appFailed(const std::shared_ptr<Registry>& reg)
+{
+    return reg->impl->appFailed(reg);
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Registry::appPaused(const std::shared_ptr<Registry>& reg)
+{
+    return reg->impl->appPaused(reg);
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Registry::appResumed(const std::shared_ptr<Registry>& reg)
+{
+    return reg->impl->appResumed(reg);
 }
 
 }  // namespace app_launch
