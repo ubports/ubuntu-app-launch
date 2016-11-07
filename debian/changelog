@@ -1,4 +1,4 @@
-ubuntu-app-launch (0.9+16.10.20161003.1-0ubuntu1) yakkety; urgency=medium
+ubuntu-app-launch (0.9+15.04.20161003.1-0ubuntu1) vivid; urgency=medium
 
   * Set a base directory for icons that have a full path specified in
     their desktop file (LP: #1623636)
