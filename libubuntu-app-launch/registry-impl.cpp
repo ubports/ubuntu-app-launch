@@ -823,7 +823,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appStarted, [reg]() {
-        reg->impl->thread.executeOnThread([reg]() {
+        reg->impl->thread.executeOnThread<bool>([reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
             reg->impl->handle_appStarted = g_dbus_connection_signal_subscribe(
@@ -846,6 +846,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
+
+            return true;
         });
     });
 
@@ -858,7 +860,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appStopped, [reg]() {
-        reg->impl->thread.executeOnThread([reg]() {
+        reg->impl->thread.executeOnThread<bool>([reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
             reg->impl->handle_appStopped = g_dbus_connection_signal_subscribe(
@@ -881,6 +883,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
+
+            return true;
         });
     });
 
@@ -893,7 +897,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     Registry::Impl::appFailed(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appFailed, [reg]() {
-        reg->impl->thread.executeOnThread([reg]() {
+        reg->impl->thread.executeOnThread<bool>([reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
             reg->impl->handle_appFailed = g_dbus_connection_signal_subscribe(
@@ -940,10 +944,10 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
+
+            return true;
         });
     });
-
-    std::call_once(flag_appFailed, [&]() { return; });
 
     return sig_appFailed;
 }
@@ -986,7 +990,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     Registry::Impl::appPaused(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appPaused, [&]() {
-        reg->impl->thread.executeOnThread([reg]() {
+        reg->impl->thread.executeOnThread<bool>([reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
             reg->impl->handle_appPaused = g_dbus_connection_signal_subscribe(
@@ -1009,6 +1013,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
+
+            return true;
         });
     });
 
@@ -1021,7 +1027,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     Registry::Impl::appResumed(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appResumed, [&]() {
-        reg->impl->thread.executeOnThread([reg]() {
+        reg->impl->thread.executeOnThread<bool>([reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
             reg->impl->handle_appResumed = g_dbus_connection_signal_subscribe(
@@ -1044,6 +1050,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
+
+            return true;
         });
     });
 
