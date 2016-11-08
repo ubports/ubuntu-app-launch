@@ -267,16 +267,19 @@ std::vector<pid_t> UpstartInstance::pids()
 void UpstartInstance::pause()
 {
     g_debug("Pausing application: %s", std::string(appId_).c_str());
-    registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
 
-    auto pids = forAllPids([this](pid_t pid) {
-        auto oomval = oom::paused();
-        g_debug("Pausing PID: %d (%d)", pid, int(oomval));
-        signalToPid(pid, SIGSTOP);
-        oomValueToPid(pid, oomval);
+    registry_->impl->thread.executeOnThread([this] {
+        auto pids = forAllPids([this](pid_t pid) {
+            auto oomval = oom::paused();
+            g_debug("Pausing PID: %d (%d)", pid, int(oomval));
+            signalToPid(pid, SIGSTOP);
+            oomValueToPid(pid, oomval);
+        });
+
+        pidListToDbus(pids, "ApplicationPaused");
     });
 
-    pidListToDbus(pids, "ApplicationPaused");
+    registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
 }
 
 /** Resumes this application by sending SIGCONT to all the PIDs in the
@@ -284,16 +287,19 @@ void UpstartInstance::pause()
 void UpstartInstance::resume()
 {
     g_debug("Resuming application: %s", std::string(appId_).c_str());
-    registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
 
-    auto pids = forAllPids([this](pid_t pid) {
-        auto oomval = oom::focused();
-        g_debug("Resuming PID: %d (%d)", pid, int(oomval));
-        signalToPid(pid, SIGCONT);
-        oomValueToPid(pid, oomval);
+    registry_->impl->thread.executeOnThread([this] {
+        auto pids = forAllPids([this](pid_t pid) {
+            auto oomval = oom::focused();
+            g_debug("Resuming PID: %d (%d)", pid, int(oomval));
+            signalToPid(pid, SIGCONT);
+            oomValueToPid(pid, oomval);
+        });
+
+        pidListToDbus(pids, "ApplicationResumed");
     });
 
-    pidListToDbus(pids, "ApplicationResumed");
+    registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
 }
 
 /** Stops this instance by asking Upstart to stop it. Upstart will then
@@ -574,59 +580,54 @@ void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
 */
 void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal)
 {
-    auto registry = registry_;
-    auto lappid = appId_;
+    auto vpids = std::shared_ptr<GVariant>(
+        [pids]() {
+            GVariant* pidarray = nullptr;
 
-    registry_->impl->thread.executeOnThread([registry, lappid, pids, signal] {
-        auto vpids = std::shared_ptr<GVariant>(
-            [pids]() {
-                GVariant* pidarray = nullptr;
-
-                if (pids.empty())
-                {
-                    pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, nullptr, 0);
-                    g_variant_ref_sink(pidarray);
-                    return pidarray;
-                }
-
-                GVariantBuilder builder;
-                g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
-                for (auto pid : pids)
-                {
-                    g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
-                }
-
-                pidarray = g_variant_builder_end(&builder);
+            if (pids.empty())
+            {
+                pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, nullptr, 0);
                 g_variant_ref_sink(pidarray);
                 return pidarray;
-            }(),
-            [](GVariant* var) { g_variant_unref(var); });
+            }
 
-        GVariantBuilder params;
-        g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
-        g_variant_builder_add_value(&params, g_variant_new_string(std::string(lappid).c_str()));
-        g_variant_builder_add_value(&params, vpids.get());
+            GVariantBuilder builder;
+            g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
+            for (auto pid : pids)
+            {
+                g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
+            }
 
-        GError* error = nullptr;
-        g_dbus_connection_emit_signal(registry->impl->_dbus.get(),     /* bus */
-                                      nullptr,                         /* destination */
-                                      "/",                             /* path */
-                                      "com.canonical.UbuntuAppLaunch", /* interface */
-                                      signal.c_str(),                  /* signal */
-                                      g_variant_builder_end(&params),  /* params, the same */
-                                      &error);                         /* error */
+            pidarray = g_variant_builder_end(&builder);
+            g_variant_ref_sink(pidarray);
+            return pidarray;
+        }(),
+        [](GVariant* var) { g_variant_unref(var); });
 
-        if (error != nullptr)
-        {
-            g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(lappid).c_str(),
-                      error->message);
-            g_error_free(error);
-        }
-        else
-        {
-            g_debug("Emmitted '%s' to DBus", signal.c_str());
-        }
-    });
+    GVariantBuilder params;
+    g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
+    g_variant_builder_add_value(&params, g_variant_new_string(std::string(appId_).c_str()));
+    g_variant_builder_add_value(&params, vpids.get());
+
+    GError* error = nullptr;
+    g_dbus_connection_emit_signal(registry_->impl->_dbus.get(),    /* bus */
+                                  nullptr,                         /* destination */
+                                  "/",                             /* path */
+                                  "com.canonical.UbuntuAppLaunch", /* interface */
+                                  signal.c_str(),                  /* signal */
+                                  g_variant_builder_end(&params),  /* params, the same */
+                                  &error);                         /* error */
+
+    if (error != nullptr)
+    {
+        g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(appId_).c_str(),
+                  error->message);
+        g_error_free(error);
+    }
+    else
+    {
+        g_debug("Emmitted '%s' to DBus", signal.c_str());
+    }
 }
 
 /** Create a new Upstart Instance object that can track the job and
