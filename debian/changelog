@@ -1,3 +1,72 @@
+ubuntu-app-launch (0.9+16.10.20161003.1-0ubuntu1) yakkety; urgency=medium
+
+  * Set a base directory for icons that have a full path specified in
+    their desktop file (LP: #1623636)
+  * Don't throw an exception when a Desktop file fails to include an
+    Icon key (LP: #1617348)
+  * Switch from g_atexit to std::atexit to avoid deprecation warnings
+  * Use the --id field for launching with libertine-launch and use it
+    for setting up other X11 environments
+  * Ensure we don't check the length of a nullptr array
+  * Make sure we don't check snapd if we know it won't return useful
+    results
+  * Make use of the instance parameter consistent through all the
+    backends (LP: #1626028)
+
+ -- Ted Gould <ted@gould.cx>  Mon, 03 Oct 2016 23:55:25 +0000
+
+ubuntu-app-launch (0.9+16.10.20160928-0ubuntu1) yakkety; urgency=medium
+
+  * Add a try/catch inside the for loop in ::list(). (LP: #1627594)
+
+ -- Rodney Dawes <rodney.dawes@canonical.com>  Wed, 28 Sep 2016 17:43:54 +0000
+
+ubuntu-app-launch (0.9+16.10.20160913.1-0ubuntu1) yakkety; urgency=medium
+
+  [ Larry Price ]
+  * Recursively sweep for desktop files for libertine applications.
+
+  [ Ted Gould ]
+  * Fixes, tools and tests related to listing applications
+  * Migrate starting and stopping applications to new classes
+  * Make find and discover use the application implementation functions.
+  * Support launching applications installed as snaps (LP: #1590445)
+
+ -- Ted Gould <ted@gould.cx>  Tue, 13 Sep 2016 17:43:33 +0000
+
+ubuntu-app-launch (0.9+16.10.20160902-0ubuntu1) yakkety; urgency=medium
+
+  * Disable handshake wait with clients doing handshaking (LP: #1618540)
+
+ -- Ted Gould <ted@gould.cx>  Fri, 02 Sep 2016 14:51:45 +0000
+
+ubuntu-app-launch (0.9+16.10.20160825-0ubuntu1) yakkety; urgency=medium
+
+  * Use at() instead of operator[]() so that we get an exception on
+    bounds checking
+
+ -- Ted Gould <ted@gould.cx>  Thu, 25 Aug 2016 14:43:00 +0000
+
+ubuntu-app-launch (0.9+16.10.20160817.1-0ubuntu1) yakkety; urgency=medium
+
+  [ Charles Kerr ]
+  * Fix memory leak in Click::launch()
+
+  [ Rodney Dawes ]
+  * Use cmake-extras for coverage reporting. (LP: #1609545)
+  * Backport some fixes for listing installed Click apps.
+
+  [ Ted Gould ]
+  * Add in eventually timeouts in tests to make them more robust
+  * Add test for abi compatibility (LP: #1609565)
+  * Add API to allow adjusting of the OOM score for an application
+    instance (LP: #1579799)
+
+  [ Rodney Dawes, Ted Gould ]
+  * Add desktop info fields needed for applications scope
+
+ -- Ted Gould <ted@gould.cx>  Wed, 17 Aug 2016 15:25:23 +0000
+
 ubuntu-app-launch (0.9+16.10.20160803-0ubuntu1) yakkety; urgency=medium
 
   [ Ken VanDine ]

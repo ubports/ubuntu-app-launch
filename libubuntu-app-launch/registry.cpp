@@ -17,12 +17,19 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "registry.h"
+#include <algorithm>
+#include <numeric>
+#include <regex>
+
 #include "registry-impl.h"
+#include "registry.h"
 
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
+#ifdef ENABLE_SNAPPY
+#include "application-impl-snap.h"
+#endif
 
 #include "helper-impl-click.h"
 
@@ -42,26 +49,59 @@ Registry::~Registry()
 
 std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> connection)
 {
-    return connection->impl->thread.executeOnThread<std::list<std::shared_ptr<Application>>>(
-        [connection]() -> std::list<std::shared_ptr<Application>> {
-            auto strv = ubuntu_app_launch_list_running_apps();
-            if (strv == nullptr)
-            {
-                return {};
-            }
+    std::list<std::string> instances;
 
-            std::list<std::shared_ptr<Application>> list;
-            for (int i = 0; strv[i] != nullptr; i++)
-            {
-                auto appid = AppID::find(strv[i]);
-                auto app = Application::create(appid, connection);
-                list.push_back(app);
-            }
+    /* Get all the legacy instances */
+    instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-legacy"));
+    /* Get all the snap instances */
+    instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-snap"));
 
-            g_strfreev(strv);
+    /* Remove the instance ID */
+    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string &instancename) -> std::string {
+        static const std::regex instanceregex("^(.*)-[0-9]*$");
+        std::smatch match;
+        if (std::regex_match(instancename, match, instanceregex))
+        {
+            return match[1].str();
+        }
+        else
+        {
+            g_warning("Unable to match instance name: %s", instancename.c_str());
+            return {};
+        }
+    });
 
-            return list;
-        });
+    /* Deduplicate Set */
+    std::set<std::string> instanceset;
+    for (auto instance : instances)
+    {
+        if (!instance.empty())
+            instanceset.insert(instance);
+    }
+
+    /* Add in the click instances */
+    for (auto instance : connection->impl->upstartInstancesForJob("application-click"))
+    {
+        instanceset.insert(instance);
+    }
+
+    g_debug("Overall there are %d instances: %s", int(instanceset.size()),
+            std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
+                            [](const std::string &instr, std::string instance) {
+                                return instr.empty() ? instance : instr + ", " + instance;
+                            })
+                .c_str());
+
+    /* Convert to Applications */
+    std::list<std::shared_ptr<Application>> apps;
+    for (auto instance : instanceset)
+    {
+        auto appid = AppID::find(connection, instance);
+        auto app = Application::create(appid, connection);
+        apps.push_back(app);
+    }
+
+    return apps;
 }
 
 std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<Registry> connection)
@@ -71,6 +111,9 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
     list.splice(list.begin(), app_impls::Click::list(connection));
     list.splice(list.begin(), app_impls::Legacy::list(connection));
     list.splice(list.begin(), app_impls::Libertine::list(connection));
+#ifdef ENABLE_SNAPPY
+    list.splice(list.begin(), app_impls::Snap::list(connection));
+#endif
 
     return list;
 }
@@ -93,6 +136,11 @@ std::shared_ptr<Registry> Registry::getDefault()
     }
 
     return defaultRegistry;
+}
+
+void Registry::clearDefault()
+{
+    defaultRegistry.reset();
 }
 
 }  // namespace app_launch

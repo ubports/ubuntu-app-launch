@@ -17,6 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+extern "C" {
 #include "ubuntu-app-launch.h"
 #include <upstart.h>
 #include <gio/gio.h>
@@ -28,21 +29,23 @@
 #include <libwhoopsie/recoverable-problem.h>
 
 #include "ubuntu-app-launch-trace.h"
-#include "second-exec-core.h"
 #include "helpers.h"
 #include "ual-tracepoint.h"
-#include "click-exec.h"
-#include "desktop-exec.h"
 #include "proxy-socket-demangler.h"
-#include "app-info.h"
+}
 
-static void apps_for_job (GDBusConnection * con, const gchar * name, GArray * apps, gboolean truncate_legacy);
+/* C++ Interface */
+#include "application.h"
+#include "appid.h"
+#include "registry.h"
+#include "registry-impl.h"
+
 static void free_helper (gpointer value);
-int kill (pid_t pid, int signal);
+int kill (pid_t pid, int signal) noexcept;
 static gchar * escape_dbus_string (const gchar * input);
 
-G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path);
-G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd);
+G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path)
+G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd)
 
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
@@ -64,47 +67,6 @@ app_uris_string (const gchar * const * uris)
 	return urisjoin;
 }
 
-typedef struct {
-	gchar * appid;
-	gchar * uris;
-} app_start_t;
-
-static void
-application_start_cb (GObject * obj, GAsyncResult * res, gpointer user_data)
-{
-	app_start_t * data = (app_start_t *)user_data;
-	GError * error = NULL;
-	GVariant * result = NULL;
-
-	ual_tracepoint(libual_start_message_callback, data->appid);
-
-	g_debug("Started Message Callback: %s", data->appid);
-
-	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
-
-	if (result != NULL)
-		g_variant_unref(result);
-	
-	if (error != NULL) {
-		if (g_dbus_error_is_remote_error(error)) {
-			gchar * remote_error = g_dbus_error_get_remote_error(error);
-			g_debug("Remote error: %s", remote_error);
-			if (g_strcmp0(remote_error, "com.ubuntu.Upstart0_6.Error.AlreadyStarted") == 0) {
-				second_exec(data->appid, data->uris);
-			}
-
-			g_free(remote_error);
-		} else {
-			g_warning("Unable to emit event to start application: %s", error->message);
-		}
-		g_error_free(error);
-	}
-
-	g_free(data->appid);
-	g_free(data->uris);
-	g_free(data);
-}
-
 /* Get the path of the job from Upstart, if we've got it already, we'll just
    use the cache of the value */
 static const gchar *
@@ -115,7 +77,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 
 	if (cachedata != NULL) {
 		g_free(cachepath);
-		return cachedata;
+		return (const gchar*)cachedata;
 	}
 
 	GError * error = NULL;
@@ -128,7 +90,7 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 		G_VARIANT_TYPE("(o)"),
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* timeout: default */
-		NULL, /* cancelable */
+		NULL, /* cancellable */
 		&error);
 
 	if (error != NULL) {	
@@ -148,237 +110,54 @@ get_jobpath (GDBusConnection * con, const gchar * jobname)
 	return job_path;
 }
 
-/* Check to see if a legacy app wants us to manage whether they're
-   single instance or not */
-static gboolean
-legacy_single_instance (const gchar * appid)
-{
-	ual_tracepoint(desktop_single_start, appid);
-
-	GKeyFile * keyfile = keyfile_for_appid(appid, NULL);
-
-	if (keyfile == NULL) {
-		g_warning("Unable to find keyfile for application '%s'", appid);
-		return FALSE;
-	}
-
-	ual_tracepoint(desktop_single_found, appid);
-
-	gboolean singleinstance = FALSE;
-
-	if (g_key_file_has_key(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", NULL)) {
-		GError * error = NULL;
-
-		singleinstance = g_key_file_get_boolean(keyfile, "Desktop Entry", "X-Ubuntu-Single-Instance", &error);
-
-		if (error != NULL) {
-			g_warning("Unable to get single instance key for app '%s': %s", appid, error->message);
-			g_error_free(error);
-			/* Ensure that if we got an error, we assume standard case */
-			singleinstance = FALSE;
-		}
-	}
-	
-	g_key_file_free(keyfile);
-
-	ual_tracepoint(desktop_single_finished, appid, singleinstance ? "single" : "unmanaged");
-
-	return singleinstance;
-}
-
-/* Determine whether it's a click package by looking for the symlink
-   that is created by the desktop hook */
-static gboolean
-is_click (const gchar * appid)
-{
-	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
-	gchar * click_link = NULL;
-	const gchar * link_farm_dir = g_getenv("UBUNTU_APP_LAUNCH_LINK_FARM");
-	if (G_LIKELY(link_farm_dir == NULL)) {
-		click_link = g_build_filename(g_get_home_dir(), ".cache", "ubuntu-app-launch", "desktop", appiddesktop, NULL);
-	} else {
-		click_link = g_build_filename(link_farm_dir, appiddesktop, NULL);
-	}
-	g_free(appiddesktop);
-	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
-	g_free(click_link);
-
-	return click;
-}
-
-/* Determine whether an AppId is realated to a Libertine container by
-   checking the container and program name. */
-static gboolean
-is_libertine (const gchar * appid)
-{
-	if (app_info_libertine(appid, NULL, NULL)) {
-		g_debug("Libertine application detected: %s", appid);
-		return TRUE;
-	} else {
-		return FALSE;
-	}
-}
-
-static gboolean
-start_application_core (const gchar * appid, const gchar * const * uris, gboolean test)
-{
-	ual_tracepoint(libual_start, appid);
-
-	g_return_val_if_fail(appid != NULL, FALSE);
-
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
-
-	gboolean click = is_click(appid);
-	ual_tracepoint(libual_determine_type, appid, click ? "click" : "legacy");
-
-	/* Figure out if it is libertine */
-	gboolean libertine = FALSE;
-	if (!click) {
-		libertine = is_libertine(appid);
-	}
-
-	ual_tracepoint(libual_determine_libertine, appid, libertine ? "container" : "host");
-
-	/* Figure out the DBus path for the job */
-	const gchar * jobpath = NULL;
-	if (click) {
-		jobpath = get_jobpath(con, "application-click");
-	} else {
-		jobpath = get_jobpath(con, "application-legacy");
-	}
-
-	if (jobpath == NULL) {
-		g_object_unref(con);
-		g_warning("Unable to get job path");
-		return FALSE;
-	}
-
-	ual_tracepoint(libual_job_path_determined, appid, jobpath);
-
-	/* Callback data */
-	app_start_t * app_start_data = g_new0(app_start_t, 1);
-	app_start_data->appid = g_strdup(appid);
-
-	/* Build up our environment */
-	GVariantBuilder builder;
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_LAUNCHER_PID=%d", getpid())));
-
-	if (uris != NULL) {
-		gchar * urisjoin = app_uris_string(uris);
-		gchar * urienv = g_strdup_printf("APP_URIS=%s", urisjoin);
-		app_start_data->uris = urisjoin;
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(urienv));
-	}
-
-	if (!click) {
-		if (libertine || legacy_single_instance(appid)) {
-			g_variant_builder_add_value(&builder, g_variant_new_string("INSTANCE_ID="));
-		} else {
-			gchar * instanceid = g_strdup_printf("INSTANCE_ID=%" G_GUINT64_FORMAT, g_get_real_time());
-			g_variant_builder_add_value(&builder, g_variant_new_take_string(instanceid));
-		}
-	}
-
-	if (test) {
-		g_variant_builder_add_value(&builder, g_variant_new_string("QT_LOAD_TESTABILITY=1"));
-	}
-
-	gboolean setup_complete = FALSE;
-	if (click) {
-		setup_complete = click_task_setup(con, appid, (EnvHandle*)&builder);
-	} else {
-		setup_complete = desktop_task_setup(con, appid, (EnvHandle*)&builder, libertine);
-	}
-
-	if (setup_complete) {
-		g_variant_builder_close(&builder);
-		g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-	
-		/* Call the job start function */
-		g_dbus_connection_call(con,
-		                       DBUS_SERVICE_UPSTART,
-		                       jobpath,
-		                       DBUS_INTERFACE_UPSTART_JOB,
-		                       "Start",
-		                       g_variant_builder_end(&builder),
-		                       NULL,
-		                       G_DBUS_CALL_FLAGS_NONE,
-		                       -1,
-		                       NULL, /* cancelable */
-		                       application_start_cb,
-		                       app_start_data);
-
-		ual_tracepoint(libual_start_message_sent, appid);
-	} else {
-		g_variant_builder_clear(&builder);
-	}
-
-	g_object_unref(con);
-
-	return setup_complete;
-}
-
 gboolean
 ubuntu_app_launch_start_application (const gchar * appid, const gchar * const * uris)
 {
-	return start_application_core(appid, uris, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+
+		std::vector<ubuntu::app_launch::Application::URL> urivect;
+		for (auto i = 0; uris != nullptr && uris[i] != nullptr; i++)
+			urivect.emplace_back(ubuntu::app_launch::Application::URL::from_raw(uris[i]));
+
+		auto instance = app->launch(urivect);
+
+		if (instance) {
+			return TRUE;
+		} else {
+			return FALSE;
+		}
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to start app '%s': %s", appid, e.what());
+		return FALSE;
+	}
 }
 
 gboolean
 ubuntu_app_launch_start_application_test (const gchar * appid, const gchar * const * uris)
 {
-	return start_application_core(appid, uris, TRUE);
-}
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-static void
-stop_job (GDBusConnection * con, const gchar * jobname, const gchar * appname, const gchar * instanceid)
-{
-	g_debug("Stopping job %s app_id %s instance_id %s", jobname, appname, instanceid);
+		std::vector<ubuntu::app_launch::Application::URL> urivect;
+		for (auto i = 0; uris != nullptr && uris[i] != nullptr; i++)
+			urivect.emplace_back(ubuntu::app_launch::Application::URL::from_raw(uris[i]));
 
-	const gchar * job_path = get_jobpath(con, jobname);
-	if (job_path == NULL)
-		return;
+		auto instance = app->launchTest(urivect);
 
-	GVariantBuilder builder;
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-
-	g_variant_builder_add_value(&builder,
-		g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appname)));
-	
-	if (instanceid != NULL) {
-		g_variant_builder_add_value(&builder,
-			g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instanceid)));
+		if (instance) {
+			return TRUE;
+		} else {
+			return FALSE;
+		}
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to start app '%s': %s", appid, e.what());
+		return FALSE;
 	}
-
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
-
-	GError * error = NULL;
-	GVariant * stop_variant = g_dbus_connection_call_sync(con,
-		DBUS_SERVICE_UPSTART,
-		job_path,
-		DBUS_INTERFACE_UPSTART_JOB,
-		"Stop",
-		g_variant_builder_end(&builder),
-		NULL,
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout: default */
-		NULL, /* cancelable */
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to stop job %s app_id %s instance_id %s: %s", jobname, appname, instanceid, error->message);
-		g_error_free(error);
-	}
-
-	g_variant_unref(stop_variant);
 }
 
 static void
@@ -393,369 +172,62 @@ ubuntu_app_launch_stop_application (const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-	gboolean found = FALSE;
-	int i;
-
-	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-	g_array_set_clear_func(apps, free_helper);
-
-	/* Look through the click jobs and see if any match.  There can
-	   only be one instance for each ID in the click world */
-	apps_for_job(con, "application-click", apps, FALSE);
-	for (i = 0; i < apps->len; i++) {
-		const gchar * array_id = g_array_index(apps, const gchar *, i);
-		if (g_strcmp0(array_id, appid) == 0) {
-			stop_job(con, "application-click", appid, NULL);
-			found = TRUE;
-			break; /* There can be only one with click */
+		auto instances = app->instances();
+		for (auto instance : instances) {
+			instance->stop();
 		}
-	}
 
-	if (apps->len > 0)
-		g_array_remove_range(apps, 0, apps->len);
-
-	/* Look through the legacy apps.  Trickier because we know that there
-	   can be many instances of the legacy jobs out there, so we might
-	   have to kill more than one of them. */
-	apps_for_job(con, "application-legacy", apps, FALSE);
-	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
-	for (i = 0; i < apps->len; i++) {
-		const gchar * array_id = g_array_index(apps, const gchar *, i);
-		if (g_str_has_prefix(array_id, appiddash)) {
-			gchar * instanceid = g_strrstr(array_id, "-");
-			stop_job(con, "application-legacy", appid, &(instanceid[1]));
-			found = TRUE;
-		}
-	}
-	g_free(appiddash);
-
-	g_array_free(apps, TRUE);
-	g_object_unref(con);
-
-	return found;
-}
-
-/* Set the OOM value using the helper as an async task */
-static gboolean
-use_oom_helper (GPid pid, const gchar * oomscore)
-{
-	GError * error = NULL;
-	const gchar * args[4] = {
-		OOM_HELPER,
-		NULL, /* pid */
-		oomscore,
-		NULL
-	};
-	gchar * pidstr = g_strdup_printf("%d", pid);
-	args[1] = pidstr;
-
-	g_spawn_async(NULL, /* working dir */
-		(gchar **)args,
-		NULL, /* env */
-		G_SPAWN_DEFAULT,
-		NULL, NULL, /* child setup */
-		NULL, /* pid */
-		&error); /* error */
-
-	g_free(pidstr);
-
-	if (error != NULL) {
-		g_warning("Unable to launch OOM helper '" OOM_HELPER "' on PID '%d': %s", pid, error->message);
-		g_error_free(error);
+		return TRUE;
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to stop app '%s': %s", appid, e.what());
 		return FALSE;
 	}
-
-	return TRUE;
-}
-
-/* Sets the OOM score to a particular value, returns true on NULL */
-static gboolean
-set_oom_value (GPid pid, const gchar * oomscore)
-{
-	static const gchar * procpath = NULL;
-	if (G_UNLIKELY(procpath == NULL)) {
-		/* Set by the test suite, probably not anyone else */
-		procpath = g_getenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH");
-		if (G_LIKELY(procpath == NULL)) {
-			procpath = "/proc";
-		}
-	}
-
-	gchar * path = g_strdup_printf("%s/%d/oom_score_adj", procpath, pid);
-	FILE * adj = fopen(path, "w");
-	int openerr = errno;
-	g_free(path);
-
-	if (adj == NULL) {
-		switch (openerr) {
-		case ENOENT:
-			/* ENOENT happens a fair amount because of races, so it's not
-			   worth printing a warning about */
-			return TRUE;
-		case EACCES: {
-			/* We can get this error when trying to set the OOM value on
-			   Oxide renderers because they're started by the sandbox and
-			   don't have their adjustment value available for us to write.
-			   We have a helper to deal with this, but it's kinda expensive
-			   so we only use it when we have to. */
-			return use_oom_helper(pid, oomscore);
-		}
-		default:
-			g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(openerr));
-			return FALSE;
-		}
-	}
-
-	size_t writesize = fwrite(oomscore, 1, strlen(oomscore), adj);
-	int writeerr = errno;
-	fclose(adj);
-
-	if (writesize == strlen(oomscore))
-		return TRUE;
-	
-	if (writeerr != 0)
-		g_warning("Unable to set OOM value for '%d' to '%s': %s", pid, oomscore, strerror(writeerr));
-	else
-		/* No error, but yet, wrong size. Not sure, what could cause this. */
-		g_debug("Unable to set OOM value for '%d' to '%s': Wrote %d bytes", pid, oomscore, (int)writesize);
-
-	return FALSE;
-}
-
-/* Throw out a DBus signal that we've signalled all of these processes. This
-   is the fun GVariant building part. */
-static void
-notify_signalling (GList * pids, const gchar * appid, const gchar * signal_name)
-{
-	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	if (conn == NULL) {
-		return;
-	}
-
-	/* Pull together a PID array */
-	GVariant *pidarray = NULL;
-	if (pids == NULL) {
-		pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, NULL, 0);
-	} else {
-		GList * i;
-		GVariantBuilder builder;
-		g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
-
-		for (i = pids; i != NULL; i = g_list_next(i))
-			g_variant_builder_add_value(&builder, g_variant_new_uint64(GPOINTER_TO_INT(i->data)));
-
-		pidarray = g_variant_builder_end(&builder);
-	}
-
-	/* Combine into the wrapping tuple */
-	GVariantBuilder btuple;
-	g_variant_builder_init(&btuple, G_VARIANT_TYPE_TUPLE);
-	g_variant_builder_add_value(&btuple, g_variant_new_string(appid));
-	g_variant_builder_add_value(&btuple, pidarray);
-
-	/* Emit !!! */
-	GError * error = NULL;
-	g_dbus_connection_emit_signal(conn,
-		NULL, /* destination */
-		"/", /* path */
-		"com.canonical.UbuntuAppLaunch", /* interface */
-		signal_name, /* signal */
-		g_variant_builder_end(&btuple), /* params, the same */
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to emit signal '%s' for appid '%s': %s", signal_name, appid, error->message);
-		g_error_free(error);
-	} else {
-		g_debug("Emmitted '%s' to DBus", signal_name);
-	}
-
-	g_object_unref(conn);
-}
-
-/* Gets all the pids for an appid and sends a signal to all of them. This also
-   loops to ensure no new pids are added while we're signaling */
-static gboolean
-signal_to_cgroup (const gchar * appid, int signal, const gchar * oomscore, const gchar * signal_name)
-{
-	GHashTable * pidssignaled = g_hash_table_new(g_direct_hash, g_direct_equal);
-	guint hash_table_size = 0;
-	gboolean retval = TRUE;
-
-	do {
-		hash_table_size = g_hash_table_size(pidssignaled);
-		GList * pidlist = ubuntu_app_launch_get_pids(appid);
-		GList * iter;
-
-		if (pidlist == NULL) {
-			g_warning("Unable to get pids for '%s' to send signal %d", appid, signal);
-			retval = FALSE;
-			break;
-		}
-
-		for (iter = pidlist; iter != NULL; iter = g_list_next(iter)) {
-			if (g_hash_table_contains(pidssignaled, iter->data)) {
-				continue;
-			}
-
-			/* We've got a PID that we've not previously signaled */
-			GPid pid = GPOINTER_TO_INT(iter->data);
-			if (-1 == kill(pid, signal)) {
-				/* While that didn't work, we still want to try as many as we can */
-				g_warning("Unable to send signal %d to pid %d", signal, pid);
-				retval = FALSE;
-			}
-
-			if (!set_oom_value(pid, oomscore)) {
-				retval = FALSE;
-			}
-
-			g_hash_table_add(pidssignaled, iter->data);
-		}
-
-		g_list_free(pidlist);
-	/* If it grew, then try again */
-	} while (hash_table_size != g_hash_table_size(pidssignaled));
-
-	notify_signalling(g_hash_table_get_keys(pidssignaled), appid, signal_name);
-	g_hash_table_destroy(pidssignaled);
-
-	return retval;
-}
-
-/* Mostly here to just print a warning if we can't submit the event, they're
-   not critical to have */
-static void
-zg_insert_complete (GObject * obj, GAsyncResult * res, gpointer user_data)
-{
-	GError * error = NULL;
-	GArray * result = NULL;
-
-	result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
-
-	if (error != NULL) {
-		g_warning("Unable to submit Zeitgeist Event: %s", error->message);
-		g_error_free(error);
-	}
-
-	g_array_free(result, TRUE);
-	return;
-}
-
-/* Function to report the access and leaving events to Zeitgeist so we
-   can track application usage */
-static void
-report_zg_event (const gchar * appid, const gchar * eventtype)
-{
-	gchar * uri = NULL;
-	gchar * pkg = NULL;
-	gchar * app = NULL;
-
-	if (ubuntu_app_launch_app_id_parse(appid, &pkg, &app, NULL)) {
-		/* If it's parseable, use the short form */
-		uri = g_strdup_printf("application://%s_%s.desktop", pkg, app);
-		g_free(pkg);
-		g_free(app);
-	} else {
-		uri = g_strdup_printf("application://%s.desktop", appid);
-	}
-
-	ZeitgeistLog * log = zeitgeist_log_get_default();
-
-	ZeitgeistEvent * event = zeitgeist_event_new();
-	zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
-	zeitgeist_event_set_interpretation(event, eventtype);
-	zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
-
-	ZeitgeistSubject * subject = zeitgeist_subject_new();
-	zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
-	zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
-	zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
-	zeitgeist_subject_set_uri(subject, uri);
-
-	zeitgeist_event_add_subject(event, subject);
-
-	zeitgeist_log_insert_event(log, event, NULL, zg_insert_complete, NULL);
-
-	g_free(uri);
-	g_object_unref(log);
-	g_object_unref(event);
-	g_object_unref(subject);
 }
 
 gboolean
 ubuntu_app_launch_pause_application (const gchar * appid)
 {
-	report_zg_event(appid, ZEITGEIST_ZG_LEAVE_EVENT);
-	return signal_to_cgroup(appid, SIGSTOP, "900", "ApplicationPaused");
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		app->instances().at(0)->pause();
+		return TRUE;
+	} catch (...) {
+		return FALSE;
+	}
 }
 
 gboolean
 ubuntu_app_launch_resume_application (const gchar * appid)
 {
-	report_zg_event(appid, ZEITGEIST_ZG_ACCESS_EVENT);
-	return signal_to_cgroup(appid, SIGCONT, "100", "ApplicationResumed");
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		app->instances().at(0)->resume();
+		return TRUE;
+	} catch (...) {
+		return FALSE;
+	}
 }
 
 gchar *
 ubuntu_app_launch_application_log_path (const gchar * appid)
 {
-	gchar * path = NULL;
-	g_return_val_if_fail(appid != NULL, NULL);
-
-	if (is_click(appid)) {
-		gchar * appfile = g_strdup_printf("application-click-%s.log", appid);
-		path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
-		g_free(appfile);
-		return path;
-	}
-
-	if (!is_libertine(appid) && legacy_single_instance(appid)) {
-		gchar * appfile = g_strdup_printf("application-legacy-%s-.log", appid);
-		path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
-		g_free(appfile);
-		return path;
-	}
-
-	/* If we're not single instance, we can't recreate the instance ID
-	   but if it's running we can grab it. */
-	unsigned int i;
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, NULL);
-
-	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-	g_array_set_clear_func(apps, free_helper);
-
-	apps_for_job(con, "application-legacy", apps, FALSE);
-	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
-	for (i = 0; i < apps->len && path == NULL; i++) {
-		const gchar * array_id = g_array_index(apps, const gchar *, i);
-		if (g_str_has_prefix(array_id, appiddash)) {
-			gchar * appfile = g_strdup_printf("application-legacy-%s.log", array_id);
-			path =  g_build_filename(g_get_user_cache_dir(), "upstart", appfile, NULL);
-			g_free(appfile);
-		}
-	}
-	g_free(appiddash);
-
-	g_array_free(apps, TRUE);
-	g_object_unref(con);
-
-	return path;
-}
-
-gboolean
-ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
-{
-	if (is_click(appid)) {
-		return app_info_click(appid, appdir, appdesktop);
-	} else if (is_libertine(appid)) {
-		return app_info_libertine(appid, appdir, appdesktop);
-	} else {
-		return app_info_legacy(appid, appdir, appdesktop);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		auto log = app->instances()[0]->logPath();
+		return g_strdup(log.c_str());
+	} catch (...) {
+		return nullptr;
 	}
 }
 
@@ -764,7 +236,7 @@ gdbus_upstart_ref (void) {
 	static GDBusConnection * gdbus_upstart = NULL;
 
 	if (gdbus_upstart != NULL) {
-		return g_object_ref(gdbus_upstart);
+		return G_DBUS_CONNECTION(g_object_ref(gdbus_upstart));
 	}
 
 	GError * error = NULL;
@@ -776,7 +248,7 @@ gdbus_upstart_ref (void) {
 		return NULL;
 	}
 
-	g_object_add_weak_pointer(G_OBJECT(gdbus_upstart), (gpointer)&gdbus_upstart);
+	g_object_add_weak_pointer(G_OBJECT(gdbus_upstart), (void **)(&gdbus_upstart));
 
 	return gdbus_upstart;
 }
@@ -842,6 +314,9 @@ observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object,
 		if (g_strcmp0(env, "JOB=application-click") == 0) {
 			job_found = TRUE;
 		} else if (g_strcmp0(env, "JOB=application-legacy") == 0) {
+			job_found = TRUE;
+			job_legacy = TRUE;
+		} else if (g_strcmp0(env, "JOB=application-snap") == 0) {
 			job_found = TRUE;
 			job_legacy = TRUE;
 		} else if (g_str_has_prefix(env, "INSTANCE=")) {
@@ -1034,6 +509,7 @@ starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * 
 gboolean
 ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(true);
 	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
 }
 
@@ -1225,6 +701,7 @@ ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer
 gboolean
 ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(false);
 	return delete_app_generic(observer, user_data, &starting_array);
 }
 
@@ -1313,7 +790,7 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 		G_VARIANT_TYPE("(ao)"),
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* timeout: default */
-		NULL, /* cancelable */
+		NULL, /* cancellable */
 		&error);
 
 	if (error != NULL) {
@@ -1339,7 +816,7 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 			G_VARIANT_TYPE("(a{sv})"),
 			G_DBUS_CALL_FLAGS_NONE,
 			-1, /* timeout: default */
-			NULL, /* cancelable */
+			NULL, /* cancellable */
 			&error);
 
 		if (error != NULL) {
@@ -1361,122 +838,22 @@ foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance
 	g_variant_unref(instance_list);
 }
 
-typedef struct {
-	GArray * apps;
-	gboolean truncate_legacy;
-	const gchar * jobname;
-} apps_for_job_t;
-
-static void
-apps_for_job_instance (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
-{
-	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
-	if (namev == NULL) {
-		return;
-	}
-
-	apps_for_job_t * data = (apps_for_job_t *)user_data;
-	gchar * instance_name = g_variant_dup_string(namev, NULL);
-	g_variant_unref(namev);
-
-	if (data->truncate_legacy && g_strcmp0(data->jobname, "application-legacy") == 0) {
-		gchar * last_dash = g_strrstr(instance_name, "-");
-		if (last_dash != NULL) {
-			last_dash[0] = '\0';
-		}
-	}
-
-	g_array_append_val(data->apps, instance_name);
-}
-
-/* Get all the instances for a given job name */
-static void
-apps_for_job (GDBusConnection * con, const gchar * jobname, GArray * apps, gboolean truncate_legacy)
-{
-	apps_for_job_t data = {
-		.jobname = jobname,
-		.apps = apps,
-		.truncate_legacy = truncate_legacy
-	};
-
-	foreach_job_instance(con, jobname, apps_for_job_instance, &data);
-}
-
 gchar **
 ubuntu_app_launch_list_running_apps (void)
 {
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, g_new0(gchar *, 1));
-
-	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-
-	apps_for_job(con, "application-legacy", apps, TRUE);
-	apps_for_job(con, "application-click", apps, FALSE);
-
-	g_object_unref(con);
-
-	return (gchar **)g_array_free(apps, FALSE);
-}
-
-typedef struct {
-	GPid pid;
-	const gchar * appid;
-	const gchar * jobname;
-} pid_for_job_t;
-
-static void
-pid_for_job_instance (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
-{
-	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
-	if (namev == NULL) {
-		return;
-	}
-
-	pid_for_job_t * data = (pid_for_job_t *)user_data;
-	gchar * instance_name = g_variant_dup_string(namev, NULL);
-	g_variant_unref(namev);
-
-	if (g_strcmp0(data->jobname, "application-legacy") == 0) {
-		gchar * last_dash = g_strrstr(instance_name, "-");
-		if (last_dash != NULL) {
-			last_dash[0] = '\0';
+	try {
+		GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
+		for (auto app : ubuntu::app_launch::Registry::runningApps()) {
+			std::string appid = app->appId();
+			g_debug("Adding AppID to list: %s", appid.c_str());
+			gchar * gappid = g_strdup(appid.c_str());
+			g_array_append_val(apps, gappid);
 		}
+
+		return (gchar **)g_array_free(apps, FALSE);
+	} catch (...) {
+		return nullptr;
 	}
-
-	if (g_strcmp0(instance_name, data->appid) == 0) {
-		GVariant * processv = g_variant_lookup_value(props_dict, "processes", G_VARIANT_TYPE("a(si)"));
-
-		if (processv != NULL) {
-			if (g_variant_n_children(processv) > 0) {
-				GVariant * first_entry = g_variant_get_child_value(processv, 0);
-				GVariant * pidv = g_variant_get_child_value(first_entry, 1);
-
-				data->pid = g_variant_get_int32(pidv);
-
-				g_variant_unref(pidv);
-				g_variant_unref(first_entry);
-			}
-
-			g_variant_unref(processv);
-		}
-	}
-
-	g_free(instance_name);
-}
-
-/* Look for the app for a job */
-static GPid
-pid_for_job (GDBusConnection * con, const gchar * jobname, const gchar * appid)
-{
-	pid_for_job_t data = {
-		.jobname = jobname,
-		.appid = appid,
-		.pid = 0
-	};
-
-	foreach_job_instance(con, jobname, pid_for_job_instance, &data);
-
-	return data.pid;
 }
 
 GPid
@@ -1484,22 +861,14 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, 0);
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, 0);
-
-	GPid pid = 0;
-
-	if (pid == 0) {
-		pid = pid_for_job(con, "application-legacy", appid);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		return app->instances().at(0)->primaryPid();
+	} catch (...) {
+		return 0;
 	}
-
-	if (pid == 0) {
-		pid = pid_for_job(con, "application-click", appid);
-	}
-
-	g_object_unref(con);
-
-	return pid;
 }
 
 /* Get the PIDs for an AppID. If it's click or legacy single instance that's
@@ -1508,83 +877,40 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 GList *
 ubuntu_app_launch_get_pids (const gchar * appid)
 {
-	g_return_val_if_fail(appid != NULL, NULL);
-	ual_tracepoint(pids_list_start, appid);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
+		auto pids = app->instances().at(0)->pids();
 
-	GDBusConnection * cgmanager = cgroup_manager_connection();
-	g_return_val_if_fail(cgmanager != NULL, NULL);
-
-	ual_tracepoint(pids_list_connected, appid);
-
-	if (is_click(appid)) {
-		GList * pids = pids_from_cgroup(cgmanager, "application-click", appid);
-		cgroup_manager_unref(cgmanager);
-
-		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
-		return pids;
-	} else if (is_libertine(appid) || legacy_single_instance(appid)) {
-		gchar * jobname = g_strdup_printf("%s-", appid);
-		GList * pids = pids_from_cgroup(cgmanager, "application-legacy", jobname);
-		g_free(jobname);
-		cgroup_manager_unref(cgmanager);
-
-		ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
-		return pids;
-	}
-
-	/* If we're not single instance, we need to find all the pids for all
-	   the instances of the app */
-	unsigned int i;
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, NULL);
-
-	GList * pids = NULL;
-
-	GArray * apps = g_array_new(TRUE, TRUE, sizeof(gchar *));
-	g_array_set_clear_func(apps, free_helper);
-
-	apps_for_job(con, "application-legacy", apps, FALSE);
-	gchar * appiddash = g_strdup_printf("%s-", appid); /* Probably could go RegEx here, but let's start with just a prefix lookup */
-	for (i = 0; i < apps->len; i++) {
-		const gchar * array_id = g_array_index(apps, const gchar *, i);
-		if (g_str_has_prefix(array_id, appiddash)) {
-			GList * morepids = pids_from_cgroup(cgmanager, "application-legacy", array_id);
-			pids = g_list_concat(pids, morepids);
+		GList * retval = nullptr;
+		for (auto pid : pids) {
+			retval = g_list_prepend(retval, GINT_TO_POINTER(pid));
 		}
+
+		return retval;
+	} catch (...) {
+		return nullptr;
 	}
-	g_free(appiddash);
-
-	g_array_free(apps, TRUE);
-	g_object_unref(con);
-
-	cgroup_manager_unref(cgmanager);
-
-	ual_tracepoint(pids_list_finished, appid, g_list_length(pids));
-	return pids;
 }
 
 gboolean
 ubuntu_app_launch_pid_in_app_id (GPid pid, const gchar * appid)
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::find(appid);
+		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-	if (pid == 0) {
+		if (app->instances().at(0)->hasPid(pid)) {
+			return TRUE;
+		} else {
+			return FALSE;
+		}
+	} catch (...) {
 		return FALSE;
 	}
-
-	GList * pidlist = ubuntu_app_launch_get_pids(appid);
-	GList * head;
-
-	for (head = pidlist; head != NULL; head = g_list_next(head)) {
-		GPid checkpid = GPOINTER_TO_INT(head->data);
-		if (checkpid == pid) {
-			g_list_free(pidlist);
-			return TRUE;
-		}
-	}
-
-	g_list_free(pidlist);
-	return FALSE;
 }
 
 gboolean
@@ -1592,33 +918,28 @@ ubuntu_app_launch_app_id_parse (const gchar * appid, gchar ** package, gchar ** 
 {
 	g_return_val_if_fail(appid != NULL, FALSE);
 
-	/* 'Parse' the App ID */
-	gchar ** app_id_segments = g_strsplit(appid, "_", 4);
-	if (g_strv_length(app_id_segments) != 3) {
-		g_debug("Unable to parse Application ID: %s", appid);
-		g_strfreev(app_id_segments);
+	try {
+		auto appId = ubuntu::app_launch::AppID::parse(appid);
+
+		if (appId.empty()) {
+			return FALSE;
+		}
+
+		if (package != nullptr) {
+			*package = g_strdup(appId.package.value().c_str());
+		}
+
+		if (application != nullptr) {
+			*application = g_strdup(appId.appname.value().c_str());
+		}
+
+		if (version != nullptr) {
+			*version = g_strdup(appId.version.value().c_str());
+		}
+	} catch (...) {
 		return FALSE;
 	}
 
-	if (package != NULL) {
-		*package = app_id_segments[0];
-	} else {
-		g_free(app_id_segments[0]);
-	}
-
-	if (application != NULL) {
-		*application = app_id_segments[1];
-	} else {
-		g_free(app_id_segments[1]);
-	}
-
-	if (version != NULL) {
-		*version = app_id_segments[2];
-	} else {
-		g_free(app_id_segments[2]);
-	}
-
-	g_free(app_id_segments);
 	return TRUE;
 }
 
@@ -1629,16 +950,24 @@ ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const
 {
 	g_return_val_if_fail(pkg != NULL, NULL);
 
-	/* Check if is a libertine container */
-	gchar * libertinepath = g_build_filename(g_get_user_cache_dir(), "libertine-container", pkg, NULL);
-	gboolean libcontainer = g_file_test(libertinepath, G_FILE_TEST_EXISTS);
-	g_free(libertinepath);
+	std::string package{pkg};
+	std::string appname;
+	std::string version;
 
-	if (libcontainer) {
-		return libertine_triplet_to_app_id(pkg, app, ver);
-	} else {
-		return click_triplet_to_app_id(pkg, app, ver);
+	if (app != nullptr) {
+		appname = app;
 	}
+
+	if (ver != nullptr) {
+		version = ver;
+	}
+
+	auto appid = ubuntu::app_launch::AppID::discover(package, appname, version);
+	if (appid.empty()) {
+		return nullptr;
+	}
+
+	return g_strdup(std::string(appid).c_str());
 }
 
 /* Print an error if we couldn't start it */
@@ -1705,7 +1034,7 @@ start_helper_core (const gchar * type, const gchar * appid, const gchar * const 
 	                       NULL,
 	                       G_DBUS_CALL_FLAGS_NONE,
 	                       -1,
-	                       NULL, /* cancelable */
+	                       NULL, /* cancellable */
 	                       start_helper_callback,
 	                       NULL);
 
@@ -1777,7 +1106,7 @@ remove_socket_path_find (gconstpointer a, gconstpointer b)
 	GObject * obj = (GObject *)a;
 	const gchar * path = (const gchar *)b;
 
-	gchar * objpath = g_object_get_qdata(obj, proxy_path_quark());
+	gchar * objpath = (gchar *)g_object_get_qdata(obj, proxy_path_quark());
 	
 	return g_strcmp0(objpath, path);
 }
@@ -1835,7 +1164,7 @@ proxy_cleanup_list (void)
 {
 	while (open_proxies) {
 		GObject * obj = G_OBJECT(open_proxies->data);
-		gchar * path = g_object_get_qdata(obj, proxy_path_quark());
+		gchar * path = (gchar *)g_object_get_qdata(obj, proxy_path_quark());
 		remove_socket_path(path);
 	}
 }
@@ -1885,7 +1214,7 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 {
 	static gboolean final_cleanup = FALSE;
 	if (!final_cleanup) {
-		g_atexit(proxy_cleanup_list);
+		std::atexit(proxy_cleanup_list);
 		final_cleanup = TRUE;
 	}
 
@@ -2038,7 +1367,7 @@ stop_helper_core (const gchar * type, const gchar * appid, const gchar * instanc
 	                       NULL,
 	                       G_DBUS_CALL_FLAGS_NONE,
 	                       -1,
-	                       NULL, /* cancelable */
+	                       NULL, /* cancellable */
 	                       stop_helper_callback,
 	                       NULL);
 
@@ -2116,9 +1445,9 @@ ubuntu_app_launch_list_helpers (const gchar * type)
 	g_return_val_if_fail(con != NULL, FALSE);
 
 	helpers_helper_t helpers_helper_data = {
-		.type_prefix = g_strdup_printf("%s:", type),
-		.type_len = strlen(type) + 1, /* 1 for the colon */
-		.retappids = g_array_new(TRUE, TRUE, sizeof(gchar *))
+		g_strdup_printf("%s:", type),
+		strlen(type) + 1, /* 1 for the colon */
+		g_array_new(TRUE, TRUE, sizeof(gchar *))
 	};
 
 	foreach_job_instance(con, "untrusted-helper", list_helpers_helper, &helpers_helper_data);
@@ -2175,10 +1504,10 @@ ubuntu_app_launch_list_helper_instances (const gchar * type, const gchar * appid
 	g_return_val_if_fail(con != NULL, FALSE);
 
 	helper_instances_t helper_instances_data = {
-		.type_prefix = g_strdup_printf("%s:", type),
-		.type_len = strlen(type) + 1, /* 1 for the colon */
-		.retappids = g_array_new(TRUE, TRUE, sizeof(gchar *)),
-		.appid_suffix = g_strdup_printf(":%s", appid)
+		g_strdup_printf("%s:", type),
+		strlen(type) + 1, /* 1 for the colon */
+		g_array_new(TRUE, TRUE, sizeof(gchar *)),
+		g_strdup_printf(":%s", appid)
 	};
 
 	foreach_job_instance(con, "untrusted-helper", list_helper_instances, &helper_instances_data);
@@ -2389,7 +1718,7 @@ set_var (GDBusConnection * bus, const gchar * job_name, const gchar * instance_n
 		NULL, /* reply */
 		G_DBUS_CALL_FLAGS_NONE,
 		-1, /* timeout */
-		NULL, /* cancelable */
+		NULL, /* cancellable */
 		NULL, NULL); /* callback */
 }
 

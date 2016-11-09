@@ -1,8 +1,8 @@
 {
-	"version": "2",
-	"hooks": {
-		"application": {
-			"desktop": "chatter.desktop"
-		}
-	}
+    "version": "2",
+    "hooks": {
+        "chatter": {
+            "desktop": "chatter.desktop"
+        }
+    }
 }

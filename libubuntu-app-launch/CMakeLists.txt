@@ -1,19 +1,17 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-##########################
-# Version Info
-##########################
-
-set(API_VERSION 2)
-set(ABI_VERSION 2)
-
 
 ##########################
 # Library
 ##########################
 
 add_lttng_gen_tp(NAME ubuntu-app-launch-trace)
+
+EXECUTE_PROCESS(COMMAND gcc -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+if ("${GCC_VERSION}" VERSION_LESS "5.0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=pedantic")
+endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -Wpedantic")
@@ -28,6 +26,7 @@ set(LAUNCHER_CPP_HEADERS
 appid.h
 application.h
 helper.h
+oom.h
 registry.h
 type-tagger.h
 )
@@ -36,28 +35,41 @@ set(LAUNCHER_CPP_SOURCES
 application.cpp
 helper.cpp
 registry.cpp
+registry-impl.h
 registry-impl.cpp
+application-impl-base.h
 application-impl-base.cpp
+application-impl-click.h
 application-impl-click.cpp
 application-impl-legacy.h
 application-impl-legacy.cpp
 application-impl-libertine.h
 application-impl-libertine.cpp
+application-info-desktop.h
 application-info-desktop.cpp
+application-icon-finder.h
 application-icon-finder.cpp
 helper-impl-click.cpp
+glib-thread.h
 glib-thread.cpp
 )
 
 set(LAUNCHER_SOURCES
-ubuntu-app-launch.c
+ubuntu-app-launch.cpp
 second-exec-core.c
-click-exec.c
-desktop-exec.c
 ubuntu-app-launch-trace.c
 app-info.c
-${LAUNCHER_CPP_SOURCES}
 )
+
+if(CURL_FOUND)
+add_definitions ( -DENABLE_SNAPPY=1 )
+list(APPEND LAUNCHER_CPP_SOURCES
+application-impl-snap.h
+application-impl-snap.cpp
+snapd-info.h
+snapd-info.cpp
+)
+endif()
 
 add_custom_target(format
 	COMMAND clang-format -i -style=file ${LAUNCHER_CPP_HEADERS} ${LAUNCHER_CPP_SOURCES}
@@ -68,8 +80,26 @@ set(LAUNCHER_GEN_SOURCES
 
 add_gdbus_codegen_with_namespace(LAUNCHER_GEN_SOURCES proxy-socket-demangler com.canonical.UbuntuAppLaunch. proxy ${CMAKE_SOURCE_DIR}/data/com.canonical.UbuntuAppLaunch.SocketDemangler.xml)
 
+add_library(launcher-static ${LAUNCHER_SOURCES} ${LAUNCHER_CPP_SOURCES} ${LAUNCHER_GEN_SOURCES})
 
-add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES} ${LAUNCHER_GEN_SOURCES})
+target_link_libraries(launcher-static
+	${GLIB2_LIBARIES}
+	${GOBJECT2_LIBRARIES}
+	${LIBUPSTART_LIBRARIES}
+	${GIO2_LIBRARIES}
+	${LTTNG_LIBRARIES}
+	${JSONGLIB_LIBRARIES}
+	${CLICK_LIBRARIES}
+	${ZEITGEIST_LIBRARIES}
+	${MIR_LIBRARIES}
+	${LIBERTINE_LIBRARIES}
+	${CURL_LIBRARIES}
+	-lpthread
+	helpers
+	-Wl,--no-undefined
+)
+
+add_library(ubuntu-launcher SHARED ${LAUNCHER_SOURCES} ${LAUNCHER_CPP_SOURCES} ${LAUNCHER_GEN_SOURCES})
 
 set_target_properties(ubuntu-launcher PROPERTIES
 	VERSION ${ABI_VERSION}.0.0
@@ -90,6 +120,8 @@ target_link_libraries(ubuntu-launcher
 	${ZEITGEIST_LIBRARIES}
 	${MIR_LIBRARIES}
 	${LIBERTINE_LIBRARIES}
+	${CURL_LIBRARIES}
+	-lpthread
 	helpers
 	-Wl,--no-undefined
 )
@@ -148,3 +180,4 @@ set(UbuntuAppLaunch_2_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
 list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-2.gir)
 gir_add_introspections(INTROSPECTION_GIRS)
 
+add_subdirectory(abi-check)
