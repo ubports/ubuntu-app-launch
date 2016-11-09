@@ -29,7 +29,6 @@ extern "C" {
 
 #include "ubuntu-app-launch-trace.h"
 #include "helpers.h"
-#include "emit.h"
 #include "ual-tracepoint.h"
 #include "recoverable-problem.h"
 #include "proxy-socket-demangler.h"
@@ -646,28 +645,6 @@ gboolean
 ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
 	return paused_resumed_generic(observer, user_data, &resumed_array, "ApplicationResumed", "resumed");
-}
-
-void
-emit_paused (const gchar * appid, GPid * pids)
-{
-	GList * pobserver;
-	for (pobserver = paused_array; pobserver != nullptr; pobserver = g_list_next(pobserver)) {
-		paused_resumed_observer_t * observer = (paused_resumed_observer_t *)pobserver->data;
-
-		observer->func(appid, pids, observer->user_data);
-	}
-}
-
-void
-emit_resumed (const gchar * appid, GPid * pids)
-{
-	GList * pobserver;
-	for (pobserver = resumed_array; pobserver != nullptr; pobserver = g_list_next(pobserver)) {
-		paused_resumed_observer_t * observer = (paused_resumed_observer_t *)pobserver->data;
-
-		observer->func(appid, pids, observer->user_data);
-	}
 }
 
 static gboolean

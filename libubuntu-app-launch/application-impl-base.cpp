@@ -26,7 +26,6 @@
 #include <upstart.h>
 
 #include "application-impl-base.h"
-#include "emit.h"
 #include "helpers.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
@@ -278,9 +277,6 @@ void UpstartInstance::pause()
         });
 
         pidListToDbus(pids, "ApplicationPaused");
-
-        pids.emplace_back(0);
-        emit_paused(std::string(appId_).c_str(), pids.data());
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
@@ -301,9 +297,6 @@ void UpstartInstance::resume()
         });
 
         pidListToDbus(pids, "ApplicationResumed");
-
-        pids.emplace_back(0);
-        emit_resumed(std::string(appId_).c_str(), pids.data());
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
