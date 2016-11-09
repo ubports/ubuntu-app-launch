@@ -225,14 +225,14 @@ void Registry::Impl::initCGManager()
     std::promise<std::shared_ptr<GDBusConnection>> promise;
     auto future = promise.get_future();
 
-    thread.executeOnThread([this, &promise]() {
+    thread.executeOnThread<bool>([this, &promise]() {
         bool use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != nullptr;
         if (use_session_bus)
         {
             /* For working dbusmock */
             g_debug("Connecting to CG Manager on session bus");
             promise.set_value(_dbus);
-            return;
+            return true;
         }
 
         auto cancel =
@@ -260,6 +260,8 @@ void Registry::Impl::initCGManager()
                 promise->set_value(con);
             },
             &promise);
+
+        return true;
     });
 
     cgManager_ = future.get();
