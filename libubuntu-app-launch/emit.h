@@ -23,7 +23,7 @@
 
 G_BEGIN_DECLS
 
-void emit_pause(const gchar* appid, GPid* pids);
-void emit_resume(const gchar* appid, GPid* pids);
+void emit_paused(const gchar* appid, GPid* pids);
+void emit_resumed(const gchar* appid, GPid* pids);
 
 G_END_DECLS

@@ -649,7 +649,7 @@ ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObser
 }
 
 void
-emit_pause (const gchar * appid, GPid * pids)
+emit_paused (const gchar * appid, GPid * pids)
 {
 	GList * pobserver;
 	for (pobserver = paused_array; pobserver != nullptr; pobserver = g_list_next(pobserver)) {
@@ -660,10 +660,10 @@ emit_pause (const gchar * appid, GPid * pids)
 }
 
 void
-emit_resume (const gchar * appid, GPid * pids)
+emit_resumed (const gchar * appid, GPid * pids)
 {
 	GList * pobserver;
-	for (pobserver = resume_array; pobserver != nullptr; pobserver = g_list_next(pobserver)) {
+	for (pobserver = resumed_array; pobserver != nullptr; pobserver = g_list_next(pobserver)) {
 		paused_resumed_observer_t * observer = (paused_resumed_observer_t *)pobserver->data;
 
 		observer->func(appid, pids, observer->user_data);
