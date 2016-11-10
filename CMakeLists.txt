@@ -97,6 +97,9 @@ include_directories(${CGMANAGER_INCLUDE_DIRS})
 pkg_check_modules(MIR mirclient)
 include_directories(${MIR_INCLUDE_DIRS})
 
+pkg_check_modules(WHOOPSIE libwhoopsie)
+include_directories(${WHOOPSIE_INCLUDE_DIRS})
+
 pkg_check_modules(LIBERTINE libertine)
 include_directories(${LIBERTINE_INCLUDE_DIRS})
 
@@ -113,8 +116,8 @@ add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c helpers-shared.c libubuntu-app-launch/recoverable-problem.c)
-target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
+add_library(helpers STATIC helpers.c helpers-shared.c)
+target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
 
 ####################
 # desktop-hook
@@ -122,7 +125,7 @@ target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LI
 
 add_executable(desktop-hook desktop-hook.c)
 set_target_properties(desktop-hook PROPERTIES OUTPUT_NAME "desktop-hook")
-target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES})
+target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
