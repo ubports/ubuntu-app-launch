@@ -222,17 +222,13 @@ void Registry::Impl::initCGManager()
     if (cgManager_)
         return;
 
-    std::promise<std::shared_ptr<GDBusConnection>> promise;
-    auto future = promise.get_future();
-
-    thread.executeOnThread([this, &promise]() {
+    cgManager_ = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this]() {
         bool use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != nullptr;
         if (use_session_bus)
         {
             /* For working dbusmock */
             g_debug("Connecting to CG Manager on session bus");
-            promise.set_value(_dbus);
-            return;
+            return _dbus;
         }
 
         auto cancel =
@@ -241,28 +237,25 @@ void Registry::Impl::initCGManager()
         /* Ensure that we do not wait for more than a second */
         thread.timeoutSeconds(std::chrono::seconds{1}, [cancel]() { g_cancellable_cancel(cancel.get()); });
 
-        g_dbus_connection_new_for_address(
-            CGMANAGER_DBUS_PATH,                           /* cgmanager path */
-            G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, /* flags */
-            nullptr,                                       /* Auth Observer */
-            cancel.get(),                                  /* Cancellable */
-            [](GObject* obj, GAsyncResult* res, gpointer data) -> void {
-                GError* error = nullptr;
-                auto promise = reinterpret_cast<std::promise<std::shared_ptr<GDBusConnection>>*>(data);
+        GError* error = nullptr;
+        auto retval = std::shared_ptr<GDBusConnection>(
+            g_dbus_connection_new_for_address_sync(CGMANAGER_DBUS_PATH,                           /* cgmanager path */
+                                                   G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, /* flags */
+                                                   nullptr,                                       /* Auth Observer */
+                                                   cancel.get(),                                  /* Cancellable */
+                                                   &error),
+            [](GDBusConnection* con) { g_clear_object(&con); });
 
-                auto gcon = g_dbus_connection_new_for_address_finish(res, &error);
-                if (error != nullptr)
-                {
-                    g_error_free(error);
-                }
+        if (error != nullptr)
+        {
+            g_warning("Unable to get CGManager connection: %s", error->message);
+            g_error_free(error);
+        }
 
-                auto con = std::shared_ptr<GDBusConnection>(gcon, [](GDBusConnection* con) { g_clear_object(&con); });
-                promise->set_value(con);
-            },
-            &promise);
+        return retval;
     });
 
-    cgManager_ = future.get();
+    /* NOTE: This will execute on the thread */
     thread.timeoutSeconds(std::chrono::seconds{10}, [this]() { cgManager_.reset(); });
 }
 
