@@ -70,7 +70,7 @@ include_directories(${GOBJECT2_INCLUDE_DIRS})
 pkg_check_modules(GIO2 REQUIRED gio-2.0 gio-unix-2.0)
 include_directories(${GIO2_INCLUDE_DIRS})
 
-pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
+pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0>=1.1.2)
 include_directories(${JSONGLIB_INCLUDE_DIRS})
 
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
