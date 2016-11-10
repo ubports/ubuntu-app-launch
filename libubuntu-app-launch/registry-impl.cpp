@@ -19,6 +19,8 @@
 
 #include "registry-impl.h"
 #include "application-icon-finder.h"
+#include <regex>
+#include <upstart.h>
 
 namespace ubuntu
 {
@@ -40,7 +42,6 @@ Registry::Impl::Impl(Registry* registry)
              })
     , _registry(registry)
     , _iconFinders()
-// _manager(nullptr)
 {
     auto cancel = thread.getCancellable();
     _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
@@ -290,25 +291,6 @@ std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
     }
     return _iconFinders[basePath];
 }
-
-#if 0
-void
-Registry::Impl::setManager (Registry::Manager* manager)
-{
-    if (_manager != nullptr)
-    {
-        throw std::runtime_error("Already have a manager and trying to set another");
-    }
-
-    _manager = manager;
-}
-
-void
-Registry::Impl::clearManager ()
-{
-    _manager = nullptr;
-}
-#endif
 
 /** App start watching, if we're registered for the signal we
     can't wait on it. We are making this static right now because

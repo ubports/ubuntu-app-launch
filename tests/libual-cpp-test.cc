@@ -49,32 +49,68 @@ protected:
     DbusTestDbusMock* mock = NULL;
     DbusTestDbusMock* cgmock = NULL;
     GDBusConnection* bus = NULL;
-    std::string last_focus_appid;
-    std::string last_resume_appid;
     guint resume_timeout = 0;
     std::shared_ptr<ubuntu::app_launch::Registry> registry;
 
-private:
-    static void focus_cb(const gchar* appid, gpointer user_data)
+    class ManagerMock : public ubuntu::app_launch::Registry::Manager
     {
-        g_debug("Focus Callback: %s", appid);
-        LibUAL* _this = static_cast<LibUAL*>(user_data);
-        _this->last_focus_appid = appid;
-    }
+        GLib::ContextThread thread;
 
-    static void resume_cb(const gchar* appid, gpointer user_data)
-    {
-        g_debug("Resume Callback: %s", appid);
-        LibUAL* _this = static_cast<LibUAL*>(user_data);
-        _this->last_resume_appid = appid;
-
-        if (_this->resume_timeout > 0)
+    public:
+        ManagerMock()
         {
-            _this->pause(_this->resume_timeout);
+            g_debug("Building a Manager Mock");
         }
-    }
 
-protected:
+        ~ManagerMock()
+        {
+            g_debug("Freeing a Manager Mock");
+        }
+
+        ubuntu::app_launch::AppID lastStartedApp;
+        ubuntu::app_launch::AppID lastFocusedApp;
+        ubuntu::app_launch::AppID lastResumedApp;
+
+        bool startingResponse{true};
+        bool focusResponse{true};
+        bool resumeResponse{true};
+
+        std::chrono::milliseconds startingTimeout{0};
+        std::chrono::milliseconds focusTimeout{0};
+        std::chrono::milliseconds resumeTimeout{0};
+
+        void startingRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
+                             std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                             std::function<void(bool)> reply) override
+        {
+            thread.timeout(startingTimeout, [this, app, instance, reply]() {
+                lastStartedApp = app->appId();
+                reply(startingResponse);
+            });
+        }
+
+        void focusRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
+                          std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                          std::function<void(bool)> reply) override
+        {
+            thread.timeout(focusTimeout, [this, app, instance, reply]() {
+                lastFocusedApp = app->appId();
+                reply(focusResponse);
+            });
+        }
+
+        void resumeRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
+                           std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                           std::function<void(bool)> reply) override
+        {
+            thread.timeout(resumeTimeout, [this, app, instance, reply]() {
+                lastResumedApp = app->appId();
+                reply(resumeResponse);
+            });
+        }
+    };
+    std::weak_ptr<ManagerMock> manager;
+
     /* Useful debugging stuff, but not on by default.  You really want to
        not get all this noise typically */
     void debugConnection()
@@ -128,13 +164,13 @@ protected:
 
         dbus_test_dbus_mock_object_add_method(mock, obj, "GetJobByName", G_VARIANT_TYPE("s"), G_VARIANT_TYPE("o"),
                                               "if args[0] == 'application-click':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/application_click')\n"
+                                              "    ret = dbus.ObjectPath('/com/test/application_click')\n"
                                               "elif args[0] == 'application-snap':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/application_snap')\n"
+                                              "    ret = dbus.ObjectPath('/com/test/application_snap')\n"
                                               "elif args[0] == 'application-legacy':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/application_legacy')\n"
+                                              "    ret = dbus.ObjectPath('/com/test/application_legacy')\n"
                                               "elif args[0] == 'untrusted-helper':\n"
-                                              "	ret = dbus.ObjectPath('/com/test/untrusted/helper')\n",
+                                              "    ret = dbus.ObjectPath('/com/test/untrusted/helper')\n",
                                               NULL);
 
         dbus_test_dbus_mock_object_add_method(mock, obj, "SetEnv", G_VARIANT_TYPE("(assb)"), NULL, "", NULL);
@@ -273,18 +309,22 @@ protected:
         /* Make sure we pretend the CG manager is just on our bus */
         g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS", "YES", TRUE);
 
-        ASSERT_TRUE(ubuntu_app_launch_observer_add_app_focus(focus_cb, this));
-        ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resume(resume_cb, this));
-
         registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+        auto smanager = std::make_shared<ManagerMock>();
+        manager = smanager;
+        ubuntu::app_launch::Registry::setManager(smanager, registry);
     }
 
     virtual void TearDown()
     {
-        ubuntu_app_launch_observer_delete_app_focus(focus_cb, this);
-        ubuntu_app_launch_observer_delete_app_resume(resume_cb, this);
-
         registry.reset();
+
+        // NOTE: This should generally always be commented out, but
+        // it is useful for debugging common errors, so leaving it
+        // as a comment to make debugging those eaiser.
+        //
+        // ubuntu::app_launch::Registry::clearDefault();
 
         g_clear_object(&mock);
         g_clear_object(&cgmock);
@@ -794,33 +834,30 @@ TEST_F(LibUAL, ApplicationList)
 #endif
 }
 
-typedef struct
-{
-    unsigned int count;
-    const gchar* name;
-} observer_data_t;
-
-static void observer_cb(const gchar* appid, gpointer user_data)
-{
-    observer_data_t* data = (observer_data_t*)user_data;
-
-    if (data->name == NULL)
-    {
-        data->count++;
-    }
-    else if (g_strcmp0(data->name, appid) == 0)
-    {
-        data->count++;
-    }
-}
-
 TEST_F(LibUAL, StartStopObserver)
 {
-    observer_data_t start_data = {.count = 0, .name = nullptr};
-    observer_data_t stop_data = {.count = 0, .name = nullptr};
+    int start_count = 0;
+    int stop_count = 0;
+    ubuntu::app_launch::AppID start_appid;
+    ubuntu::app_launch::AppID stop_appid;
 
-    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_started(observer_cb, &start_data));
-    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_stop(observer_cb, &stop_data));
+    ubuntu::app_launch::Registry::appStarted(registry).connect(
+        [&start_count, &start_appid](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+            if (!start_appid.empty() && !(start_appid == app->appId()))
+                return;
+
+            start_count++;
+        });
+
+    ubuntu::app_launch::Registry::appStopped(registry).connect(
+        [&stop_count, &stop_appid](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+            if (!stop_appid.empty() && !(stop_appid == app->appId()))
+                return;
+
+            stop_count++;
+        });
 
     DbusTestDbusMockObject* obj =
         dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
@@ -831,7 +868,7 @@ TEST_F(LibUAL, StartStopObserver)
         g_variant_new_parsed("('started', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
         NULL);
 
-    EXPECT_EVENTUALLY_EQ(1, start_data.count);
+    EXPECT_EVENTUALLY_EQ(1, start_count);
 
     /* Basic stop */
     dbus_test_dbus_mock_object_emit_signal(
@@ -839,33 +876,41 @@ TEST_F(LibUAL, StartStopObserver)
         g_variant_new_parsed("('stopped', ['JOB=application-click', 'INSTANCE=com.test.good_application_1.2.3'])"),
         NULL);
 
-    EXPECT_EVENTUALLY_EQ(1, stop_data.count);
+    EXPECT_EVENTUALLY_EQ(1, stop_count);
 
     /* Start legacy */
-    start_data.count = 0;
-    start_data.name = "multiple";
+    start_count = 0;
+    start_appid = ubuntu::app_launch::AppID{ubuntu::app_launch::AppID::Package::from_raw({}),
+                                            ubuntu::app_launch::AppID::AppName::from_raw("multiple"),
+                                            ubuntu::app_launch::AppID::Version::from_raw({})};
 
     dbus_test_dbus_mock_object_emit_signal(
         mock, obj, "EventEmitted", G_VARIANT_TYPE("(sas)"),
         g_variant_new_parsed("('started', ['JOB=application-legacy', 'INSTANCE=multiple-234235'])"), NULL);
 
-    EXPECT_EVENTUALLY_EQ(1, start_data.count);
+    EXPECT_EVENTUALLY_EQ(1, start_count);
 
     /* Legacy stop */
-    stop_data.count = 0;
-    stop_data.name = "bar";
+    stop_count = 0;
+    stop_appid = ubuntu::app_launch::AppID{ubuntu::app_launch::AppID::Package::from_raw({}),
+                                           ubuntu::app_launch::AppID::AppName::from_raw("foo"),
+                                           ubuntu::app_launch::AppID::Version::from_raw({})};
 
     dbus_test_dbus_mock_object_emit_signal(
         mock, obj, "EventEmitted", G_VARIANT_TYPE("(sas)"),
-        g_variant_new_parsed("('stopped', ['JOB=application-legacy', 'INSTANCE=bar-9344321'])"), NULL);
+        g_variant_new_parsed("('stopped', ['JOB=application-legacy', 'INSTANCE=foo-9344321'])"), NULL);
 
-    EXPECT_EVENTUALLY_EQ(1, stop_data.count);
+    EXPECT_EVENTUALLY_EQ(1, stop_count);
 
     /* Test Noise Start */
-    start_data.count = 0;
-    start_data.name = "com.test.good_application_1.2.3";
-    stop_data.count = 0;
-    stop_data.name = "com.test.good_application_1.2.3";
+    start_count = 0;
+    start_appid = ubuntu::app_launch::AppID{ubuntu::app_launch::AppID::Package::from_raw("com.test.good"),
+                                            ubuntu::app_launch::AppID::AppName::from_raw("application"),
+                                            ubuntu::app_launch::AppID::Version::from_raw("1.2.3")};
+    stop_count = 0;
+    stop_appid = ubuntu::app_launch::AppID{ubuntu::app_launch::AppID::Package::from_raw("com.test.good"),
+                                           ubuntu::app_launch::AppID::AppName::from_raw("application"),
+                                           ubuntu::app_launch::AppID::Version::from_raw("1.2.3")};
 
     /* A full lifecycle */
     dbus_test_dbus_mock_object_emit_signal(
@@ -886,46 +931,33 @@ TEST_F(LibUAL, StartStopObserver)
         NULL);
 
     /* Ensure we just signaled once for each */
-    EXPECT_EVENTUALLY_EQ(1, start_data.count);
-    EXPECT_EVENTUALLY_EQ(1, stop_data.count);
-
-    /* Remove */
-    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_started(observer_cb, &start_data));
-    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_stop(observer_cb, &stop_data));
-}
-
-static GDBusMessage* filter_starting(GDBusConnection* conn,
-                                     GDBusMessage* message,
-                                     gboolean incomming,
-                                     gpointer user_data)
-{
-    if (g_strcmp0(g_dbus_message_get_member(message), "UnityStartingSignal") == 0)
-    {
-        unsigned int* count = static_cast<unsigned int*>(user_data);
-        (*count)++;
-        g_object_unref(message);
-        return NULL;
-    }
-
-    return message;
-}
-
-static void starting_observer(const gchar* appid, gpointer user_data)
-{
-    std::string* last = static_cast<std::string*>(user_data);
-    *last = appid;
-    return;
+    EXPECT_EVENTUALLY_EQ(1, start_count);
+    EXPECT_EVENTUALLY_EQ(1, stop_count);
 }
 
 TEST_F(LibUAL, StartingResponses)
 {
-    std::string last_observer;
-    unsigned int starting_count = 0;
+    /* Get Bus */
     GDBusConnection* session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-    guint filter = g_dbus_connection_add_filter(session, filter_starting, &starting_count, NULL);
 
-    EXPECT_TRUE(ubuntu_app_launch_observer_add_app_starting(starting_observer, &last_observer));
+    /* Setup filter to count signals out */
+    unsigned int starting_count = 0;
+    guint filter = g_dbus_connection_add_filter(
+        session,
+        [](GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data) -> GDBusMessage* {
+            if (g_strcmp0(g_dbus_message_get_member(message), "UnityStartingSignal") == 0)
+            {
+                unsigned int* count = static_cast<unsigned int*>(user_data);
+                (*count)++;
+                g_object_unref(message);
+                return NULL;
+            }
 
+            return message;
+        },
+        &starting_count, NULL);
+
+    /* Emit a signal */
     g_dbus_connection_emit_signal(session, NULL,                                           /* destination */
                                   "/",                                                     /* path */
                                   "com.canonical.UbuntuAppLaunch",                         /* interface */
@@ -933,10 +965,14 @@ TEST_F(LibUAL, StartingResponses)
                                   g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
                                   NULL);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
-    EXPECT_EVENTUALLY_EQ(1, starting_count);
+    /* Make sure we run our observer */
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw("com.test.good"),
+                                                   ubuntu::app_launch::AppID::AppName::from_raw("application"),
+                                                   ubuntu::app_launch::AppID::Version::from_raw("1.2.3")),
+                         manager.lock()->lastStartedApp);
 
-    EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_starting(starting_observer, &last_observer));
+    /* Make sure we return */
+    EXPECT_EVENTUALLY_EQ(1, starting_count);
 
     g_dbus_connection_remove_filter(session, filter);
     g_object_unref(session);
@@ -948,8 +984,10 @@ TEST_F(LibUAL, AppIdTest)
     auto app = ubuntu::app_launch::Application::create(appid, registry);
     app->launch();
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 }
 
 GDBusMessage* filter_func_good(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -983,8 +1021,10 @@ TEST_F(LibUAL, UrlSendTest)
 
     app->launch(uris);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 
     g_dbus_connection_remove_filter(session, filter);
 
@@ -1016,8 +1056,10 @@ TEST_F(LibUAL, UrlSendNoObjectTest)
 
     app->launch(uris);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 }
 
 TEST_F(LibUAL, UnityTimeoutTest)
@@ -1029,8 +1071,10 @@ TEST_F(LibUAL, UnityTimeoutTest)
 
     app->launch();
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
 }
 
 TEST_F(LibUAL, UnityTimeoutUriTest)
@@ -1044,8 +1088,10 @@ TEST_F(LibUAL, UnityTimeoutUriTest)
 
     app->launch(uris);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 }
 
 GDBusMessage* filter_respawn(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -1078,8 +1124,10 @@ TEST_F(LibUAL, UnityLostTest)
     g_debug("Start call time: %d ms", (end - start) / 1000);
     EXPECT_LT(end - start, 2000 * 1000);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
+                         this->manager.lock()->lastResumedApp);
 
     g_dbus_connection_remove_filter(session, filter);
     g_object_unref(session);
@@ -1139,22 +1187,20 @@ TEST_F(LibUAL, LegacySingleInstance)
     g_variant_unref(env);
 }
 
-static void failed_observer(const gchar* appid, UbuntuAppLaunchAppFailed reason, gpointer user_data)
-{
-    if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_CRASH)
-    {
-        std::string* last = static_cast<std::string*>(user_data);
-        *last = appid;
-    }
-    return;
-}
-
 TEST_F(LibUAL, FailingObserver)
 {
-    std::string last_observer;
-    GDBusConnection* session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+    ubuntu::app_launch::AppID lastFailedApp;
+    ubuntu::app_launch::Registry::FailureType lastFailedType;
 
-    EXPECT_TRUE(ubuntu_app_launch_observer_add_app_failed(failed_observer, &last_observer));
+    ubuntu::app_launch::Registry::appFailed(registry).connect(
+        [&lastFailedApp, &lastFailedType](std::shared_ptr<ubuntu::app_launch::Application> app,
+                                          std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+                                          ubuntu::app_launch::Registry::FailureType type) {
+            lastFailedApp = app->appId();
+            lastFailedType = type;
+        });
+
+    GDBusConnection* session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
     g_dbus_connection_emit_signal(
         session, NULL,                                                     /* destination */
@@ -1164,9 +1210,10 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "crash"), /* params, the same */
         NULL);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"), lastFailedApp);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::Registry::FailureType::CRASH, lastFailedType);
 
-    last_observer.clear();
+    lastFailedApp = ubuntu::app_launch::AppID();
 
     g_dbus_connection_emit_signal(
         session, NULL,                                                        /* destination */
@@ -1176,9 +1223,9 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "blahblah"), /* params, the same */
         NULL);
 
-    EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"), lastFailedApp);
 
-    last_observer.clear();
+    lastFailedApp = ubuntu::app_launch::AppID();
 
     g_dbus_connection_emit_signal(
         session, NULL,                                                             /* destination */
@@ -1188,9 +1235,7 @@ TEST_F(LibUAL, FailingObserver)
         g_variant_new("(ss)", "com.test.good_application_1.2.3", "start-failure"), /* params, the same */
         NULL);
 
-    EXPECT_EVENTUALLY_EQ(true, last_observer.empty());
-
-    EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::Registry::FailureType::START_FAILURE, lastFailedType);
 
     g_object_unref(session);
 }

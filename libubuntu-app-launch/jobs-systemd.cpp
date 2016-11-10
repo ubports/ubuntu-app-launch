@@ -851,9 +851,9 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
 
     if (error != nullptr)
     {
-        auto message = std::string{"Unable to read cgroup PID list: "} + error->message;
+        g_warning("Unable to read cgroup PID list: %s", error->message);
         g_error_free(error);
-        throw std::runtime_error(message);
+        return {};
     }
 
     gchar** pidlines = g_strsplit(pidstr, "\n", -1);
@@ -909,6 +909,39 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
 
         return true;
     });
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStarted()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appStarted;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStopped()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appStopped;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    SystemD::appFailed()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appFailed;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    SystemD::appPaused()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appPaused;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    SystemD::appResumed()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appResumed;
 }
 
 }  // namespace manager

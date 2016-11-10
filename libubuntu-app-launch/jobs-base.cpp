@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
+#include <numeric>
 
 #include "jobs-base.h"
 #include "jobs-systemd.h"
@@ -38,7 +39,23 @@ namespace manager
 Base::Base(const std::shared_ptr<Registry>& registry)
     : registry_(registry)
     , allJobs_{"application-click", "application-legacy", "application-snap"}
+    , dbus_(registry->impl->_dbus)
 {
+}
+
+Base::~Base()
+{
+    auto dohandle = [&](guint& handle) {
+        if (handle != 0)
+        {
+            g_dbus_connection_signal_unsubscribe(dbus_.get(), handle);
+            handle = 0;
+        }
+    };
+
+    dohandle(handle_managerSignalFocus);
+    dohandle(handle_managerSignalResume);
+    dohandle(handle_managerSignalStarting);
 }
 
 std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
@@ -60,6 +77,190 @@ std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
 const std::set<std::string>& Base::getAllJobs()
 {
     return allJobs_;
+}
+
+/** Take the GVariant of parameters and turn them into an application and
+    and instance. Easier to read in the smaller function */
+std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> Base::managerParams(
+    const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry>& reg)
+{
+    std::shared_ptr<Application> app;
+    std::shared_ptr<Application::Instance> instance;
+
+    const gchar* cappid = nullptr;
+    g_variant_get(params.get(), "(&s)", &cappid);
+
+    auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
+    app = ubuntu::app_launch::Application::create(appid, reg);
+
+    return std::make_tuple(app, instance);
+}
+
+/** Used to store data for manager based signal handlers. Has a link to the
+    registry and the callback to use in a C++ style. */
+struct managerEventData
+{
+    /* Keeping a weak pointer because the handle is held by
+       the registry implementation. */
+    std::weak_ptr<Registry> weakReg;
+    std::function<void(const std::shared_ptr<Registry>& reg,
+                       const std::shared_ptr<Application>& app,
+                       const std::shared_ptr<Application::Instance>& instance,
+                       const std::shared_ptr<GDBusConnection>&,
+                       const std::string&,
+                       const std::shared_ptr<GVariant>&)>
+        func;
+};
+
+/** Register for a signal for the manager. All of the signals needed this same
+    code so it got pulled out into a function. Takes the same of the signal, the registry
+    that we're using and a function to call after we've messaged all the parameters
+    into being something C++-ish. */
+guint Base::managerSignalHelper(const std::shared_ptr<Registry>& reg,
+                                const std::string& signalname,
+                                std::function<void(const std::shared_ptr<Registry>& reg,
+                                                   const std::shared_ptr<Application>& app,
+                                                   const std::shared_ptr<Application::Instance>& instance,
+                                                   const std::shared_ptr<GDBusConnection>&,
+                                                   const std::string&,
+                                                   const std::shared_ptr<GVariant>&)> responsefunc)
+{
+    managerEventData* focusdata = new managerEventData{reg, responsefunc};
+
+    return g_dbus_connection_signal_subscribe(
+        reg->impl->_dbus.get(),          /* bus */
+        nullptr,                         /* sender */
+        "com.canonical.UbuntuAppLaunch", /* interface */
+        signalname.c_str(),              /* signal */
+        "/",                             /* path */
+        nullptr,                         /* arg0 */
+        G_DBUS_SIGNAL_FLAGS_NONE,
+        [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*, GVariant* params,
+           gpointer user_data) -> void {
+            auto data = reinterpret_cast<managerEventData*>(user_data);
+            auto reg = data->weakReg.lock();
+
+            /* If we're still conneted and the manager has been cleared
+               we'll just be a no-op */
+            auto ljobs = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
+            if (!ljobs->manager_)
+            {
+                return;
+            }
+
+            auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+            auto conn = std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
+                                                         [](GDBusConnection* con) { g_clear_object(&con); });
+            std::string sender = csender;
+            std::shared_ptr<Application> app;
+            std::shared_ptr<Application::Instance> instance;
+
+            std::tie(app, instance) = managerParams(vparams, reg);
+
+            data->func(reg, app, instance, conn, sender, vparams);
+        },
+        focusdata,
+        [](gpointer user_data) {
+            auto data = reinterpret_cast<managerEventData*>(user_data);
+            delete data;
+        }); /* user data destroy */
+}
+
+/** Set the manager for the registry. This includes tracking the pointer
+    as well as setting up the signals to call back into the manager. The
+    signals are only setup once per registry even if the manager is cleared
+    and changed again. They will just be no-op's in those cases.
+*/
+void Base::setManager(std::shared_ptr<Registry::Manager> manager)
+{
+    if (manager_)
+    {
+        throw std::runtime_error("Already have a manager and trying to set another");
+    }
+
+    g_debug("Setting a new manager");
+    manager_ = manager;
+
+    std::call_once(flag_managerSignals, [this]() {
+        auto reg = registry_.lock();
+
+        if (!reg->impl->thread.executeOnThread<bool>([this, reg]() {
+                handle_managerSignalFocus = managerSignalHelper(
+                    reg, "UnityFocusRequest",
+                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                       const std::shared_ptr<Application::Instance>& instance,
+                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                       const std::shared_ptr<GVariant>& params) {
+                        /* Nothing to do today */
+                        std::dynamic_pointer_cast<Base>(reg->impl->jobs)
+                            ->manager_->focusRequest(app, instance, [](bool response) {
+                                /* NOTE: We have no clue what thread this is gonna be
+                                   executed on, but since we're just talking to the GDBus
+                                   thread it isn't an issue today. Be careful in changing
+                                   this code. */
+                            });
+                    });
+                handle_managerSignalStarting = managerSignalHelper(
+                    reg, "UnityStartingBroadcast",
+                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                       const std::shared_ptr<Application::Instance>& instance,
+                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                       const std::shared_ptr<GVariant>& params) {
+
+                        std::dynamic_pointer_cast<Base>(reg->impl->jobs)
+                            ->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
+                                /* NOTE: We have no clue what thread this is gonna be
+                                   executed on, but since we're just talking to the GDBus
+                                   thread it isn't an issue today. Be careful in changing
+                                   this code. */
+                                if (response)
+                                {
+                                    g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                                  "/",                             /* path */
+                                                                  "com.canonical.UbuntuAppLaunch", /* interface */
+                                                                  "UnityStartingSignal",           /* signal */
+                                                                  params.get(), /* params, the same */
+                                                                  nullptr);     /* error */
+                                }
+                            });
+                    });
+                handle_managerSignalResume = managerSignalHelper(
+                    reg, "UnityResumeRequest",
+                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                       const std::shared_ptr<Application::Instance>& instance,
+                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                       const std::shared_ptr<GVariant>& params) {
+                        std::dynamic_pointer_cast<Base>(reg->impl->jobs)
+                            ->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
+                                /* NOTE: We have no clue what thread this is gonna be
+                                   executed on, but since we're just talking to the GDBus
+                                   thread it isn't an issue today. Be careful in changing
+                                   this code. */
+                                if (response)
+                                {
+                                    g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                                  "/",                             /* path */
+                                                                  "com.canonical.UbuntuAppLaunch", /* interface */
+                                                                  "UnityResumeResponse",           /* signal */
+                                                                  params.get(), /* params, the same */
+                                                                  nullptr);     /* error */
+                                }
+                            });
+                    });
+
+                return true;
+            }))
+        {
+            g_warning("Unable to install manager signals");
+        }
+    });
+}
+
+/** Clear the manager pointer */
+void Base::clearManager()
+{
+    g_debug("Clearing the manager");
+    manager_.reset();
 }
 
 }  // namespace manager

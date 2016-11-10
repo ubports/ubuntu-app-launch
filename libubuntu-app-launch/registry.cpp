@@ -80,6 +80,31 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
     return list;
 }
 
+/* Quick little helper to bundle up standard code */
+inline void setJobs(const std::shared_ptr<Registry>& registry)
+{
+    if (!registry->impl->jobs)
+    {
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
+    }
+}
+
+void Registry::setManager(std::shared_ptr<Manager> manager, std::shared_ptr<Registry> registry)
+{
+    setJobs(registry);
+    registry->impl->jobs->setManager(manager);
+}
+
+void Registry::clearManager()
+{
+    if (!impl->jobs)
+    {
+        return;
+    }
+
+    impl->jobs->clearManager();
+}
+
 std::shared_ptr<Registry> defaultRegistry;
 std::shared_ptr<Registry> Registry::getDefault()
 {
@@ -94,6 +119,41 @@ std::shared_ptr<Registry> Registry::getDefault()
 void Registry::clearDefault()
 {
     defaultRegistry.reset();
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted(
+    const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->appStarted();
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped(
+    const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->appStopped();
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    Registry::appFailed(const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->appFailed();
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Registry::appPaused(const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->appPaused();
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Registry::appResumed(const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->appResumed();
 }
 
 }  // namespace app_launch
