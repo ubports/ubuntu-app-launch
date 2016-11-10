@@ -257,8 +257,15 @@ std::string UpstartInstance::logPath()
 /** Returns all the PIDs that are in the cgroup for this application */
 std::vector<pid_t> UpstartInstance::pids()
 {
-    auto pids = registry_->impl->pidsFromCgroup(upstartJobPath());
-    g_debug("Got %d PIDs for AppID '%s'", int(pids.size()), std::string(appId_).c_str());
+    return pids(registry_, appId_, upstartJobPath());
+}
+
+std::vector<pid_t> UpstartInstance::pids(const std::shared_ptr<Registry>& reg,
+                                         const AppID& appid,
+                                         const std::string& jobpath)
+{
+    auto pids = reg->impl->pidsFromCgroup(jobpath);
+    g_debug("Got %d PIDs for AppID '%s'", int(pids.size()), std::string(appid).c_str());
     return pids;
 }
 
@@ -268,15 +275,19 @@ void UpstartInstance::pause()
 {
     g_debug("Pausing application: %s", std::string(appId_).c_str());
 
-    registry_->impl->thread.executeOnThread([this] {
-        auto pids = forAllPids([this](pid_t pid) {
+    auto registry = registry_;
+    auto appid = appId_;
+    auto jobpath = upstartJobPath();
+
+    registry->impl->thread.executeOnThread([registry, appid, jobpath] {
+        auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::paused();
             g_debug("Pausing PID: %d (%d)", pid, int(oomval));
             signalToPid(pid, SIGSTOP);
             oomValueToPid(pid, oomval);
         });
 
-        pidListToDbus(pids, "ApplicationPaused");
+        pidListToDbus(registry, appid, pids, "ApplicationPaused");
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
@@ -288,15 +299,19 @@ void UpstartInstance::resume()
 {
     g_debug("Resuming application: %s", std::string(appId_).c_str());
 
-    registry_->impl->thread.executeOnThread([this] {
-        auto pids = forAllPids([this](pid_t pid) {
+    auto registry = registry_;
+    auto appid = appId_;
+    auto jobpath = upstartJobPath();
+
+    registry->impl->thread.executeOnThread([registry, appid, jobpath] {
+        auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::focused();
             g_debug("Resuming PID: %d (%d)", pid, int(oomval));
             signalToPid(pid, SIGCONT);
             oomValueToPid(pid, oomval);
         });
 
-        pidListToDbus(pids, "ApplicationResumed");
+        pidListToDbus(registry, appid, pids, "ApplicationResumed");
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
@@ -371,7 +386,7 @@ void UpstartInstance::stop()
 */
 void UpstartInstance::setOomAdjustment(const oom::Score score)
 {
-    forAllPids([this, &score](pid_t pid) { oomValueToPid(pid, score); });
+    forAllPids(registry_, appId_, upstartJobPath(), [score](pid_t pid) { oomValueToPid(pid, score); });
 }
 
 /** Figures out the path to the primary PID of the application and
@@ -410,7 +425,10 @@ const oom::Score UpstartInstance::getOomAdjustment()
 
     \param eachPid Function to run on each PID
 */
-std::vector<pid_t> UpstartInstance::forAllPids(std::function<void(pid_t)> eachPid)
+std::vector<pid_t> UpstartInstance::forAllPids(const std::shared_ptr<Registry>& reg,
+                                               const AppID& appid,
+                                               const std::string& jobpath,
+                                               std::function<void(pid_t)> eachPid)
 {
     std::set<pid_t> seenPids;
     bool added = true;
@@ -418,7 +436,7 @@ std::vector<pid_t> UpstartInstance::forAllPids(std::function<void(pid_t)> eachPi
     while (added)
     {
         added = false;
-        auto pidlist = pids();
+        auto pidlist = pids(reg, appid, jobpath);
         for (auto pid : pidlist)
         {
             if (seenPids.insert(pid).second)
@@ -578,7 +596,10 @@ void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
     \param pids List of PIDs to turn into variants to send
     \param signal Name of the DBus signal to send
 */
-void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal)
+void UpstartInstance::pidListToDbus(const std::shared_ptr<Registry>& reg,
+                                    const AppID& appid,
+                                    const std::vector<pid_t>& pids,
+                                    const std::string& signal)
 {
     auto vpids = std::shared_ptr<GVariant>(
         [pids]() {
@@ -606,11 +627,11 @@ void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::s
 
     GVariantBuilder params;
     g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
-    g_variant_builder_add_value(&params, g_variant_new_string(std::string(appId_).c_str()));
+    g_variant_builder_add_value(&params, g_variant_new_string(std::string(appid).c_str()));
     g_variant_builder_add_value(&params, vpids.get());
 
     GError* error = nullptr;
-    g_dbus_connection_emit_signal(registry_->impl->_dbus.get(),    /* bus */
+    g_dbus_connection_emit_signal(reg->impl->_dbus.get(),          /* bus */
                                   nullptr,                         /* destination */
                                   "/",                             /* path */
                                   "com.canonical.UbuntuAppLaunch", /* interface */
@@ -620,7 +641,7 @@ void UpstartInstance::pidListToDbus(const std::vector<pid_t>& pids, const std::s
 
     if (error != nullptr)
     {
-        g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(appId_).c_str(),
+        g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(appid).c_str(),
                   error->message);
         g_error_free(error);
     }
