@@ -851,9 +851,9 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
 
     if (error != nullptr)
     {
-        auto message = std::string{"Unable to read cgroup PID list: "} + error->message;
+        g_warning("Unable to read cgroup PID list: %s", error->message);
         g_error_free(error);
-        throw std::runtime_error(message);
+        return {};
     }
 
     gchar** pidlines = g_strsplit(pidstr, "\n", -1);
