@@ -37,6 +37,7 @@ namespace manager
 
 Base::Base(const std::shared_ptr<Registry>& registry)
     : registry_(registry)
+    , dbus_(registry->impl->_dbus)
 {
 }
 

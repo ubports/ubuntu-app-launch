@@ -403,27 +403,22 @@ Upstart::Upstart(std::shared_ptr<Registry> registry)
 
 Upstart::~Upstart()
 {
-    auto registry = registry_.lock();
-    registry->impl->thread.executeOnThread<bool>([this, registry]() {
-        auto dohandle = [&](guint& handle) {
-            if (handle != 0)
-            {
-                g_dbus_connection_signal_unsubscribe(registry->impl->_dbus.get(), handle);
-                handle = 0;
-            }
-        };
+    auto dohandle = [&](guint& handle) {
+        if (handle != 0)
+        {
+            g_dbus_connection_signal_unsubscribe(dbus_.get(), handle);
+            handle = 0;
+        }
+    };
 
-        dohandle(handle_appStarted);
-        dohandle(handle_appStopped);
-        dohandle(handle_appFailed);
-        dohandle(handle_appPaused);
-        dohandle(handle_appResumed);
-        dohandle(handle_managerSignalFocus);
-        dohandle(handle_managerSignalResume);
-        dohandle(handle_managerSignalStarting);
-
-        return true;
-    });
+    dohandle(handle_appStarted);
+    dohandle(handle_appStopped);
+    dohandle(handle_appFailed);
+    dohandle(handle_appPaused);
+    dohandle(handle_appResumed);
+    dohandle(handle_managerSignalFocus);
+    dohandle(handle_managerSignalResume);
+    dohandle(handle_managerSignalStarting);
 }
 
 /** Launch an application and create a new Upstart instance object to track

@@ -23,6 +23,7 @@
 #include "registry.h"
 
 #include <core/signal.h>
+#include <gio/gio.h>
 
 namespace ubuntu
 {
@@ -127,6 +128,7 @@ public:
 
 protected:
     std::weak_ptr<Registry> registry_;
+    std::shared_ptr<GDBusConnection> dbus_;
 };
 
 }  // namespace manager
