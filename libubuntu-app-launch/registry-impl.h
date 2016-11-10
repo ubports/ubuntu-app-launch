@@ -77,18 +77,6 @@ public:
     static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
     static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
 
-    /* Signals to discover what is happening to apps */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted(
-        const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped(
-        const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed(
-        const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& appPaused(
-        const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& appResumed(
-        const std::shared_ptr<Registry>& reg);
-
     /* Signal Hints */
     /* NOTE: Static because we don't have registry instances in the C
        code right now. We want these to not be static in the future */
@@ -96,64 +84,10 @@ public:
     static bool isWatchingAppStarting();
 
 private:
-    Registry* _registry;                         /**< The Registry that we're spawned from */
-    std::shared_ptr<Registry::Manager> manager_; /**< Application manager if registered */
+    Registry* _registry; /**< The Registry that we're spawned from */
 
     std::shared_ptr<ClickDB> _clickDB;     /**< Shared instance of the Click Database */
     std::shared_ptr<ClickUser> _clickUser; /**< Click database filtered by the current user */
-
-    /** Signal object for applications started */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStarted;
-    /** Signal object for applications stopped */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStopped;
-    /** Signal object for applications failed */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> sig_appFailed;
-    /** Signal object for applications paused */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>
-        sig_appPaused;
-    /** Signal object for applications resumed */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>
-        sig_appResumed;
-
-    guint handle_appStarted{0};            /**< GDBus signal watcher handle for app started signal */
-    guint handle_appStopped{0};            /**< GDBus signal watcher handle for app stopped signal */
-    guint handle_appFailed{0};             /**< GDBus signal watcher handle for app failed signal */
-    guint handle_appPaused{0};             /**< GDBus signal watcher handle for app paused signal */
-    guint handle_appResumed{0};            /**< GDBus signal watcher handle for app resumed signal */
-    guint handle_managerSignalFocus{0};    /**< GDBus signal watcher handle for app focused signal */
-    guint handle_managerSignalResume{0};   /**< GDBus signal watcher handle for app resumed signal */
-    guint handle_managerSignalStarting{0}; /**< GDBus signal watcher handle for app starting signal */
-
-    std::once_flag flag_appStarted; /**< Variable to track to see if signal handlers are installed for application
-                                       started */
-    std::once_flag flag_appStopped; /**< Variable to track to see if signal handlers are installed for application
-                                       stopped */
-    std::once_flag
-        flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
-    std::once_flag
-        flag_appPaused; /**< Variable to track to see if signal handlers are installed for application paused */
-    std::once_flag flag_appResumed;     /**< Variable to track to see if signal handlers are installed for application
-                                           resumed */
-    std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
-                                           signals of focused, resumed and starting */
-
-    void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
-                             std::shared_ptr<GVariant> params,
-                             const std::shared_ptr<Registry>& reg);
-    void pauseEventEmitted(
-        core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
-        const std::shared_ptr<GVariant>& params,
-        const std::shared_ptr<Registry>& reg);
-    static std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> managerParams(
-        const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry>& reg);
-    static guint managerSignalHelper(const std::shared_ptr<Registry>& reg,
-                                     const std::string& signalname,
-                                     std::function<void(const std::shared_ptr<Registry>& reg,
-                                                        const std::shared_ptr<Application>& app,
-                                                        const std::shared_ptr<Application::Instance>& instance,
-                                                        const std::shared_ptr<GDBusConnection>&,
-                                                        const std::string&,
-                                                        const std::shared_ptr<GVariant>&)> responsefunc);
 
     void initClick();
 
