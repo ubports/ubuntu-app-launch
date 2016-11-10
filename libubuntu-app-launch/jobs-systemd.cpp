@@ -911,6 +911,39 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
     });
 }
 
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStarted()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appStarted;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStopped()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appStopped;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    SystemD::appFailed()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appFailed;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    SystemD::appPaused()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appPaused;
+}
+
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    SystemD::appResumed()
+{
+    g_warning("Systemd signals not implemented");
+    return sig_appResumed;
+}
+
 }  // namespace manager
 }  // namespace jobs
 }  // namespace app_launch

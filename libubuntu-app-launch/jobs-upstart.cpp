@@ -378,6 +378,19 @@ Upstart::Upstart(std::shared_ptr<Registry> registry)
 
 Upstart::~Upstart()
 {
+    auto dohandle = [&](guint& handle) {
+        if (handle != 0)
+        {
+            g_dbus_connection_signal_unsubscribe(dbus_.get(), handle);
+            handle = 0;
+        }
+    };
+
+    dohandle(handle_appStarted);
+    dohandle(handle_appStopped);
+    dohandle(handle_appFailed);
+    dohandle(handle_appPaused);
+    dohandle(handle_appResumed);
 }
 
 /** Launch an application and create a new Upstart instance object to track
@@ -549,6 +562,325 @@ std::vector<std::shared_ptr<instance::Base>> Upstart::instances(const AppID& app
     g_debug("App '%s' has %d instances", std::string(appID).c_str(), int(vect.size()));
 
     return vect;
+}
+
+/** Structure to track the data needed for upstart events. This cleans
+    up the lifecycle as we're passing this as a pointer through the
+    GLib calls. */
+struct upstartEventData
+{
+    /** Keeping a weak pointer because the handle is held by
+        the registry implementation. */
+    std::weak_ptr<Registry> weakReg;
+};
+
+/** Regex to parse the JOB environment variable from Upstart */
+std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
+/** Regex to parse the INSTANCE environment variable from Upstart */
+std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
+
+/** Core of most of the events that come from Upstart directly. Includes parsing of the
+    Upstart event environment and calling the appropriate signal with the right Application
+    object and eventually its instance */
+void Upstart::upstartEventEmitted(
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
+    std::shared_ptr<GVariant> params,
+    const std::shared_ptr<Registry>& reg)
+{
+    std::string jobname;
+    std::string sappid;
+    std::string instance;
+
+    gchar* env = nullptr;
+    GVariant* envs = g_variant_get_child_value(params.get(), 1);
+    GVariantIter iter;
+    g_variant_iter_init(&iter, envs);
+
+    while (g_variant_iter_loop(&iter, "s", &env))
+    {
+        std::smatch match;
+        std::string senv = env;
+
+        if (std::regex_match(senv, match, jobenv_regex))
+        {
+            jobname = match[1].str();
+        }
+        else if (std::regex_match(senv, match, instanceenv_regex))
+        {
+            sappid = match[1].str();
+            instance = match[2].str();
+        }
+    }
+
+    g_variant_unref(envs);
+
+    if (jobname.empty())
+    {
+        return;
+    }
+
+    g_debug("Upstart Event for job '%s' appid '%s' instance '%s'", jobname.c_str(), sappid.c_str(), instance.c_str());
+
+    auto appid = AppID::find(reg, sappid);
+    auto app = Application::create(appid, reg);
+
+    // TODO: Figure otu creating instances
+
+    signal(app, {});
+}
+
+/** Grab the signal object for application startup. If we're not already listing for
+    those signals this sets up a listener for them. */
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Upstart::appStarted()
+{
+    std::call_once(flag_appStarted, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            handle_appStarted = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(), /* bus */
+                nullptr,                /* sender */
+                DBUS_INTERFACE_UPSTART, /* interface */
+                "EventEmitted",         /* signal */
+                DBUS_PATH_UPSTART,      /* path */
+                "started",              /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
+                    upstart->upstartEventEmitted(upstart->sig_appStarted, sparams, reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            return true;
+        });
+    });
+
+    return sig_appStarted;
+}
+
+/** Grab the signal object for application stopping. If we're not already listing for
+    those signals this sets up a listener for them. */
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Upstart::appStopped()
+{
+    std::call_once(flag_appStopped, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            handle_appStopped = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(), /* bus */
+                nullptr,                /* sender */
+                DBUS_INTERFACE_UPSTART, /* interface */
+                "EventEmitted",         /* signal */
+                DBUS_PATH_UPSTART,      /* path */
+                "stopped",              /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
+                    upstart->upstartEventEmitted(upstart->sig_appStopped, sparams, reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            return true;
+        });
+    });
+
+    return sig_appStopped;
+}
+
+/** Grab the signal object for application failing. If we're not already listing for
+    those signals this sets up a listener for them. */
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    Upstart::appFailed()
+{
+    std::call_once(flag_appFailed, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            handle_appFailed = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "ApplicationFailed",             /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+
+                    const gchar* sappid = NULL;
+                    const gchar* typestr = NULL;
+
+                    Registry::FailureType type = Registry::FailureType::CRASH;
+                    g_variant_get(params, "(&s&s)", &sappid, &typestr);
+
+                    if (g_strcmp0("crash", typestr) == 0)
+                    {
+                        type = Registry::FailureType::CRASH;
+                    }
+                    else if (g_strcmp0("start-failure", typestr) == 0)
+                    {
+                        type = Registry::FailureType::START_FAILURE;
+                    }
+                    else
+                    {
+                        g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
+                    }
+
+                    auto appid = AppID::find(reg, sappid);
+                    auto app = Application::create(appid, reg);
+
+                    /* TODO: Instance issues */
+
+                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
+                    upstart->sig_appFailed(app, {}, type);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            return true;
+        });
+    });
+
+    return sig_appFailed;
+}
+
+/** Core handler for pause and resume events. Includes turning the GVariant
+    pid list into a std::vector and getting the application object. */
+void Upstart::pauseEventEmitted(
+    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
+    const std::shared_ptr<GVariant>& params,
+    const std::shared_ptr<Registry>& reg)
+{
+    std::vector<pid_t> pids;
+    GVariant* vappid = g_variant_get_child_value(params.get(), 0);
+    GVariant* vpids = g_variant_get_child_value(params.get(), 1);
+    guint64 pid;
+    GVariantIter thispid;
+    g_variant_iter_init(&thispid, vpids);
+
+    while (g_variant_iter_loop(&thispid, "t", &pid))
+    {
+        pids.emplace_back(pid);
+    }
+
+    auto cappid = g_variant_get_string(vappid, NULL);
+    auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
+    auto app = Application::create(appid, reg);
+
+    /* TODO: Instance */
+    signal(app, {}, pids);
+
+    g_variant_unref(vappid);
+    g_variant_unref(vpids);
+
+    return;
+}
+
+/** Grab the signal object for application paused. If we're not already listing for
+    those signals this sets up a listener for them. */
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Upstart::appPaused()
+{
+    std::call_once(flag_appPaused, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            handle_appPaused = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "ApplicationPaused",             /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
+                    upstart->pauseEventEmitted(upstart->sig_appPaused, sparams, reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            return true;
+        });
+    });
+
+    return sig_appPaused;
+}
+
+/** Grab the signal object for application resumed. If we're not already listing for
+    those signals this sets up a listener for them. */
+core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    Upstart::appResumed()
+{
+    std::call_once(flag_appResumed, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            handle_appResumed = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "ApplicationResumed",            /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
+                    upstart->pauseEventEmitted(upstart->sig_appResumed, sparams, reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            return true;
+        });
+    });
+
+    return sig_appResumed;
 }
 
 /** Initialize the CGManager connection, including a timeout to disconnect

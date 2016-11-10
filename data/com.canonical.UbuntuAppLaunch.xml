@@ -3,29 +3,37 @@
 	<interface name="com.canonical.UpstartAppLaunch">
 		<signal name="UnityResumeRequest">
 			<arg type="s" name="appid" />
+			<arg type="s" name="instance" />
 		</signal>
 		<signal name="UnityResumeResponse">
 			<arg type="s" name="appid" />
+			<arg type="s" name="instance" />
 		</signal>
 		<signal name="UnityFocusRequest">
 			<arg type="s" name="appid" />
+			<arg type="s" name="instance" />
 		</signal>
 		<signal name="UnityStartingBroadcast">
 			<arg type="s" name="appid" />
+			<arg type="s" name="instance" />
 		</signal>
 		<signal name="UnityStartingSignal">
 			<arg type="s" name="appid" />
+			<arg type="s" name="instance" />
 		</signal>
 		<signal name="ApplicationFailed">
 			<arg type="s" name="appid" />
+			<arg type="s" name="instance" />
 			<arg type="s" name="stage" />
 		</signal>
 		<signal name="ApplicationPaused">
 			<arg type="s" name="appid" />
+			<arg type="s" name="instance" />
 			<arg type="at" name="pids" />
 		</signal>
 		<signal name="ApplicationResumed">
 			<arg type="s" name="appid" />
+			<arg type="s" name="instance" />
 			<arg type="at" name="pids" />
 		</signal>
 	</interface>
