@@ -17,34 +17,40 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <iostream>
 #include "libubuntu-app-launch/application.h"
 #include "libubuntu-app-launch/registry.h"
+#include <iostream>
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-    if (argc != 2) {
+    if (argc != 2)
+    {
         std::cerr << "Usage: " << argv[0] << " (appid)" << std::endl;
         exit(1);
     }
 
     auto appid = ubuntu::app_launch::AppID::find(argv[1]);
-    if (appid.empty()) {
+    if (appid.empty())
+    {
         std::cerr << "Unable to find app for appid: " << argv[1] << std::endl;
         return 1;
     }
 
     std::shared_ptr<ubuntu::app_launch::Application> app;
-    try {
+    try
+    {
         app = ubuntu::app_launch::Application::create(appid, ubuntu::app_launch::Registry::getDefault());
         if (!app)
             throw std::runtime_error("Application object is nullptr");
-    } catch (std::runtime_error &e) {
+    }
+    catch (std::runtime_error &e)
+    {
         std::cerr << "Unable to find application for AppID: " << argv[1] << std::endl;
         exit(1);
     }
 
-    try {
+    try
+    {
         auto info = app->info();
 
         std::cout << "Name:             " << info->name().value() << std::endl;
@@ -64,8 +70,11 @@ int main(int argc, char* argv[])
         std::cout << "  Inv Landscape:  " << info->supportedOrientations().invertedLandscape << std::endl;
         std::cout << "Rotates:          " << info->rotatesWindowContents().value() << std::endl;
         std::cout << "Ubuntu Lifecycle: " << info->supportsUbuntuLifecycle().value() << std::endl;
-    } catch (std::runtime_error &e) {
-        std::cerr << "Unable to parse Application info for application '" << std::string(appid) << "': " << e.what() << std::endl;
+    }
+    catch (std::runtime_error &e)
+    {
+        std::cerr << "Unable to parse Application info for application '" << std::string(appid) << "': " << e.what()
+                  << std::endl;
         exit(1);
     }
 
