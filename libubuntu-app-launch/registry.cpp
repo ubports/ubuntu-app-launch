@@ -47,61 +47,14 @@ Registry::~Registry()
 {
 }
 
-std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> connection)
+std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> registry)
 {
-    std::list<std::string> instances;
-
-    /* Get all the legacy instances */
-    instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-legacy"));
-    /* Get all the snap instances */
-    instances.splice(instances.begin(), connection->impl->upstartInstancesForJob("application-snap"));
-
-    /* Remove the instance ID */
-    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string& instancename) -> std::string {
-        static const std::regex instanceregex("^(.*)-[0-9]*$");
-        std::smatch match;
-        if (std::regex_match(instancename, match, instanceregex))
-        {
-            return match[1].str();
-        }
-        else
-        {
-            g_warning("Unable to match instance name: %s", instancename.c_str());
-            return {};
-        }
-    });
-
-    /* Deduplicate Set */
-    std::set<std::string> instanceset;
-    for (auto instance : instances)
+    if (!registry->impl->jobs)
     {
-        if (!instance.empty())
-            instanceset.insert(instance);
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
     }
 
-    /* Add in the click instances */
-    for (auto instance : connection->impl->upstartInstancesForJob("application-click"))
-    {
-        instanceset.insert(instance);
-    }
-
-    g_debug("Overall there are %d instances: %s", int(instanceset.size()),
-            std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
-                            [](const std::string& instr, std::string instance) {
-                                return instr.empty() ? instance : instr + ", " + instance;
-                            })
-                .c_str());
-
-    /* Convert to Applications */
-    std::list<std::shared_ptr<Application>> apps;
-    for (auto instance : instanceset)
-    {
-        auto appid = AppID::find(connection, instance);
-        auto app = Application::create(appid, connection);
-        apps.push_back(app);
-    }
-
-    return apps;
+    return registry->impl->jobs->runningApps();
 }
 
 std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<Registry> connection)
@@ -127,14 +80,29 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
     return list;
 }
 
+/* Quick little helper to bundle up standard code */
+inline void setJobs(const std::shared_ptr<Registry>& registry)
+{
+    if (!registry->impl->jobs)
+    {
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
+    }
+}
+
 void Registry::setManager(std::shared_ptr<Manager> manager, std::shared_ptr<Registry> registry)
 {
-    Registry::Impl::setManager(manager, registry);
+    setJobs(registry);
+    registry->impl->jobs->setManager(manager);
 }
 
 void Registry::clearManager()
 {
-    impl->clearManager();
+    if (!impl->jobs)
+    {
+        return;
+    }
+
+    impl->jobs->clearManager();
 }
 
 std::shared_ptr<Registry> defaultRegistry;
@@ -156,31 +124,36 @@ void Registry::clearDefault()
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted(
     const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appStarted(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appStarted();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped(
     const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appStopped(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appStopped();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
     Registry::appFailed(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appFailed(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appFailed();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
     Registry::appPaused(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appPaused(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appPaused();
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
     Registry::appResumed(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appResumed(reg);
+    setJobs(reg);
+    return reg->impl->jobs->appResumed();
 }
 
 }  // namespace app_launch

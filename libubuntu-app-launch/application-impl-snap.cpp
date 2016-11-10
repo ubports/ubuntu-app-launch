@@ -396,19 +396,8 @@ std::shared_ptr<Application::Info> Snap::info()
 /** Get all of the instances of this snap package that are running */
 std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    auto startsWith = std::string(appid_) + "-";
-
-    for (const auto& instance : _registry->impl->upstartInstancesForJob("application-snap"))
-    {
-        if (std::equal(startsWith.begin(), startsWith.end(), instance.begin()))
-        {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appid_, "application-snap", std::string{},
-                                                                std::vector<Application::URL>{}, _registry));
-        }
-    }
-
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-snap");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Return the launch environment for this snap. That includes whether
@@ -448,8 +437,8 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appid_, "application-snap", {}, urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appid_, "application-snap", {}, urls, jobs::manager::launchMode::STANDARD,
+                                         envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -460,8 +449,8 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appid_, "application-snap", {}, urls, _registry, UpstartInstance::launchMode::TEST,
-                                   envfunc);
+    return _registry->impl->jobs->launch(appid_, "application-snap", {}, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
 }
 
 }  // namespace app_impls
