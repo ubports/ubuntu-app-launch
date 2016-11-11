@@ -122,6 +122,12 @@ guint Base::managerSignalHelper(const std::shared_ptr<Registry>& reg,
             auto data = reinterpret_cast<managerEventData*>(user_data);
             auto reg = data->weakReg.lock();
 
+            if (!reg)
+            {
+                g_warning("Registry object invalid!");
+                return;
+            }
+
             /* If we're still conneted and the manager has been cleared
                we'll just be a no-op */
             auto ljobs = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
@@ -165,6 +171,12 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
 
     std::call_once(flag_managerSignals, [this]() {
         auto reg = registry_.lock();
+
+        if (!reg)
+        {
+            g_warning("Registry object invalid!");
+            return;
+        }
 
         if (!reg->impl->thread.executeOnThread<bool>([this, reg]() {
                 handle_managerSignalFocus = managerSignalHelper(

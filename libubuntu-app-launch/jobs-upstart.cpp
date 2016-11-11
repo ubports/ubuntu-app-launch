@@ -440,6 +440,13 @@ std::shared_ptr<Application::Instance> Upstart::launch(
         return {};
 
     auto registry = registry_.lock();
+
+    if (!registry)
+    {
+        g_warning("Registry object invalid!");
+        return {};
+    }
+
     return registry->impl->thread.executeOnThread<std::shared_ptr<instance::Upstart>>(
         [&]() -> std::shared_ptr<instance::Upstart> {
             auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry->impl->jobs);
@@ -676,6 +683,13 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
                     upstart->upstartEventEmitted(upstart->sig_appStarted, sparams, reg);
@@ -715,6 +729,13 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
                     upstart->upstartEventEmitted(upstart->sig_appStopped, sparams, reg);
@@ -755,6 +776,12 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
 
                     const gchar* sappid = NULL;
                     const gchar* typestr = NULL;
@@ -851,6 +878,13 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
                     upstart->pauseEventEmitted(upstart->sig_appPaused, sparams, reg);
@@ -891,6 +925,13 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
                     upstart->pauseEventEmitted(upstart->sig_appResumed, sparams, reg);
