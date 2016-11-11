@@ -168,6 +168,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
         auto node = json_node_alloc();
         json_node_init_object(node, mani);
+        json_object_unref(mani);
 
         auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
 
@@ -624,6 +625,12 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
             auto data = reinterpret_cast<managerEventData*>(user_data);
             auto reg = data->weakReg.lock();
 
+            if (!reg)
+            {
+                g_warning("Registry object invalid!");
+                return;
+            }
+
             /* If we're still conneted and the manager has been cleared
                we'll just be a no-op */
             if (!reg->impl->manager_)
@@ -838,6 +845,13 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     reg->impl->upstartEventEmitted(reg->impl->sig_appStarted, sparams, reg);
                 },    /* callback */
@@ -875,6 +889,13 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     reg->impl->upstartEventEmitted(reg->impl->sig_appStopped, sparams, reg);
                 },    /* callback */
@@ -912,6 +933,12 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
 
                     const gchar* sappid = NULL;
                     const gchar* typestr = NULL;
@@ -1005,6 +1032,13 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     reg->impl->pauseEventEmitted(reg->impl->sig_appPaused, sparams, reg);
                 },    /* callback */
@@ -1042,6 +1076,13 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                    gpointer user_data) -> void {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     reg->impl->pauseEventEmitted(reg->impl->sig_appResumed, sparams, reg);
                 },    /* callback */

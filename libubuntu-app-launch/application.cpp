@@ -46,6 +46,11 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         throw std::runtime_error("AppID is empty");
     }
 
+    if (!registry || !registry->impl)
+    {
+        throw std::runtime_error("Invalid registry object");
+    }
+
     if (app_impls::Click::hasAppId(appid, registry))
     {
         return std::make_shared<app_impls::Click>(appid, registry);
