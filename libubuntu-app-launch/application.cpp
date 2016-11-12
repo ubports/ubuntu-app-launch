@@ -54,31 +54,32 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
     }
 
     if (!registry->impl->jobs)
+    {
         registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
-}
+    }
 
-if (app_impls::Click::hasAppId(appid, registry))
-{
-    return std::make_shared<app_impls::Click>(appid, registry);
-}
+    if (app_impls::Click::hasAppId(appid, registry))
+    {
+        return std::make_shared<app_impls::Click>(appid, registry);
+    }
 #ifdef ENABLE_SNAPPY
-else if (app_impls::Snap::hasAppId(appid, registry))
-{
-    return std::make_shared<app_impls::Snap>(appid, registry);
-}
+    else if (app_impls::Snap::hasAppId(appid, registry))
+    {
+        return std::make_shared<app_impls::Snap>(appid, registry);
+    }
 #endif
-else if (app_impls::Libertine::hasAppId(appid, registry))
-{
-    return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
-}
-else if (app_impls::Legacy::hasAppId(appid, registry))
-{
-    return std::make_shared<app_impls::Legacy>(appid.appname, registry);
-}
-else
-{
-    throw std::runtime_error("Invalid app ID: " + std::string(appid));
-}
+    else if (app_impls::Libertine::hasAppId(appid, registry))
+    {
+        return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
+    }
+    else if (app_impls::Legacy::hasAppId(appid, registry))
+    {
+        return std::make_shared<app_impls::Legacy>(appid.appname, registry);
+    }
+    else
+    {
+        throw std::runtime_error("Invalid app ID: " + std::string(appid));
+    }
 }
 
 AppID::AppID()
