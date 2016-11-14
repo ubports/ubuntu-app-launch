@@ -112,7 +112,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
 {
     auto cancel = registry->impl->thread.getCancellable();
-    userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
+    userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
         GError* error = nullptr;
         auto bus = std::shared_ptr<GDBusConnection>(
             g_dbus_connection_new_for_address_sync(
@@ -131,12 +131,114 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
             throw std::runtime_error(message);
         }
 
+        /* Setup Unit add/remove signals */
+        handle_unitNew =
+            g_dbus_connection_signal_subscribe(bus.get(),                          /* bus */
+                                               nullptr,                            /* sender */
+                                               SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
+                                               "UnitNew",                          /* signal */
+                                               SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
+                                               nullptr,                            /* arg0 */
+                                               G_DBUS_SIGNAL_FLAGS_NONE,
+                                               [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
+                                                  const gchar*, GVariant* params, gpointer user_data) -> void {
+                                                   auto pthis = static_cast<SystemD*>(user_data);
+
+                                                   const gchar* unitname{nullptr};
+                                                   const gchar* unitpath{nullptr};
+
+                                                   g_variant_get(params, "(&s&o)", unitname, unitpath);
+
+                                                   pthis->unitNew(unitname, unitpath);
+                                               },        /* callback */
+                                               this,     /* user data */
+                                               nullptr); /* user data destroy */
+
+        handle_unitRemoved =
+            g_dbus_connection_signal_subscribe(bus.get(),                          /* bus */
+                                               nullptr,                            /* sender */
+                                               SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
+                                               "UnitRemoved",                      /* signal */
+                                               SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
+                                               nullptr,                            /* arg0 */
+                                               G_DBUS_SIGNAL_FLAGS_NONE,
+                                               [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
+                                                  const gchar*, GVariant* params, gpointer user_data) -> void {
+                                                   auto pthis = static_cast<SystemD*>(user_data);
+
+                                                   const gchar* unitname{nullptr};
+                                                   const gchar* unitpath{nullptr};
+
+                                                   g_variant_get(params, "(&s&o)", unitname, unitpath);
+
+                                                   pthis->unitRemoved(unitname, unitpath);
+                                               },        /* callback */
+                                               this,     /* user data */
+                                               nullptr); /* user data destroy */
+
+        g_dbus_connection_call(
+            bus.get(),                          /* user bus */
+            SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
+            SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
+            SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
+            "ListUnits",                        /* method */
+            nullptr,                            /* params */
+            G_VARIANT_TYPE("(a(ssssssouso))"),  /* ret type */
+            G_DBUS_CALL_FLAGS_NONE,             /* flags */
+            -1,                                 /* timeout */
+            cancel.get(),                       /* cancellable */
+            [](GObject* obj, GAsyncResult* res, gpointer user_data) {
+                auto pthis = static_cast<SystemD*>(user_data);
+                GError* error{nullptr};
+                GVariant* callt = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+
+                if (error != nullptr)
+                {
+                    g_warning("Unable to list SystemD units: %s", error->message);
+                    g_error_free(error);
+                    return;
+                }
+
+                GVariant* call = g_variant_get_child_value(callt, 0);
+                g_variant_unref(callt);
+
+                const gchar* id;
+                const gchar* description;
+                const gchar* loadState;
+                const gchar* activeState;
+                const gchar* subState;
+                const gchar* following;
+                const gchar* path;
+                guint32 jobId;
+                const gchar* jobType;
+                const gchar* jobPath;
+                auto iter = g_variant_iter_new(call);
+                while (g_variant_iter_loop(iter, "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState,
+                                           &subState, &following, &path, &jobId, &jobType, &jobPath))
+                {
+                    pthis->unitNew(id, jobPath);
+                }
+
+                g_variant_iter_free(iter);
+                g_variant_unref(call);
+            },
+            this);
         return bus;
     });
 }
 
 SystemD::~SystemD()
 {
+    auto dohandle = [&](guint& handle) {
+        if (handle != 0)
+        {
+            g_dbus_connection_signal_unsubscribe(dbus_.get(), handle);
+            handle = 0;
+        }
+    };
+
+    dohandle(handle_unitNew);
+    dohandle(handle_unitRemoved);
 }
 
 std::string SystemD::findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env)
@@ -747,6 +849,14 @@ std::string SystemD::unitPath(const std::string& unitName)
     }
 
     return retval;
+}
+
+void SystemD::unitNew(const std::string& name, const std::string& path)
+{
+}
+
+void SystemD::unitRemoved(const std::string& name, const std::string& path)
+{
 }
 
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)

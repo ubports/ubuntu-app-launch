@@ -74,6 +74,9 @@ public:
 private:
     std::shared_ptr<GDBusConnection> userbus_;
 
+    guint handle_unitNew{0};     /**< GDBus signal watcher handle for the unit new signal */
+    guint handle_unitRemoved{0}; /**< GDBus signal watcher handle for the unit removed signal */
+
     /* ssssssouso */
     struct UnitEntry
     {
@@ -108,6 +111,8 @@ private:
     std::list<UnitPath> unitPaths_;
     std::mutex unitPathsMutex_;
     std::string unitPath(const std::string& unitName);
+    void unitNew(const std::string& name, const std::string& path);
+    void unitRemoved(const std::string& name, const std::string& path);
 
     static std::string findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
     static void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env);
