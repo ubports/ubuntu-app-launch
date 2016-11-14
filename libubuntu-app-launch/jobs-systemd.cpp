@@ -1088,20 +1088,6 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
     return sig_appFailed;
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-    SystemD::appPaused()
-{
-    g_warning("Systemd signals not implemented");
-    return sig_appPaused;
-}
-
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-    SystemD::appResumed()
-{
-    g_warning("Systemd signals not implemented");
-    return sig_appResumed;
-}
-
 }  // namespace manager
 }  // namespace jobs
 }  // namespace app_launch

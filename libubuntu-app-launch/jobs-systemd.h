@@ -60,10 +60,6 @@ public:
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped() override;
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
         appFailed() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-        appPaused() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-        appResumed() override;
 
     static std::string userBusPath();
 
