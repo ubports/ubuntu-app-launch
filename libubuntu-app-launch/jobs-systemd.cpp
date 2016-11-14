@@ -764,93 +764,6 @@ std::string SystemD::unitName(const SystemD::UnitInfo& info)
     return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst + ".service";
 }
 
-/** Function that uses and maintains the cache of the paths for units
-    on the systemd dbus connection. If we already have the entry in the
-    cache we just return the path and this function is fast. If not we have
-    to ask systemd for it and that can take a bit longer.
-
-    After getting the data we throw a small background task in to clean
-    up the cache if it has more than 50 entries. We delete those who
-    haven't be used for an hour.
-*/
-std::string SystemD::unitPath(const std::string& unitName)
-{
-    auto registry = registry_.lock();
-    std::string retval;
-
-    if (true)
-    {
-        /* Create a context for the gaurd */
-        std::lock_guard<std::mutex> guard(unitPathsMutex_);
-        auto iter = std::find_if(unitPaths_.begin(), unitPaths_.end(),
-                                 [&unitName](const SystemD::UnitPath& entry) { return entry.unitName == unitName; });
-
-        if (iter != unitPaths_.end())
-        {
-            retval = iter->unitPath;
-            iter->timeStamp = std::chrono::system_clock::now();
-        }
-    }
-
-    if (retval.empty())
-    {
-        retval = registry->impl->thread.executeOnThread<std::string>([this, registry, unitName]() {
-            std::string path;
-            GError* error{nullptr};
-            GVariant* call =
-                g_dbus_connection_call_sync(userbus_.get(),                                /* user bus */
-                                            SYSTEMD_DBUS_ADDRESS.c_str(),                  /* bus name */
-                                            SYSTEMD_DBUS_PATH_MANAGER.c_str(),             /* path */
-                                            SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
-                                            "GetUnit",                                     /* method */
-                                            g_variant_new("(s)", unitName.c_str()),        /* params */
-                                            G_VARIANT_TYPE("(o)"),                         /* ret type */
-                                            G_DBUS_CALL_FLAGS_NONE,                        /* flags */
-                                            -1,                                            /* timeout */
-                                            registry->impl->thread.getCancellable().get(), /* cancellable */
-                                            &error);
-
-            if (error != nullptr)
-            {
-                auto message = std::string{"Unable to get SystemD unit path for '"} + unitName + std::string{"': "} +
-                               error->message;
-                g_error_free(error);
-                throw std::runtime_error(message);
-            }
-
-            /* Parse variant */
-            gchar* gpath = nullptr;
-            g_variant_get(call, "(o)", &gpath);
-            if (gpath != nullptr)
-            {
-                std::lock_guard<std::mutex> guard(unitPathsMutex_);
-                path = gpath;
-                unitPaths_.emplace_back(SystemD::UnitPath{unitName, path, std::chrono::system_clock::now()});
-            }
-
-            g_variant_unref(call);
-
-            return path;
-        });
-    }
-
-    /* Queue a possible cleanup */
-    if (unitPaths_.size() > 50)
-    {
-        /* TODO: We should look at UnitRemoved as well */
-        /* TODO: Add to cache on UnitNew */
-        registry->impl->thread.executeOnThread([this] {
-            std::lock_guard<std::mutex> guard(unitPathsMutex_);
-            std::remove_if(unitPaths_.begin(), unitPaths_.end(), [](const SystemD::UnitPath& entry) -> bool {
-                auto age = std::chrono::system_clock::now() - entry.timeStamp;
-                return age > std::chrono::hours{1};
-            });
-        });
-    }
-
-    return retval;
-}
-
 void SystemD::unitNew(const std::string& name, const std::string& path)
 {
     UnitInfo info;
@@ -910,8 +823,14 @@ void SystemD::emitSignal(core::Signal<std::shared_ptr<Application>, std::shared_
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
 {
     auto registry = registry_.lock();
-    auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
-    auto unitpath = unitPath(unitname);
+    auto unitinfo = SystemD::UnitInfo{appId, job, instance};
+    auto unitname = unitName(unitinfo);
+    auto unitpath = unitPaths[unitinfo];
+
+    if (unitpath.empty())
+    {
+        return 0;
+    }
 
     return registry->impl->thread.executeOnThread<pid_t>([this, registry, unitname, unitpath]() {
         GError* error{nullptr};
@@ -952,8 +871,14 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
 std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job, const std::string& instance)
 {
     auto registry = registry_.lock();
-    auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
-    auto unitpath = unitPath(unitname);
+    auto unitinfo = SystemD::UnitInfo{appId, job, instance};
+    auto unitname = unitName(unitinfo);
+    auto unitpath = unitPaths[unitinfo];
+
+    if (unitpath.empty())
+    {
+        return {};
+    }
 
     auto cgrouppath = registry->impl->thread.executeOnThread<std::string>([this, registry, unitname, unitpath]() {
         GError* error{nullptr};
