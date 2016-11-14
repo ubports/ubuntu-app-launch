@@ -118,9 +118,9 @@ public:
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
         appFailed() = 0;
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-        appPaused() = 0;
+        appPaused();
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-        appResumed() = 0;
+        appResumed();
 
     /* App manager */
     virtual void setManager(std::shared_ptr<Registry::Manager> manager);
@@ -154,9 +154,20 @@ private:
     guint handle_managerSignalFocus{0};    /**< GDBus signal watcher handle for app focused signal */
     guint handle_managerSignalResume{0};   /**< GDBus signal watcher handle for app resumed signal */
     guint handle_managerSignalStarting{0}; /**< GDBus signal watcher handle for app starting signal */
+    guint handle_appPaused{0};             /**< GDBus signal watcher handle for app paused signal */
+    guint handle_appResumed{0};            /**< GDBus signal watcher handle for app resumed signal */
 
     std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
                                            signals of focused, resumed and starting */
+    std::once_flag
+        flag_appPaused; /**< Variable to track to see if signal handlers are installed for application paused */
+    std::once_flag flag_appResumed; /**< Variable to track to see if signal handlers are installed for application
+                                       resumed */
+
+    void pauseEventEmitted(
+        core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
+        const std::shared_ptr<GVariant>& params,
+        const std::shared_ptr<Registry>& reg);
 
     static std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> managerParams(
         const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry>& reg);
