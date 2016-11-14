@@ -98,7 +98,36 @@ private:
         std::string appid;
         std::string job;
         std::string inst;
+
+        bool operator<(const UnitInfo& b) const
+        {
+            if (job < b.job)
+            {
+                return true;
+            }
+            else if (job == b.job)
+            {
+                if (appid < b.appid)
+                {
+                    return true;
+                }
+                else if (appid == b.appid)
+                {
+                    return inst < b.inst;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
     };
+
+    std::map<UnitInfo, std::string> unitPaths;
     UnitInfo parseUnit(const std::string& unit);
     std::string unitName(const UnitInfo& info);
 

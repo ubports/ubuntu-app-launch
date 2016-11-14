@@ -853,10 +853,36 @@ std::string SystemD::unitPath(const std::string& unitName)
 
 void SystemD::unitNew(const std::string& name, const std::string& path)
 {
+    UnitInfo info;
+    try
+    {
+        info = parseUnit(name);
+    }
+    catch (std::runtime_error& e)
+    {
+        return;
+    }
+
+    unitPaths[info] = path;
 }
 
 void SystemD::unitRemoved(const std::string& name, const std::string& path)
 {
+    UnitInfo info;
+    try
+    {
+        info = parseUnit(name);
+    }
+    catch (std::runtime_error& e)
+    {
+        return;
+    }
+
+    auto it = unitPaths.find(info);
+    if (it != unitPaths.end())
+    {
+        unitPaths.erase(it);
+    }
 }
 
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
