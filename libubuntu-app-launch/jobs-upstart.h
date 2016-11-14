@@ -59,10 +59,6 @@ public:
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped() override;
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
         appFailed() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-        appPaused() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-        appResumed() override;
 
     std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
 
@@ -81,8 +77,6 @@ private:
     guint handle_appStarted{0}; /**< GDBus signal watcher handle for app started signal */
     guint handle_appStopped{0}; /**< GDBus signal watcher handle for app stopped signal */
     guint handle_appFailed{0};  /**< GDBus signal watcher handle for app failed signal */
-    guint handle_appPaused{0};  /**< GDBus signal watcher handle for app paused signal */
-    guint handle_appResumed{0}; /**< GDBus signal watcher handle for app resumed signal */
 
     std::once_flag flag_appStarted; /**< Variable to track to see if signal handlers are installed for application
                                        started */
@@ -90,18 +84,10 @@ private:
                                        stopped */
     std::once_flag
         flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
-    std::once_flag
-        flag_appPaused; /**< Variable to track to see if signal handlers are installed for application paused */
-    std::once_flag flag_appResumed; /**< Variable to track to see if signal handlers are installed for application
-                                       resumed */
 
     void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
                              std::shared_ptr<GVariant> params,
                              const std::shared_ptr<Registry>& reg);
-    void pauseEventEmitted(
-        core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
-        const std::shared_ptr<GVariant>& params,
-        const std::shared_ptr<Registry>& reg);
 };
 
 }  // namespace manager
