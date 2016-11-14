@@ -586,7 +586,7 @@ ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver obse
 				ubuntu::app_launch::Registry::appFailed().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
 					std::string appid = app->appId();
 					executeOnContext(context, [appid, type, observer, user_data]() {
-						UbuntuAppLaunchAppFailed ctype;
+						UbuntuAppLaunchAppFailed ctype{UBUNTU_APP_LAUNCH_APP_FAILED_CRASH};
 
 						switch (type) {
 						case ubuntu::app_launch::Registry::FailureType::CRASH:
