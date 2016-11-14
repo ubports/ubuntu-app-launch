@@ -1071,13 +1071,11 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStarted()
 {
-    g_warning("Systemd signals not implemented");
     return sig_appStarted;
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStopped()
 {
-    g_warning("Systemd signals not implemented");
     return sig_appStopped;
 }
 
