@@ -603,21 +603,18 @@ std::shared_ptr<Application::Instance> SystemD::existing(const AppID& appId,
 std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& appID, const std::string& job)
 {
     std::vector<std::shared_ptr<instance::Base>> instances;
-    auto registry = registry_.lock();
     std::vector<Application::URL> urls;
+    auto registry = registry_.lock();
 
-    for (const auto& unit : listUnits())
+    if (!registry)
     {
-        SystemD::UnitInfo unitinfo;
+        g_warning("Unable to list instances without a registry");
+        return {};
+    }
 
-        try
-        {
-            unitinfo = parseUnit(unit.id);
-        }
-        catch (std::runtime_error& e)
-        {
-            continue;
-        }
+    for (const auto& unit : unitPaths)
+    {
+        const SystemD::UnitInfo& unitinfo = unit.first;
 
         if (job != unitinfo.job)
         {
@@ -640,21 +637,18 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
 std::list<std::shared_ptr<Application>> SystemD::runningApps()
 {
     auto allJobs = getAllJobs();
-    auto registry = registry_.lock();
     std::set<std::string> appids;
+    auto registry = registry_.lock();
 
-    for (const auto& unit : listUnits())
+    if (!registry)
     {
-        SystemD::UnitInfo unitinfo;
+        g_warning("Unable to list instances without a registry");
+        return {};
+    }
 
-        try
-        {
-            unitinfo = parseUnit(unit.id);
-        }
-        catch (std::runtime_error& e)
-        {
-            continue;
-        }
+    for (const auto& unit : unitPaths)
+    {
+        const SystemD::UnitInfo& unitinfo = unit.first;
 
         if (allJobs.find(unitinfo.job) == allJobs.end())
         {
@@ -688,60 +682,6 @@ std::string SystemD::userBusPath()
         return cpath;
     }
     return std::string{"/run/user/"} + std::to_string(getuid()) + std::string{"/bus"};
-}
-
-std::list<SystemD::UnitEntry> SystemD::listUnits()
-{
-    auto registry = registry_.lock();
-    return registry->impl->thread.executeOnThread<std::list<SystemD::UnitEntry>>([this, registry]() {
-        GError* error{nullptr};
-        std::list<SystemD::UnitEntry> ret;
-
-        GVariant* callt = g_dbus_connection_call_sync(userbus_.get(),                                /* user bus */
-                                                      SYSTEMD_DBUS_ADDRESS.c_str(),                  /* bus name */
-                                                      SYSTEMD_DBUS_PATH_MANAGER.c_str(),             /* path */
-                                                      SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
-                                                      "ListUnits",                                   /* method */
-                                                      nullptr,                                       /* params */
-                                                      G_VARIANT_TYPE("(a(ssssssouso))"),             /* ret type */
-                                                      G_DBUS_CALL_FLAGS_NONE,                        /* flags */
-                                                      -1,                                            /* timeout */
-                                                      registry->impl->thread.getCancellable().get(), /* cancellable */
-                                                      &error);
-
-        if (error != nullptr)
-        {
-            auto message = std::string{"Unable to list SystemD units: "} + error->message;
-            g_error_free(error);
-            throw std::runtime_error(message);
-        }
-
-        GVariant* call = g_variant_get_child_value(callt, 0);
-        g_variant_unref(callt);
-
-        const gchar* id;
-        const gchar* description;
-        const gchar* loadState;
-        const gchar* activeState;
-        const gchar* subState;
-        const gchar* following;
-        const gchar* path;
-        guint32 jobId;
-        const gchar* jobType;
-        const gchar* jobPath;
-        auto iter = g_variant_iter_new(call);
-        while (g_variant_iter_loop(iter, "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState,
-                                   &subState, &following, &path, &jobId, &jobType, &jobPath))
-        {
-            ret.emplace_back(SystemD::UnitEntry{id, description, loadState, activeState, subState, following, path,
-                                                jobId, jobType, jobPath});
-        }
-
-        g_variant_iter_free(iter);
-        g_variant_unref(call);
-
-        return ret;
-    });
 }
 
 /* TODO: Application job names */

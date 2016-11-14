@@ -73,22 +73,6 @@ private:
     guint handle_unitNew{0};     /**< GDBus signal watcher handle for the unit new signal */
     guint handle_unitRemoved{0}; /**< GDBus signal watcher handle for the unit removed signal */
 
-    /* ssssssouso */
-    struct UnitEntry
-    {
-        std::string id;
-        std::string description;
-        std::string loadState;
-        std::string activeState;
-        std::string subState;
-        std::string following;
-        std::string path;
-        std::uint32_t jobId;
-        std::string jobType;
-        std::string jobPath;
-    };
-    std::list<UnitEntry> listUnits();
-
     struct UnitInfo
     {
         std::string appid;
