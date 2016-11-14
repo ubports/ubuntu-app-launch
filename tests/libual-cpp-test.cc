@@ -67,6 +67,11 @@ protected:
             g_debug("Freeing a Manager Mock");
         }
 
+        void quit()
+        {
+            thread.quit();
+        }
+
         ubuntu::app_launch::AppID lastStartedApp;
         ubuntu::app_launch::AppID lastFocusedApp;
         ubuntu::app_launch::AppID lastResumedApp;
@@ -109,7 +114,7 @@ protected:
             });
         }
     };
-    std::weak_ptr<ManagerMock> manager;
+    std::shared_ptr<ManagerMock> manager;
 
     /* Useful debugging stuff, but not on by default.  You really want to
        not get all this noise typically */
@@ -311,14 +316,15 @@ protected:
 
         registry = std::make_shared<ubuntu::app_launch::Registry>();
 
-        auto smanager = std::make_shared<ManagerMock>();
-        manager = smanager;
-        ubuntu::app_launch::Registry::setManager(smanager, registry);
+        manager = std::make_shared<ManagerMock>();
+        ubuntu::app_launch::Registry::setManager(manager, registry);
     }
 
     virtual void TearDown()
     {
+        manager->quit();
         registry.reset();
+        manager.reset();
 
         // NOTE: This should generally always be commented out, but
         // it is useful for debugging common errors, so leaving it
@@ -969,7 +975,7 @@ TEST_F(LibUAL, StartingResponses)
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw("com.test.good"),
                                                    ubuntu::app_launch::AppID::AppName::from_raw("application"),
                                                    ubuntu::app_launch::AppID::Version::from_raw("1.2.3")),
-                         manager.lock()->lastStartedApp);
+                         manager->lastStartedApp);
 
     /* Make sure we return */
     EXPECT_EVENTUALLY_EQ(1, starting_count);
@@ -985,9 +991,9 @@ TEST_F(LibUAL, AppIdTest)
     app->launch();
 
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastFocusedApp);
+                         this->manager->lastFocusedApp);
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastResumedApp);
+                         this->manager->lastResumedApp);
 }
 
 GDBusMessage* filter_func_good(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -1022,9 +1028,9 @@ TEST_F(LibUAL, UrlSendTest)
     app->launch(uris);
 
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastFocusedApp);
+                         this->manager->lastFocusedApp);
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastResumedApp);
+                         this->manager->lastResumedApp);
 
     g_dbus_connection_remove_filter(session, filter);
 
@@ -1057,9 +1063,9 @@ TEST_F(LibUAL, UrlSendNoObjectTest)
     app->launch(uris);
 
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastFocusedApp);
+                         this->manager->lastFocusedApp);
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastResumedApp);
+                         this->manager->lastResumedApp);
 }
 
 TEST_F(LibUAL, UnityTimeoutTest)
@@ -1072,9 +1078,9 @@ TEST_F(LibUAL, UnityTimeoutTest)
     app->launch();
 
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastResumedApp);
+                         this->manager->lastResumedApp);
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastFocusedApp);
+                         this->manager->lastFocusedApp);
 }
 
 TEST_F(LibUAL, UnityTimeoutUriTest)
@@ -1089,9 +1095,9 @@ TEST_F(LibUAL, UnityTimeoutUriTest)
     app->launch(uris);
 
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastFocusedApp);
+                         this->manager->lastFocusedApp);
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastResumedApp);
+                         this->manager->lastResumedApp);
 }
 
 GDBusMessage* filter_respawn(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -1125,9 +1131,9 @@ TEST_F(LibUAL, UnityLostTest)
     EXPECT_LT(end - start, 2000 * 1000);
 
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastFocusedApp);
+                         this->manager->lastFocusedApp);
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager.lock()->lastResumedApp);
+                         this->manager->lastResumedApp);
 
     g_dbus_connection_remove_filter(session, filter);
     g_object_unref(session);

@@ -158,6 +158,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
         auto node = json_node_alloc();
         json_node_init_object(node, mani);
+        json_object_unref(mani);
 
         auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
 

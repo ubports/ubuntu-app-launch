@@ -48,6 +48,11 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         throw std::runtime_error("AppID is empty");
     }
 
+    if (!registry || !registry->impl)
+    {
+        throw std::runtime_error("Invalid registry object");
+    }
+
     if (!registry->impl->jobs)
     {
         registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
