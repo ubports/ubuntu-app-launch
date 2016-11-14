@@ -863,7 +863,10 @@ void SystemD::unitNew(const std::string& name, const std::string& path)
         return;
     }
 
-    unitPaths[info] = path;
+    if (unitPaths.insert(std::make_pair(info, path)).second)
+    {
+        emitSignal(sig_appStarted, info);
+    }
 }
 
 void SystemD::unitRemoved(const std::string& name, const std::string& path)
@@ -882,7 +885,26 @@ void SystemD::unitRemoved(const std::string& name, const std::string& path)
     if (it != unitPaths.end())
     {
         unitPaths.erase(it);
+        emitSignal(sig_appStopped, info);
     }
+}
+
+void SystemD::emitSignal(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& sig,
+                         UnitInfo& info)
+{
+    auto reg = registry_.lock();
+    if (!reg)
+    {
+        g_warning("Unable to emit systemd signal, invalid registry");
+        return;
+    }
+
+    auto appid = AppID::find(reg, info.appid);
+    auto app = Application::create(appid, reg);
+
+    // TODO: Figure otu creating instances
+
+    sig(app, {});
 }
 
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)

@@ -142,6 +142,8 @@ private:
     std::string unitPath(const std::string& unitName);
     void unitNew(const std::string& name, const std::string& path);
     void unitRemoved(const std::string& name, const std::string& path);
+    void emitSignal(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& sig,
+                    UnitInfo& info);
 
     static std::string findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
     static void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env);
