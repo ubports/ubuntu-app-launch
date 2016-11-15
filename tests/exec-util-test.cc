@@ -93,14 +93,7 @@ class ExecUtil : public EventuallyFixture
 
 			g_object_unref(bus);
 
-			unsigned int cleartry = 0;
-			while (bus != NULL && cleartry < 100) {
-				g_usleep(100000);
-				while (g_main_pending()) {
-					g_main_iteration(TRUE);
-				}
-				cleartry++;
-			}
+			ASSERT_EVENTUALLY_EQ(nullptr, bus);
 		}
 
 		inline void StartCheckEnv (const std::string& appid, std::map<std::string, std::function<void(const gchar *)>> enums) {
