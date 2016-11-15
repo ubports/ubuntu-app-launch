@@ -963,32 +963,83 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             auto data = new FailedData{reg};
 
-            handle_appFailed =
-                g_dbus_connection_signal_subscribe(reg->impl->_dbus.get(),             /* bus */
-                                                   SYSTEMD_DBUS_ADDRESS.c_str(),       /* sender */
-                                                   "org.freedesktop.DBus.Properties",  /* interface */
-                                                   "PropertiesChanged",                /* signal */
-                                                   nullptr,                            /* path */
-                                                   SYSTEMD_DBUS_IFACE_SERVICE.c_str(), /* arg0 */
-                                                   G_DBUS_SIGNAL_FLAGS_NONE,
-                                                   [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
-                                                      const gchar*, GVariant* params, gpointer user_data) -> void {
-                                                       auto data = reinterpret_cast<FailedData*>(user_data);
-                                                       auto reg = data->registry.lock();
+            handle_appFailed = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),             /* bus */
+                SYSTEMD_DBUS_ADDRESS.c_str(),       /* sender */
+                "org.freedesktop.DBus.Properties",  /* interface */
+                "PropertiesChanged",                /* signal */
+                nullptr,                            /* path */
+                SYSTEMD_DBUS_IFACE_SERVICE.c_str(), /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar* path, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto data = reinterpret_cast<FailedData*>(user_data);
+                    auto reg = data->registry.lock();
 
-                                                       if (!reg)
-                                                       {
-                                                           g_warning("Registry object invalid!");
-                                                           return;
-                                                       }
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
 
-                                                       /* TODO */
-                                                   },    /* callback */
-                                                   data, /* user data */
-                                                   [](gpointer user_data) {
-                                                       auto data = reinterpret_cast<FailedData*>(user_data);
-                                                       delete data;
-                                                   }); /* user data destroy */
+                    auto manager = std::dynamic_pointer_cast<SystemD>(reg->impl->jobs);
+
+                    /* Check to see if this is a path we care about */
+                    bool pathfound{false};
+                    UnitInfo unitinfo;
+                    for (const auto& unit : manager->unitPaths)
+                    {
+                        if (unit.second == path)
+                        {
+                            pathfound = true;
+                            unitinfo = unit.first;
+                            break;
+                        }
+                    }
+                    if (!pathfound)
+                    {
+                        return;
+                    }
+
+                    /* Now see if it is a property we care about */
+                    auto vdict = g_variant_get_child_value(params, 1);
+                    GVariantDict dict;
+                    g_variant_dict_init(&dict, vdict);
+                    g_variant_unref(vdict);
+
+                    if (g_variant_dict_contains(&dict, "Result") == FALSE)
+                    {
+                        /* We don't care about anything else */
+                        return;
+                    }
+
+                    /* Check to see if it just was successful */
+                    const gchar* value{nullptr};
+                    g_variant_dict_lookup(&dict, "Result", "&s", &value);
+
+                    if (value == std::string{"success"})
+                    {
+                        return;
+                    }
+
+                    /* Oh, we might want to do something now */
+                    auto reason{Registry::FailureType::CRASH};
+                    if (value == std::string{"exit-code"})
+                    {
+                        reason = Registry::FailureType::START_FAILURE;
+                    }
+
+                    auto appid = AppID::find(reg, unitinfo.appid);
+                    auto app = Application::create(appid, reg);
+
+                    // TODO: Instance
+                    manager->sig_appFailed(app, {}, reason);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = reinterpret_cast<FailedData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
 
             return true;
         });
