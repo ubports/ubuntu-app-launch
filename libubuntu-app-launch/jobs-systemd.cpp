@@ -239,6 +239,7 @@ SystemD::~SystemD()
 
     dohandle(handle_unitNew);
     dohandle(handle_unitRemoved);
+    dohandle(handle_appFailed);
 }
 
 std::string SystemD::findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env)
@@ -936,18 +937,63 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStarted()
 {
+    /* For systemd we're automatically listening to the UnitNew signal
+       and emitting on the object */
     return sig_appStarted;
 }
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStopped()
 {
+    /* For systemd we're automatically listening to the UnitRemoved signal
+       and emitting on the object */
     return sig_appStopped;
 }
+
+struct FailedData
+{
+    std::weak_ptr<Registry> registry;
+};
 
 core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
     SystemD::appFailed()
 {
-    g_warning("Systemd signals not implemented");
+    std::call_once(flag_appFailed, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            auto data = new FailedData{reg};
+
+            handle_appFailed =
+                g_dbus_connection_signal_subscribe(reg->impl->_dbus.get(),             /* bus */
+                                                   SYSTEMD_DBUS_ADDRESS.c_str(),       /* sender */
+                                                   "org.freedesktop.DBus.Properties",  /* interface */
+                                                   "PropertiesChanged",                /* signal */
+                                                   nullptr,                            /* path */
+                                                   SYSTEMD_DBUS_IFACE_SERVICE.c_str(), /* arg0 */
+                                                   G_DBUS_SIGNAL_FLAGS_NONE,
+                                                   [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
+                                                      const gchar*, GVariant* params, gpointer user_data) -> void {
+                                                       auto data = reinterpret_cast<FailedData*>(user_data);
+                                                       auto reg = data->registry.lock();
+
+                                                       if (!reg)
+                                                       {
+                                                           g_warning("Registry object invalid!");
+                                                           return;
+                                                       }
+
+                                                       /* TODO */
+                                                   },    /* callback */
+                                                   data, /* user data */
+                                                   [](gpointer user_data) {
+                                                       auto data = reinterpret_cast<FailedData*>(user_data);
+                                                       delete data;
+                                                   }); /* user data destroy */
+
+            return true;
+        });
+    });
+
     return sig_appFailed;
 }
 
