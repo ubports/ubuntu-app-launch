@@ -131,6 +131,33 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
             throw std::runtime_error(message);
         }
 
+        /* If we don't subscribe, it doesn't send us signals :-( */
+        g_dbus_connection_call(bus.get(),                          /* user bus */
+                               SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
+                               SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
+                               SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
+                               "Subscribe",                        /* method */
+                               nullptr,                            /* params */
+                               nullptr,                            /* ret type */
+                               G_DBUS_CALL_FLAGS_NONE,             /* flags */
+                               -1,                                 /* timeout */
+                               cancel.get(),                       /* cancellable */
+                               [](GObject* obj, GAsyncResult* res, gpointer user_data) {
+                                   GError* error{nullptr};
+                                   GVariant* callt = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+
+                                   if (error != nullptr)
+                                   {
+                                       g_warning("Unable to subscribe to SystemD: %s", error->message);
+                                       g_error_free(error);
+                                       return;
+                                   }
+
+                                   g_variant_unref(callt);
+                                   g_debug("Subscribed to Systemd");
+                               },
+                               nullptr);
+
         /* Setup Unit add/remove signals */
         handle_unitNew =
             g_dbus_connection_signal_subscribe(bus.get(),                          /* bus */
@@ -147,7 +174,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                                    const gchar* unitname{nullptr};
                                                    const gchar* unitpath{nullptr};
 
-                                                   g_variant_get(params, "(&s&o)", unitname, unitpath);
+                                                   g_variant_get(params, "(&s&o)", &unitname, &unitpath);
 
                                                    pthis->unitNew(unitname, unitpath);
                                                },        /* callback */
@@ -169,7 +196,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                                    const gchar* unitname{nullptr};
                                                    const gchar* unitpath{nullptr};
 
-                                                   g_variant_get(params, "(&s&o)", unitname, unitpath);
+                                                   g_variant_get(params, "(&s&o)", &unitname, &unitpath);
 
                                                    pthis->unitRemoved(unitname, unitpath);
                                                },        /* callback */
