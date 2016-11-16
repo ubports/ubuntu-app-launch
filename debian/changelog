@@ -1,3 +1,11 @@
+ubuntu-app-launch (0.9+17.04.20161110.1-0ubuntu1) zesty; urgency=medium
+
+  * Make pause/resume non-blocking
+  * Removing JSON-GLib version cruft
+  * Switch to libwhoopsie for recoverable problem support
+
+ -- Ted Gould <ted@gould.cx>  Thu, 10 Nov 2016 15:39:43 +0000
+
 ubuntu-app-launch (0.9+16.10.20161003.1-0ubuntu1) yakkety; urgency=medium
 
   * Set a base directory for icons that have a full path specified in
