@@ -111,6 +111,8 @@ static const std::string SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Se
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
 {
+    unitPathsInitFuture = unitPathsInitPromise.get_future();
+
     auto cancel = registry->impl->thread.getCancellable();
     userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
         GError* error = nullptr;
@@ -223,6 +225,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                 {
                     g_warning("Unable to list SystemD units: %s", error->message);
                     g_error_free(error);
+                    pthis->unitPathsInitPromise.set_value(false);
                     return;
                 }
 
@@ -249,8 +252,10 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
                 g_variant_iter_free(iter);
                 g_variant_unref(call);
+                pthis->unitPathsInitPromise.set_value(true);
             },
             this);
+
         return bus;
     });
 }
@@ -641,6 +646,8 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
         return {};
     }
 
+    unitPathsInit();
+
     for (const auto& unit : unitPaths)
     {
         const SystemD::UnitInfo& unitinfo = unit.first;
@@ -674,6 +681,8 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
         g_warning("Unable to list instances without a registry");
         return {};
     }
+
+    unitPathsInit();
 
     for (const auto& unit : unitPaths)
     {
@@ -733,8 +742,27 @@ std::string SystemD::unitName(const SystemD::UnitInfo& info)
     return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst + ".service";
 }
 
+std::string SystemD::unitPath(const SystemD::UnitInfo& info)
+{
+    auto data = unitPaths[info];
+
+    if (!data)
+    {
+        return {};
+    }
+
+    data->pathfuture.wait();
+    return data->unitpath;
+}
+
 void SystemD::unitNew(const std::string& name, const std::string& path)
 {
+    if (path == "/")
+    {
+        /* Job paths of '/' means there is no job, and it's likely the unit failed */
+        return;
+    }
+
     g_debug("New Unit: %s", name.c_str());
 
     UnitInfo info;
@@ -747,11 +775,55 @@ void SystemD::unitNew(const std::string& name, const std::string& path)
         return;
     }
 
-    if (unitPaths.insert(std::make_pair(info, path)).second)
+    auto data = std::make_shared<UnitData>();
+    data->jobpath = path;
+    data->pathfuture = data->pathpromise.get_future();
+
+    /* We already have this one, continue on */
+    if (!unitPaths.insert(std::make_pair(info, data)).second)
     {
-        g_debug("Unit added: %s", name.c_str());
-        emitSignal(sig_appStarted, info);
+        return;
     }
+
+    /* We need to get the path, we're blocking everyone else on
+       this call if they try to get the path. But we're just locking
+       up the UAL thread so it should be a big deal. But if someone
+       comes an asking at this point we'll think that we have the
+       app, but not yet its path */
+    GError* error{nullptr};
+    auto reg = registry_.lock();
+    GVariant* call = g_dbus_connection_call_sync(userbus_.get(),                           /* user bus */
+                                                 SYSTEMD_DBUS_ADDRESS.c_str(),             /* bus name */
+                                                 SYSTEMD_DBUS_PATH_MANAGER.c_str(),        /* path */
+                                                 SYSTEMD_DBUS_IFACE_MANAGER.c_str(),       /* interface */
+                                                 "GetUnit",                                /* method */
+                                                 g_variant_new("(s)", name.c_str()),       /* params */
+                                                 G_VARIANT_TYPE("(o)"),                    /* ret type */
+                                                 G_DBUS_CALL_FLAGS_NONE,                   /* flags */
+                                                 -1,                                       /* timeout */
+                                                 reg->impl->thread.getCancellable().get(), /* cancellable */
+                                                 &error);
+
+    if (error != nullptr)
+    {
+        g_warning("Unable to get SystemD unit path for '%s': %s", name.c_str(), error->message);
+        g_error_free(error);
+        return;
+    }
+
+    /* Parse variant */
+    gchar* gpath = nullptr;
+    g_variant_get(call, "(o)", &gpath);
+    if (gpath != nullptr)
+    {
+        data->unitpath = gpath;
+    }
+
+    g_variant_unref(call);
+
+    data->pathpromise.set_value(true);
+
+    emitSignal(sig_appStarted, info);
 }
 
 void SystemD::unitRemoved(const std::string& name, const std::string& path)
@@ -795,9 +867,18 @@ void SystemD::emitSignal(core::Signal<std::shared_ptr<Application>, std::shared_
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
 {
     auto registry = registry_.lock();
+
+    if (!registry)
+    {
+        g_warning("Unable to get registry to determine primary PID");
+        return 0;
+    }
+
+    unitPathsInit();
+
     auto unitinfo = SystemD::UnitInfo{appId, job, instance};
     auto unitname = unitName(unitinfo);
-    auto unitpath = unitPaths[unitinfo];
+    auto unitpath = unitPath(unitinfo);
 
     if (unitpath.empty())
     {
@@ -843,9 +924,18 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
 std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job, const std::string& instance)
 {
     auto registry = registry_.lock();
+
+    if (!registry)
+    {
+        g_warning("Unable to get registry to determine primary PID");
+        return {};
+    }
+
+    unitPathsInit();
+
     auto unitinfo = SystemD::UnitInfo{appId, job, instance};
     auto unitname = unitName(unitinfo);
-    auto unitpath = unitPaths[unitinfo];
+    auto unitpath = unitPath(unitinfo);
 
     if (unitpath.empty())
     {
@@ -1020,7 +1110,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     UnitInfo unitinfo;
                     for (const auto& unit : manager->unitPaths)
                     {
-                        if (unit.second == path)
+                        if (unit.second->unitpath == path)
                         {
                             pathfound = true;
                             unitinfo = unit.first;

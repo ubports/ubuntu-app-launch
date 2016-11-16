@@ -21,6 +21,7 @@
 
 #include "jobs-base.h"
 #include <chrono>
+#include <future>
 #include <gio/gio.h>
 #include <map>
 #include <mutex>
@@ -111,9 +112,25 @@ private:
         }
     };
 
-    std::map<UnitInfo, std::string> unitPaths;
+    struct UnitData
+    {
+        std::string jobpath;
+        std::string unitpath;
+        std::promise<bool> pathpromise;
+        std::future<bool> pathfuture;
+    };
+
+    std::promise<bool> unitPathsInitPromise;
+    std::future<bool> unitPathsInitFuture;
+    void unitPathsInit(void)
+    {
+        unitPathsInitFuture.wait();
+    };
+
+    std::map<UnitInfo, std::shared_ptr<UnitData>> unitPaths;
     UnitInfo parseUnit(const std::string& unit);
     std::string unitName(const UnitInfo& info);
+    std::string unitPath(const UnitInfo& info);
 
     void unitNew(const std::string& name, const std::string& path);
     void unitRemoved(const std::string& name, const std::string& path);
