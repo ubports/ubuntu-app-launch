@@ -216,6 +216,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                 while (g_variant_iter_loop(iter, "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState,
                                            &subState, &following, &path, &jobId, &jobType, &jobPath))
                 {
+                    g_debug("List Units: %s", id);
                     pthis->unitNew(id, jobPath);
                 }
 
@@ -707,6 +708,8 @@ std::string SystemD::unitName(const SystemD::UnitInfo& info)
 
 void SystemD::unitNew(const std::string& name, const std::string& path)
 {
+    g_debug("New Unit: %s", name.c_str());
+
     UnitInfo info;
     try
     {
@@ -719,6 +722,7 @@ void SystemD::unitNew(const std::string& name, const std::string& path)
 
     if (unitPaths.insert(std::make_pair(info, path)).second)
     {
+        g_debug("Unit added: %s", name.c_str());
         emitSignal(sig_appStarted, info);
     }
 }
