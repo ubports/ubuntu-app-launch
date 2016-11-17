@@ -561,6 +561,15 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 g_variant_builder_close(&builder);
                 g_variant_builder_close(&builder);
             }
+            else
+            {
+                g_warning("Not setting 'ExecStart' with: %s",
+                          std::accumulate(commands.begin(), commands.end(), std::string{},
+                                          [](const std::string& accum, std::string add) {
+                                              return accum.empty() ? add : accum + " " + add;
+                                          })
+                              .c_str());
+            }
 
             /* RemainAfterExit */
             g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
