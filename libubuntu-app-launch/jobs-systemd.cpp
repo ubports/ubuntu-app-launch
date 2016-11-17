@@ -311,6 +311,11 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     g_array_set_clear_func(execarray, g_free);
     g_array_free(execarray, FALSE); /* TODO: Not TRUE? */
 
+    if (retval.empty())
+    {
+        g_warning("After parsing 'APP_EXEC=%s' we ended up with no tokens", exec.c_str());
+    }
+
     /* See if we need the xmir helper */
     if (findEnv("APP_XMIR_ENABLE", env) == "1" && getenv("DISPLAY") == nullptr)
     {
