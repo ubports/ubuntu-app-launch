@@ -313,6 +313,27 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
         execline = std::string(libertine_launch) + " " + execline;
     }
 
+    auto snappath = getenv("SNAP");
+    if (snappath != nullptr)
+    {
+        /* This means we're inside a snap, and if we're in a snap then
+           the legacy application is in a snap. We need to try and set
+           up the proper environment for that app */
+        retval.emplace_back(std::make_pair("SNAP", snappath));
+
+        auto launcherpath = std::string{snappath} + "/bin/desktop-launch";
+        if (g_file_test(launcherpath.c_str(), G_FILE_TEST_EXISTS))
+        {
+            execline = launcherpath + " " + execline;
+        }
+
+        auto snapenvpath = std::string{snappath} + "/snappyenv";
+        if (g_file_test(snapenvpath.c_str(), G_FILE_TEST_EXISTS))
+        {
+            execline = snapenvpath + " " + execline;
+        }
+    }
+
     retval.emplace_back(std::make_pair("APP_EXEC", execline));
 
     /* Honor the 'Path' key if it is in the desktop file */
