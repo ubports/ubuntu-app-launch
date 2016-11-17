@@ -541,8 +541,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
             /* ExecStart */
             auto commands = parseExec(env);
-            gchar* pathexec{nullptr};
-            if (!commands.empty() && ((pathexec = g_find_program_in_path(commands[0].c_str())) != nullptr))
+            if (!commands.empty())
             {
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
                 g_variant_builder_add_value(&builder, g_variant_new_string("ExecStart"));
@@ -550,7 +549,17 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
 
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-                g_variant_builder_add_value(&builder, g_variant_new_take_string(pathexec));
+
+                gchar* pathexec = g_find_program_in_path(commands[0].c_str());
+                if (pathexec != nullptr)
+                {
+                    g_variant_builder_add_value(&builder, g_variant_new_take_string(pathexec));
+                }
+                else
+                {
+                    g_debug("Unable to find '%s' in PATH=%s", commands[0].c_str(), g_getenv("PATH"));
+                    g_variant_builder_add_value(&builder, g_variant_new_string(commands[0].c_str()));
+                }
 
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
                 for (auto param : commands)
@@ -565,15 +574,6 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 g_variant_builder_close(&builder);
                 g_variant_builder_close(&builder);
                 g_variant_builder_close(&builder);
-            }
-            else
-            {
-                g_warning("Not setting 'ExecStart' with: %s",
-                          std::accumulate(commands.begin(), commands.end(), std::string{},
-                                          [](const std::string& accum, std::string add) {
-                                              return accum.empty() ? add : accum + " " + add;
-                                          })
-                              .c_str());
             }
 
             /* RemainAfterExit */
