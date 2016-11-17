@@ -94,7 +94,7 @@ void Base::pause()
         oomValueToPid(pid, oomval);
     });
 
-    pidListToDbus(pids, "ApplicationPaused");
+    pidListToDbus(registry_, appId_, pids, "ApplicationPaused");
 }
 
 /** Resumes this application by sending SIGCONT to all the PIDs in the
@@ -111,7 +111,7 @@ void Base::resume()
         oomValueToPid(pid, oomval);
     });
 
-    pidListToDbus(pids, "ApplicationResumed");
+    pidListToDbus(registry_, appId_, pids, "ApplicationResumed");
 }
 
 /** Go through the list of PIDs calling a function and handling
@@ -147,61 +147,59 @@ std::vector<pid_t> Base::forAllPids(std::function<void(pid_t)> eachPid)
     \param pids List of PIDs to turn into variants to send
     \param signal Name of the DBus signal to send
 */
-void Base::pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal)
+void Base::pidListToDbus(const std::shared_ptr<Registry>& reg,
+                         const AppID& appid,
+                         const std::vector<pid_t>& pids,
+                         const std::string& signal)
 {
-    auto registry = registry_;
-    auto lappid = appId_;
+    auto vpids = std::shared_ptr<GVariant>(
+        [pids]() {
+            GVariant* pidarray = nullptr;
 
-    registry_->impl->thread.executeOnThread([registry, lappid, pids, signal] {
-        auto vpids = std::shared_ptr<GVariant>(
-            [pids]() {
-                GVariant* pidarray = nullptr;
-
-                if (pids.empty())
-                {
-                    pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, nullptr, 0);
-                    g_variant_ref_sink(pidarray);
-                    return pidarray;
-                }
-
-                GVariantBuilder builder;
-                g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
-                for (auto pid : pids)
-                {
-                    g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
-                }
-
-                pidarray = g_variant_builder_end(&builder);
+            if (pids.empty())
+            {
+                pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, nullptr, 0);
                 g_variant_ref_sink(pidarray);
                 return pidarray;
-            }(),
-            [](GVariant* var) { g_variant_unref(var); });
+            }
 
-        GVariantBuilder params;
-        g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
-        g_variant_builder_add_value(&params, g_variant_new_string(std::string(lappid).c_str()));
-        g_variant_builder_add_value(&params, vpids.get());
+            GVariantBuilder builder;
+            g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
+            for (auto pid : pids)
+            {
+                g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
+            }
 
-        GError* error = nullptr;
-        g_dbus_connection_emit_signal(registry->impl->_dbus.get(),     /* bus */
-                                      nullptr,                         /* destination */
-                                      "/",                             /* path */
-                                      "com.canonical.UbuntuAppLaunch", /* interface */
-                                      signal.c_str(),                  /* signal */
-                                      g_variant_builder_end(&params),  /* params, the same */
-                                      &error);                         /* error */
+            pidarray = g_variant_builder_end(&builder);
+            g_variant_ref_sink(pidarray);
+            return pidarray;
+        }(),
+        [](GVariant* var) { g_variant_unref(var); });
 
-        if (error != nullptr)
-        {
-            g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(lappid).c_str(),
-                      error->message);
-            g_error_free(error);
-        }
-        else
-        {
-            g_debug("Emmitted '%s' to DBus", signal.c_str());
-        }
-    });
+    GVariantBuilder params;
+    g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
+    g_variant_builder_add_value(&params, g_variant_new_string(std::string(appid).c_str()));
+    g_variant_builder_add_value(&params, vpids.get());
+
+    GError* error = nullptr;
+    g_dbus_connection_emit_signal(reg->impl->_dbus.get(),          /* bus */
+                                  nullptr,                         /* destination */
+                                  "/",                             /* path */
+                                  "com.canonical.UbuntuAppLaunch", /* interface */
+                                  signal.c_str(),                  /* signal */
+                                  g_variant_builder_end(&params),  /* params, the same */
+                                  &error);                         /* error */
+
+    if (error != nullptr)
+    {
+        g_warning("Unable to emit signal '%s' for appid '%s': %s", signal.c_str(), std::string(appid).c_str(),
+                  error->message);
+        g_error_free(error);
+    }
+    else
+    {
+        g_debug("Emmitted '%s' to DBus", signal.c_str());
+    }
 }
 
 /** Sets the OOM adjustment by getting the list of PIDs and writing

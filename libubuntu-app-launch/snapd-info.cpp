@@ -217,7 +217,7 @@ std::shared_ptr<JsonNode> Info::snapdJson(const std::string &endpoint) const
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, snapd_writefunc);
 
     /* Overridable timeout */
-    if (g_getenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT") != nullptr)
+    if (g_getenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT") == nullptr)
     {
         curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 100L);
     }

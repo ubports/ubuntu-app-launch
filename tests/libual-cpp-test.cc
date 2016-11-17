@@ -1574,13 +1574,7 @@ private:
     }
 };
 
-static void signal_increment(GDBusConnection* connection,
-                             const gchar* sender,
-                             const gchar* path,
-                             const gchar* interface,
-                             const gchar* signal,
-                             GVariant* params,
-                             gpointer user_data)
+static void signal_increment(const gchar* appid, GPid* pids, gpointer user_data)
 {
     guint* count = (guint*)user_data;
     g_debug("Count incremented to: %d", *count + 1);
@@ -1628,12 +1622,9 @@ TEST_F(LibUAL, DISABLED_PauseResume)
     /* Setup signal handling */
     guint paused_count = 0;
     guint resumed_count = 0;
-    guint paused_signal =
-        g_dbus_connection_signal_subscribe(bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationPaused", "/",
-                                           nullptr, G_DBUS_SIGNAL_FLAGS_NONE, signal_increment, &paused_count, nullptr);
-    guint resumed_signal = g_dbus_connection_signal_subscribe(
-        bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationResumed", "/", nullptr, G_DBUS_SIGNAL_FLAGS_NONE,
-        signal_increment, &resumed_count, nullptr);
+
+    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_paused(signal_increment, &paused_count));
+    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resumed(signal_increment, &resumed_count));
 
     /* Get our app object */
     auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
@@ -1690,8 +1681,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
 
-    g_dbus_connection_signal_unsubscribe(bus, paused_signal);
-    g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
+    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_paused(signal_increment, &paused_count));
+    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_resumed(signal_increment, &resumed_count));
 }
 
 TEST_F(LibUAL, MultiPause)
@@ -1737,9 +1728,16 @@ TEST_F(LibUAL, MultiPause)
     do
     {
         g_debug("Giving mocks a chance to start");
-        pause(200);
+        pause(20);
     } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING &&
              dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
+
+    /* Setup signal handling */
+    guint paused_count = 0;
+    guint resumed_count = 0;
+
+    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_paused(signal_increment, &paused_count));
+    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resumed(signal_increment, &resumed_count));
 
     /* Get our app object */
     auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
@@ -1756,6 +1754,8 @@ TEST_F(LibUAL, MultiPause)
     /* Pause the app */
     instance->pause();
 
+    EXPECT_EVENTUALLY_EQ(1, paused_count);
+
     std::for_each(spews.begin(), spews.end(), [](SpewMaster& spew) { spew.reset(); });
     pause(50);
 
@@ -1765,6 +1765,8 @@ TEST_F(LibUAL, MultiPause)
 
     /* Now Resume the App */
     instance->resume();
+
+    EXPECT_EVENTUALLY_EQ(1, resumed_count);
 
     pause(50);
 
@@ -1774,6 +1776,8 @@ TEST_F(LibUAL, MultiPause)
     /* Pause the app */
     instance->pause();
 
+    EXPECT_EVENTUALLY_EQ(2, paused_count);
+
     std::for_each(spews.begin(), spews.end(), [](SpewMaster& spew) { spew.reset(); });
     pause(50);
 
@@ -1784,12 +1788,17 @@ TEST_F(LibUAL, MultiPause)
     /* Now Resume the App */
     instance->resume();
 
+    EXPECT_EVENTUALLY_EQ(2, resumed_count);
+
     pause(50);
 
     EXPECT_NE(0, std::accumulate(spews.begin(), spews.end(), int{0},
                                  [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
 
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
+
+    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_paused(signal_increment, &paused_count));
+    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_resumed(signal_increment, &resumed_count));
 }
 
 TEST_F(LibUAL, OOMSet)

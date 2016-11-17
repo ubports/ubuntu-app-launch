@@ -66,13 +66,23 @@ public:
 
     /* Manage lifecycle */
     void stop() override;
+    void pause() override;
+    void resume() override;
 
     /* C Callback */
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 
 private:
-    std::string upstartJobPath(const std::string& job);
+    std::string upstartJobPath();
     std::string upstartName();
+
+    static std::vector<pid_t> pids(const std::shared_ptr<Registry>& reg,
+                                   const AppID& appid,
+                                   const std::string& jobpath);
+    static std::vector<pid_t> forAllPids(const std::shared_ptr<Registry>& reg,
+                                         const AppID& appid,
+                                         const std::string& jobpath,
+                                         std::function<void(pid_t)> eachPid);
 
     static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
 };
@@ -81,7 +91,7 @@ private:
     DBus interface */
 pid_t Upstart::primaryPid()
 {
-    auto jobpath = upstartJobPath(job_);
+    auto jobpath = upstartJobPath();
     if (jobpath.empty())
     {
         g_debug("Unable to get a valid job path");
@@ -234,7 +244,7 @@ void Upstart::stop()
             g_debug("Stopping job %s app_id %s instance_id %s", job_.c_str(), std::string(appId_).c_str(),
                     instance_.c_str());
 
-            auto jobpath = manager->upstartJobPath(job_);
+            auto jobpath = upstartJobPath();
             if (jobpath.empty())
             {
                 throw new std::runtime_error("Unable to get job path for Upstart job '" + job_ + "'");
@@ -385,10 +395,96 @@ void Upstart::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
     delete data;
 }
 
-std::string Upstart::upstartJobPath(const std::string& job)
+std::string Upstart::upstartJobPath()
 {
     auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry_->impl->jobs);
-    return manager->upstartJobPath(job);
+    return manager->upstartJobPath(job_);
+}
+
+/** Go through the list of PIDs calling a function and handling
+    the issue with getting PIDs being a racey condition.
+
+    \param eachPid Function to run on each PID
+*/
+std::vector<pid_t> Upstart::forAllPids(const std::shared_ptr<Registry>& reg,
+                                       const AppID& appid,
+                                       const std::string& jobpath,
+                                       std::function<void(pid_t)> eachPid)
+{
+    std::set<pid_t> seenPids;
+    bool added = true;
+
+    while (added)
+    {
+        added = false;
+        auto pidlist = pids(reg, appid, jobpath);
+        for (auto pid : pidlist)
+        {
+            if (seenPids.insert(pid).second)
+            {
+                eachPid(pid);
+                added = true;
+            }
+        }
+    }
+
+    return std::vector<pid_t>(seenPids.begin(), seenPids.end());
+}
+
+/** Pauses this application by sending SIGSTOP to all the PIDs in the
+    cgroup and tells Zeitgeist that we've left the application. */
+void Upstart::pause()
+{
+    g_debug("Pausing application: %s", std::string(appId_).c_str());
+
+    auto registry = registry_;
+    auto appid = appId_;
+    auto jobpath = upstartJobPath();
+
+    registry->impl->thread.executeOnThread([registry, appid, jobpath] {
+        auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
+            auto oomval = oom::paused();
+            g_debug("Pausing PID: %d (%d)", pid, int(oomval));
+            signalToPid(pid, SIGSTOP);
+            oomValueToPid(pid, oomval);
+        });
+
+        pidListToDbus(registry, appid, pids, "ApplicationPaused");
+    });
+
+    registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
+}
+
+/** Resumes this application by sending SIGCONT to all the PIDs in the
+    cgroup and tells Zeitgeist that we're accessing the application. */
+void Upstart::resume()
+{
+    g_debug("Resuming application: %s", std::string(appId_).c_str());
+
+    auto registry = registry_;
+    auto appid = appId_;
+    auto jobpath = upstartJobPath();
+
+    registry->impl->thread.executeOnThread([registry, appid, jobpath] {
+        auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
+            auto oomval = oom::focused();
+            g_debug("Resuming PID: %d (%d)", pid, int(oomval));
+            signalToPid(pid, SIGCONT);
+            oomValueToPid(pid, oomval);
+        });
+
+        pidListToDbus(registry, appid, pids, "ApplicationResumed");
+    });
+
+    registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
+}
+
+std::vector<pid_t> Upstart::pids(const std::shared_ptr<Registry>& reg, const AppID& appid, const std::string& jobpath)
+{
+    auto manager = std::dynamic_pointer_cast<manager::Upstart>(reg->impl->jobs);
+    auto pids = manager->pidsFromCgroup(jobpath);
+    g_debug("Got %d PIDs for AppID '%s'", int(pids.size()), std::string(appid).c_str());
+    return pids;
 }
 
 }  // namespace instances
@@ -584,18 +680,15 @@ void Upstart::initCGManager()
     if (cgManager_)
         return;
 
-    std::promise<std::shared_ptr<GDBusConnection>> promise;
-    auto future = promise.get_future();
     auto registry = registry_.lock();
 
-    registry->impl->thread.executeOnThread([this, &promise, &registry]() {
+    cgManager_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, registry]() {
         bool use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != nullptr;
         if (use_session_bus)
         {
             /* For working dbusmock */
             g_debug("Connecting to CG Manager on session bus");
-            promise.set_value(registry->impl->_dbus);
-            return;
+            return registry->impl->_dbus;
         }
 
         auto cancel =
@@ -605,28 +698,25 @@ void Upstart::initCGManager()
         registry->impl->thread.timeoutSeconds(std::chrono::seconds{1},
                                               [cancel]() { g_cancellable_cancel(cancel.get()); });
 
-        g_dbus_connection_new_for_address(
-            CGMANAGER_DBUS_PATH,                           /* cgmanager path */
-            G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, /* flags */
-            nullptr,                                       /* Auth Observer */
-            cancel.get(),                                  /* Cancellable */
-            [](GObject* obj, GAsyncResult* res, gpointer data) -> void {
-                GError* error = nullptr;
-                auto promise = reinterpret_cast<std::promise<std::shared_ptr<GDBusConnection>>*>(data);
+        GError* error = nullptr;
+        auto retval = std::shared_ptr<GDBusConnection>(
+            g_dbus_connection_new_for_address_sync(CGMANAGER_DBUS_PATH,                           /* cgmanager path */
+                                                   G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, /* flags */
+                                                   nullptr,                                       /* Auth Observer */
+                                                   cancel.get(),                                  /* Cancellable */
+                                                   &error),
+            [](GDBusConnection* con) { g_clear_object(&con); });
 
-                auto gcon = g_dbus_connection_new_for_address_finish(res, &error);
-                if (error != nullptr)
-                {
-                    g_error_free(error);
-                }
+        if (error != nullptr)
+        {
+            g_warning("Unable to get CGManager connection: %s", error->message);
+            g_error_free(error);
+        }
 
-                auto con = std::shared_ptr<GDBusConnection>(gcon, [](GDBusConnection* con) { g_clear_object(&con); });
-                promise->set_value(con);
-            },
-            &promise);
+        return retval;
     });
 
-    cgManager_ = future.get();
+    /* NOTE: This will execute on the thread */
     registry->impl->thread.timeoutSeconds(std::chrono::seconds{10}, [this]() { cgManager_.reset(); });
 }
 
