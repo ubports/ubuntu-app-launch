@@ -96,7 +96,6 @@ void Registry::Impl::initClick()
     }
 }
 
-#if JSON_CHECK_VERSION(1, 1, 2)
 /** Helper function for printing JSON objects to debug output */
 std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
 {
@@ -121,17 +120,6 @@ std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
 
     return retval;
 }
-#else
-std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
-{
-    return "Your JSON-GLib is too old to print the JSON here, please talk to your vendor about upgrading";
-}
-
-std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
-{
-    return "Your JSON-GLib is too old to print the JSON here, please talk to your vendor about upgrading";
-}
-#endif
 
 std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& package)
 {
