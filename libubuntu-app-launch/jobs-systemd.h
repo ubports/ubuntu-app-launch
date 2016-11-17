@@ -21,6 +21,7 @@
 
 #include "jobs-base.h"
 #include <chrono>
+#include <future>
 #include <gio/gio.h>
 #include <map>
 #include <mutex>
@@ -60,10 +61,6 @@ public:
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped() override;
     virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
         appFailed() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-        appPaused() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
-        appResumed() override;
 
     static std::string userBusPath();
 
@@ -74,40 +71,71 @@ public:
 private:
     std::shared_ptr<GDBusConnection> userbus_;
 
-    /* ssssssouso */
-    struct UnitEntry
-    {
-        std::string id;
-        std::string description;
-        std::string loadState;
-        std::string activeState;
-        std::string subState;
-        std::string following;
-        std::string path;
-        std::uint32_t jobId;
-        std::string jobType;
-        std::string jobPath;
-    };
-    std::list<UnitEntry> listUnits();
+    guint handle_unitNew{0};     /**< GDBus signal watcher handle for the unit new signal */
+    guint handle_unitRemoved{0}; /**< GDBus signal watcher handle for the unit removed signal */
+    guint handle_appFailed{0};   /**< GDBus signal watcher handle for app failed signal */
+
+    std::once_flag
+        flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
 
     struct UnitInfo
     {
         std::string appid;
         std::string job;
         std::string inst;
+
+        bool operator<(const UnitInfo& b) const
+        {
+            if (job < b.job)
+            {
+                return true;
+            }
+            else if (job == b.job)
+            {
+                if (appid < b.appid)
+                {
+                    return true;
+                }
+                else if (appid == b.appid)
+                {
+                    return inst < b.inst;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
     };
+
+    struct UnitData
+    {
+        std::string jobpath;
+        std::string unitpath;
+        std::promise<bool> pathpromise;
+        std::future<bool> pathfuture;
+    };
+
+    std::promise<bool> unitPathsInitPromise;
+    std::future<bool> unitPathsInitFuture;
+    void unitPathsInit(void)
+    {
+        unitPathsInitFuture.wait();
+    };
+
+    std::map<UnitInfo, std::shared_ptr<UnitData>> unitPaths;
     UnitInfo parseUnit(const std::string& unit);
     std::string unitName(const UnitInfo& info);
+    std::string unitPath(const UnitInfo& info);
 
-    struct UnitPath
-    {
-        std::string unitName;
-        std::string unitPath;
-        std::chrono::time_point<std::chrono::system_clock> timeStamp;
-    };
-    std::list<UnitPath> unitPaths_;
-    std::mutex unitPathsMutex_;
-    std::string unitPath(const std::string& unitName);
+    void unitNew(const std::string& name, const std::string& path);
+    void unitRemoved(const std::string& name, const std::string& path);
+    void emitSignal(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& sig,
+                    UnitInfo& info);
 
     static std::string findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
     static void copyEnv(const std::string& envname, std::list<std::pair<std::string, std::string>>& env);

@@ -67,15 +67,16 @@ protected:
     /** A link to the registry we're using for connections */
     std::shared_ptr<Registry> registry_;
 
-    static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
-
-private:
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
-    void signalToPid(pid_t pid, int signal);
-    std::string pidToOomPath(pid_t pid);
-    void oomValueToPid(pid_t pid, const oom::Score oomvalue);
-    void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
-    void pidListToDbus(const std::vector<pid_t>& pids, const std::string& signal);
+    static void pidListToDbus(const std::shared_ptr<Registry>& reg,
+                              const AppID& appid,
+                              const std::vector<pid_t>& pids,
+                              const std::string& signal);
+    static void signalToPid(pid_t pid, int signal);
+    static void oomValueToPid(pid_t pid, const oom::Score oomvalue);
+    static void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
+    static std::string pidToOomPath(pid_t pid);
+    static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
 };
 
 }  // namespace instance
