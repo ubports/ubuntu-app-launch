@@ -179,7 +179,16 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     if (findEnv("APP_XMIR_ENABLE", env) == "1" && getenv("DISPLAY") == nullptr)
     {
         retval.emplace(retval.begin(), findEnv("APP_ID", env));
-        retval.emplace(retval.begin(), XMIR_HELPER);
+
+        auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
+        if (xmirenv == nullptr)
+        {
+            retval.emplace(retval.begin(), XMIR_HELPER);
+        }
+        else
+        {
+            retval.emplace(retval.begin(), xmirenv);
+        }
     }
 
     /* See if we're doing apparmor by hand */

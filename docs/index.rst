@@ -58,6 +58,9 @@ UBUNTU_APP_LAUNCH_SNAP_BASEDIR
 UBUNTU_APP_LAUNCH_SNAPD_SOCKET
   Path to the snapd socket.
 
+UBUNTU_APP_LAUNCH_XMIR_HELPER
+  Tool that helps to start XMir and sets the DISPLAY variable for applications
+
 
 API Documentation
 =================
