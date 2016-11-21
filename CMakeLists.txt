@@ -210,6 +210,25 @@ target_link_libraries(socket-demangler-helper ${GIO2_LIBRARIES})
 install(TARGETS socket-demangler-helper RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
+# snappy-xmir
+####################
+
+add_executable(snappy-xmir snappy-xmir.c)
+set_target_properties(snappy-xmir PROPERTIES OUTPUT_NAME "snappy-xmir")
+# No libs, otherwise we have to worry about how to handle finding them
+install(TARGETS snappy-xmir RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
+# snappy-xmir-envvars
+####################
+
+add_executable(snappy-xmir-envvars snappy-xmir-envvars.c)
+set_target_properties(snappy-xmir-envvars PROPERTIES OUTPUT_NAME "snappy-xmir-envvars")
+# No libs, otherwise we have to worry about how to handle finding them
+install(TARGETS snappy-xmir-envvars RUNTIME DESTINATION "${pkglibexecdir}")
+
+
+####################
 # ubuntu-app-launch-desktop.click-hook
 ####################
 
