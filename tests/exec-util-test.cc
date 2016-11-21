@@ -218,7 +218,7 @@ TEST_F(ExecUtil, DesktopExec)
 	});
 }
 
-TEST_F(ExecUtil, DesktopMir)
+TEST_F(ExecUtil, DISABLED_DesktopMir)
 {
 	StartCheckEnv("xmir", {
 		{"APP_EXEC", [](const gchar * value) {
