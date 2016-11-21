@@ -30,7 +30,7 @@ void
 sigchild_handler (int signal)
 {
 	fprintf(stderr, "XMir has closed unexpectedly\n");
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 struct sigaction sigchild_action = {
@@ -43,7 +43,7 @@ main (int argc, char * argv[])
 {
 	if (argc < 3) {
 		fprintf(stderr, "xmir-helper needs more arguments: xmir-helper $(appid) $(thing to exec) ... \n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	/* Make nice variables for the things we need */
@@ -57,7 +57,7 @@ main (int argc, char * argv[])
 	int sockets[2];
 	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sockets) != 0) {
 		fprintf(stderr, "Unable to create socketpair for communicating with XMir\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	/* Give them nice names, the compiler will optimize out */
@@ -67,7 +67,7 @@ main (int argc, char * argv[])
 	/* Watch for the child dying */
 	if (sigaction(SIGCHLD, &sigchild_action, NULL) != 0) {
 		fprintf(stderr, "Unable to setup child signal handler\n");
-		return 1;
+		return EXIT_FAILURE;
 	}
 
 	/* Start XMir */
