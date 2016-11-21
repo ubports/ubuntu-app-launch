@@ -321,14 +321,24 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     {
         retval.emplace(retval.begin(), findEnv("APP_ID", env));
 
-        auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
-        if (xmirenv == nullptr)
+        if (getenv("SNAP") == nullptr)
         {
-            retval.emplace(retval.begin(), XMIR_HELPER);
+            auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
+            if (xmirenv == nullptr)
+            {
+                retval.emplace(retval.begin(), XMIR_HELPER);
+            }
+            else
+            {
+                retval.emplace(retval.begin(), xmirenv);
+            }
         }
         else
         {
-            retval.emplace(retval.begin(), xmirenv);
+            /* If we're in a snap we need to use the utility which
+               gets us back into the snap */
+            /* TODO: Better paths */
+            retval.emplace(retval.begin(), "/snap/bin/unity8-session.snappy-xmir");
         }
     }
 
