@@ -411,23 +411,7 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     std::list<std::pair<std::string, std::string>> retval;
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", info_->xMirEnable().value() ? "1" : "0"));
-    if (info_->xMirEnable())
-    {
-        /* If we're setting up XMir we also need the other helpers
-           that libertine is helping with */
-        auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
-        if (libertine_launch == nullptr)
-        {
-            libertine_launch = LIBERTINE_LAUNCH;
-        }
-
-        retval.emplace_back(
-            std::make_pair("APP_EXEC", std::string(libertine_launch) + " " + info_->execLine().value()));
-    }
-    else
-    {
-        retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
-    }
+	retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
 
     return retval;
 }
