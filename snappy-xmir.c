@@ -67,7 +67,7 @@ main (int argc, char * argv[])
 
 	if (fork() == 0) {
 		/* XMir start here */
-		/* GOAL: /snap/bin/unity8-session.xmir-helper $appid libertine-launch /snap/unity8-session/current/usr/bin/snappy-xmir-envvar */
+		/* GOAL: /snap/bin/unity8-session.xmir-helper $appid libertine-launch /snap/unity8-session/current/usr/bin/snappy-xmir-envvars */
 		/* TODO: Make paths more dynamic */
 		char socketbuf[16] = {0};
 		snprintf(socketbuf, 16, "%d", envend);
@@ -78,7 +78,7 @@ main (int argc, char * argv[])
 			"/snap/bin/unity8-session.xmir-helper",
 			appid,
 			"libertine-launch",
-			"/snap/unity8-session/current/usr/bin/snappy-xmir-envvar",
+			"/snap/unity8-session/current/usr/bin/snappy-xmir-envvars",
 			NULL
 		};
 
