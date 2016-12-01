@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <string.h>
@@ -65,22 +66,34 @@ main (int argc, char * argv[])
 {
 	/* Grab socket */
 	if (argc != 2) {
-		fprintf(stderr, "Usage: %s <fd>\n", argv[0]);
+		fprintf(stderr, "Usage: %s <socket name>\n", argv[0]);
 		return(EXIT_FAILURE);
 	}
 
-	int socketnum = atoi(argv[1]);
-	if (!(socketnum > 0 && socketnum < 20)) {
-		fprintf(stderr, "Passed socket ID not within a valid range: %d\n", socketnum);
-		return(EXIT_FAILURE);
+	char * socketname = argv[1];
+
+	int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (socketfd <= 0) {
+		fprintf(stderr, "Unable to create socket");
+		return EXIT_FAILURE;
+	}
+
+	struct sockaddr_un socketaddr = {0};
+	socketaddr.sun_family = AF_UNIX;
+	strcpy(socketaddr.sun_path, socketname);
+	socketaddr.sun_path[0] = 0;
+
+	if (connect(socketfd, (const struct sockaddr *)&socketaddr, sizeof(struct sockaddr_un)) < 0) {
+		fprintf(stderr, "Unable to connect socket");
+		return EXIT_FAILURE;
 	}
 
 	/* Dump envvars to socket */
-	copyenv(socketnum, "DISPLAY");
-	copyenv(socketnum, "DBUS_SESSION_BUS_ADDRESS");
+	copyenv(socketfd, "DISPLAY");
+	copyenv(socketfd, "DBUS_SESSION_BUS_ADDRESS");
 
 	/* Close the socket */
-	close(socketnum);
+	close(socketfd);
 
 	/* Wait for sigterm */
 	signal(SIGTERM, termhandler);

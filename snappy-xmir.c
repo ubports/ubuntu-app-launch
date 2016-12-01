@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <signal.h>
 #include <string.h>
 #include <fcntl.h>
@@ -50,15 +51,26 @@ main (int argc, char * argv[])
 
 	char * appid = argv[1];
 
-	/* Setup socket pair */
-	int sockets[2];
-	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, sockets) != 0) {
-		fprintf(stderr, "Unable to create socketpair for grabbing environment variables\n");
+	/* Build Socket Name */
+	char socketname[256] = {0};
+	snprintf(socketname, sizeof(socketname), "/ual-socket-%s-%d", appid, rand());
+
+	/* Setup abstract socket */
+	int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (socketfd <= 0) {
+		fprintf(stderr, "Unable to create socket");
 		return EXIT_FAILURE;
 	}
 
-	int ourend = sockets[0];
-	int envend = sockets[1];
+	struct sockaddr_un socketaddr = {0};
+	socketaddr.sun_family = AF_UNIX;
+	strcpy(socketaddr.sun_path, socketname);
+	socketaddr.sun_path[0] = 0;
+
+	if (bind(socketfd, (const struct sockaddr *)&socketaddr, sizeof(struct sockaddr_un)) < 0) {
+		fprintf(stderr, "Unable to bind socket");
+		return EXIT_FAILURE;
+	}
 
 	/* Fork and exec the x11 setup under it's confiment */
 	if (sigaction(SIGCHLD, &sigchild_action, NULL) != 0) {
@@ -68,12 +80,7 @@ main (int argc, char * argv[])
 
 	if (fork() == 0) {
 		/* XMir start here */
-		/* GOAL: /snap/bin/unity8-session.xmir-helper $appid libertine-launch /snap/unity8-session/current/usr/bin/snappy-xmir-envvars */
-		char socketbuf[16] = {0};
-		snprintf(socketbuf, 16, "%d", envend);
-
-		/* Make sure the FD doesn't close on exec */
-		fcntl(envend, F_SETFD, 0);
+		/* GOAL: /snap/bin/unity8-session.xmir-helper $appid libertine-launch /snap/unity8-session/current/usr/bin/snappy-xmir-envvars socketname */
 
 		char * snappyhelper = getenv("UBUNTU_APP_LAUNCH_SNAPPY_XMIR_HELPER");
 		if (snappyhelper == NULL) {
@@ -88,14 +95,14 @@ main (int argc, char * argv[])
 
 		/* envvar is like us, but a little more */
 		char envvars[256] = {0};
-		snprintf(envvars, 256, "%s-envvars", argv[0]);
+		snprintf(envvars, sizeof(envvars), "%s-envvars", argv[0]);
 
 		char * xmirexec[6] = {
 			snappyhelper,
 			appid,
 			libertinelaunch,
 			envvars,
-			socketbuf,
+			socketname,
 			NULL
 		};
 
@@ -104,10 +111,13 @@ main (int argc, char * argv[])
 		return execv(xmirexec[0], xmirexec);
 	}
 
+	listen(socketfd, 1);
+	int readsocket = accept(socketfd, NULL, NULL);
+
 	/* Read our socket until we get all of the environment */
 	char readbuf[2048] = {0};
 	int amountread = 0;
-	while ((amountread = read(ourend, readbuf, 2048))) {
+	while ((amountread = read(readsocket, readbuf, 2048))) {
 		if (amountread == 2048) {
 			fprintf(stderr, "Environment is too large, abort!\n");
 			exit(EXIT_FAILURE);
@@ -124,7 +134,8 @@ main (int argc, char * argv[])
 		while (startvar < readbuf + amountread);
 	}
 
-	close(ourend);
+	close(readsocket);
+	close(socketfd);
 
 	/* Exec the application with the new environment under its confinement */
 	return execv(argv[2], &(argv[2]));
