@@ -86,6 +86,9 @@ main (int argc, char * argv[])
 	/* Wait for sigterm */
 	signal(SIGTERM, termhandler);
 
-	wait(NULL);
-	return EXIT_SUCCESS;
+	for (;;) {
+		sleep(24 * 60 * 60); // taking things one day at a time
+	}
+
+	return EXIT_FAILURE;
 }
