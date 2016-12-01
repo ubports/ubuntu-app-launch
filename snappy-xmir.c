@@ -69,20 +69,33 @@ main (int argc, char * argv[])
 	if (fork() == 0) {
 		/* XMir start here */
 		/* GOAL: /snap/bin/unity8-session.xmir-helper $appid libertine-launch /snap/unity8-session/current/usr/bin/snappy-xmir-envvars */
-		/* TODO: Make paths more dynamic */
 		char socketbuf[16] = {0};
 		snprintf(socketbuf, 16, "%d", envend);
 
 		/* Make sure the FD doesn't close on exec */
 		fcntl(envend, F_SETFD, 0);
 
-		setenv("UBUNTU_APP_LAUNCH_SNAPPY_XMIR_ENVVARS", socketbuf, 1);
+		char * snappyhelper = getenv("UBUNTU_APP_LAUNCH_SNAPPY_XMIR_HELPER");
+		if (snappyhelper == NULL) {
+			/* TODO: Better default? Crash? */
+			snappyhelper = "/snap/bin/unity8-session.xmir-helper";
+		}
 
-		char * xmirexec[5] = {
-			"/snap/bin/unity8-session.xmir-helper",
+		char * libertinelaunch = getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+		if (libertinelaunch == NULL) {
+			libertinelaunch = "libertine-launch";
+		}
+
+		/* envvar is like us, but a little more */
+		char envvars[256] = {0};
+		snprintf(envvars, 256, "%s-envvars", argv[0]);
+
+		char * xmirexec[6] = {
+			snappyhelper,
 			appid,
-			"libertine-launch",
-			"/snap/unity8-session/current/usr/bin/snappy-xmir-envvars",
+			libertinelaunch,
+			envvars,
+			socketbuf,
 			NULL
 		};
 

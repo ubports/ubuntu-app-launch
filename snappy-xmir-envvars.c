@@ -64,13 +64,12 @@ int
 main (int argc, char * argv[])
 {
 	/* Grab socket */
-	char * socketstring = getenv("UBUNTU_APP_LAUNCH_SNAPPY_XMIR_ENVVARS");
-	if (socketstring == NULL) {
-		fprintf(stderr, "Unable to get socket environment variable\n");
+	if (argc != 2) {
+		fprintf(stderr, "Usage: %s <fd>\n", argv[0]);
 		return(EXIT_FAILURE);
 	}
 
-	int socketnum = atoi(socketstring);
+	int socketnum = atoi(argv[1]);
 	if (!(socketnum > 0 && socketnum < 20)) {
 		fprintf(stderr, "Passed socket ID not within a valid range: %d\n", socketnum);
 		return(EXIT_FAILURE);
