@@ -26,6 +26,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <string.h>
+#include <fcntl.h>
 
 void
 sigchild_handler (int signal)
@@ -71,6 +72,9 @@ main (int argc, char * argv[])
 		/* TODO: Make paths more dynamic */
 		char socketbuf[16] = {0};
 		snprintf(socketbuf, 16, "%d", envend);
+
+		/* Make sure the FD doesn't close on exec */
+		fcntl(envend, F_SETFD, 0);
 
 		setenv("UBUNTU_APP_LAUNCH_SNAPPY_XMIR_ENVVARS", socketbuf, 1);
 
