@@ -41,14 +41,14 @@ copyenv (int fd, const char * envname)
 
 	writesize = write(fd, envname, strlen(envname) + 1);
 
-	if (writesize == 0) {
+	if (writesize <= 0) {
 		fprintf(stderr, "Unable to write to socket '%s'\n", envname);
 		exit(EXIT_FAILURE);
 	}
 
 	writesize = write(fd, envval, strlen(envval) + 1);
 
-	if (writesize == 0) {
+	if (writesize <= 0) {
 		fprintf(stderr, "Unable to write to socket '%s'\n", envval);
 		exit(EXIT_FAILURE);
 	}
