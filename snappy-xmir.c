@@ -64,7 +64,7 @@ main (int argc, char * argv[])
 
 	struct sockaddr_un socketaddr = {0};
 	socketaddr.sun_family = AF_UNIX;
-	strcpy(socketaddr.sun_path, socketname);
+	strncpy(socketaddr.sun_path, socketname, sizeof(socketaddr.sun_path) - 1);
 	socketaddr.sun_path[0] = 0;
 
 	if (bind(socketfd, (const struct sockaddr *)&socketaddr, sizeof(struct sockaddr_un)) < 0) {
