@@ -625,7 +625,6 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             removeEnv("UBUNTU_APP_LAUNCH_DEMANGLER", env);
             removeEnv("UBUNTU_APP_LAUNCH_OOM_HELPER", env);
             removeEnv("UBUNTU_APP_LAUNCH_LEGACY_ROOT", env);
-            removeEnv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH", env);
             removeEnv("UBUNTU_APP_LAUNCH_XMIR_HELPER", env);
 
             g_debug("Environment length: %d", envSize(env));
