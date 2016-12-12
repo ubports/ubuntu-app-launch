@@ -58,7 +58,7 @@ main (int argc, char * argv[])
 	/* Build Socket Name */
 	srand(time(NULL));
 	char socketname[SOCKETNAME_BUFFER_SIZE] = {0};
-	snprintf(socketname, sizeof(socketname), "/ual-socket-%8X-%s", rand(), appid);
+	snprintf(socketname, sizeof(socketname), "/ual-socket-%08X-%s", rand(), appid);
 
 	/* Setup abstract socket */
 	int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
