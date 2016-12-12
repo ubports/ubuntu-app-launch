@@ -30,6 +30,9 @@
 #include <fcntl.h>
 #include <time.h>
 
+#define ENVVAR_BUFFER_SIZE 4096
+#define SOCKETNAME_BUFFER_SIZE 256
+
 void
 sigchild_handler (int signal)
 {
@@ -54,8 +57,8 @@ main (int argc, char * argv[])
 
 	/* Build Socket Name */
 	srand(time(NULL));
-	char socketname[256] = {0};
-	snprintf(socketname, sizeof(socketname), "/ual-socket-%s-%d", appid, rand());
+	char socketname[SOCKETNAME_BUFFER_SIZE] = {0};
+	snprintf(socketname, sizeof(socketname), "/ual-socket-%8X-%s", rand(), appid);
 
 	/* Setup abstract socket */
 	int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -86,8 +89,7 @@ main (int argc, char * argv[])
 
 		char * snappyhelper = getenv("UBUNTU_APP_LAUNCH_SNAPPY_XMIR_HELPER");
 		if (snappyhelper == NULL) {
-			/* TODO: Better default? Crash? */
-			snappyhelper = "/snap/bin/unity8-session.xmir-helper";
+			snappyhelper = "xmir-helper";
 		}
 
 		char * libertinelaunch = getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
@@ -115,7 +117,7 @@ main (int argc, char * argv[])
 		return execv(xmirexec[0], xmirexec);
 	}
 
-	listen(socketfd, 1);
+	listen(socketfd, 1); /* 1 is the number of people who can connect */
 	int readsocket = accept(socketfd, NULL, NULL);
 
 	if (getenv("G_MESSAGES_DEBUG") != NULL) {
@@ -123,18 +125,22 @@ main (int argc, char * argv[])
 	}
 
 	/* Read our socket until we get all of the environment */
-	char readbuf[4096] = {0};
+	char readbuf[ENVVAR_BUFFER_SIZE] = {0};
 	int amountread = 0;
 	int thisread = 0;
-	while ((thisread = read(readsocket, readbuf + amountread, 4096 - amountread))) {
+	while ((thisread = read(readsocket, readbuf + amountread, ENVVAR_BUFFER_SIZE - amountread))) {
 		amountread += thisread;
 
-		if (amountread == 4096) {
+		if (amountread == ENVVAR_BUFFER_SIZE) {
 			fprintf(stderr, "Environment is too large, abort!\n");
 			exit(EXIT_FAILURE);
 		}
 	}
 
+	close(readsocket);
+	close(socketfd);
+
+	/* Parse the environment into variables we can insert */
 	if (amountread > 0) {
 		char * startvar = readbuf;
 
@@ -151,9 +157,7 @@ main (int argc, char * argv[])
 		while (startvar < readbuf + amountread);
 	}
 
-	close(readsocket);
-	close(socketfd);
-
+	/* Clear MIR_* variables from the environment */
 	/* Unfortunately calling unsetenv resets the environ array so
 	   it can become invalid. So we need to start over, though this
 	   is fast */
