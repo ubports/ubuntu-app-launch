@@ -411,7 +411,7 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     std::list<std::pair<std::string, std::string>> retval;
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", info_->xMirEnable().value() ? "1" : "0"));
-	retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
+    retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
 
     return retval;
 }
