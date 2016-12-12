@@ -496,12 +496,6 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             copyEnvByPrefix("UNITY_", env);
             copyEnvByPrefix("XDG_", env);
 
-            if (!findEnv("SNAP", env).empty())
-            {
-                /* If we care about the snap path, grab 'em all */
-                copyEnvByPrefix("SNAP_", env);
-            }
-
             if (!urls.empty())
             {
                 auto accumfunc = [](const std::string& prev, Application::URL thisurl) -> std::string {
