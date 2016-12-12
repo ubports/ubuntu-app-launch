@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -ex
+
+# Test the test harness
+
+@CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-helper.sh appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
+
+# Test our pass through
+
+export UBUNTU_APP_LAUNCH_SNAPPY_XMIR_HELPER="@CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-helper.sh"
+export UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH="@CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-libertine-launch.sh"
+
+@CMAKE_BINARY_DIR@/snappy-xmir appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
+

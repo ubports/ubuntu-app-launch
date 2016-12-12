@@ -74,7 +74,7 @@ main (int argc, char * argv[])
 
 	int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (socketfd <= 0) {
-		fprintf(stderr, "Unable to create socket");
+		fprintf(stderr, "%s: Unable to create socket\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
@@ -84,7 +84,7 @@ main (int argc, char * argv[])
 	socketaddr.sun_path[0] = 0;
 
 	if (connect(socketfd, (const struct sockaddr *)&socketaddr, sizeof(struct sockaddr_un)) < 0) {
-		fprintf(stderr, "Unable to connect socket");
+		fprintf(stderr, "Unable to connect socket\n");
 		return EXIT_FAILURE;
 	}
 

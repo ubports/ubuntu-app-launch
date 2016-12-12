@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <string.h>
 #include <fcntl.h>
+#include <time.h>
 
 void
 sigchild_handler (int signal)
@@ -52,13 +53,14 @@ main (int argc, char * argv[])
 	char * appid = argv[1];
 
 	/* Build Socket Name */
+	srand(time(NULL));
 	char socketname[256] = {0};
 	snprintf(socketname, sizeof(socketname), "/ual-socket-%s-%d", appid, rand());
 
 	/* Setup abstract socket */
 	int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (socketfd <= 0) {
-		fprintf(stderr, "Unable to create socket");
+		fprintf(stderr, "%s: Unable to create socket\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
@@ -68,7 +70,7 @@ main (int argc, char * argv[])
 	socketaddr.sun_path[0] = 0;
 
 	if (bind(socketfd, (const struct sockaddr *)&socketaddr, sizeof(struct sockaddr_un)) < 0) {
-		fprintf(stderr, "Unable to bind socket");
+		fprintf(stderr, "%s: Unable to bind socket '%s'\n", argv[0], socketname);
 		return EXIT_FAILURE;
 	}
 
@@ -106,7 +108,7 @@ main (int argc, char * argv[])
 			NULL
 		};
 
-		printf("Executing xmir-helper on PID: %d", getpid());
+		printf("Executing xmir-helper on PID: %d\n", getpid());
 
 		return execv(xmirexec[0], xmirexec);
 	}
@@ -163,7 +165,7 @@ main (int argc, char * argv[])
 						if (unsetenv(envname) != 0) {
 							/* Shouldn't happen unless we're out of memory,
 							   might as well bail now if that's the case. */
-							fprintf(stderr, "Unable to unset '%s' environment variable", envname);
+							fprintf(stderr, "Unable to unset '%s' environment variable\n", envname);
 							exit(EXIT_FAILURE);
 						}
 
