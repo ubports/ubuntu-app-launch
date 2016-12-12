@@ -111,6 +111,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 
 add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
+add_definitions( -DSNAPPY_XMIR="${CMAKE_INSTALL_FULL_BINDIR}/snappy-xmir" )
 
 ####################
 # Helpers

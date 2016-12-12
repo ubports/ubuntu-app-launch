@@ -339,7 +339,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
                gets us back into the snap */
             std::string snappath = getenv("SNAP");
 
-            retval.emplace(retval.begin(), snappath + "/usr/bin/snappy-xmir");
+            retval.emplace(retval.begin(), snappath + SNAPPY_XMIR);
         }
     }
 
