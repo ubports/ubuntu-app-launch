@@ -14,4 +14,4 @@ export APP_ID
 env APP_URIS
 export APP_URIS
 
-exec ${SNAP}/@pkglibexecdir@/application-job
+exec @pkglibexecdir@/application-job

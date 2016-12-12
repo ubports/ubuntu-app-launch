@@ -6,4 +6,4 @@ instance ${HELPER_TYPE}
 
 emits untrusted-helper-end
 
-exec ${SNAP}/@pkglibexecdir@/untrusted-helper-type-end
+exec @pkglibexecdir@/untrusted-helper-type-end

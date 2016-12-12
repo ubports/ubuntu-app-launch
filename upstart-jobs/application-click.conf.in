@@ -22,12 +22,12 @@ cgroup freezer
 oom score 100
 
 # Remember, this is confined
-exec ${SNAP}/@pkglibexecdir@/exec-line-exec
+exec @pkglibexecdir@/exec-line-exec
 
-post-start exec ${SNAP}/@pkglibexecdir@/zg-report-app open
+post-start exec @pkglibexecdir@/zg-report-app open
 post-stop script
-	${SNAP}/@pkglibexecdir@/zg-report-app close
-	${SNAP}/@pkglibexecdir@/cgroup-reap-all
+	@pkglibexecdir@/zg-report-app close
+	@pkglibexecdir@/cgroup-reap-all
 
 	DEVELOPER_MODE=`gdbus call --system --dest com.canonical.PropertyService --object-path /com/canonical/PropertyService --method com.canonical.PropertyService.GetProperty adb`
 	if [ "$DEVELOPER_MODE" != "(true,)" ] ; then

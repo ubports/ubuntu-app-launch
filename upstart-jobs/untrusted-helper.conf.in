@@ -19,8 +19,8 @@ oom score 800
 
 # This is unconfined
 pre-start script
-	if [ -x "${SNAP}/@pkglibexecdir@/${HELPER_TYPE}/exec-tool" ] ; then
-		${SNAP}/@pkglibexecdir@/${HELPER_TYPE}/exec-tool
+	if [ -x "@pkglibexecdir@/${HELPER_TYPE}/exec-tool" ] ; then
+		@pkglibexecdir@/${HELPER_TYPE}/exec-tool
 	else
 		echo "Unable to find exec tool for ${HELPER_TYPE}"
 		exit -1
@@ -28,6 +28,6 @@ pre-start script
 end script
 
 # Remember, this is confined
-exec ${SNAP}/@pkglibexecdir@/exec-line-exec
+exec @pkglibexecdir@/exec-line-exec
 
-post-stop exec ${SNAP}/@pkglibexecdir@/cgroup-reap-all
+post-stop exec @pkglibexecdir@/cgroup-reap-all
