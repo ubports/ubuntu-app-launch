@@ -337,8 +337,9 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         {
             /* If we're in a snap we need to use the utility which
                gets us back into the snap */
-            /* TODO: Better paths */
-            retval.emplace(retval.begin(), "/snap/unity8-session/current/usr/bin/snappy-xmir");
+            std::string snappath = getenv("SNAP");
+
+            retval.emplace(retval.begin(), snappath + "/usr/bin/snappy-xmir");
         }
     }
 
