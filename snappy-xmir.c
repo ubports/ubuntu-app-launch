@@ -123,17 +123,21 @@ main (int argc, char * argv[])
 	}
 
 	/* Read our socket until we get all of the environment */
-	char readbuf[2048] = {0};
+	char readbuf[4096] = {0};
 	int amountread = 0;
-	while ((amountread = read(readsocket, readbuf, 2048))) {
-		if (amountread == 2048) {
+	int thisread = 0;
+	while ((thisread = read(readsocket, readbuf + amountread, 4096 - amountread))) {
+		amountread += thisread;
+
+		if (amountread == 4096) {
 			fprintf(stderr, "Environment is too large, abort!\n");
 			exit(EXIT_FAILURE);
 		}
+	}
 
+	if (amountread > 0) {
 		char * startvar = readbuf;
 
-		/* TODO: Assumes one big read of both value and variable */
 		do {
 			char * startval = startvar + strlen(startvar) + 1;
 			setenv(startvar, startval, 1);
