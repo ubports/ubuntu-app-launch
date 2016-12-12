@@ -7,5 +7,6 @@ if [ $1 != "appid" ] ; then
 fi
 
 export DISPLAY=foo
+export DBUS_SESSION_BUS_ADDRESS=bar
 
 exec $2 $3 $4 $5

@@ -3,12 +3,22 @@
 set -ex
 
 if [ -z ${DISPLAY} ] ; then
-	echo Display is not set
+	echo DISPLAY is not set
 	exit 1
 fi
 
 if [ ${DISPLAY} != "foo" ] ; then
-	echo Display is not set to 'foo'
+	echo DISPLAY is not set to 'foo'
+	exit 1
+fi
+
+if [ -z ${DBUS_SESSION_BUS_ADDRESS} ] ; then
+	echo DBUS_SESSION_BUS_ADDRESS is not set
+	exit 1
+fi
+
+if [ ${DBUS_SESSION_BUS_ADDRESS} != "bar" ] ; then
+	echo DBUS_SESSION_BUS_ADDRESS is not set to 'bar'
 	exit 1
 fi
 
