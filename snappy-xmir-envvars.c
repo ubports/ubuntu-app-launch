@@ -30,9 +30,8 @@
 #include <string.h>
 
 void
-copyenv (int fd, const char * envname)
+copyenv (int fd, const char * envname, const char * envval)
 {
-	const char * envval = getenv(envname);
 	if (envval == NULL) {
 		fprintf(stderr, "Unable to get environment variable '%s'\n", envname);
 		exit(EXIT_FAILURE);
@@ -89,8 +88,12 @@ main (int argc, char * argv[])
 	}
 
 	/* Dump envvars to socket */
-	copyenv(socketfd, "DISPLAY");
-	copyenv(socketfd, "DBUS_SESSION_BUS_ADDRESS");
+	copyenv(socketfd, "DISPLAY", getenv("DISPLAY"));
+	copyenv(socketfd, "DBUS_SESSION_BUS_ADDRESS", getenv("DBUS_SESSION_BUS_ADDRESS"));
+
+	char mypid[16];
+	snprintf(mypid, 16, "%d", getpid());
+	copyenv(socketfd, "UBUNTU_APP_LAUNCH_SNAPPY_XMIR_ENVVARS_PID", mypid);
 
 	/* Close the socket */
 	close(socketfd);
