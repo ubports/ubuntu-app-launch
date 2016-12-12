@@ -55,6 +55,9 @@ UBUNTU_APP_LAUNCH_OOM_PROC_PATH
 UBUNTU_APP_LAUNCH_SNAP_BASEDIR
   The place where snaps are installed in the system, /snap is the default.
 
+UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC
+  A snappy command that is used to launch legacy applications in the current snap, to ensure the environment gets configured correctly.
+
 UBUNTU_APP_LAUNCH_SNAPD_SOCKET
   Path to the snapd socket.
 

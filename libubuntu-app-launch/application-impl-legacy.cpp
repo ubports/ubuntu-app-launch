@@ -309,7 +309,13 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
            up the proper environment for that app */
         retval.emplace_back(std::make_pair("SNAP", snappath));
 
-        execline = "/snap/bin/unity8-session.legacy-exec " + execline;
+        const char* legacyexec = getenv("UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC");
+        if (legacyexec == nullptr)
+        {
+            legacyexec = "/snap/bin/unity8-session.legacy-exec";
+        }
+
+        execline = std::string{legacyexec} + " " + execline;
     }
 
     retval.emplace_back(std::make_pair("APP_EXEC", execline));
