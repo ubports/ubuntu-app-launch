@@ -137,6 +137,45 @@ main (int argc, char * argv[])
 	close(readsocket);
 	close(socketfd);
 
+	/* Unfortunately calling unsetenv resets the environ array so
+	   it can become invalid. So we need to start over, though this
+	   is fast */
+	int unset = 1;
+	while (unset) {
+		unset = 0;
+
+		unsigned int i;
+		for (i = 0; __environ[i] != NULL; i++) {
+			const char * env = __environ[i];
+			/* Not checking the length becasue imagining that block
+			   size will always be larger than 4 bytes on 32-bit systems.
+			   Compiler should fold this into one comparison. */
+			if (env[0] == 'M' && env[1] == 'I' && env[2] == 'R' && env[3] == '_') {
+				char envname[64] = {0};
+				unset = 1;
+
+				strncpy(envname, env, 64 - 1);
+				unsigned int j;
+				for (j = 0; j < 64 && envname[j] != '\0'; j++) {
+					if (envname[j] == '=') {
+						envname[j] = '\0';
+
+						if (unsetenv(envname) != 0) {
+							/* Shouldn't happen unless we're out of memory,
+							   might as well bail now if that's the case. */
+							fprintf(stderr, "Unable to unset '%s' environment variable", envname);
+							exit(EXIT_FAILURE);
+						}
+
+						break;
+					}
+				}
+
+				break;
+			}
+		}
+	}
+
 	/* Exec the application with the new environment under its confinement */
 	return execv(argv[2], &(argv[2]));
 }
