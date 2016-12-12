@@ -13,3 +13,8 @@ export UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH="@CMAKE_CURRENT_SOURCE_DIR@/snappy-xmi
 
 @CMAKE_BINARY_DIR@/snappy-xmir appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
 
+# Add a Mir variable to make sure it gets cleared
+
+export MIR_SOCKET="/this/is/a/socket"
+
+@CMAKE_BINARY_DIR@/snappy-xmir appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
