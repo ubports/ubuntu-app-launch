@@ -52,6 +52,9 @@ copyenv (int fd, const char * envname, const char * envval)
 		fprintf(stderr, "Unable to write to socket '%s'\n", envval);
 		exit(EXIT_FAILURE);
 	}
+
+	if (getenv("G_MESSAGES_DEBUG") != NULL)
+		printf("Wrote envvar '%s=%s'\n", envname, envval);
 }
 
 void

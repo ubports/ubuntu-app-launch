@@ -2,6 +2,11 @@
 
 set -ex
 
+if [ -z ${DISPLAY} ] ; then
+	echo Display is not set
+	exit 1
+fi
+
 if [ ${DISPLAY} != "foo" ] ; then
 	echo Display is not set to 'foo'
 	exit 1

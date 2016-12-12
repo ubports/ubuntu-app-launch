@@ -110,11 +110,17 @@ main (int argc, char * argv[])
 
 		printf("Executing xmir-helper on PID: %d\n", getpid());
 
+		fflush(stdout);
+
 		return execv(xmirexec[0], xmirexec);
 	}
 
 	listen(socketfd, 1);
 	int readsocket = accept(socketfd, NULL, NULL);
+
+	if (getenv("G_MESSAGES_DEBUG") != NULL) {
+		printf("Got a socket connection on: %s\n", socketname);
+	}
 
 	/* Read our socket until we get all of the environment */
 	char readbuf[2048] = {0};
@@ -131,6 +137,11 @@ main (int argc, char * argv[])
 		do {
 			char * startval = startvar + strlen(startvar) + 1;
 			setenv(startvar, startval, 1);
+
+			if (getenv("G_MESSAGES_DEBUG") != NULL) {
+				printf("Got env: %s=%s\n", startvar, startval);
+			}
+
 			startvar = startval + strlen(startval) + 1;
 		}
 		while (startvar < readbuf + amountread);
@@ -177,6 +188,8 @@ main (int argc, char * argv[])
 			}
 		}
 	}
+
+	fflush(stdout);
 
 	/* Exec the application with the new environment under its confinement */
 	return execv(argv[2], &(argv[2]));
