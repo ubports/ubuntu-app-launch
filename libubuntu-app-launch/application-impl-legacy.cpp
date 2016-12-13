@@ -317,6 +317,18 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
 
         execline = std::string{legacyexec} + " " + execline;
     }
+    else if (appinfo_->xMirEnable().value())
+    {
+        /* If we're setting up XMir we also need the other helpers
+           that libertine is helping with */
+        auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
+        if (libertine_launch == nullptr)
+        {
+            libertine_launch = LIBERTINE_LAUNCH;
+        }
+
+        execline = std::string{libertine_launch} + " " + execline;
+    }
 
     retval.emplace_back(std::make_pair("APP_EXEC", execline));
 
