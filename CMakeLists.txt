@@ -214,9 +214,14 @@ install(TARGETS socket-demangler-helper RUNTIME DESTINATION "${pkglibexecdir}")
 # snappy-xmir
 ####################
 
+####################
+# NOTE: This only can link to libraries that are in
+# the base UBUNTU CORE image. Which is basically libc
+# and not much else. Don't add libs.
+####################
+
 add_executable(snappy-xmir snappy-xmir.c)
 set_target_properties(snappy-xmir PROPERTIES OUTPUT_NAME "snappy-xmir")
-# No libs, otherwise we have to worry about how to handle finding them
 install(TARGETS snappy-xmir RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
 ####################
