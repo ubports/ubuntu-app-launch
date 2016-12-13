@@ -30,8 +30,9 @@
 #include <fcntl.h>
 #include <time.h>
 
-#define ENVVAR_BUFFER_SIZE 4096
-#define SOCKETNAME_BUFFER_SIZE 256
+#define ENVVAR_SIZE 4096
+#define SOCKETNAME_SIZE 256
+#define ENVNAME_SIZE 64
 
 void
 sigchild_handler (int signal)
@@ -57,7 +58,7 @@ main (int argc, char * argv[])
 
 	/* Build Socket Name */
 	srand(time(NULL));
-	char socketname[SOCKETNAME_BUFFER_SIZE] = {0};
+	char socketname[SOCKETNAME_SIZE] = {0};
 	snprintf(socketname, sizeof(socketname), "/ual-socket-%08X-%s", rand(), appid);
 
 	/* Setup abstract socket */
@@ -125,13 +126,13 @@ main (int argc, char * argv[])
 	}
 
 	/* Read our socket until we get all of the environment */
-	char readbuf[ENVVAR_BUFFER_SIZE] = {0};
+	char readbuf[ENVVAR_SIZE] = {0};
 	int amountread = 0;
 	int thisread = 0;
-	while ((thisread = read(readsocket, readbuf + amountread, ENVVAR_BUFFER_SIZE - amountread))) {
+	while ((thisread = read(readsocket, readbuf + amountread, ENVVAR_SIZE - amountread))) {
 		amountread += thisread;
 
-		if (amountread == ENVVAR_BUFFER_SIZE) {
+		if (amountread == ENVVAR_SIZE) {
 			fprintf(stderr, "Environment is too large, abort!\n");
 			exit(EXIT_FAILURE);
 		}
@@ -172,12 +173,12 @@ main (int argc, char * argv[])
 			   size will always be larger than 4 bytes on 32-bit systems.
 			   Compiler should fold this into one comparison. */
 			if (env[0] == 'M' && env[1] == 'I' && env[2] == 'R' && env[3] == '_') {
-				char envname[64] = {0};
+				char envname[ENVNAME_SIZE] = {0};
 				unset = 1;
 
-				strncpy(envname, env, 64 - 1);
+				strncpy(envname, env, ENVNAME_SIZE - 1);
 				unsigned int j;
-				for (j = 0; j < 64 && envname[j] != '\0'; j++) {
+				for (j = 0; j < ENVNAME_SIZE && envname[j] != '\0'; j++) {
 					if (envname[j] == '=') {
 						envname[j] = '\0';
 
