@@ -103,10 +103,6 @@ private:
         into */
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
 
-    /** Getting the Upstart job path is relatively expensive in
-        that it requires a DBus call. Worth keeping a cache of. */
-    std::map<std::string, std::string> upstartJobPathCache_;
-
     /** Path to the OOM Helper */
     std::string oomHelper_;
 };
