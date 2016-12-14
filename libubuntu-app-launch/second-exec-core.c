@@ -29,6 +29,7 @@
 typedef struct {
 	GDBusConnection * bus;
 	gchar * appid;
+	gchar * instanceid;
 	gchar ** input_uris;
 	GPid app_pid;
 	guint connections_open;
@@ -355,7 +356,7 @@ find_appid_pid (GDBusConnection * session, second_exec_t * data)
 }
 
 gboolean
-second_exec (GDBusConnection * session, GCancellable * cancel, GPid pid, const gchar * app_id, gchar ** appuris)
+second_exec (GDBusConnection * session, GCancellable * cancel, GPid pid, const gchar * app_id, const gchar * instance_id, gchar ** appuris)
 {
 	ual_tracepoint(second_exec_start, app_id);
 	GError * error = NULL;
@@ -363,6 +364,7 @@ second_exec (GDBusConnection * session, GCancellable * cancel, GPid pid, const g
 	/* Setup our continuation data */
 	second_exec_t * data = g_new0(second_exec_t, 1);
 	data->appid = g_strdup(app_id);
+	data->instanceid = g_strdup(instance_id);
 	data->input_uris = g_strdupv(appuris);
 	data->bus = g_object_ref(session);
 	data->app_pid = pid;
@@ -387,7 +389,7 @@ second_exec (GDBusConnection * session, GCancellable * cancel, GPid pid, const g
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityResumeRequest", /* signal */
-		g_variant_new("(ss)", app_id, "" /* TODO */),
+		g_variant_new("(ss)", app_id, instance_id),
 		&error);
 
 	/* Now we start a race, we try to get to the point of knowing who
@@ -435,7 +437,7 @@ second_exec_complete (second_exec_t * data)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityFocusRequest", /* signal */
-		g_variant_new("(ss)", data->appid, "" /* TODO */),
+		g_variant_new("(ss)", data->appid, data->instanceid),
 		&error);
 
 	if (error != NULL) {
@@ -467,6 +469,7 @@ second_exec_complete (second_exec_t * data)
 	if (data->app_data != NULL)
 		g_variant_unref(data->app_data);
 	g_free(data->appid);
+	g_free(data->instanceid);
 	g_strfreev(data->input_uris);
 	g_free(data->dbus_path);
 	g_free(data);

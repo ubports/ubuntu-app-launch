@@ -381,6 +381,7 @@ void Upstart::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
                             data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
                             data->ptr->primaryPid(),                                   /* primary pid */
                             std::string(data->ptr->appId_).c_str(),                    /* appid */
+                            std::string(data->ptr->instance_).c_str(),                 /* instance */
                             urls.get());                                               /* urls */
             }
 
