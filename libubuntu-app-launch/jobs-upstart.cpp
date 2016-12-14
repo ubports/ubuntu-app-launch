@@ -439,9 +439,10 @@ void Upstart::pause()
 
     auto registry = registry_;
     auto appid = appId_;
+    auto instance = instance_;
     auto jobpath = upstartJobPath();
 
-    registry->impl->thread.executeOnThread([registry, appid, jobpath] {
+    registry->impl->thread.executeOnThread([registry, appid, instance, jobpath] {
         auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::paused();
             g_debug("Pausing PID: %d (%d)", pid, int(oomval));
@@ -449,8 +450,7 @@ void Upstart::pause()
             oomValueToPid(pid, oomval);
         });
 
-        /* TODO: Instance */
-        pidListToDbus(registry, appid, "", pids, "ApplicationPaused");
+        pidListToDbus(registry, appid, instance, pids, "ApplicationPaused");
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
@@ -464,9 +464,10 @@ void Upstart::resume()
 
     auto registry = registry_;
     auto appid = appId_;
+    auto instance = instance_;
     auto jobpath = upstartJobPath();
 
-    registry->impl->thread.executeOnThread([registry, appid, jobpath] {
+    registry->impl->thread.executeOnThread([registry, appid, instance, jobpath] {
         auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::focused();
             g_debug("Resuming PID: %d (%d)", pid, int(oomval));
@@ -474,8 +475,7 @@ void Upstart::resume()
             oomValueToPid(pid, oomval);
         });
 
-        /* TODO: Instance */
-        pidListToDbus(registry, appid, "", pids, "ApplicationResumed");
+        pidListToDbus(registry, appid, instance, pids, "ApplicationResumed");
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
