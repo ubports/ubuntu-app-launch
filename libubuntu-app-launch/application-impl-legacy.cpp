@@ -387,6 +387,11 @@ std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Appl
                                          envfunc);
 }
 
+std::shared_ptr<Application::Instance> Legacy::findInstance(const std::string& instanceid)
+{
+    return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -22,6 +22,7 @@
 #include <cstring>
 #include <numeric>
 
+#include "application-impl-base.h"
 #include "jobs-base.h"
 #include "jobs-upstart.h"
 #include "registry-impl.h"
@@ -82,7 +83,8 @@ void Base::pauseEventEmitted(
 {
     std::vector<pid_t> pids;
     GVariant* vappid = g_variant_get_child_value(params.get(), 0);
-    GVariant* vpids = g_variant_get_child_value(params.get(), 1);
+    GVariant* vinstid = g_variant_get_child_value(params.get(), 1);
+    GVariant* vpids = g_variant_get_child_value(params.get(), 2);
     guint64 pid;
     GVariantIter thispid;
     g_variant_iter_init(&thispid, vpids);
@@ -93,13 +95,16 @@ void Base::pauseEventEmitted(
     }
 
     auto cappid = g_variant_get_string(vappid, NULL);
+    auto cinstid = g_variant_get_string(vinstid, NULL);
+
     auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
     auto app = Application::create(appid, reg);
+    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(cinstid);
 
-    /* TODO: Instance */
-    signal(app, {}, pids);
+    signal(app, inst, pids);
 
     g_variant_unref(vappid);
+    g_variant_unref(vinstid);
     g_variant_unref(vpids);
 
     return;

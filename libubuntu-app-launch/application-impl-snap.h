@@ -75,6 +75,8 @@ public:
                                       const AppID::AppName& appname,
                                       const std::shared_ptr<Registry>& registry);
 
+    virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) override;
+
 private:
     /** AppID of the Snap. Should be the name of the snap package.
         The name of the command. And then the revision. */
