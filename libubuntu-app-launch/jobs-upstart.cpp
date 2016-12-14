@@ -449,7 +449,8 @@ void Upstart::pause()
             oomValueToPid(pid, oomval);
         });
 
-        pidListToDbus(registry, appid, pids, "ApplicationPaused");
+        /* TODO: Instance */
+        pidListToDbus(registry, appid, "", pids, "ApplicationPaused");
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
@@ -473,7 +474,8 @@ void Upstart::resume()
             oomValueToPid(pid, oomval);
         });
 
-        pidListToDbus(registry, appid, pids, "ApplicationResumed");
+        /* TODO: Instance */
+        pidListToDbus(registry, appid, "", pids, "ApplicationResumed");
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
@@ -878,10 +880,11 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     }
 
                     const gchar* sappid = NULL;
+                    const gchar* sinstid = NULL;
                     const gchar* typestr = NULL;
 
                     Registry::FailureType type = Registry::FailureType::CRASH;
-                    g_variant_get(params, "(&s&s)", &sappid, &typestr);
+                    g_variant_get(params, "(&s&s&s)", &sappid, &sinstid, &typestr);
 
                     if (g_strcmp0("crash", typestr) == 0)
                     {

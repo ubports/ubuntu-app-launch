@@ -537,7 +537,7 @@ starting_handshake_start (const gchar *   app_id, int timeout_s)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingBroadcast", /* signal */
-		g_variant_new("(s)", app_id),
+		g_variant_new("(ss)", app_id, "" /* TODO */),
 		&error);
 
 	/* Really, Unity? */

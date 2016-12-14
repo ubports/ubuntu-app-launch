@@ -387,7 +387,7 @@ second_exec (GDBusConnection * session, GCancellable * cancel, GPid pid, const g
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityResumeRequest", /* signal */
-		g_variant_new("(s)", app_id),
+		g_variant_new("(ss)", app_id, "" /* TODO */),
 		&error);
 
 	/* Now we start a race, we try to get to the point of knowing who
@@ -435,7 +435,7 @@ second_exec_complete (second_exec_t * data)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityFocusRequest", /* signal */
-		g_variant_new("(s)", data->appid),
+		g_variant_new("(ss)", data->appid, "" /* TODO */),
 		&error);
 
 	if (error != NULL) {

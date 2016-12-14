@@ -208,7 +208,8 @@ std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>
     std::shared_ptr<Application::Instance> instance;
 
     const gchar* cappid = nullptr;
-    g_variant_get(params.get(), "(&s)", &cappid);
+    const gchar* cinstid = nullptr;
+    g_variant_get(params.get(), "(&s&s)", &cappid, &cinstid);
 
     auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
     app = ubuntu::app_launch::Application::create(appid, reg);
@@ -444,7 +445,7 @@ void Base::pause()
         oomValueToPid(pid, oomval);
     });
 
-    pidListToDbus(registry_, appId_, pids, "ApplicationPaused");
+    pidListToDbus(registry_, appId_, instance_, pids, "ApplicationPaused");
 }
 
 /** Resumes this application by sending SIGCONT to all the PIDs in the
@@ -461,7 +462,7 @@ void Base::resume()
         oomValueToPid(pid, oomval);
     });
 
-    pidListToDbus(registry_, appId_, pids, "ApplicationResumed");
+    pidListToDbus(registry_, appId_, instance_, pids, "ApplicationResumed");
 }
 
 /** Go through the list of PIDs calling a function and handling
@@ -499,6 +500,7 @@ std::vector<pid_t> Base::forAllPids(std::function<void(pid_t)> eachPid)
 */
 void Base::pidListToDbus(const std::shared_ptr<Registry>& reg,
                          const AppID& appid,
+                         const std::string& instanceid,
                          const std::vector<pid_t>& pids,
                          const std::string& signal)
 {
@@ -529,6 +531,7 @@ void Base::pidListToDbus(const std::shared_ptr<Registry>& reg,
     GVariantBuilder params;
     g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
     g_variant_builder_add_value(&params, g_variant_new_string(std::string(appid).c_str()));
+    g_variant_builder_add_value(&params, g_variant_new_string(instanceid.c_str()));
     g_variant_builder_add_value(&params, vpids.get());
 
     GError* error = nullptr;
