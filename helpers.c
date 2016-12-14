@@ -503,7 +503,7 @@ unity_too_slow_cb (gpointer user_data)
 }
 
 handshake_t *
-starting_handshake_start (const gchar *   app_id, int timeout_s)
+starting_handshake_start (const gchar * app_id, const gchar * instance_id, int timeout_s)
 {
 	GError * error = NULL;
 	handshake_t * handshake = g_new0(handshake_t, 1);
@@ -537,7 +537,7 @@ starting_handshake_start (const gchar *   app_id, int timeout_s)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingBroadcast", /* signal */
-		g_variant_new("(ss)", app_id, "" /* TODO */),
+		g_variant_new("(ss)", app_id, instance_id),
 		&error);
 
 	/* Really, Unity? */

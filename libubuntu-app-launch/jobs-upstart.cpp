@@ -557,7 +557,7 @@ std::shared_ptr<Application::Instance> Upstart::launch(
                 timeout = 0;
             }
 
-            auto handshake = starting_handshake_start(appIdStr.c_str(), timeout);
+            auto handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
             if (handshake == nullptr)
             {
                 g_warning("Unable to setup starting handshake");
