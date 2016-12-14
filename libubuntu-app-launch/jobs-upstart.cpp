@@ -27,6 +27,7 @@
 #include <cgmanager/cgmanager.h>
 #include <upstart.h>
 
+#include "application-impl-base.h"
 #include "helpers.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
@@ -751,10 +752,9 @@ void Upstart::upstartEventEmitted(
 
     auto appid = AppID::find(reg, sappid);
     auto app = Application::create(appid, reg);
+    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instance);
 
-    // TODO: Figure otu creating instances
-
-    signal(app, {});
+    signal(app, inst);
 }
 
 /** Grab the signal object for application startup. If we're not already listing for
@@ -901,8 +901,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
                     auto appid = AppID::find(reg, sappid);
                     auto app = Application::create(appid, reg);
-
-                    /* TODO: Instance issues */
+                    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(sinstid);
 
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
                     upstart->sig_appFailed(app, {}, type);
