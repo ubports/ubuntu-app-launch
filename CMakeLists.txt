@@ -59,6 +59,11 @@ add_compile_options(
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+STRING(TOLOWER "${CMAKE_BUILD_TYPE}" LOWER_CMAKE_BUILD_TYPE)
+if ("${LOWER_CMAKE_BUILD_TYPE}" STREQUAL "coverage")
+	set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} -lgcov")
+endif()
+
 enable_testing()
 
 pkg_check_modules(GLIB2 REQUIRED glib-2.0)
@@ -237,7 +242,22 @@ if (NOT ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
   list(APPEND filter-list "${CMAKE_BINARY_DIR}/*")
 endif()
 ENABLE_COVERAGE_REPORT(
-  TARGETS ubuntu-launcher
-  TESTS application-icon-finder-test application-info-desktop-test cgroup-reap-test exec-util-test failure-test helper-test helper-handshake-test libual-test libual-cpp-test zg-test
-  FILTER ${filter-list}
+  TARGETS
+  	ubuntu-launcher
+	launcher-static
+  TESTS
+  	application-icon-finder-test
+	application-info-desktop-test
+	cgroup-reap-test exec-util-test
+	failure-test
+	helper-test
+	helper-handshake-test
+	libual-test
+	libual-cpp-test
+	list-apps
+	jobs-base-test
+#	snap-info-test
+	zg-test
+  FILTER
+  	${filter-list}
 )
