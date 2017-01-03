@@ -491,10 +491,10 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             copyEnv("DISPLAY", env);
             copyEnvByPrefix("DBUS_", env);
             copyEnvByPrefix("MIR_", env);
-            copyEnvByPrefix("QT_", env);
+            // copyEnvByPrefix("QT_", env);
             copyEnvByPrefix("UBUNTU_", env);
             copyEnvByPrefix("UNITY_", env);
-            copyEnvByPrefix("XDG_", env);
+            // copyEnvByPrefix("XDG_", env);
 
             if (!urls.empty())
             {
