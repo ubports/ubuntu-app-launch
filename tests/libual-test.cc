@@ -752,7 +752,7 @@ TEST_F(LibUAL, StartingResponses)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingBroadcast", /* signal */
-		g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
+		g_variant_new("(ss)", "com.test.good_application_1.2.3", "goodinstance"), /* params, the same */
 		NULL);
 
 	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
@@ -817,7 +817,7 @@ TEST_F(LibUAL, UrlSendTest)
 			"/", /* path */
 			"com.canonical.UbuntuAppLaunch", /* interface */
 			"UnityResumeResponse", /* signal */
-			g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
+			g_variant_new("(ss)", "com.test.good_application_1.2.3", "goodinstance"), /* params, the same */
 			NULL);
 
 		pause(50); /* Ensure all the events come through */
@@ -974,7 +974,7 @@ TEST_F(LibUAL, FailingObserver)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
-		g_variant_new("(ss)", "com.test.good_application_1.2.3", "crash"), /* params, the same */
+		g_variant_new("(sss)", "com.test.good_application_1.2.3", "goodinstance", "crash"), /* params, the same */
 		NULL);
 
 	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
@@ -986,7 +986,7 @@ TEST_F(LibUAL, FailingObserver)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
-		g_variant_new("(ss)", "com.test.good_application_1.2.3", "blahblah"), /* params, the same */
+		g_variant_new("(sss)", "com.test.good_application_1.2.3", "goodinstance", "blahblah"), /* params, the same */
 		NULL);
 
 	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", last_observer);
@@ -998,7 +998,7 @@ TEST_F(LibUAL, FailingObserver)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"ApplicationFailed", /* signal */
-		g_variant_new("(ss)", "com.test.good_application_1.2.3", "start-failure"), /* params, the same */
+		g_variant_new("(sss)", "com.test.good_application_1.2.3", "goodinstance", "start-failure"), /* params, the same */
 		NULL);
 
 	EXPECT_EVENTUALLY_EQ(true, last_observer.empty());
