@@ -2,6 +2,10 @@
 
 set -ex
 
+# Unset MIR_SOCKET as we might be in an environment it exists in
+
+export MIR_SOCKET=
+
 # Test the test harness
 
 @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-helper.sh appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
