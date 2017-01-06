@@ -965,12 +965,13 @@ TEST_F(LibUAL, StartingResponses)
         &starting_count, NULL);
 
     /* Emit a signal */
-    g_dbus_connection_emit_signal(session, NULL,                                           /* destination */
-                                  "/",                                                     /* path */
-                                  "com.canonical.UbuntuAppLaunch",                         /* interface */
-                                  "UnityStartingBroadcast",                                /* signal */
-                                  g_variant_new("(ss)", "com.test.good_application_1.2.3", "goodinstance"), /* params, the same */
-                                  NULL);
+    g_dbus_connection_emit_signal(
+        session, NULL,                                                            /* destination */
+        "/",                                                                      /* path */
+        "com.canonical.UbuntuAppLaunch",                                          /* interface */
+        "UnityStartingBroadcast",                                                 /* signal */
+        g_variant_new("(ss)", "com.test.good_application_1.2.3", "goodinstance"), /* params, the same */
+        NULL);
 
     /* Make sure we run our observer */
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw("com.test.good"),
@@ -1041,12 +1042,13 @@ TEST_F(LibUAL, UrlSendTest)
     int i;
     for (i = 0; i < 5; i++)
     {
-        g_dbus_connection_emit_signal(session, NULL,                                           /* destination */
-                                      "/",                                                     /* path */
-                                      "com.canonical.UbuntuAppLaunch",                         /* interface */
-                                      "UnityResumeResponse",                                   /* signal */
-                                      g_variant_new("(s)", "com.test.good_application_1.2.3"), /* params, the same */
-                                      NULL);
+        g_dbus_connection_emit_signal(
+            session, NULL,                                                            /* destination */
+            "/",                                                                      /* path */
+            "com.canonical.UbuntuAppLaunch",                                          /* interface */
+            "UnityResumeResponse",                                                    /* signal */
+            g_variant_new("(ss)", "com.test.good_application_1.2.3", "goodinstance"), /* params, the same */
+            NULL);
 
         pause(50); /* Ensure all the events come through */
     }
@@ -1210,10 +1212,10 @@ TEST_F(LibUAL, FailingObserver)
     GDBusConnection* session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 
     g_dbus_connection_emit_signal(
-        session, NULL,                                                     /* destination */
-        "/",                                                               /* path */
-        "com.canonical.UbuntuAppLaunch",                                   /* interface */
-        "ApplicationFailed",                                               /* signal */
+        session, NULL,                                                                      /* destination */
+        "/",                                                                                /* path */
+        "com.canonical.UbuntuAppLaunch",                                                    /* interface */
+        "ApplicationFailed",                                                                /* signal */
         g_variant_new("(sss)", "com.test.good_application_1.2.3", "goodinstance", "crash"), /* params, the same */
         NULL);
 
@@ -1223,10 +1225,10 @@ TEST_F(LibUAL, FailingObserver)
     lastFailedApp = ubuntu::app_launch::AppID();
 
     g_dbus_connection_emit_signal(
-        session, NULL,                                                        /* destination */
-        "/",                                                                  /* path */
-        "com.canonical.UbuntuAppLaunch",                                      /* interface */
-        "ApplicationFailed",                                                  /* signal */
+        session, NULL,                                                                         /* destination */
+        "/",                                                                                   /* path */
+        "com.canonical.UbuntuAppLaunch",                                                       /* interface */
+        "ApplicationFailed",                                                                   /* signal */
         g_variant_new("(sss)", "com.test.good_application_1.2.3", "goodinstance", "blahblah"), /* params, the same */
         NULL);
 
@@ -1234,13 +1236,13 @@ TEST_F(LibUAL, FailingObserver)
 
     lastFailedApp = ubuntu::app_launch::AppID();
 
-    g_dbus_connection_emit_signal(
-        session, NULL,                                                             /* destination */
-        "/",                                                                       /* path */
-        "com.canonical.UbuntuAppLaunch",                                           /* interface */
-        "ApplicationFailed",                                                       /* signal */
-        g_variant_new("(sss)", "com.test.good_application_1.2.3", "goodinstance", "start-failure"), /* params, the same */
-        NULL);
+    g_dbus_connection_emit_signal(session, NULL,                   /* destination */
+                                  "/",                             /* path */
+                                  "com.canonical.UbuntuAppLaunch", /* interface */
+                                  "ApplicationFailed",             /* signal */
+                                  g_variant_new("(sss)", "com.test.good_application_1.2.3", "goodinstance",
+                                                "start-failure"), /* params, the same */
+                                  NULL);
 
     EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::Registry::FailureType::START_FAILURE, lastFailedType);
 
