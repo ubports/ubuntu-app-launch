@@ -176,5 +176,6 @@ add_custom_target(format-tests
 	jobs-base-test.cpp
 	snapd-info-test.cpp
 	snapd-mock.h
+	spew-master.h
 	zg-test.cc
 )
