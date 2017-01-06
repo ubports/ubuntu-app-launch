@@ -359,6 +359,11 @@ std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Appli
                                          envfunc);
 }
 
+std::shared_ptr<Application::Instance> Click::findInstance(const std::string& instanceid)
+{
+    return _registry->impl->jobs->existing(appId(), "application-click", instanceid, std::vector<Application::URL>{});
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu
