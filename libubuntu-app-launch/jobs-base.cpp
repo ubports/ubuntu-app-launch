@@ -141,8 +141,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     }
 
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
-                    upstart->pauseEventEmitted(upstart->sig_appPaused, sparams, reg);
+                    auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
+                    manager->pauseEventEmitted(manager->sig_appPaused, sparams, reg);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
@@ -188,8 +188,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                     }
 
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
-                    upstart->pauseEventEmitted(upstart->sig_appResumed, sparams, reg);
+                    auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
+                    manager->pauseEventEmitted(manager->sig_appResumed, sparams, reg);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
