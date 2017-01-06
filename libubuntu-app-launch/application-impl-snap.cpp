@@ -457,6 +457,11 @@ std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Applic
                                          envfunc);
 }
 
+std::shared_ptr<Application::Instance> Snap::findInstance(const std::string& instanceid)
+{
+    return _registry->impl->jobs->existing(appId(), "application-snap", instanceid, std::vector<Application::URL>{});
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -45,6 +45,7 @@ public:
     bool hasInstances() override;
 
     std::string getInstance(const std::shared_ptr<app_info::Desktop>& desktop);
+    virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) = 0;
 
 protected:
     /** Pointer to the registry so we can ask it for things */

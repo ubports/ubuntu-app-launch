@@ -70,6 +70,7 @@ protected:
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
     static void pidListToDbus(const std::shared_ptr<Registry>& reg,
                               const AppID& appid,
+                              const std::string& instanceid,
                               const std::vector<pid_t>& pids,
                               const std::string& signal);
     static void signalToPid(pid_t pid, int signal);

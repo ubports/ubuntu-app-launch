@@ -332,6 +332,11 @@ std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<A
                                          envfunc);
 }
 
+std::shared_ptr<Application::Instance> Libertine::findInstance(const std::string& instanceid)
+{
+    return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

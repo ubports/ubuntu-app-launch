@@ -396,6 +396,7 @@ void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
                             data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
                             data->ptr->primaryPid(),                                   /* primary pid */
                             std::string(data->ptr->appId_).c_str(),                    /* appid */
+                            data->ptr->instance_.c_str(),                              /* instance */
                             urls.get());                                               /* urls */
             }
 
@@ -480,7 +481,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 timeout = 0;
             }
 
-            auto handshake = starting_handshake_start(appIdStr.c_str(), timeout);
+            auto handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
             if (handshake == nullptr)
             {
                 g_warning("Unable to setup starting handshake");
