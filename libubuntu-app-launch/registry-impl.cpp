@@ -594,7 +594,7 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
                                                              const std::string& sender,
                                                              const std::shared_ptr<GVariant>& params)> responsefunc)
 {
-    managerEventData* focusdata = new managerEventData{reg, responsefunc};
+    auto focusdata = new managerEventData{reg, responsefunc};
 
     return g_dbus_connection_signal_subscribe(
         reg->impl->_dbus.get(),          /* bus */
