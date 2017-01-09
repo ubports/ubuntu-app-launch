@@ -305,7 +305,7 @@ std::vector<pid_t> Registry::Impl::pidsFromCgroup(const std::string& jobpath)
             return {};
         }
 
-        GVariant* vpids = g_variant_get_child_value(vtpids, 0);
+        auto vpids = g_variant_get_child_value(vtpids, 0);
         GVariantIter iter;
         g_variant_iter_init(&iter, vpids);
         gint32 pid;
@@ -412,7 +412,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
             return {};
         }
 
-        GVariant* instance_list = g_variant_get_child_value(instance_tuple, 0);
+        auto instance_list = g_variant_get_child_value(instance_tuple, 0);
         g_variant_unref(instance_tuple);
 
         GVariantIter instance_iter;
@@ -443,9 +443,9 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
                 continue;
             }
 
-            GVariant* props_dict = g_variant_get_child_value(props_tuple, 0);
+            auto props_dict = g_variant_get_child_value(props_tuple, 0);
 
-            GVariant* namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+            auto namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
             if (namev != nullptr)
             {
                 auto name = g_variant_get_string(namev, nullptr);
@@ -776,7 +776,7 @@ void Registry::Impl::upstartEventEmitted(
     std::string instance;
 
     gchar* env = nullptr;
-    GVariant* envs = g_variant_get_child_value(params.get(), 1);
+    auto envs = g_variant_get_child_value(params.get(), 1);
     GVariantIter iter;
     g_variant_iter_init(&iter, envs);
 
@@ -976,8 +976,8 @@ void Registry::Impl::pauseEventEmitted(
     const std::shared_ptr<Registry>& reg)
 {
     std::vector<pid_t> pids;
-    GVariant* vappid = g_variant_get_child_value(params.get(), 0);
-    GVariant* vpids = g_variant_get_child_value(params.get(), 1);
+    auto vappid = g_variant_get_child_value(params.get(), 0);
+    auto vpids = g_variant_get_child_value(params.get(), 1);
     guint64 pid;
     GVariantIter thispid;
     g_variant_iter_init(&thispid, vpids);
