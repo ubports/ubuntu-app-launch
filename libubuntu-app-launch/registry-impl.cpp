@@ -647,9 +647,14 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
 */
 void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std::shared_ptr<Registry> reg)
 {
+    if (!reg)
+    {
+        throw std::invalid_argument("Passed null registry to setManager()");
+    }
+
     if (reg->impl->manager_)
     {
-        throw std::runtime_error("Already have a manager and trying to set another");
+        throw std::logic_error("Already have a manager and trying to set another");
     }
 
     g_debug("Setting a new manager");
