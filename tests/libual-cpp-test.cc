@@ -84,8 +84,8 @@ protected:
         std::chrono::milliseconds focusTimeout{0};
         std::chrono::milliseconds resumeTimeout{0};
 
-        void startingRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                             std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+        void startingRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                             const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                              std::function<void(bool)> reply) override
         {
             thread.timeout(startingTimeout, [this, app, instance, reply]() {
@@ -94,8 +94,8 @@ protected:
             });
         }
 
-        void focusRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                          std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+        void focusRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                          const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                           std::function<void(bool)> reply) override
         {
             thread.timeout(focusTimeout, [this, app, instance, reply]() {
@@ -104,8 +104,8 @@ protected:
             });
         }
 
-        void resumeRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                           std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+        void resumeRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                           const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                            std::function<void(bool)> reply) override
         {
             thread.timeout(resumeTimeout, [this, app, instance, reply]() {

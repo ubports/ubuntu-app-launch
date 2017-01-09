@@ -82,16 +82,20 @@ public:
     static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
 
     /* Signals to discover what is happening to apps */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted(
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& appStarted(
         const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped(
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& appStopped(
         const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed(
-        const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& appPaused(
-        const std::shared_ptr<Registry>& reg);
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& appResumed(
-        const std::shared_ptr<Registry>& reg);
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, FailureType>&
+        appFailed(const std::shared_ptr<Registry>& reg);
+    core::Signal<const std::shared_ptr<Application>&,
+                 const std::shared_ptr<Application::Instance>&,
+                 const std::vector<pid_t>&>&
+        appPaused(const std::shared_ptr<Registry>& reg);
+    core::Signal<const std::shared_ptr<Application>&,
+                 const std::shared_ptr<Application::Instance>&,
+                 const std::vector<pid_t>&>&
+        appResumed(const std::shared_ptr<Registry>& reg);
 
     /* Signal Hints */
     /* NOTE: Static because we don't have registry instances in the C
@@ -107,16 +111,21 @@ private:
     std::shared_ptr<ClickUser> _clickUser; /**< Click database filtered by the current user */
 
     /** Signal object for applications started */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStarted;
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&> sig_appStarted;
     /** Signal object for applications stopped */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> sig_appStopped;
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&> sig_appStopped;
     /** Signal object for applications failed */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> sig_appFailed;
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, FailureType>
+        sig_appFailed;
     /** Signal object for applications paused */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>
+    core::Signal<const std::shared_ptr<Application>&,
+                 const std::shared_ptr<Application::Instance>&,
+                 const std::vector<pid_t>&>
         sig_appPaused;
     /** Signal object for applications resumed */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>
+    core::Signal<const std::shared_ptr<Application>&,
+                 const std::shared_ptr<Application::Instance>&,
+                 const std::vector<pid_t>&>
         sig_appResumed;
 
     guint handle_appStarted{0};            /**< GDBus signal watcher handle for app started signal */
@@ -141,13 +150,15 @@ private:
     std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
                                            signals of focused, resumed and starting */
 
-    void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
-                             const std::shared_ptr<GVariant>& params,
-                             const std::shared_ptr<Registry>& reg);
-    void pauseEventEmitted(
-        core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
+    void upstartEventEmitted(
+        core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& signal,
         const std::shared_ptr<GVariant>& params,
         const std::shared_ptr<Registry>& reg);
+    void pauseEventEmitted(core::Signal<const std::shared_ptr<Application>&,
+                                        const std::shared_ptr<Application::Instance>&,
+                                        const std::vector<pid_t>&>& signal,
+                           const std::shared_ptr<GVariant>& params,
+                           const std::shared_ptr<Registry>& reg);
     static std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> managerParams(
         const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry>& reg);
     static guint managerSignalHelper(const std::shared_ptr<Registry>& reg,

@@ -767,7 +767,7 @@ const std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
     Upstart event environment and calling the appropriate signal with the right Application
     object and eventually its instance */
 void Registry::Impl::upstartEventEmitted(
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& signal,
     const std::shared_ptr<GVariant>& params,
     const std::shared_ptr<Registry>& reg)
 {
@@ -815,8 +815,8 @@ void Registry::Impl::upstartEventEmitted(
 
 /** Grab the signal object for application startup. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted(
-    const std::shared_ptr<Registry>& reg)
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+    Registry::Impl::appStarted(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appStarted, [reg]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
@@ -859,8 +859,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Grab the signal object for application stopping. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped(
-    const std::shared_ptr<Registry>& reg)
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+    Registry::Impl::appStopped(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appStopped, [reg]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
@@ -903,7 +903,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Grab the signal object for application failing. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
     Registry::Impl::appFailed(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appFailed, [reg]() {
@@ -970,10 +970,11 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Core handler for pause and resume events. Includes turning the GVariant
     pid list into a std::vector and getting the application object. */
-void Registry::Impl::pauseEventEmitted(
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
-    const std::shared_ptr<GVariant>& params,
-    const std::shared_ptr<Registry>& reg)
+void Registry::Impl::pauseEventEmitted(core::Signal<const std::shared_ptr<Application>&,
+                                                    const std::shared_ptr<Application::Instance>&,
+                                                    const std::vector<pid_t>&>& signal,
+                                       const std::shared_ptr<GVariant>& params,
+                                       const std::shared_ptr<Registry>& reg)
 {
     std::vector<pid_t> pids;
     auto vappid = g_variant_get_child_value(params.get(), 0);
@@ -1002,7 +1003,9 @@ void Registry::Impl::pauseEventEmitted(
 
 /** Grab the signal object for application paused. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Registry::Impl::appPaused(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appPaused, [&]() {
@@ -1046,7 +1049,9 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Grab the signal object for application resumed. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Registry::Impl::appResumed(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appResumed, [&]() {

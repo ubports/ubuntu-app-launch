@@ -82,7 +82,7 @@ public:
 
         \param reg Registry to get the handler from
     */
-    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted(
+    static core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& appStarted(
         const std::shared_ptr<Registry>& reg = getDefault());
 
     /** Get the signal object that is signaled when an application has stopped.
@@ -92,7 +92,7 @@ public:
 
         \param reg Registry to get the handler from
     */
-    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped(
+    static core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& appStopped(
         const std::shared_ptr<Registry>& reg = getDefault());
 
     /** Get the signal object that is signaled when an application has failed.
@@ -102,8 +102,9 @@ public:
 
         \param reg Registry to get the handler from
     */
-    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType>& appFailed(
-        const std::shared_ptr<Registry>& reg = getDefault());
+    static core::
+        Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, FailureType>&
+        appFailed(const std::shared_ptr<Registry>& reg = getDefault());
 
     /** Get the signal object that is signaled when an application has been
         paused.
@@ -113,7 +114,9 @@ public:
 
         \param reg Registry to get the handler from
     */
-    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    static core::Signal<const std::shared_ptr<Application>&,
+                        const std::shared_ptr<Application::Instance>&,
+                        const std::vector<pid_t>&>&
         appPaused(const std::shared_ptr<Registry>& reg = getDefault());
 
     /** Get the signal object that is signaled when an application has been
@@ -124,7 +127,9 @@ public:
 
         \param reg Registry to get the handler from
     */
-    static core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+    static core::Signal<const std::shared_ptr<Application>&,
+                        const std::shared_ptr<Application::Instance>&,
+                        const std::vector<pid_t>&>&
         appResumed(const std::shared_ptr<Registry>& reg = getDefault());
 
     /** The Application Manager, almost always if you're not Unity8, don't
@@ -152,8 +157,8 @@ public:
                         unless mulit-instance app.
             \param reply Function object to reply if it is allowed to start
         */
-        virtual void startingRequest(std::shared_ptr<Application> app,
-                                     std::shared_ptr<Application::Instance> instance,
+        virtual void startingRequest(const std::shared_ptr<Application>& app,
+                                     const std::shared_ptr<Application::Instance>& instance,
                                      std::function<void(bool)> reply) = 0;
 
         /** Application wishes to have focus. Usually this occurs when
@@ -168,8 +173,8 @@ public:
                         unless mulit-instance app.
             \param reply Function object to reply if it is allowed to focus
         */
-        virtual void focusRequest(std::shared_ptr<Application> app,
-                                  std::shared_ptr<Application::Instance> instance,
+        virtual void focusRequest(const std::shared_ptr<Application>& app,
+                                  const std::shared_ptr<Application::Instance>& instance,
                                   std::function<void(bool)> reply) = 0;
 
         /** Application wishes to resume. Usually this occurs when
@@ -184,8 +189,8 @@ public:
                         unless mulit-instance app.
             \param reply Function object to reply if it is allowed to resume
         */
-        virtual void resumeRequest(std::shared_ptr<Application> app,
-                                   std::shared_ptr<Application::Instance> instance,
+        virtual void resumeRequest(const std::shared_ptr<Application>& app,
+                                   const std::shared_ptr<Application::Instance>& instance,
                                    std::function<void(bool)> reply) = 0;
 
     protected:

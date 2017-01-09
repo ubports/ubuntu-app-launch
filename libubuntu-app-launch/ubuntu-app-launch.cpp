@@ -378,8 +378,8 @@ public:
 		g_debug("Creating the CManager object");
 	}
 
-	void startingRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+	void startingRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                                      std::function<void(bool)> reply) override {
 		std::string sappid = app->appId();
 		g_debug("CManager starting: %s", sappid.c_str());
@@ -393,8 +393,8 @@ public:
 		reply(true);
 	}
 
-	void focusRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                                  std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+	void focusRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                  const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                                   std::function<void(bool)> reply) override {
 		std::string sappid = app->appId();
 		g_debug("CManager focus: %s", sappid.c_str());
@@ -408,8 +408,8 @@ public:
 		reply(true);
 	}
 
-	void resumeRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+	void resumeRequest(const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                   const std::shared_ptr<ubuntu::app_launch::Application::Instance> &instance,
                                    std::function<void(bool)> reply) override {
 		std::string sappid = app->appId();
 		g_debug("CManager resume: %s", sappid.c_str());
@@ -629,7 +629,7 @@ ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserv
 	appPausedObservers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
 			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appPaused().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, std::vector<pid_t> &pids) {
+				ubuntu::app_launch::Registry::appPaused().connect([context, observer, user_data](const std::shared_ptr<ubuntu::app_launch::Application> &app, const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance, const std::vector<pid_t> &pids) {
 					std::vector<pid_t> lpids = pids;
 					lpids.emplace_back(0);
 
@@ -668,7 +668,7 @@ ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObser
 	appResumedObservers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
 			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appResumed().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, std::vector<pid_t>& pids) {
+				ubuntu::app_launch::Registry::appResumed().connect([context, observer, user_data](const std::shared_ptr<ubuntu::app_launch::Application>& app, const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance, const std::vector<pid_t>& pids) {
 					std::vector<pid_t> lpids = pids;
 					lpids.emplace_back(0);
 
