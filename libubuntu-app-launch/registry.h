@@ -77,7 +77,7 @@ public:
     /** Get the signal object that is signaled when an application has been
         started.
 
-        \note This singal handler is activated on the UAL thread, if you want
+        \note This signal handler is activated on the UAL thread, if you want
             to execute on a different thread you'll need to move the work.
 
         \param reg Registry to get the handler from
@@ -87,7 +87,7 @@ public:
 
     /** Get the signal object that is signaled when an application has stopped.
 
-        \note This singal handler is activated on the UAL thread, if you want
+        \note This signal handler is activated on the UAL thread, if you want
             to execute on a different thread you'll need to move the work.
 
         \param reg Registry to get the handler from
@@ -97,7 +97,7 @@ public:
 
     /** Get the signal object that is signaled when an application has failed.
 
-        \note This singal handler is activated on the UAL thread, if you want
+        \note This signal handler is activated on the UAL thread, if you want
             to execute on a different thread you'll need to move the work.
 
         \param reg Registry to get the handler from
@@ -108,7 +108,7 @@ public:
     /** Get the signal object that is signaled when an application has been
         paused.
 
-        \note This singal handler is activated on the UAL thread, if you want
+        \note This signal handler is activated on the UAL thread, if you want
             to execute on a different thread you'll need to move the work.
 
         \param reg Registry to get the handler from
@@ -119,7 +119,7 @@ public:
     /** Get the signal object that is signaled when an application has been
         resumed.
 
-        \note This singal handler is activated on the UAL thread, if you want
+        \note This signal handler is activated on the UAL thread, if you want
             to execute on a different thread you'll need to move the work.
 
         \param reg Registry to get the handler from
@@ -140,7 +140,7 @@ public:
     public:
         /** Application wishes to startup
 
-            \note This singal handler is activated on the UAL thread, if you want
+            \note This signal handler is activated on the UAL thread, if you want
                 to execute on a different thread you'll need to move the work.
 
             \param app Application requesting startup
@@ -156,7 +156,7 @@ public:
             a URL for the application is activated and the running app is
             requested.
 
-            \note This singal handler is activated on the UAL thread, if you want
+            \note This signal handler is activated on the UAL thread, if you want
                 to execute on a different thread you'll need to move the work.
 
             \param app Application requesting focus
@@ -172,7 +172,7 @@ public:
             a URL for the application is activated and the running app is
             requested.
 
-            \note This singal handler is activated on the UAL thread, if you want
+            \note This signal handler is activated on the UAL thread, if you want
                 to execute on a different thread you'll need to move the work.
 
             \param app Application requesting resume
