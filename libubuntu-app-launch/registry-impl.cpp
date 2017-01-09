@@ -666,8 +666,8 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
                     reg, "UnityFocusRequest",
                     [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
                        const std::shared_ptr<Application::Instance>& instance,
-                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
-                       const std::shared_ptr<GVariant>& params) {
+                       const std::shared_ptr<GDBusConnection>& /* conn */, const std::string& /* sender */,
+                       const std::shared_ptr<GVariant>& /* params */) {
                         /* Nothing to do today */
                         reg->impl->manager_->focusRequest(app, instance, [](bool response) {
                             /* NOTE: We have no clue what thread this is gonna be
