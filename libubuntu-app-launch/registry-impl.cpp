@@ -556,8 +556,11 @@ std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>
     const gchar* cappid = nullptr;
     g_variant_get(params.get(), "(&s)", &cappid);
 
-    auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
-    app = ubuntu::app_launch::Application::create(appid, reg);
+    if (cappid != nullptr)
+    {
+        auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
+        app = ubuntu::app_launch::Application::create(appid, reg);
+    }
 
     return std::make_tuple(app, instance);
 }
