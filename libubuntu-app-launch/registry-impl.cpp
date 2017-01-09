@@ -186,7 +186,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         }
 
         std::list<AppID::Package> list;
-        for (GList* item = pkgs; item != NULL; item = g_list_next(item))
+        for (GList* item = pkgs; item != nullptr; item = g_list_next(item))
         {
             auto pkgobj = static_cast<gchar*>(item->data);
             if (pkgobj)
@@ -287,7 +287,7 @@ std::vector<pid_t> Registry::Impl::pidsFromCgroup(const std::string& jobpath)
 
         GVariant* vtpids = g_dbus_connection_call_sync(
             lmanager.get(),                     /* connection */
-            name,                               /* bus name for direct connection is NULL */
+            name,                               /* bus name for direct connection is nullptr */
             "/org/linuxcontainers/cgmanager",   /* object */
             "org.linuxcontainers.cgmanager0_0", /* interface */
             "GetTasksRecursive",                /* method */
@@ -448,7 +448,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
             GVariant* namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
             if (namev != nullptr)
             {
-                auto name = g_variant_get_string(namev, NULL);
+                auto name = g_variant_get_string(namev, nullptr);
                 g_debug("Adding instance for job '%s': %s", job.c_str(), name);
                 instances.push_back(name);
                 g_variant_unref(namev);
@@ -929,8 +929,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                         return;
                     }
 
-                    const gchar* sappid = NULL;
-                    const gchar* typestr = NULL;
+                    const gchar* sappid = nullptr;
+                    const gchar* typestr = nullptr;
 
                     Registry::FailureType type = Registry::FailureType::CRASH;
                     g_variant_get(params, "(&s&s)", &sappid, &typestr);
@@ -987,7 +987,7 @@ void Registry::Impl::pauseEventEmitted(
         pids.emplace_back(pid);
     }
 
-    auto cappid = g_variant_get_string(vappid, NULL);
+    auto cappid = g_variant_get_string(vappid, nullptr);
     auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
     auto app = Application::create(appid, reg);
 
