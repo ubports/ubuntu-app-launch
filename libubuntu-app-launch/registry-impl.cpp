@@ -645,7 +645,7 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
     signals are only setup once per registry even if the manager is cleared
     and changed again. They will just be no-op's in those cases.
 */
-void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std::shared_ptr<Registry> reg)
+void Registry::Impl::setManager(const std::shared_ptr<Registry::Manager>& manager, const std::shared_ptr<Registry>& reg)
 {
     if (!reg)
     {

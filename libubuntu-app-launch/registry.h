@@ -201,7 +201,7 @@ public:
         \param manager A reference to the Manager object to call
         \param registry Registry to register the manager on
     */
-    static void setManager(std::shared_ptr<Manager> manager, std::shared_ptr<Registry> registry);
+    static void setManager(const std::shared_ptr<Manager>& manager, const std::shared_ptr<Registry>& registry);
 
     /** Remove the current manager on the registry */
     void clearManager();
