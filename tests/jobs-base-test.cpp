@@ -132,7 +132,7 @@ TEST_F(JobBaseTest, pauseResume)
         .WillOnce(testing::Return());
 
     /* Make sure it is running */
-    EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+    EXPECT_EVENTUALLY_NE(0u, spew.datacnt_);
 
     /*** Do Pause ***/
     instance->pause();
@@ -140,7 +140,7 @@ TEST_F(JobBaseTest, pauseResume)
     spew.reset();
     pause(100);  // give spew a chance to send data if it is running
 
-    EXPECT_EQ(0, spew.dataCnt());
+    EXPECT_EQ(0u, spew.dataCnt());
 
     EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::paused())), spew.oomScore());
 
@@ -149,12 +149,12 @@ TEST_F(JobBaseTest, pauseResume)
         .WillOnce(testing::Return());
 
     spew.reset();
-    EXPECT_EQ(0, spew.dataCnt());
+    EXPECT_EQ(0u, spew.dataCnt());
 
     /*** Do Resume ***/
     instance->resume();
 
-    EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+    EXPECT_EVENTUALLY_NE(0u, spew.datacnt_);
 
     EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
 }
@@ -202,7 +202,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
     /* Make sure it is running */
     for (auto& spew : spews)
     {
-        EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+        EXPECT_EVENTUALLY_NE(0u, spew.datacnt_);
     }
 
     /*** Do Pause ***/
@@ -216,7 +216,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
 
     for (auto& spew : spews)
     {
-        EXPECT_EQ(0, spew.dataCnt());
+        EXPECT_EQ(0u, spew.dataCnt());
 
         EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::paused())), spew.oomScore());
     }
@@ -228,7 +228,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
     for (auto& spew : spews)
     {
         spew.reset();
-        EXPECT_EQ(0, spew.dataCnt());
+        EXPECT_EQ(0u, spew.dataCnt());
     }
 
     /*** Do Resume ***/
@@ -236,7 +236,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
 
     for (auto& spew : spews)
     {
-        EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+        EXPECT_EVENTUALLY_NE(0u, spew.datacnt_);
 
         EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
     }
