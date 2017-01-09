@@ -808,7 +808,7 @@ void Registry::Impl::upstartEventEmitted(
     auto appid = AppID::find(reg, sappid);
     auto app = Application::create(appid, reg);
 
-    // TODO: Figure otu creating instances
+    // TODO: Figure out creating instances
 
     signal(app, {});
 }
