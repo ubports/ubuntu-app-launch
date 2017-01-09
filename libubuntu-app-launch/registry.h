@@ -134,6 +134,10 @@ public:
         Each function here is being passed a function object that takes a boolean
         to reply. This will accept or reject the request. The function object
         can be copied to another thread and executed if needed.
+
+        The reply is required for the application to start. It will block (not
+        currently implemented) until approval is given. If there are multiple requests
+        sent they may be replied out of order if desired.
     */
     class Manager
     {
