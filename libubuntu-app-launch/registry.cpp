@@ -86,11 +86,10 @@ std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Re
     }
 
     g_debug("Overall there are %d instances: %s", int(instanceset.size()),
-            std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
-                            [](const std::string& instr, std::string instance) {
-                                return instr.empty() ? instance : instr + ", " + instance;
-                            })
-                .c_str());
+            std::accumulate(instanceset.begin(), instanceset.end(), std::string{}, [](const std::string& instr,
+                                                                                      std::string instance) {
+                return instr.empty() ? instance : instr + ", " + instance;
+            }).c_str());
 
     /* Convert to Applications */
     std::list<std::shared_ptr<Application>> apps;
