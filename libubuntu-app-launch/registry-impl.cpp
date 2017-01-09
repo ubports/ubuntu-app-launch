@@ -820,7 +820,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 {
     std::call_once(flag_appStarted, [reg]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appStarted = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(), /* bus */
@@ -864,7 +864,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 {
     std::call_once(flag_appStopped, [reg]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appStopped = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(), /* bus */
@@ -908,7 +908,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 {
     std::call_once(flag_appFailed, [reg]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appFailed = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
@@ -1007,7 +1007,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 {
     std::call_once(flag_appPaused, [&]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appPaused = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
@@ -1051,7 +1051,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 {
     std::call_once(flag_appResumed, [&]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appResumed = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
