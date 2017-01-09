@@ -575,9 +575,9 @@ struct managerEventData
     std::function<void(const std::shared_ptr<Registry>& reg,
                        const std::shared_ptr<Application>& app,
                        const std::shared_ptr<Application::Instance>& instance,
-                       const std::shared_ptr<GDBusConnection>&,
-                       const std::string&,
-                       const std::shared_ptr<GVariant>&)>
+                       const std::shared_ptr<GDBusConnection>& dbus,
+                       const std::string& sender,
+                       const std::shared_ptr<GVariant>& params)>
         func;
 };
 
@@ -590,9 +590,9 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
                                           std::function<void(const std::shared_ptr<Registry>& reg,
                                                              const std::shared_ptr<Application>& app,
                                                              const std::shared_ptr<Application::Instance>& instance,
-                                                             const std::shared_ptr<GDBusConnection>&,
-                                                             const std::string&,
-                                                             const std::shared_ptr<GVariant>&)> responsefunc)
+                                                             const std::shared_ptr<GDBusConnection>& dbus,
+                                                             const std::string& sender,
+                                                             const std::shared_ptr<GVariant>& params)> responsefunc)
 {
     managerEventData* focusdata = new managerEventData{reg, responsefunc};
 
