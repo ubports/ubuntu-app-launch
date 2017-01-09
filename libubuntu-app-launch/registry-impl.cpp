@@ -768,7 +768,7 @@ const std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
     object and eventually its instance */
 void Registry::Impl::upstartEventEmitted(
     core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
-    std::shared_ptr<GVariant> params,
+    const std::shared_ptr<GVariant>& params,
     const std::shared_ptr<Registry>& reg)
 {
     std::string jobname;

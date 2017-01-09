@@ -140,9 +140,10 @@ private:
     std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
                                            signals of focused, resumed and starting */
 
-    void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
-                             std::shared_ptr<GVariant> params,
-                             const std::shared_ptr<Registry>& reg);
+    void upstartEventEmitted(
+        core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
+        const std::shared_ptr<GVariant>& params,
+        const std::shared_ptr<Registry>& reg);
     void pauseEventEmitted(
         core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
         const std::shared_ptr<GVariant>& params,
