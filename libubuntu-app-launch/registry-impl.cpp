@@ -615,7 +615,7 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
                 return;
             }
 
-            /* If we're still conneted and the manager has been cleared
+            /* If we're still connected and the manager has been cleared
                we'll just be a no-op */
             if (!reg->impl->manager_)
             {
