@@ -759,9 +759,9 @@ bool Registry::Impl::isWatchingAppStarting()
 }
 
 /** Regex to parse the JOB environment variable from Upstart */
-std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
+const std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
 /** Regex to parse the INSTANCE environment variable from Upstart */
-std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
+const std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
 
 /** Core of most of the events that come from Upstart directly. Includes parsing of the
     Upstart event environment and calling the appropriate signal with the right Application
