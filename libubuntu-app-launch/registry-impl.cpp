@@ -188,7 +188,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         std::list<AppID::Package> list;
         for (GList* item = pkgs; item != NULL; item = g_list_next(item))
         {
-            auto pkgobj = reinterpret_cast<gchar*>(item->data);
+            auto pkgobj = static_cast<gchar*>(item->data);
             if (pkgobj)
             {
                 list.emplace_back(AppID::Package::from_raw(pkgobj));
@@ -606,7 +606,7 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
         G_DBUS_SIGNAL_FLAGS_NONE,
         [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*, GVariant* params,
            gpointer user_data) {
-            auto data = reinterpret_cast<managerEventData*>(user_data);
+            auto data = static_cast<managerEventData*>(user_data);
             auto reg = data->weakReg.lock();
 
             if (!reg)
@@ -635,7 +635,7 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
         },
         focusdata,
         [](gpointer user_data) {
-            auto data = reinterpret_cast<managerEventData*>(user_data);
+            auto data = static_cast<managerEventData*>(user_data);
             delete data;
         }); /* user data destroy */
 }
@@ -827,7 +827,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -841,7 +841,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
@@ -871,7 +871,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -885,7 +885,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
@@ -915,7 +915,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -952,7 +952,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
@@ -1014,7 +1014,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -1028,7 +1028,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
@@ -1058,7 +1058,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -1072,7 +1072,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
