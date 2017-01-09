@@ -505,7 +505,7 @@ void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
         zeitgeist_log_insert_event(zgLog_.get(), /* log */
                                    event,        /* event */
                                    nullptr,      /* cancellable */
-                                   [](GObject* obj, GAsyncResult* res, gpointer user_data) -> void {
+                                   [](GObject* obj, GAsyncResult* res, gpointer user_data) {
                                        GError* error = nullptr;
                                        GArray* result = nullptr;
 
@@ -605,7 +605,7 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
         nullptr,                         /* arg0 */
         G_DBUS_SIGNAL_FLAGS_NONE,
         [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*, GVariant* params,
-           gpointer user_data) -> void {
+           gpointer user_data) {
             auto data = reinterpret_cast<managerEventData*>(user_data);
             auto reg = data->weakReg.lock();
 
@@ -826,7 +826,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 "started",              /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
+                   gpointer user_data) {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
@@ -870,7 +870,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 "stopped",              /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
+                   gpointer user_data) {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
@@ -914,7 +914,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 nullptr,                         /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
+                   gpointer user_data) {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
@@ -1013,7 +1013,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 nullptr,                         /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
+                   gpointer user_data) {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
@@ -1057,7 +1057,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 nullptr,                         /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
+                   gpointer user_data) {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
