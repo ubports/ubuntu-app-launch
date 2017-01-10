@@ -324,8 +324,9 @@ observer_add (UbuntuAppLaunchAppObserver observer, gpointer user_data, std::map<
 }
 
 /** A handy helper to delete items from an observer map */
+template<typename observertype>
 static gboolean
-observer_delete (UbuntuAppLaunchAppObserver observer, gpointer user_data, std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> &observers)
+observer_delete (observertype observer, gpointer user_data, std::map<std::pair<observertype, gpointer>, core::ScopedConnection> &observers)
 {
 	auto iter = observers.find(std::make_pair(observer, user_data));
 
@@ -349,7 +350,7 @@ ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer,
 gboolean
 ubuntu_app_launch_observer_delete_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return observer_delete(observer, user_data, appStartedObservers);
+	return observer_delete<UbuntuAppLaunchAppObserver>(observer, user_data, appStartedObservers);
 }
 
 /* Map of all the observers listening for app stopped */
@@ -364,7 +365,7 @@ ubuntu_app_launch_observer_add_app_stop (UbuntuAppLaunchAppObserver observer, gp
 gboolean
 ubuntu_app_launch_observer_delete_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return observer_delete(observer, user_data, appStoppedObservers);
+	return observer_delete<UbuntuAppLaunchAppObserver>(observer, user_data, appStoppedObservers);
 }
 
 /** Class to implement the Registry::Manager interface for the C code
@@ -571,14 +572,7 @@ ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver obse
 gboolean
 ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
 {
-	auto iter = appFailedObservers.find(std::make_pair(observer, user_data));
-
-	if (iter == appFailedObservers.end()) {
-		return FALSE;
-	}
-
-	appFailedObservers.erase(iter);
-	return TRUE;
+	return observer_delete<UbuntuAppLaunchAppFailedObserver>(observer, user_data, appFailedObservers);
 }
 
 static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> appPausedObservers;
@@ -610,14 +604,7 @@ ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserv
 gboolean
 ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	auto iter = appPausedObservers.find(std::make_pair(observer, user_data));
-
-	if (iter == appPausedObservers.end()) {
-		return FALSE;
-	}
-
-	appPausedObservers.erase(iter);
-	return TRUE;
+	return observer_delete<UbuntuAppLaunchAppPausedResumedObserver>(observer, user_data, appPausedObservers);
 }
 
 static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> appResumedObservers;
@@ -649,14 +636,7 @@ ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObser
 gboolean
 ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	auto iter = appResumedObservers.find(std::make_pair(observer, user_data));
-
-	if (iter == appResumedObservers.end()) {
-		return FALSE;
-	}
-
-	appResumedObservers.erase(iter);
-	return TRUE;
+	return observer_delete<UbuntuAppLaunchAppPausedResumedObserver>(observer, user_data, appResumedObservers);
 }
 
 typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);
