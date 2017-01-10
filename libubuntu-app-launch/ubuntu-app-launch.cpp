@@ -377,46 +377,19 @@ public:
 	void startingRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
                                      const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                                      std::function<void(bool)> reply) override {
-		std::string sappid = app->appId();
-		g_debug("CManager starting: %s", sappid.c_str());
-
-		for (const auto &data : startingList) {
-			executeOnContext(data.context, [data, sappid]() {
-				data.observer(sappid.c_str(), data.user_data);
-			});
-		}
-
-		reply(true);
+		requestImpl(app, instance, reply, "starting", startingList);
 	}
 
 	void focusRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
                                   const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                                   std::function<void(bool)> reply) override {
-		std::string sappid = app->appId();
-		g_debug("CManager focus: %s", sappid.c_str());
-
-		for (const auto &data : focusList) {
-			executeOnContext(data.context, [data, sappid]() {
-				data.observer(sappid.c_str(), data.user_data);
-			});
-		}
-
-		reply(true);
+		requestImpl(app, instance, reply, "focus", focusList);
 	}
 
 	void resumeRequest(const std::shared_ptr<ubuntu::app_launch::Application> &app,
                                    const std::shared_ptr<ubuntu::app_launch::Application::Instance> &instance,
                                    std::function<void(bool)> reply) override {
-		std::string sappid = app->appId();
-		g_debug("CManager resume: %s", sappid.c_str());
-
-		for (const auto &data : resumeList) {
-			executeOnContext(data.context, [data, sappid]() {
-				data.observer(sappid.c_str(), data.user_data);
-			});
-		}
-
-		reply(true);
+		requestImpl(app, instance, reply, "resume", resumeList);
 	}
 
 private:
@@ -447,6 +420,23 @@ private:
 
 		list.erase(iter);
 		return true;
+	}
+
+	inline void requestImpl ( const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                   const std::shared_ptr<ubuntu::app_launch::Application::Instance> &instance,
+                                   std::function<void(bool)> reply,
+				   const std::string& name,
+				   std::list<ObserverData>& list) {
+		std::string sappid = app->appId();
+		g_debug("CManager %s: %s", name.c_str(), sappid.c_str());
+
+		for (const auto &data : list) {
+			executeOnContext(data.context, [data, sappid]() {
+				data.observer(sappid.c_str(), data.user_data);
+			});
+		}
+
+		reply(true);
 	}
 
 public:
