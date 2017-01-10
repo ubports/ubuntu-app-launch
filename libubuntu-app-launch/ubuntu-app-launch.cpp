@@ -274,7 +274,7 @@ struct _failed_observer_t {
 
 /* Function to take a work function and have it execute on a given
    GMainContext */
-static void executeOnContext (std::shared_ptr<GMainContext> context, std::function<void()> work)
+static void executeOnContext (const std::shared_ptr<GMainContext>& context, std::function<void()> work)
 {
 	if (!context) {
 		work();
