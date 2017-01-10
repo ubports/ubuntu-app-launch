@@ -308,7 +308,7 @@ ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer,
 	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
 	appStartedObservers.emplace(std::make_pair(
-		std::make_pair(observer, user_data),
+			std::make_pair(observer, user_data),
 			core::ScopedConnection(
 				ubuntu::app_launch::Registry::appStarted().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
 					std::string appid = app->appId();
