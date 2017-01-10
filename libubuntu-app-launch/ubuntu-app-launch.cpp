@@ -367,6 +367,8 @@ ubuntu_app_launch_observer_delete_app_stop (UbuntuAppLaunchAppObserver observer,
 	return observer_delete(observer, user_data, appStoppedObservers);
 }
 
+/** Class to implement the Registry::Manager interface for the C code
+    using a GLib mainloop. */
 class CManager : public ubuntu::app_launch::Registry::Manager
 {
 public:
@@ -393,11 +395,14 @@ public:
 	}
 
 private:
+	/** The Data that we track on an observer. It is the functions to
+	    call, the user data and the context to call it on. */
 	struct ObserverData {
 		UbuntuAppLaunchAppObserver observer;
 		gpointer user_data;
 		std::shared_ptr<GMainContext> context;
 
+		/** Handy constructor to get the context in one place */
 		ObserverData(UbuntuAppLaunchAppObserver obs, gpointer ud)
 			: observer(obs)
 			, user_data(ud) {
@@ -405,11 +410,12 @@ private:
 		}
 	};
 
-	std::list<ObserverData> focusList;
-	std::list<ObserverData> resumeList;
-	std::list<ObserverData> startingList;
+	std::list<ObserverData> focusList;    /**< List of observers on the focus signal */
+	std::list<ObserverData> resumeList;   /**< List of observers on the resume signal */
+	std::list<ObserverData> startingList; /**< List of observers on the starting signal */
 
-	bool removeList (std::list<ObserverData> &list, UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+	/** Removes an observer from a specified list */
+	bool removeObserver (std::list<ObserverData> &list, UbuntuAppLaunchAppObserver observer, gpointer user_data) {
 		auto iter = std::find_if(list.begin(), list.end(), [observer, user_data](const ObserverData &data) {
 			return data.observer == observer && data.user_data == user_data;
 		});
@@ -422,6 +428,7 @@ private:
 		return true;
 	}
 
+	/** Implements a request for a specified list by calling each observer and then the reply */
 	inline void requestImpl ( const std::shared_ptr<ubuntu::app_launch::Application> &app,
                                    const std::shared_ptr<ubuntu::app_launch::Application::Instance> &instance,
                                    std::function<void(bool)> reply,
@@ -450,13 +457,13 @@ public:
 		startingList.emplace_back(ObserverData(observer, user_data));
 	}
 	bool deleteFocus (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		return removeList(focusList, observer, user_data);
+		return removeObserver(focusList, observer, user_data);
 	}
 	bool deleteResume (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		return removeList(resumeList, observer, user_data);
+		return removeObserver(resumeList, observer, user_data);
 	}
 	bool deleteStarting (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		return removeList(startingList, observer, user_data);
+		return removeObserver(startingList, observer, user_data);
 	}
 };
 
