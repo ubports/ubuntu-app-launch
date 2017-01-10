@@ -77,8 +77,7 @@ public:
     /** Get the signal object that is signaled when an application has been
         started.
 
-        \note This signal handler is activated on the UAL thread, if you want
-            to execute on a different thread you'll need to move the work.
+        \note This signal handler is activated on the UAL thread
 
         \param reg Registry to get the handler from
     */
@@ -87,8 +86,7 @@ public:
 
     /** Get the signal object that is signaled when an application has stopped.
 
-        \note This signal handler is activated on the UAL thread, if you want
-            to execute on a different thread you'll need to move the work.
+        \note This signal handler is activated on the UAL thread
 
         \param reg Registry to get the handler from
     */
@@ -97,8 +95,7 @@ public:
 
     /** Get the signal object that is signaled when an application has failed.
 
-        \note This signal handler is activated on the UAL thread, if you want
-            to execute on a different thread you'll need to move the work.
+        \note This signal handler is activated on the UAL thread
 
         \param reg Registry to get the handler from
     */
@@ -109,8 +106,7 @@ public:
     /** Get the signal object that is signaled when an application has been
         paused.
 
-        \note This signal handler is activated on the UAL thread, if you want
-            to execute on a different thread you'll need to move the work.
+        \note This signal handler is activated on the UAL thread
 
         \param reg Registry to get the handler from
     */
@@ -122,8 +118,7 @@ public:
     /** Get the signal object that is signaled when an application has been
         resumed.
 
-        \note This signal handler is activated on the UAL thread, if you want
-            to execute on a different thread you'll need to move the work.
+        \note This signal handler is activated on the UAL thread
 
         \param reg Registry to get the handler from
     */
@@ -149,8 +144,7 @@ public:
     public:
         /** Application wishes to startup
 
-            \note This signal handler is activated on the UAL thread, if you want
-                to execute on a different thread you'll need to move the work.
+            \note This signal handler is activated on the UAL thread
 
             \param app Application requesting startup
             \param instance Instance of the app, always valid but not useful
@@ -165,8 +159,7 @@ public:
             a URL for the application is activated and the running app is
             requested.
 
-            \note This signal handler is activated on the UAL thread, if you want
-                to execute on a different thread you'll need to move the work.
+            \note This signal handler is activated on the UAL thread
 
             \param app Application requesting focus
             \param instance Instance of the app, always valid but not useful
@@ -181,8 +174,7 @@ public:
             a URL for the application is activated and the running app is
             requested.
 
-            \note This signal handler is activated on the UAL thread, if you want
-                to execute on a different thread you'll need to move the work.
+            \note This signal handler is activated on the UAL thread
 
             \param app Application requesting resume
             \param instance Instance of the app, always valid but not useful
