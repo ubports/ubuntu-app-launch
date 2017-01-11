@@ -17,15 +17,16 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "jobs-base.h"
 #include "appid.h"
+#include "jobs-base.h"
 #include "registry-impl.h"
 #include "registry.h"
 
 #include "eventually-fixture.h"
+#include "spew-master.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "spew-master.h"
+#include <libdbustest/dbus-test.h>
 
 class RegistryImplMock : public ubuntu::app_launch::Registry::Impl
 {
@@ -69,16 +70,21 @@ public:
 class JobBaseTest : public EventuallyFixture
 {
 protected:
+    std::shared_ptr<DbusTestService> service;
     std::shared_ptr<RegistryMock> registry;
 
     virtual void SetUp()
     {
+        service = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
+                                                   [](DbusTestService* service) { g_clear_object(&service); });
+        dbus_test_service_start_tasks(service.get());
         registry = std::make_shared<RegistryMock>();
     }
 
     virtual void TearDown()
     {
         registry.reset();
+        service.reset();
     }
 
     ubuntu::app_launch::AppID simpleAppID()
@@ -132,7 +138,7 @@ TEST_F(JobBaseTest, pauseResume)
         .WillOnce(testing::Return());
 
     /* Make sure it is running */
-    EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+    EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
     /*** Do Pause ***/
     instance->pause();
@@ -140,7 +146,7 @@ TEST_F(JobBaseTest, pauseResume)
     spew.reset();
     pause(100);  // give spew a chance to send data if it is running
 
-    EXPECT_EQ(0, spew.dataCnt());
+    EXPECT_EQ(0u, spew.dataCnt());
 
     EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::paused())), spew.oomScore());
 
@@ -149,12 +155,12 @@ TEST_F(JobBaseTest, pauseResume)
         .WillOnce(testing::Return());
 
     spew.reset();
-    EXPECT_EQ(0, spew.dataCnt());
+    EXPECT_EQ(0u, spew.dataCnt());
 
     /*** Do Resume ***/
     instance->resume();
 
-    EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+    EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
     EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
 }
@@ -202,7 +208,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
     /* Make sure it is running */
     for (auto& spew : spews)
     {
-        EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+        EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
     }
 
     /*** Do Pause ***/
@@ -216,7 +222,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
 
     for (auto& spew : spews)
     {
-        EXPECT_EQ(0, spew.dataCnt());
+        EXPECT_EQ(0u, spew.dataCnt());
 
         EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::paused())), spew.oomScore());
     }
@@ -228,7 +234,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
     for (auto& spew : spews)
     {
         spew.reset();
-        EXPECT_EQ(0, spew.dataCnt());
+        EXPECT_EQ(0u, spew.dataCnt());
     }
 
     /*** Do Resume ***/
@@ -236,7 +242,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
 
     for (auto& spew : spews)
     {
-        EXPECT_EVENTUALLY_NE(0, spew.datacnt_);
+        EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
         EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
     }

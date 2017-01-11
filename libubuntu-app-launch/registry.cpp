@@ -89,7 +89,7 @@ inline void setJobs(const std::shared_ptr<Registry>& registry)
     }
 }
 
-void Registry::setManager(std::shared_ptr<Manager> manager, std::shared_ptr<Registry> registry)
+void Registry::setManager(const std::shared_ptr<Manager>& manager, const std::shared_ptr<Registry>& registry)
 {
     setJobs(registry);
     registry->impl->jobs->setManager(manager);
@@ -121,35 +121,39 @@ void Registry::clearDefault()
     defaultRegistry.reset();
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted(
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Registry::appStarted(
     const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);
     return reg->impl->jobs->appStarted();
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped(
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Registry::appStopped(
     const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);
     return reg->impl->jobs->appStopped();
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
     Registry::appFailed(const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);
     return reg->impl->jobs->appFailed();
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Registry::appPaused(const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);
     return reg->impl->jobs->appPaused();
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Registry::appResumed(const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);

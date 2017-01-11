@@ -25,7 +25,7 @@
 
 class ZGEvent : public EventuallyFixture
 {
-    GDBusConnection* bus = NULL;
+    GDBusConnection* bus = nullptr;
 
 protected:
     virtual void SetUp()
@@ -41,28 +41,22 @@ protected:
 
     void grabBus()
     {
-        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
     }
 };
 
-static void zg_state_changed(DbusTestTask* task, DbusTestTaskState state, gpointer user_data)
-{
-    auto outstate = reinterpret_cast<DbusTestTaskState*>(user_data);
-    *outstate = state;
-}
-
 TEST_F(ZGEvent, OpenTest)
 {
-    DbusTestService* service = dbus_test_service_new(NULL);
+    DbusTestService* service = dbus_test_service_new(nullptr);
 
     DbusTestDbusMock* mock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
     DbusTestDbusMockObject* obj =
-        dbus_test_dbus_mock_get_object(mock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", NULL);
+        dbus_test_dbus_mock_get_object(mock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", nullptr);
 
     dbus_test_dbus_mock_object_add_method(mock, obj, "InsertEvents", G_VARIANT_TYPE("a(asaasay)"), G_VARIANT_TYPE("au"),
-                                          "ret = [ 0 ]", NULL);
+                                          "ret = [ 0 ]", nullptr);
 
     dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
 
@@ -71,24 +65,23 @@ TEST_F(ZGEvent, OpenTest)
     g_setenv("APP_ID", "foo", TRUE);
     dbus_test_task_set_wait_for(DBUS_TEST_TASK(zgevent), "org.gnome.zeitgeist.Engine");
     dbus_test_task_set_name(DBUS_TEST_TASK(zgevent), "ZGEvent");
-    DbusTestTaskState zgevent_state = DBUS_TEST_TASK_STATE_INIT;
-    g_signal_connect(G_OBJECT(zgevent), DBUS_TEST_TASK_SIGNAL_STATE_CHANGED, G_CALLBACK(zg_state_changed),
-                     &zgevent_state);
 
     dbus_test_service_add_task(service, DBUS_TEST_TASK(zgevent));
 
     dbus_test_service_start_tasks(service);
     grabBus();
 
-    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_FINISHED, zgevent_state);
+    EXPECT_EVENTUALLY_FUNC_EQ(DBUS_TEST_TASK_STATE_FINISHED, std::function<DbusTestTaskState()>{[&zgevent] {
+                                  return dbus_test_task_get_state(DBUS_TEST_TASK(zgevent));
+                              }});
     ASSERT_TRUE(dbus_test_task_passed(DBUS_TEST_TASK(zgevent)));
 
     guint numcalls = 0;
     const DbusTestDbusMockCall* calls =
-        dbus_test_dbus_mock_object_get_method_calls(mock, obj, "InsertEvents", &numcalls, NULL);
+        dbus_test_dbus_mock_object_get_method_calls(mock, obj, "InsertEvents", &numcalls, nullptr);
 
     ASSERT_NE(nullptr, calls);
-    ASSERT_EQ(1, numcalls);
+    ASSERT_EQ(1u, numcalls);
 
     g_object_unref(zgevent);
     g_object_unref(mock);
@@ -97,16 +90,16 @@ TEST_F(ZGEvent, OpenTest)
 
 TEST_F(ZGEvent, TimeoutTest)
 {
-    DbusTestService* service = dbus_test_service_new(NULL);
+    DbusTestService* service = dbus_test_service_new(nullptr);
 
     DbusTestDbusMock* mock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
     DbusTestDbusMockObject* obj =
-        dbus_test_dbus_mock_get_object(mock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", NULL);
+        dbus_test_dbus_mock_get_object(mock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log", nullptr);
 
     dbus_test_dbus_mock_object_add_method(mock, obj, "InsertEvents", G_VARIANT_TYPE("a(asaasay)"), G_VARIANT_TYPE("au"),
                                           "time.sleep(6)\n"
                                           "ret = [ 0 ]",
-                                          NULL);
+                                          nullptr);
 
     dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
 
@@ -115,16 +108,15 @@ TEST_F(ZGEvent, TimeoutTest)
     g_setenv("APP_ID", "foo", TRUE);
     dbus_test_task_set_wait_for(DBUS_TEST_TASK(zgevent), "org.gnome.zeitgeist.Engine");
     dbus_test_task_set_name(DBUS_TEST_TASK(zgevent), "ZGEvent");
-    DbusTestTaskState zgevent_state = DBUS_TEST_TASK_STATE_INIT;
-    g_signal_connect(G_OBJECT(zgevent), DBUS_TEST_TASK_SIGNAL_STATE_CHANGED, G_CALLBACK(zg_state_changed),
-                     &zgevent_state);
 
     dbus_test_service_add_task(service, DBUS_TEST_TASK(zgevent));
 
     dbus_test_service_start_tasks(service);
     grabBus();
 
-    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_FINISHED, zgevent_state);
+    EXPECT_EVENTUALLY_FUNC_EQ(DBUS_TEST_TASK_STATE_FINISHED, std::function<DbusTestTaskState()>{[&zgevent] {
+                                  return dbus_test_task_get_state(DBUS_TEST_TASK(zgevent));
+                              }});
 
     g_object_unref(zgevent);
     g_object_unref(mock);

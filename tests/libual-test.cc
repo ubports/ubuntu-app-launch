@@ -357,6 +357,12 @@ class LibUAL : public EventuallyFixture
 		}
 };
 
+#define TASK_STATE(task)                                                   \
+    std::function<DbusTestTaskState()>                                     \
+    {                                                                      \
+        [&task] { return dbus_test_task_get_state(DBUS_TEST_TASK(task)); } \
+    }
+
 TEST_F(LibUAL, StartApplication)
 {
 	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -373,10 +379,10 @@ TEST_F(LibUAL, StartApplication)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Start", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	GVariant * block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -400,7 +406,7 @@ TEST_F(LibUAL, StartApplication)
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	env = g_variant_get_child_value(calls->params, 0);
 	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
@@ -419,10 +425,10 @@ TEST_F(LibUAL, StartApplicationTest)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Start", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	GVariant * block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -483,7 +489,7 @@ TEST_F(LibUAL, ApplicationPid)
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "com.test.good_application_1.2.3"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
@@ -491,7 +497,7 @@ TEST_F(LibUAL, ApplicationPid)
 	/* Click out of the set */
 	EXPECT_FALSE(ubuntu_app_launch_pid_in_app_id(101, "com.test.good_application_1.2.3"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
@@ -499,7 +505,7 @@ TEST_F(LibUAL, ApplicationPid)
 	/* Legacy Single Instance */
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "single"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-single-")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
@@ -507,7 +513,7 @@ TEST_F(LibUAL, ApplicationPid)
 	/* Legacy Multi Instance */
 	EXPECT_TRUE(ubuntu_app_launch_pid_in_app_id(100, "multiple"));
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-multiple-2342345")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
@@ -580,7 +586,7 @@ TEST_F(LibUAL, ApplicationList)
 	gchar ** apps = ubuntu_app_launch_list_running_apps();
 
 	ASSERT_NE(apps, nullptr);
-	ASSERT_EQ(3, g_strv_length(apps));
+	ASSERT_EQ(3u, g_strv_length(apps));
 
 	/* Not enforcing order, but wanting to use the GTest functions
 	   for "actually testing" so the errors look right. */
@@ -596,7 +602,7 @@ TEST_F(LibUAL, ApplicationList)
 }
 
 typedef struct {
-	unsigned int count;
+	int count;
 	const gchar * name;
 } observer_data_t;
 
@@ -719,7 +725,7 @@ static GDBusMessage *
 filter_starting (GDBusConnection * conn, GDBusMessage * message, gboolean incomming, gpointer user_data)
 {
 	if (g_strcmp0(g_dbus_message_get_member(message), "UnityStartingSignal") == 0) {
-		unsigned int * count = static_cast<unsigned int *>(user_data);
+		auto count = static_cast<int *>(user_data);
 		(*count)++;
 		g_object_unref(message);
 		return NULL;
@@ -739,7 +745,7 @@ starting_observer (const gchar * appid, gpointer user_data)
 TEST_F(LibUAL, StartingResponses)
 {
 	std::string last_observer;
-	unsigned int starting_count = 0;
+	int starting_count = 0;
 	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	guint filter = g_dbus_connection_add_filter(session,
 		filter_starting,
@@ -896,7 +902,7 @@ TEST_F(LibUAL, UnityLostTest)
 	guint end = g_get_monotonic_time();
 
 	g_debug("Start call time: %d ms", (end - start) / 1000);
-	EXPECT_LT(end - start, 2000 * 1000);
+	EXPECT_LT(end - start, 2000u * 1000u);
 
 	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_focus_appid);
 	EXPECT_EVENTUALLY_EQ("com.test.good_application_1.2.3", this->last_resume_appid);
@@ -916,10 +922,10 @@ TEST_F(LibUAL, LegacySingleInstance)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Start", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	GVariant * block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -938,10 +944,10 @@ TEST_F(LibUAL, LegacySingleInstance)
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Start", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -1025,10 +1031,10 @@ TEST_F(LibUAL, StartHelper)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = nullptr;
 	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Start", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	GVariant * block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -1050,10 +1056,10 @@ TEST_F(LibUAL, StartHelper)
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Start", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -1080,7 +1086,7 @@ TEST_F(LibUAL, StartHelper)
 	len = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL));
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	env = g_variant_get_child_value(calls->params, 0);
 	EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
@@ -1110,10 +1116,10 @@ TEST_F(LibUAL, StopHelper)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = nullptr;
 	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL));
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Stop", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	GVariant * block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -1134,10 +1140,10 @@ TEST_F(LibUAL, StopHelper)
 
 	len = 0;
 	EXPECT_NE(nullptr, calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL));
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Stop", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -1163,14 +1169,14 @@ TEST_F(LibUAL, HelperList)
 	gchar ** blanktype = ubuntu_app_launch_list_helpers("not-a-type");
 
 	EXPECT_NE(nullptr, blanktype);
-	EXPECT_EQ(0, g_strv_length(blanktype));
+	EXPECT_EQ(0u, g_strv_length(blanktype));
 
 	g_strfreev(blanktype);
 
 	gchar ** goodtype = ubuntu_app_launch_list_helpers("untrusted-type");
 
 	EXPECT_NE(nullptr, goodtype);
-	EXPECT_EQ(2, g_strv_length(goodtype));
+	EXPECT_EQ(2u, g_strv_length(goodtype));
 
 	if (g_strcmp0(goodtype[0], "com.foo_bar_43.23.12") == 0) {
 		EXPECT_STREQ("com.foo_bar_43.23.12", goodtype[0]);
@@ -1188,14 +1194,14 @@ TEST_F(LibUAL, HelperInstanceList)
 	gchar ** blanktype = ubuntu_app_launch_list_helper_instances("not-a-type", "com.bar_foo_8432.13.1");
 
 	EXPECT_NE(nullptr, blanktype);
-	EXPECT_EQ(0, g_strv_length(blanktype));
+	EXPECT_EQ(0u, g_strv_length(blanktype));
 
 	g_strfreev(blanktype);
 
 	gchar ** goodtype = ubuntu_app_launch_list_helper_instances("untrusted-type", "com.bar_foo_8432.13.1");
 
 	EXPECT_NE(nullptr, goodtype);
-	EXPECT_EQ(1, g_strv_length(goodtype));
+	EXPECT_EQ(1u, g_strv_length(goodtype));
 	EXPECT_STREQ("24034582324132", goodtype[0]);
 
 	g_strfreev(goodtype);
@@ -1203,7 +1209,7 @@ TEST_F(LibUAL, HelperInstanceList)
 
 
 typedef struct {
-	unsigned int count;
+	int count;
 	const gchar * appid;
 	const gchar * type;
 	const gchar * instance;
@@ -1376,8 +1382,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	g_object_unref(G_OBJECT(zgmock));
 
 	/* Give things a chance to start */
-    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_RUNNING, dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)));
-    EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_RUNNING, dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)));
+	EXPECT_EVENTUALLY_FUNC_EQ(DBUS_TEST_TASK_STATE_RUNNING, TASK_STATE(cgmock2));
+	EXPECT_EVENTUALLY_FUNC_EQ(DBUS_TEST_TASK_STATE_RUNNING, TASK_STATE(zgmock));
 
 	/* Setup signal handling */
 	guint paused_count = 0;
@@ -1404,7 +1410,7 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 		nullptr);
 
 	/* Test it */
-	EXPECT_NE(0, datacnt);
+	EXPECT_NE(0u, datacnt);
 	paused_count = 0;
 
 	/* Pause the app */
@@ -1414,15 +1420,15 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	datacnt = 0; /* clear it */
 
 	/* Check data coming out */
-	EXPECT_EVENTUALLY_EQ(1, paused_count);
-	EXPECT_EQ(0, datacnt);
+	EXPECT_EVENTUALLY_EQ(1u, paused_count);
+	EXPECT_EQ(0u, datacnt);
 
 	/* Check to make sure we sent the event to ZG */
 	guint numcalls = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(zgmock, zgobj, "InsertEvents", &numcalls, NULL);
 
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, numcalls);
+	EXPECT_EQ(1u, numcalls);
 
 	dbus_test_dbus_mock_object_clear_method_calls(zgmock, zgobj, NULL);
 
@@ -1437,15 +1443,15 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	EXPECT_TRUE(ubuntu_app_launch_resume_application("com.test.good_application_1.2.3"));
 
 	/* Ensure we started getting some data */
-	EXPECT_EVENTUALLY_EQ(1, resumed_count);
-	EXPECT_NE(0, datacnt);
+	EXPECT_EVENTUALLY_EQ(1u, resumed_count);
+	EXPECT_NE(0u, datacnt);
 
 	/* Check to make sure we sent the event to ZG */
 	numcalls = 0;
 	calls = dbus_test_dbus_mock_object_get_method_calls(zgmock, zgobj, "InsertEvents", &numcalls, NULL);
 
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, numcalls);
+	EXPECT_EQ(1u, numcalls);
 
 	/* Check to ensure we set the OOM score */
 	gchar * resumeoomscore = NULL;
@@ -1454,7 +1460,7 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 	g_free(resumeoomscore);
 
 	/* Check to see if we got the resume dbus signal */
-	EXPECT_EQ(1, resumed_count);
+	EXPECT_EQ(1u, resumed_count);
 
 	/* Clean up */
 	gchar * killstr = g_strdup_printf("kill -9 %d", spewpid);
@@ -1490,10 +1496,10 @@ TEST_F(LibUAL, StartSessionHelper)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
 	EXPECT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	EXPECT_STREQ("Start", calls->name);
-	EXPECT_EQ(2, g_variant_n_children(calls->params));
+	EXPECT_EQ(2u, g_variant_n_children(calls->params));
 
 	GVariant * block = g_variant_get_child_value(calls->params, 1);
 	EXPECT_TRUE(g_variant_get_boolean(block));
@@ -1574,7 +1580,7 @@ TEST_F(LibUAL, SetExec)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 	ASSERT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	gchar * appexecstr = g_strdup_printf("APP_EXEC=%s", exec);
 	GVariant * appexecenv = g_variant_get_child_value(calls[0].params, 1);
@@ -1590,7 +1596,7 @@ TEST_F(LibUAL, SetExec)
 
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 	ASSERT_NE(nullptr, calls);
-	EXPECT_EQ(1, len);
+	EXPECT_EQ(1u, len);
 
 	gchar * demangleexecstr = g_strdup_printf("APP_EXEC=%s %s", SOCKET_DEMANGLER_INSTALL, exec);
 	appexecenv = g_variant_get_child_value(calls[0].params, 1);
@@ -1606,7 +1612,7 @@ TEST_F(LibUAL, SetExec)
 
 	calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
 	ASSERT_NE(nullptr, calls);
-	EXPECT_EQ(2, len);
+	EXPECT_EQ(2u, len);
 
 	appexecenv = g_variant_get_child_value(calls[1].params, 1);
 	EXPECT_STREQ("APP_DIR=/not/a/real/directory", g_variant_get_string(appexecenv, nullptr));
