@@ -81,7 +81,7 @@ TEST_F(SnapdInfo, AppsForInterface)
 
     mock.result();
 
-    EXPECT_EQ(2, apps.size());
+    EXPECT_EQ(2, int(apps.size()));
     EXPECT_NE(apps.end(), apps.find(ubuntu::app_launch::AppID::parse("test-package_foo_x123")));
     EXPECT_NE(apps.end(), apps.find(ubuntu::app_launch::AppID::parse("test-package_bar_x123")));
 }
@@ -104,7 +104,7 @@ TEST_F(SnapdInfo, InterfacesForAppID)
 
     mock.result();
 
-    EXPECT_EQ(2, ifaces.size());
+    EXPECT_EQ(2, int(ifaces.size()));
     EXPECT_NE(ifaces.end(), ifaces.find("unity7"));
     EXPECT_NE(ifaces.end(), ifaces.find("unity8"));
 }

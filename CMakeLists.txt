@@ -227,9 +227,6 @@ add_subdirectory(ubuntu-app-test)
 
 # testing & coverage
 if (${enable_tests})
-  set (GTEST_SOURCE_DIR /usr/src/gtest/src)
-  set (GTEST_INCLUDE_DIR ${GTEST_SOURCE_DIR}/..)
-  set (GTEST_LIBS -lpthread)
   enable_testing ()
   add_subdirectory(tests)
 endif ()
