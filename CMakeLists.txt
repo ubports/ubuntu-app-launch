@@ -249,10 +249,10 @@ ENABLE_COVERAGE_REPORT(
 	failure-test
 	helper-test
 	helper-handshake-test
+	jobs-base-test
 	libual-test
 	libual-cpp-test
 	list-apps
-	jobs-base-test
 #	snap-info-test
 	zg-test
   FILTER
