@@ -575,17 +575,18 @@ ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver o
 	return observer_delete<UbuntuAppLaunchAppFailedObserver>(observer, user_data, appFailedObservers);
 }
 
-static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> appPausedObservers;
-
-gboolean
-ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+/** Handy helper for pause and resume here */
+template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Application>&, const std::shared_ptr<ubuntu::app_launch::Application::Instance>&, const std::vector<pid_t>&>& (*getSignal)(const std::shared_ptr<ubuntu::app_launch::Registry>&)>
+static gboolean
+observer_add_pause (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> &observers)
 {
 	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
-	appPausedObservers.emplace(std::make_pair(
+	observers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
-			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appPaused().connect([context, observer, user_data](const std::shared_ptr<ubuntu::app_launch::Application> &app, const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance, const std::vector<pid_t> &pids) {
+		core::ScopedConnection(
+			getSignal(ubuntu::app_launch::Registry::getDefault())
+				.connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, const std::vector<pid_t> &pids) {
 					std::vector<pid_t> lpids = pids;
 					lpids.emplace_back(0);
 
@@ -594,11 +595,19 @@ ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserv
 					executeOnContext(context, [appid, observer, user_data, lpids]() {
 						observer(appid.c_str(), (int *)(lpids.data()), user_data);
 					});
-				})
-			)
+			})
+		)
 		));
 
 	return TRUE;
+}
+
+static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> appPausedObservers;
+
+gboolean
+ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+{
+	return observer_add_pause<&ubuntu::app_launch::Registry::appPaused>(observer, user_data, appPausedObservers);
 }
 
 gboolean
@@ -612,25 +621,7 @@ static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, co
 gboolean
 ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
-
-	appResumedObservers.emplace(std::make_pair(
-		std::make_pair(observer, user_data),
-			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appResumed().connect([context, observer, user_data](const std::shared_ptr<ubuntu::app_launch::Application>& app, const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance, const std::vector<pid_t>& pids) {
-					std::vector<pid_t> lpids = pids;
-					lpids.emplace_back(0);
-
-					std::string appid = app->appId();
-
-					executeOnContext(context, [appid, observer, user_data, lpids]() {
-						observer(appid.c_str(), (int *)(lpids.data()), user_data);
-					});
-				})
-			)
-		));
-
-	return TRUE;
+	return observer_add_pause<&ubuntu::app_launch::Registry::appResumed>(observer, user_data, appResumedObservers);
 }
 
 gboolean
