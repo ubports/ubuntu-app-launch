@@ -75,10 +75,11 @@ struct upstartEventData
 
 /** Core handler for pause and resume events. Includes turning the GVariant
     pid list into a std::vector and getting the application object. */
-void Base::pauseEventEmitted(
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
-    const std::shared_ptr<GVariant>& params,
-    const std::shared_ptr<Registry>& reg)
+void Base::pauseEventEmitted(core::Signal<const std::shared_ptr<Application>&,
+                                          const std::shared_ptr<Application::Instance>&,
+                                          const std::vector<pid_t>&>& signal,
+                             const std::shared_ptr<GVariant>& params,
+                             const std::shared_ptr<Registry>& reg)
 {
     std::vector<pid_t> pids;
     GVariant* vappid = g_variant_get_child_value(params.get(), 0);
@@ -107,7 +108,9 @@ void Base::pauseEventEmitted(
 
 /** Grab the signal object for application paused. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Base::appPaused()
 {
     std::call_once(flag_appPaused, [this]() {
@@ -154,7 +157,9 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Grab the signal object for application resumed. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Base::appResumed()
 {
     std::call_once(flag_appResumed, [this]() {
@@ -699,22 +704,21 @@ void Base::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
     std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomstr.c_str(), nullptr};
 
     g_debug("Excuting OOM Helper (pid: %d, score: %d): %s", int(pid), int(oomvalue),
-            std::accumulate(args.begin(), args.end(), std::string{},
-                            [](const std::string& instr, const char* output) -> std::string {
-                                if (instr.empty())
-                                {
-                                    return output;
-                                }
-                                else if (output != nullptr)
-                                {
-                                    return instr + " " + std::string(output);
-                                }
-                                else
-                                {
-                                    return instr;
-                                }
-                            })
-                .c_str());
+            std::accumulate(args.begin(), args.end(), std::string{}, [](const std::string& instr,
+                                                                        const char* output) -> std::string {
+                if (instr.empty())
+                {
+                    return output;
+                }
+                else if (output != nullptr)
+                {
+                    return instr + " " + std::string(output);
+                }
+                else
+                {
+                    return instr;
+                }
+            }).c_str());
 
     g_spawn_async(nullptr,               /* working dir */
                   (char**)(args.data()), /* args */
