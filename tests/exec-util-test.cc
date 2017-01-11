@@ -111,7 +111,7 @@ class ExecUtil : public ::testing::Test
 			guint len = 0;
 			const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, nullptr);
 
-			ASSERT_EQ(guint(1), len);
+			ASSERT_EQ(1u, len);
 			ASSERT_NE(nullptr, calls);
 			ASSERT_STREQ("Start", calls[0].name);
 

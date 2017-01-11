@@ -67,7 +67,7 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* No %s and no URLs */
 	output = desktop_exec_parse("foo", NULL);
-	ASSERT_EQ(guint(1), output->len);
+	ASSERT_EQ(1u, output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
