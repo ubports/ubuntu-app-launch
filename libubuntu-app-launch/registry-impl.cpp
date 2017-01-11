@@ -57,7 +57,7 @@ Registry::Impl::Impl(Registry* registry)
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
                  _dbus.reset();
              })
-    , _registry(registry)
+    , _registry{registry}
     , _iconFinders()
 {
     auto cancel = thread.getCancellable();
@@ -185,9 +185,9 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         }
 
         std::list<AppID::Package> list;
-        for (GList* item = pkgs; item != NULL; item = g_list_next(item))
+        for (GList* item = pkgs; item != nullptr; item = g_list_next(item))
         {
-            auto pkgobj = reinterpret_cast<gchar*>(item->data);
+            auto pkgobj = static_cast<gchar*>(item->data);
             if (pkgobj)
             {
                 list.emplace_back(AppID::Package::from_raw(pkgobj));
@@ -260,7 +260,7 @@ void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
         zeitgeist_log_insert_event(zgLog_.get(), /* log */
                                    event,        /* event */
                                    nullptr,      /* cancellable */
-                                   [](GObject* obj, GAsyncResult* res, gpointer user_data) -> void {
+                                   [](GObject* obj, GAsyncResult* res, gpointer user_data) {
                                        GError* error = nullptr;
                                        GArray* result = nullptr;
 
@@ -311,8 +311,11 @@ std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>
     const gchar* cappid = nullptr;
     g_variant_get(params.get(), "(&s)", &cappid);
 
-    auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
-    app = ubuntu::app_launch::Application::create(appid, reg);
+    if (cappid != nullptr)
+    {
+        auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
+        app = ubuntu::app_launch::Application::create(appid, reg);
+    }
 
     return std::make_tuple(app, instance);
 }
@@ -327,9 +330,9 @@ struct managerEventData
     std::function<void(const std::shared_ptr<Registry>& reg,
                        const std::shared_ptr<Application>& app,
                        const std::shared_ptr<Application::Instance>& instance,
-                       const std::shared_ptr<GDBusConnection>&,
-                       const std::string&,
-                       const std::shared_ptr<GVariant>&)>
+                       const std::shared_ptr<GDBusConnection>& dbus,
+                       const std::string& sender,
+                       const std::shared_ptr<GVariant>& params)>
         func;
 };
 
@@ -342,11 +345,11 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
                                           std::function<void(const std::shared_ptr<Registry>& reg,
                                                              const std::shared_ptr<Application>& app,
                                                              const std::shared_ptr<Application::Instance>& instance,
-                                                             const std::shared_ptr<GDBusConnection>&,
-                                                             const std::string&,
-                                                             const std::shared_ptr<GVariant>&)> responsefunc)
+                                                             const std::shared_ptr<GDBusConnection>& dbus,
+                                                             const std::string& sender,
+                                                             const std::shared_ptr<GVariant>& params)> responsefunc)
 {
-    managerEventData* focusdata = new managerEventData{reg, responsefunc};
+    auto focusdata = new managerEventData{reg, responsefunc};
 
     return g_dbus_connection_signal_subscribe(
         reg->impl->_dbus.get(),          /* bus */
@@ -357,8 +360,8 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
         nullptr,                         /* arg0 */
         G_DBUS_SIGNAL_FLAGS_NONE,
         [](GDBusConnection* cconn, const gchar* csender, const gchar*, const gchar*, const gchar*, GVariant* params,
-           gpointer user_data) -> void {
-            auto data = reinterpret_cast<managerEventData*>(user_data);
+           gpointer user_data) {
+            auto data = static_cast<managerEventData*>(user_data);
             auto reg = data->weakReg.lock();
 
             if (!reg)
@@ -367,7 +370,7 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
                 return;
             }
 
-            /* If we're still conneted and the manager has been cleared
+            /* If we're still connected and the manager has been cleared
                we'll just be a no-op */
             if (!reg->impl->manager_)
             {
@@ -387,7 +390,7 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
         },
         focusdata,
         [](gpointer user_data) {
-            auto data = reinterpret_cast<managerEventData*>(user_data);
+            auto data = static_cast<managerEventData*>(user_data);
             delete data;
         }); /* user data destroy */
 }
@@ -397,11 +400,16 @@ guint Registry::Impl::managerSignalHelper(const std::shared_ptr<Registry>& reg,
     signals are only setup once per registry even if the manager is cleared
     and changed again. They will just be no-op's in those cases.
 */
-void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std::shared_ptr<Registry> reg)
+void Registry::Impl::setManager(const std::shared_ptr<Registry::Manager>& manager, const std::shared_ptr<Registry>& reg)
 {
+    if (!reg)
+    {
+        throw std::invalid_argument("Passed null registry to setManager()");
+    }
+
     if (reg->impl->manager_)
     {
-        throw std::runtime_error("Already have a manager and trying to set another");
+        throw std::logic_error("Already have a manager and trying to set another");
     }
 
     g_debug("Setting a new manager");
@@ -413,8 +421,8 @@ void Registry::Impl::setManager(std::shared_ptr<Registry::Manager> manager, std:
                     reg, "UnityFocusRequest",
                     [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
                        const std::shared_ptr<Application::Instance>& instance,
-                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
-                       const std::shared_ptr<GVariant>& params) {
+                       const std::shared_ptr<GDBusConnection>& /* conn */, const std::string& /* sender */,
+                       const std::shared_ptr<GVariant>& /* params */) {
                         /* Nothing to do today */
                         reg->impl->manager_->focusRequest(app, instance, [](bool response) {
                             /* NOTE: We have no clue what thread this is gonna be
@@ -506,16 +514,16 @@ bool Registry::Impl::isWatchingAppStarting()
 }
 
 /** Regex to parse the JOB environment variable from Upstart */
-std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
+const std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
 /** Regex to parse the INSTANCE environment variable from Upstart */
-std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
+const std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
 
 /** Core of most of the events that come from Upstart directly. Includes parsing of the
     Upstart event environment and calling the appropriate signal with the right Application
     object and eventually its instance */
 void Registry::Impl::upstartEventEmitted(
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
-    std::shared_ptr<GVariant> params,
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& signal,
+    const std::shared_ptr<GVariant>& params,
     const std::shared_ptr<Registry>& reg)
 {
     std::string jobname;
@@ -523,7 +531,7 @@ void Registry::Impl::upstartEventEmitted(
     std::string instance;
 
     gchar* env = nullptr;
-    GVariant* envs = g_variant_get_child_value(params.get(), 1);
+    auto envs = g_variant_get_child_value(params.get(), 1);
     GVariantIter iter;
     g_variant_iter_init(&iter, envs);
 
@@ -555,19 +563,19 @@ void Registry::Impl::upstartEventEmitted(
     auto appid = AppID::find(reg, sappid);
     auto app = Application::create(appid, reg);
 
-    // TODO: Figure otu creating instances
+    // TODO: Figure out creating instances
 
     signal(app, {});
 }
 
 /** Grab the signal object for application startup. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStarted(
-    const std::shared_ptr<Registry>& reg)
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+    Registry::Impl::appStarted(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appStarted, [reg]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appStarted = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(), /* bus */
@@ -578,8 +586,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 "started",              /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                   gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -593,7 +601,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
@@ -606,12 +614,12 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Grab the signal object for application stopping. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::Impl::appStopped(
-    const std::shared_ptr<Registry>& reg)
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+    Registry::Impl::appStopped(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appStopped, [reg]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appStopped = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(), /* bus */
@@ -622,8 +630,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 "stopped",              /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                   gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -637,7 +645,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
@@ -650,12 +658,12 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Grab the signal object for application failing. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
     Registry::Impl::appFailed(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appFailed, [reg]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appFailed = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
@@ -666,8 +674,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 nullptr,                         /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                   gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -676,8 +684,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                         return;
                     }
 
-                    const gchar* sappid = NULL;
-                    const gchar* typestr = NULL;
+                    const gchar* sappid = nullptr;
+                    const gchar* typestr = nullptr;
 
                     Registry::FailureType type = Registry::FailureType::CRASH;
                     g_variant_get(params, "(&s&s)", &sappid, &typestr);
@@ -704,7 +712,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
@@ -717,14 +725,15 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Core handler for pause and resume events. Includes turning the GVariant
     pid list into a std::vector and getting the application object. */
-void Registry::Impl::pauseEventEmitted(
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>& signal,
-    const std::shared_ptr<GVariant>& params,
-    const std::shared_ptr<Registry>& reg)
+void Registry::Impl::pauseEventEmitted(core::Signal<const std::shared_ptr<Application>&,
+                                                    const std::shared_ptr<Application::Instance>&,
+                                                    const std::vector<pid_t>&>& signal,
+                                       const std::shared_ptr<GVariant>& params,
+                                       const std::shared_ptr<Registry>& reg)
 {
     std::vector<pid_t> pids;
-    GVariant* vappid = g_variant_get_child_value(params.get(), 0);
-    GVariant* vpids = g_variant_get_child_value(params.get(), 1);
+    auto vappid = g_variant_get_child_value(params.get(), 0);
+    auto vpids = g_variant_get_child_value(params.get(), 1);
     guint64 pid;
     GVariantIter thispid;
     g_variant_iter_init(&thispid, vpids);
@@ -734,7 +743,7 @@ void Registry::Impl::pauseEventEmitted(
         pids.emplace_back(pid);
     }
 
-    auto cappid = g_variant_get_string(vappid, NULL);
+    auto cappid = g_variant_get_string(vappid, nullptr);
     auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
     auto app = Application::create(appid, reg);
 
@@ -749,12 +758,14 @@ void Registry::Impl::pauseEventEmitted(
 
 /** Grab the signal object for application paused. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Registry::Impl::appPaused(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appPaused, [&]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appPaused = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
@@ -765,8 +776,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 nullptr,                         /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                   gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -780,7 +791,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
@@ -793,12 +804,14 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
 
 /** Grab the signal object for application resumed. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Registry::Impl::appResumed(const std::shared_ptr<Registry>& reg)
 {
     std::call_once(flag_appResumed, [&]() {
         reg->impl->thread.executeOnThread<bool>([reg]() {
-            upstartEventData* data = new upstartEventData{reg};
+            auto data = new upstartEventData{reg};
 
             reg->impl->handle_appResumed = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
@@ -809,8 +822,8 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 nullptr,                         /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                   gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
                     auto reg = data->weakReg.lock();
 
                     if (!reg)
@@ -824,7 +837,7 @@ core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
+                    auto data = static_cast<upstartEventData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 

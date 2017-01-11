@@ -761,7 +761,7 @@ std::vector<pid_t> Upstart::pidsFromCgroup(const std::string& jobpath)
             return {};
         }
 
-        GVariant* vpids = g_variant_get_child_value(vtpids, 0);
+        auto vpids = g_variant_get_child_value(vtpids, 0);
         GVariantIter iter;
         g_variant_iter_init(&iter, vpids);
         gint32 pid;
@@ -873,7 +873,7 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
                 return {};
             }
 
-            GVariant* instance_list = g_variant_get_child_value(instance_tuple, 0);
+            auto instance_list = g_variant_get_child_value(instance_tuple, 0);
             g_variant_unref(instance_tuple);
 
             GVariantIter instance_iter;
@@ -904,9 +904,9 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
                     continue;
                 }
 
-                GVariant* props_dict = g_variant_get_child_value(props_tuple, 0);
+                auto props_dict = g_variant_get_child_value(props_tuple, 0);
 
-                GVariant* namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
+                auto namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
                 if (namev != nullptr)
                 {
                     auto name = g_variant_get_string(namev, NULL);
@@ -964,11 +964,10 @@ std::list<std::shared_ptr<Application>> Upstart::runningApps()
     }
 
     g_debug("Overall there are %d instances: %s", int(instanceset.size()),
-            std::accumulate(instanceset.begin(), instanceset.end(), std::string{},
-                            [](const std::string& instr, std::string instance) {
-                                return instr.empty() ? instance : instr + ", " + instance;
-                            })
-                .c_str());
+            std::accumulate(instanceset.begin(), instanceset.end(), std::string{}, [](const std::string& instr,
+                                                                                      std::string instance) {
+                return instr.empty() ? instance : instr + ", " + instance;
+            }).c_str());
 
     /* Convert to Applications */
     auto registry = registry_.lock();

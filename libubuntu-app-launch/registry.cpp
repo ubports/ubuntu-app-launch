@@ -80,7 +80,7 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
     return list;
 }
 
-void Registry::setManager(std::shared_ptr<Manager> manager, std::shared_ptr<Registry> registry)
+void Registry::setManager(const std::shared_ptr<Manager>& manager, const std::shared_ptr<Registry>& registry)
 {
     Registry::Impl::setManager(manager, registry);
 }
@@ -106,31 +106,35 @@ void Registry::clearDefault()
     defaultRegistry.reset();
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStarted(
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Registry::appStarted(
     const std::shared_ptr<Registry>& reg)
 {
     return reg->impl->appStarted(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& Registry::appStopped(
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Registry::appStopped(
     const std::shared_ptr<Registry>& reg)
 {
     return reg->impl->appStopped(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
     Registry::appFailed(const std::shared_ptr<Registry>& reg)
 {
     return reg->impl->appFailed(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Registry::appPaused(const std::shared_ptr<Registry>& reg)
 {
     return reg->impl->appPaused(reg);
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, std::vector<pid_t>&>&
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
     Registry::appResumed(const std::shared_ptr<Registry>& reg)
 {
     return reg->impl->appResumed(reg);
