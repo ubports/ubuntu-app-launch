@@ -54,7 +54,8 @@ public:
     std::list<AppID::Package> getClickPackages();
     std::string getClickDir(const std::string& package);
 
-    static void setManager(std::shared_ptr<Registry::Manager> manager, std::shared_ptr<Registry> registry);
+    static void setManager(const std::shared_ptr<Registry::Manager>& manager,
+                           const std::shared_ptr<Registry>& registry);
     void clearManager();
 
     /** Shared context thread for events and background tasks

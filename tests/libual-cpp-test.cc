@@ -84,8 +84,8 @@ protected:
         std::chrono::milliseconds focusTimeout{0};
         std::chrono::milliseconds resumeTimeout{0};
 
-        void startingRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                             std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+        void startingRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                             const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                              std::function<void(bool)> reply) override
         {
             thread.timeout(startingTimeout, [this, app, instance, reply]() {
@@ -94,8 +94,8 @@ protected:
             });
         }
 
-        void focusRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                          std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+        void focusRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                          const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                           std::function<void(bool)> reply) override
         {
             thread.timeout(focusTimeout, [this, app, instance, reply]() {
@@ -104,8 +104,8 @@ protected:
             });
         }
 
-        void resumeRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                           std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+        void resumeRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                           const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                            std::function<void(bool)> reply) override
         {
             thread.timeout(resumeTimeout, [this, app, instance, reply]() {
@@ -1618,28 +1618,24 @@ TEST_F(LibUAL, DISABLED_PauseResume)
     guint paused_count = 0;
     guint resumed_count = 0;
 
-    ubuntu::app_launch::Registry::appPaused(registry).connect(
-        [&paused_count](std::shared_ptr<ubuntu::app_launch::Application> app,
-                        std::shared_ptr<ubuntu::app_launch::Application::Instance> inst, std::vector<pid_t>& pids) {
-            g_debug("App paused: %s (%s)", std::string(app->appId()).c_str(),
-                    std::accumulate(pids.begin(), pids.end(), std::string{},
-                                    [](const std::string& accum, pid_t pid) {
-                                        return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
-                                    })
-                        .c_str());
-            paused_count++;
-        });
-    ubuntu::app_launch::Registry::appResumed(registry).connect(
-        [&resumed_count](std::shared_ptr<ubuntu::app_launch::Application> app,
-                         std::shared_ptr<ubuntu::app_launch::Application::Instance> inst, std::vector<pid_t>& pids) {
-            g_debug("App resumed: %s (%s)", std::string(app->appId()).c_str(),
-                    std::accumulate(pids.begin(), pids.end(), std::string{},
-                                    [](const std::string& accum, pid_t pid) {
-                                        return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
-                                    })
-                        .c_str());
-            resumed_count++;
-        });
+    ubuntu::app_launch::Registry::appPaused(registry).connect([&paused_count](
+        const std::shared_ptr<ubuntu::app_launch::Application>& app,
+        const std::shared_ptr<ubuntu::app_launch::Application::Instance>& inst, const std::vector<pid_t>& pids) {
+        g_debug("App paused: %s (%s)", std::string(app->appId()).c_str(),
+                std::accumulate(pids.begin(), pids.end(), std::string{}, [](const std::string& accum, pid_t pid) {
+                    return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
+                }).c_str());
+        paused_count++;
+    });
+    ubuntu::app_launch::Registry::appResumed(registry).connect([&resumed_count](
+        const std::shared_ptr<ubuntu::app_launch::Application>& app,
+        const std::shared_ptr<ubuntu::app_launch::Application::Instance>& inst, const std::vector<pid_t>& pids) {
+        g_debug("App resumed: %s (%s)", std::string(app->appId()).c_str(),
+                std::accumulate(pids.begin(), pids.end(), std::string{}, [](const std::string& accum, pid_t pid) {
+                    return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
+                }).c_str());
+        resumed_count++;
+    });
 
     /* Get our app object */
     auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
@@ -1748,28 +1744,24 @@ TEST_F(LibUAL, MultiPause)
     guint paused_count = 0;
     guint resumed_count = 0;
 
-    ubuntu::app_launch::Registry::appPaused(registry).connect(
-        [&paused_count](std::shared_ptr<ubuntu::app_launch::Application> app,
-                        std::shared_ptr<ubuntu::app_launch::Application::Instance> inst, std::vector<pid_t>& pids) {
-            g_debug("App paused: %s (%s)", std::string(app->appId()).c_str(),
-                    std::accumulate(pids.begin(), pids.end(), std::string{},
-                                    [](const std::string& accum, pid_t pid) {
-                                        return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
-                                    })
-                        .c_str());
-            paused_count++;
-        });
-    ubuntu::app_launch::Registry::appResumed(registry).connect(
-        [&resumed_count](std::shared_ptr<ubuntu::app_launch::Application> app,
-                         std::shared_ptr<ubuntu::app_launch::Application::Instance> inst, std::vector<pid_t>& pids) {
-            g_debug("App resumed: %s (%s)", std::string(app->appId()).c_str(),
-                    std::accumulate(pids.begin(), pids.end(), std::string{},
-                                    [](const std::string& accum, pid_t pid) {
-                                        return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
-                                    })
-                        .c_str());
-            resumed_count++;
-        });
+    ubuntu::app_launch::Registry::appPaused(registry).connect([&paused_count](
+        const std::shared_ptr<ubuntu::app_launch::Application>& app,
+        const std::shared_ptr<ubuntu::app_launch::Application::Instance>& inst, const std::vector<pid_t>& pids) {
+        g_debug("App paused: %s (%s)", std::string(app->appId()).c_str(),
+                std::accumulate(pids.begin(), pids.end(), std::string{}, [](const std::string& accum, pid_t pid) {
+                    return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
+                }).c_str());
+        paused_count++;
+    });
+    ubuntu::app_launch::Registry::appResumed(registry).connect([&resumed_count](
+        const std::shared_ptr<ubuntu::app_launch::Application>& app,
+        const std::shared_ptr<ubuntu::app_launch::Application::Instance>& inst, const std::vector<pid_t>& pids) {
+        g_debug("App resumed: %s (%s)", std::string(app->appId()).c_str(),
+                std::accumulate(pids.begin(), pids.end(), std::string{}, [](const std::string& accum, pid_t pid) {
+                    return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
+                }).c_str());
+        resumed_count++;
+    });
 
     /* Get our app object */
     auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
