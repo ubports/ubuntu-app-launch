@@ -40,7 +40,7 @@ Registry::Impl::Impl(Registry* registry)
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
                  _dbus.reset();
              })
-    , _registry(registry)
+    , _registry{registry}
     , _iconFinders()
 {
     auto cancel = thread.getCancellable();
@@ -168,9 +168,9 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         }
 
         std::list<AppID::Package> list;
-        for (GList* item = pkgs; item != NULL; item = g_list_next(item))
+        for (GList* item = pkgs; item != nullptr; item = g_list_next(item))
         {
-            auto pkgobj = reinterpret_cast<gchar*>(item->data);
+            auto pkgobj = static_cast<gchar*>(item->data);
             if (pkgobj)
             {
                 list.emplace_back(AppID::Package::from_raw(pkgobj));
@@ -243,7 +243,7 @@ void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
         zeitgeist_log_insert_event(zgLog_.get(), /* log */
                                    event,        /* event */
                                    nullptr,      /* cancellable */
-                                   [](GObject* obj, GAsyncResult* res, gpointer user_data) -> void {
+                                   [](GObject* obj, GAsyncResult* res, gpointer user_data) {
                                        GError* error = nullptr;
                                        GArray* result = nullptr;
 

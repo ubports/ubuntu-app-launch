@@ -67,46 +67,46 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* No %s and no URLs */
 	output = desktop_exec_parse("foo", NULL);
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(1u, output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
 	/* URL without any % items */
 	output = desktop_exec_parse("foo", "http://ubuntu.com");
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
 	/* Little u with a single URL */
 	output = desktop_exec_parse("foo %u", "http://ubuntu.com");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
 	g_array_free(output, TRUE);
 
 	/* Little u with a NULL string */
 	output = desktop_exec_parse("foo %u", "");
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
 	/* Big %U with a single URL */
 	output = desktop_exec_parse("foo %U", "http://ubuntu.com");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
 	g_array_free(output, TRUE);
 
 	/* Little %u by itself */
 	output = desktop_exec_parse("foo %u", "http://ubuntu.com http://slashdot.org");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
 	g_array_free(output, TRUE);
 
 	/* Little %u in quotes */
 	output = desktop_exec_parse("foo %u \"%u\" %u%u", "http://ubuntu.com");
-	ASSERT_EQ(output->len, 4);
+	ASSERT_EQ(guint(4), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
 	ASSERT_STREQ(g_array_index(output, gchar *, 2), "http://ubuntu.com");
@@ -115,33 +115,33 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* Single escaped " before the URL as a second param */
 	output = desktop_exec_parse("foo \\\"%u", "http://ubuntu.com");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"http://ubuntu.com");
 	g_array_free(output, TRUE);
 
 	/* URL is a quote, make sure we handle the error */
 	output = desktop_exec_parse("foo %u", "\"");
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
 	/* Lots of quotes, escaped and not */
 	output = desktop_exec_parse("foo \\\"\"%u\"", "'\"'");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "\"\"");
 	g_array_free(output, TRUE);
 
 	/* Let's have no params, but a little %u */
 	output = desktop_exec_parse("foo\\ %u", "bar");
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo bar");
 	g_array_free(output, TRUE);
 
 	/* Big U with two URLs */
 	output = desktop_exec_parse("foo %U", "http://ubuntu.com http://slashdot.org");
-	ASSERT_EQ(output->len, 3);
+	ASSERT_EQ(guint(3), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
 	ASSERT_STREQ(g_array_index(output, gchar *, 2), "http://slashdot.org");
@@ -149,46 +149,46 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* Big U with no URLs */
 	output = desktop_exec_parse("foo %U", NULL);
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
 	/* Big U with quoted URL */
 	output = desktop_exec_parse("foo %U", "'http://ubuntu.com'");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
 	g_array_free(output, TRUE);
 
 	/* Big U with URLs that have spaces */
 	output = desktop_exec_parse("foo %u", "'http://bob.com/foo bar/' http://slashdot.org");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://bob.com/foo bar/");
 	g_array_free(output, TRUE);
 
 	/* %f with a valid file */
 	output = desktop_exec_parse("foo %f", "file:///proc/version");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
 	g_array_free(output, TRUE);
 
 	/* A %f with a NULL string */
 	output = desktop_exec_parse("foo %f", "");
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
 	/* %f with a URL that isn't a file */
 	output = desktop_exec_parse("foo %f", "torrent://moviephone.com/hot-new-movie");
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
 	/* Lots of %f combinations */
 	output = desktop_exec_parse("foo %f \"%f\" %f%f %f\\ %f", "file:///proc/version");
-	ASSERT_EQ(output->len, 5);
+	ASSERT_EQ(guint(5), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
 	ASSERT_STREQ(g_array_index(output, gchar *, 2), "/proc/version");
@@ -198,14 +198,14 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* Little f with two files */
 	output = desktop_exec_parse("foo %f", "file:///proc/version file:///proc/uptime");
-	ASSERT_EQ(output->len, 2);
+	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
 	g_array_free(output, TRUE);
 
 	/* Big F with two files */
 	output = desktop_exec_parse("foo %F", "file:///proc/version file:///proc/uptime");
-	ASSERT_EQ(output->len, 3);
+	ASSERT_EQ(guint(3), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "/proc/version");
 	ASSERT_STREQ(g_array_index(output, gchar *, 2), "/proc/uptime");
@@ -213,13 +213,13 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* Big F with no files */
 	output = desktop_exec_parse("foo %F", NULL);
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
 	/* Groups of percents */
 	output = desktop_exec_parse("foo %% \"%%\" %%%%", NULL);
-	ASSERT_EQ(output->len, 4);
+	ASSERT_EQ(guint(4), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "%");
 	ASSERT_STREQ(g_array_index(output, gchar *, 2), "%");
@@ -228,7 +228,7 @@ TEST_F(HelperTest, DesktopExecParse)
 
 	/* All the % sequences we don't support */
 	output = desktop_exec_parse("foo %d %D %n %N %v %m %i %c %k", "file:///proc/version");
-	ASSERT_EQ(output->len, 1);
+	ASSERT_EQ(guint(1), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	g_array_free(output, TRUE);
 
@@ -295,7 +295,7 @@ TEST_F(HelperTest, SetConfinedEnvvars)
 	guint len = 0;
 	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
 
-	ASSERT_EQ(len, 1);
+	ASSERT_EQ(guint(1), len);
 	ASSERT_NE(calls, nullptr);
 	ASSERT_STREQ("SetEnvList", calls[0].name);
 

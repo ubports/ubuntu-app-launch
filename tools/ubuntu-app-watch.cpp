@@ -23,21 +23,21 @@
 
 std::promise<int> retval;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     ubuntu::app_launch::Registry registry;
 
-    registry.appStarted().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+    registry.appStarted().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance) {
         std::cout << "Started: " << (std::string)app->appId() << std::endl;
     });
-    registry.appStopped().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+    registry.appStopped().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance) {
         std::cout << "Stopped: " << (std::string)app->appId() << std::endl;
     });
-    registry.appPaused().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
-                                    std::vector<pid_t> &pids) {
+    registry.appPaused().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                    const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
+                                    const std::vector<pid_t>& pids) {
         std::cout << "Paused:  " << (std::string)app->appId() << " (";
 
         for (auto pid : pids)
@@ -47,9 +47,9 @@ int main(int argc, char *argv[])
 
         std::cout << ")" << std::endl;
     });
-    registry.appResumed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
-                                     std::vector<pid_t> &pids) {
+    registry.appResumed().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
+                                     const std::vector<pid_t>& pids) {
         std::cout << "Resumed: " << (std::string)app->appId() << " (";
 
         for (auto pid : pids)
@@ -59,8 +59,8 @@ int main(int argc, char *argv[])
 
         std::cout << ")" << std::endl;
     });
-    registry.appFailed().connect([](std::shared_ptr<ubuntu::app_launch::Application> app,
-                                    std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+    registry.appFailed().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                    const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                                     ubuntu::app_launch::Registry::FailureType type) {
         std::cout << "Failed:  " << (std::string)app->appId();
         switch (type)

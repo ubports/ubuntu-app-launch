@@ -906,8 +906,9 @@ void SystemD::unitRemoved(const std::string& name, const std::string& path)
     }
 }
 
-void SystemD::emitSignal(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& sig,
-                         UnitInfo& info)
+void SystemD::emitSignal(
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& sig,
+    UnitInfo& info)
 {
     auto reg = registry_.lock();
     if (!reg)
@@ -1116,14 +1117,14 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
     });
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStarted()
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& SystemD::appStarted()
 {
     /* For systemd we're automatically listening to the UnitNew signal
        and emitting on the object */
     return sig_appStarted;
 }
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& SystemD::appStopped()
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& SystemD::appStopped()
 {
     /* For systemd we're automatically listening to the UnitRemoved signal
        and emitting on the object */
@@ -1135,7 +1136,7 @@ struct FailedData
     std::weak_ptr<Registry> registry;
 };
 
-core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
     SystemD::appFailed()
 {
     std::call_once(flag_appFailed, [this]() {

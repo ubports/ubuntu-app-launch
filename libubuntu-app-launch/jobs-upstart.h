@@ -55,9 +55,13 @@ public:
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
 
     /* Signals to apps */
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+        appStarted() override;
+    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+        appStopped() override;
+    virtual core::Signal<const std::shared_ptr<Application>&,
+                         const std::shared_ptr<Application::Instance>&,
+                         Registry::FailureType>&
         appFailed() override;
 
     std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
@@ -85,9 +89,10 @@ private:
     std::once_flag
         flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
 
-    void upstartEventEmitted(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& signal,
-                             std::shared_ptr<GVariant> params,
-                             const std::shared_ptr<Registry>& reg);
+    void upstartEventEmitted(
+        core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& signal,
+        std::shared_ptr<GVariant> params,
+        const std::shared_ptr<Registry>& reg);
 };
 
 }  // namespace manager

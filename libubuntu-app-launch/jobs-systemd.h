@@ -57,9 +57,13 @@ public:
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
 
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStarted() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& appStopped() override;
-    virtual core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, Registry::FailureType>&
+    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+        appStarted() override;
+    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+        appStopped() override;
+    virtual core::Signal<const std::shared_ptr<Application>&,
+                         const std::shared_ptr<Application::Instance>&,
+                         Registry::FailureType>&
         appFailed() override;
 
     static std::string userBusPath();
@@ -134,8 +138,9 @@ private:
 
     void unitNew(const std::string& name, const std::string& path);
     void unitRemoved(const std::string& name, const std::string& path);
-    void emitSignal(core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>& sig,
-                    UnitInfo& info);
+    void emitSignal(
+        core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& sig,
+        UnitInfo& info);
 
     static std::string findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
     static void removeEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
