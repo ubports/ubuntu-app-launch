@@ -31,7 +31,7 @@ private:
 protected:
     std::shared_ptr<ubuntu::app_launch::Registry> registry;
 
-    virtual void SetUp()
+    virtual void SetUp() override
     {
         /* Click DB test mode */
         g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
@@ -51,7 +51,7 @@ protected:
         registry = std::make_shared<ubuntu::app_launch::Registry>();
     }
 
-    virtual void TearDown()
+    virtual void TearDown() override
     {
         registry.reset();
 

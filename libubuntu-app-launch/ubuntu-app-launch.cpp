@@ -274,7 +274,7 @@ struct _failed_observer_t {
 
 /* Function to take a work function and have it execute on a given
    GMainContext */
-static void executeOnContext (std::shared_ptr<GMainContext> context, std::function<void()> work)
+static void executeOnContext (const std::shared_ptr<GMainContext>& context, std::function<void()> work)
 {
 	if (!context) {
 		work();
@@ -299,40 +299,58 @@ static void executeOnContext (std::shared_ptr<GMainContext> context, std::functi
     g_source_attach(source.get(), context.get());
 }
 
-/* Map of all the observers listening for app started */
-static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> appStartedObservers;
-
-gboolean
-ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+/** A handy helper function that is based of a function to get
+    a signal and put it into a map. */
+template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Application>&, const std::shared_ptr<ubuntu::app_launch::Application::Instance>&>& (*getSignal)(const std::shared_ptr<ubuntu::app_launch::Registry>&)>
+static gboolean
+observer_add (UbuntuAppLaunchAppObserver observer, gpointer user_data, std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> &observers)
 {
 	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
-	appStartedObservers.emplace(std::make_pair(
+	observers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
-			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appStarted().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+		core::ScopedConnection(
+			getSignal(ubuntu::app_launch::Registry::getDefault())
+				.connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
 					std::string appid = app->appId();
 					executeOnContext(context, [appid, observer, user_data]() {
 						observer(appid.c_str(), user_data);
 					});
-				})
-			)
+			})
+		)
 		));
 
 	return TRUE;
 }
 
-gboolean
-ubuntu_app_launch_observer_delete_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+/** A handy helper to delete items from an observer map */
+template<typename observertype>
+static gboolean
+observer_delete (observertype observer, gpointer user_data, std::map<std::pair<observertype, gpointer>, core::ScopedConnection> &observers)
 {
-	auto iter = appStartedObservers.find(std::make_pair(observer, user_data));
+	auto iter = observers.find(std::make_pair(observer, user_data));
 
-	if (iter == appStartedObservers.end()) {
+	if (iter == observers.end()) {
 		return FALSE;
 	}
 
-	appStartedObservers.erase(iter);
+	observers.erase(iter);
 	return TRUE;
+}
+
+/** Map of all the observers listening for app started */
+static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> appStartedObservers;
+
+gboolean
+ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+{
+	return observer_add<&ubuntu::app_launch::Registry::appStarted>(observer, user_data, appStartedObservers);
+}
+
+gboolean
+ubuntu_app_launch_observer_delete_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+{
+	return observer_delete<UbuntuAppLaunchAppObserver>(observer, user_data, appStartedObservers);
 }
 
 /* Map of all the observers listening for app stopped */
@@ -341,36 +359,17 @@ static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedCon
 gboolean
 ubuntu_app_launch_observer_add_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
-
-	appStoppedObservers.emplace(std::make_pair(
-		std::make_pair(observer, user_data),
-			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appStopped().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
-					std::string appid = app->appId();
-					executeOnContext(context, [appid, observer, user_data]() {
-						observer(appid.c_str(), user_data);
-					});
-				})
-			)
-		));
-
-	return TRUE;
+	return observer_add<&ubuntu::app_launch::Registry::appStopped>(observer, user_data, appStoppedObservers);
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto iter = appStoppedObservers.find(std::make_pair(observer, user_data));
-
-	if (iter == appStoppedObservers.end()) {
-		return FALSE;
-	}
-
-	appStoppedObservers.erase(iter);
-	return TRUE;
+	return observer_delete<UbuntuAppLaunchAppObserver>(observer, user_data, appStoppedObservers);
 }
 
+/** Class to implement the Registry::Manager interface for the C code
+    using a GLib mainloop. */
 class CManager : public ubuntu::app_launch::Registry::Manager
 {
 public:
@@ -378,57 +377,33 @@ public:
 		g_debug("Creating the CManager object");
 	}
 
-	void startingRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                                     std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+	void startingRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                                      std::function<void(bool)> reply) override {
-		std::string sappid = app->appId();
-		g_debug("CManager starting: %s", sappid.c_str());
-
-		for (const auto &data : startingList) {
-			executeOnContext(data.context, [data, sappid]() {
-				data.observer(sappid.c_str(), data.user_data);
-			});
-		}
-
-		reply(true);
+		requestImpl(app, instance, reply, "starting", startingList);
 	}
 
-	void focusRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                                  std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+	void focusRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                  const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                                   std::function<void(bool)> reply) override {
-		std::string sappid = app->appId();
-		g_debug("CManager focus: %s", sappid.c_str());
-
-		for (const auto &data : focusList) {
-			executeOnContext(data.context, [data, sappid]() {
-				data.observer(sappid.c_str(), data.user_data);
-			});
-		}
-
-		reply(true);
+		requestImpl(app, instance, reply, "focus", focusList);
 	}
 
-	void resumeRequest(std::shared_ptr<ubuntu::app_launch::Application> app,
-                                   std::shared_ptr<ubuntu::app_launch::Application::Instance> instance,
+	void resumeRequest(const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                   const std::shared_ptr<ubuntu::app_launch::Application::Instance> &instance,
                                    std::function<void(bool)> reply) override {
-		std::string sappid = app->appId();
-		g_debug("CManager resume: %s", sappid.c_str());
-
-		for (const auto &data : resumeList) {
-			executeOnContext(data.context, [data, sappid]() {
-				data.observer(sappid.c_str(), data.user_data);
-			});
-		}
-
-		reply(true);
+		requestImpl(app, instance, reply, "resume", resumeList);
 	}
 
 private:
+	/** The Data that we track on an observer. It is the functions to
+	    call, the user data and the context to call it on. */
 	struct ObserverData {
 		UbuntuAppLaunchAppObserver observer;
 		gpointer user_data;
 		std::shared_ptr<GMainContext> context;
 
+		/** Handy constructor to get the context in one place */
 		ObserverData(UbuntuAppLaunchAppObserver obs, gpointer ud)
 			: observer(obs)
 			, user_data(ud) {
@@ -436,11 +411,12 @@ private:
 		}
 	};
 
-	std::list<ObserverData> focusList;
-	std::list<ObserverData> resumeList;
-	std::list<ObserverData> startingList;
+	std::list<ObserverData> focusList;    /**< List of observers on the focus signal */
+	std::list<ObserverData> resumeList;   /**< List of observers on the resume signal */
+	std::list<ObserverData> startingList; /**< List of observers on the starting signal */
 
-	bool removeList (std::list<ObserverData> &list, UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+	/** Removes an observer from a specified list */
+	bool removeObserver (std::list<ObserverData> &list, UbuntuAppLaunchAppObserver observer, gpointer user_data) {
 		auto iter = std::find_if(list.begin(), list.end(), [observer, user_data](const ObserverData &data) {
 			return data.observer == observer && data.user_data == user_data;
 		});
@@ -451,6 +427,24 @@ private:
 
 		list.erase(iter);
 		return true;
+	}
+
+	/** Implements a request for a specified list by calling each observer and then the reply */
+	inline void requestImpl ( const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                   const std::shared_ptr<ubuntu::app_launch::Application::Instance> &instance,
+                                   std::function<void(bool)> reply,
+				   const std::string& name,
+				   std::list<ObserverData>& list) {
+		std::string sappid = app->appId();
+		g_debug("CManager %s: %s", name.c_str(), sappid.c_str());
+
+		for (const auto &data : list) {
+			executeOnContext(data.context, [data, sappid]() {
+				data.observer(sappid.c_str(), data.user_data);
+			});
+		}
+
+		reply(true);
 	}
 
 public:
@@ -464,42 +458,40 @@ public:
 		startingList.emplace_back(ObserverData(observer, user_data));
 	}
 	bool deleteFocus (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		return removeList(focusList, observer, user_data);
+		return removeObserver(focusList, observer, user_data);
 	}
 	bool deleteResume (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		return removeList(resumeList, observer, user_data);
+		return removeObserver(resumeList, observer, user_data);
 	}
 	bool deleteStarting (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
-		return removeList(startingList, observer, user_data);
+		return removeObserver(startingList, observer, user_data);
 	}
 };
 
+/** Weak pointer to the CManager if it is still in use. If it gets free'd by
+    the registry we're okay with that. */
 static std::weak_ptr<CManager> cmanager;
 
-/* Generic handler for a bunch of our signals */
-static inline void
-generic_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+/** Function to create the CManager if it doesn't currently exist. Otherwise
+    just return a lock to it */
+static std::shared_ptr<CManager>
+ensure_cmanager ()
 {
-	observer_t * observer = (observer_t *)user_data;
-	const gchar * appid = NULL;
+	auto retval = cmanager.lock();
 
-	if (observer->func != NULL) {
-		g_variant_get(params, "(&s)", &appid);
-		observer->func(appid, observer->user_data);
+	if (!retval) {
+		retval = std::make_shared<CManager>();
+		ubuntu::app_launch::Registry::setManager(retval, ubuntu::app_launch::Registry::getDefault());
+		cmanager = retval;
 	}
+
+	return retval;
 }
 
 gboolean
 ubuntu_app_launch_observer_add_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto manager = cmanager.lock();
-
-	if (!manager) {
-		manager = std::make_shared<CManager>();
-		ubuntu::app_launch::Registry::setManager(manager, ubuntu::app_launch::Registry::getDefault());
-		cmanager = manager;
-	}
-
+	auto manager = ensure_cmanager();
 	manager->addFocus(observer, user_data);
 	return TRUE;
 }
@@ -507,26 +499,14 @@ ubuntu_app_launch_observer_add_app_focus (UbuntuAppLaunchAppObserver observer, g
 gboolean
 ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto manager = cmanager.lock();
-
-	if (!manager) {
-		return FALSE;
-	}
-
+	auto manager = ensure_cmanager();
 	return manager->deleteFocus(observer, user_data) ? TRUE : FALSE;
 }
 
 gboolean
 ubuntu_app_launch_observer_add_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto manager = cmanager.lock();
-
-	if (!manager) {
-		manager = std::make_shared<CManager>();
-		ubuntu::app_launch::Registry::setManager(manager, ubuntu::app_launch::Registry::getDefault());
-		cmanager = manager;
-	}
-
+	auto manager = ensure_cmanager();
 	manager->addResume(observer, user_data);
 	return TRUE;
 }
@@ -534,26 +514,14 @@ ubuntu_app_launch_observer_add_app_resume (UbuntuAppLaunchAppObserver observer, 
 gboolean
 ubuntu_app_launch_observer_delete_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto manager = cmanager.lock();
-
-	if (!manager) {
-		return FALSE;
-	}
-
+	auto manager = ensure_cmanager();
 	return manager->deleteResume(observer, user_data) ? TRUE : FALSE;
 }
 
 gboolean
 ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto manager = cmanager.lock();
-
-	if (!manager) {
-		manager = std::make_shared<CManager>();
-		ubuntu::app_launch::Registry::setManager(manager, ubuntu::app_launch::Registry::getDefault());
-		cmanager = manager;
-	}
-
+	auto manager = ensure_cmanager();
 	ubuntu::app_launch::Registry::Impl::watchingAppStarting(true);
 	manager->addStarting(observer, user_data);
 	return TRUE;
@@ -562,12 +530,7 @@ ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer
 gboolean
 ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	auto manager = cmanager.lock();
-
-	if (!manager) {
-		return FALSE;
-	}
-
+	auto manager = ensure_cmanager();
 	ubuntu::app_launch::Registry::Impl::watchingAppStarting(false);
 	return manager->deleteStarting(observer, user_data) ? TRUE : FALSE;
 }
@@ -609,13 +572,33 @@ ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver obse
 gboolean
 ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
 {
-	auto iter = appFailedObservers.find(std::make_pair(observer, user_data));
+	return observer_delete<UbuntuAppLaunchAppFailedObserver>(observer, user_data, appFailedObservers);
+}
 
-	if (iter == appFailedObservers.end()) {
-		return FALSE;
-	}
+/** Handy helper for pause and resume here */
+template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Application>&, const std::shared_ptr<ubuntu::app_launch::Application::Instance>&, const std::vector<pid_t>&>& (*getSignal)(const std::shared_ptr<ubuntu::app_launch::Registry>&)>
+static gboolean
+observer_add_pause (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> &observers)
+{
+	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
-	appFailedObservers.erase(iter);
+	observers.emplace(std::make_pair(
+		std::make_pair(observer, user_data),
+		core::ScopedConnection(
+			getSignal(ubuntu::app_launch::Registry::getDefault())
+				.connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, const std::vector<pid_t> &pids) {
+					std::vector<pid_t> lpids = pids;
+					lpids.emplace_back(0);
+
+					std::string appid = app->appId();
+
+					executeOnContext(context, [appid, observer, user_data, lpids]() {
+						observer(appid.c_str(), (int *)(lpids.data()), user_data);
+					});
+			})
+		)
+		));
+
 	return TRUE;
 }
 
@@ -624,38 +607,13 @@ static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, co
 gboolean
 ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
-
-	appPausedObservers.emplace(std::make_pair(
-		std::make_pair(observer, user_data),
-			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appPaused().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, std::vector<pid_t> &pids) {
-					std::vector<pid_t> lpids = pids;
-					lpids.emplace_back(0);
-
-					std::string appid = app->appId();
-
-					executeOnContext(context, [appid, observer, user_data, lpids]() {
-						observer(appid.c_str(), (int *)(lpids.data()), user_data);
-					});
-				})
-			)
-		));
-
-	return TRUE;
+	return observer_add_pause<&ubuntu::app_launch::Registry::appPaused>(observer, user_data, appPausedObservers);
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	auto iter = appPausedObservers.find(std::make_pair(observer, user_data));
-
-	if (iter == appPausedObservers.end()) {
-		return FALSE;
-	}
-
-	appPausedObservers.erase(iter);
-	return TRUE;
+	return observer_delete<UbuntuAppLaunchAppPausedResumedObserver>(observer, user_data, appPausedObservers);
 }
 
 static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> appResumedObservers;
@@ -663,38 +621,13 @@ static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, co
 gboolean
 ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
-
-	appResumedObservers.emplace(std::make_pair(
-		std::make_pair(observer, user_data),
-			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appResumed().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, std::vector<pid_t>& pids) {
-					std::vector<pid_t> lpids = pids;
-					lpids.emplace_back(0);
-
-					std::string appid = app->appId();
-
-					executeOnContext(context, [appid, observer, user_data, lpids]() {
-						observer(appid.c_str(), (int *)(lpids.data()), user_data);
-					});
-				})
-			)
-		));
-
-	return TRUE;
+	return observer_add_pause<&ubuntu::app_launch::Registry::appResumed>(observer, user_data, appResumedObservers);
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	auto iter = appResumedObservers.find(std::make_pair(observer, user_data));
-
-	if (iter == appResumedObservers.end()) {
-		return FALSE;
-	}
-
-	appResumedObservers.erase(iter);
-	return TRUE;
+	return observer_delete<UbuntuAppLaunchAppPausedResumedObserver>(observer, user_data, appResumedObservers);
 }
 
 typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);
