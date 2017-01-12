@@ -250,11 +250,17 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
         auto xdg_current_desktop = getenv("XDG_CURRENT_DESKTOP");
         if (xdg_current_desktop != nullptr)
         {
-            if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false) ||
-                !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
+            /* Split the CURRENT_DESKTOP by colons if there are multiple */
+            auto current_desktops = std::shared_ptr<gchar*>(g_strsplit(xdg_current_desktop, ":", -1), g_strfreev);
+
+            for (auto desktop = current_desktops.get()[0]; desktop != nullptr; desktop++)
             {
-                g_warning("Application is not shown in Unity");
-                throw std::runtime_error("Application is not shown in Unity");
+                if (stringlistFromKeyfileContains(keyfile, "NotShowIn", desktop, false) ||
+                    !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", desktop, true))
+                {
+                    g_warning("Application is not shown in Unity");
+                    throw std::runtime_error("Application is not shown in Unity");
+                }
             }
         }
 
