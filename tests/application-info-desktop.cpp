@@ -30,13 +30,13 @@ class ApplicationInfoDesktop : public ::testing::Test
 {
 protected:
     ApplicationInfoDesktop()
-        : test_dekstop_env("SomeFreeDesktop")
+        : test_desktop_env("SomeFreeDesktop")
     {
     }
 
     virtual void SetUp()
     {
-        setenv("XDG_CURRENT_DESKTOP", test_dekstop_env.c_str(), true);
+        setenv("XDG_CURRENT_DESKTOP", test_desktop_env.c_str(), true);
     }
 
     virtual void TearDown()
@@ -53,7 +53,7 @@ protected:
         return keyfile;
     }
 
-    const std::string test_dekstop_env;
+    const std::string test_desktop_env;
 };
 
 TEST_F(ApplicationInfoDesktop, DefaultState)
@@ -122,7 +122,7 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
 
     // not shown in Unity
     auto notshowin = defaultKeyfile();
-    g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_dekstop_env + ";").c_str());
+    g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_desktop_env + ";").c_str());
     EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
@@ -192,14 +192,14 @@ TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
 
     // Appearing explicitly in only show list
     auto onlyshowin = defaultKeyfile();
-    g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_dekstop_env + ";Gnome;").c_str());
+    g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_desktop_env + ";Gnome;").c_str());
     EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 
     // Appearing explicitly in only show list not first
     auto onlyshowinmiddle = defaultKeyfile();
     g_key_file_set_string(onlyshowinmiddle.get(), DESKTOP, "OnlyShowIn",
-                          ("Gnome;" + test_dekstop_env + ";KDE;").c_str());
+                          ("Gnome;" + test_desktop_env + ";KDE;").c_str());
     EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowinmiddle, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 }
