@@ -52,8 +52,6 @@ set(ubuntu_app_launch_arch "${UBUNTU_APP_LAUNCH_ARCH}")
 add_compile_options(
 # Because we believe in quality
 	-Wall -Werror
-# Deprecated needed for g_atexit() in libual
-	-Wno-error=deprecated-declarations
 	-g
 	-pthread
 )
@@ -72,7 +70,7 @@ include_directories(${GOBJECT2_INCLUDE_DIRS})
 pkg_check_modules(GIO2 REQUIRED gio-2.0 gio-unix-2.0)
 include_directories(${GIO2_INCLUDE_DIRS})
 
-pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0)
+pkg_check_modules(JSONGLIB REQUIRED json-glib-1.0>=1.1.2)
 include_directories(${JSONGLIB_INCLUDE_DIRS})
 
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
@@ -99,8 +97,14 @@ include_directories(${CGMANAGER_INCLUDE_DIRS})
 pkg_check_modules(MIR mirclient)
 include_directories(${MIR_INCLUDE_DIRS})
 
+pkg_check_modules(WHOOPSIE libwhoopsie)
+include_directories(${WHOOPSIE_INCLUDE_DIRS})
+
 pkg_check_modules(LIBERTINE libertine)
 include_directories(${LIBERTINE_INCLUDE_DIRS})
+
+pkg_check_modules(CURL libcurl>=7.47)
+include_directories(${CURL_INCLUDE_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -112,8 +116,8 @@ add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 # Helpers
 ####################
 
-add_library(helpers STATIC helpers.c helpers-shared.c libubuntu-app-launch/recoverable-problem.c)
-target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES})
+add_library(helpers STATIC helpers.c helpers-shared.c)
+target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
 
 ####################
 # desktop-hook
@@ -121,7 +125,7 @@ target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LI
 
 add_executable(desktop-hook desktop-hook.c)
 set_target_properties(desktop-hook PROPERTIES OUTPUT_NAME "desktop-hook")
-target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES})
+target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################

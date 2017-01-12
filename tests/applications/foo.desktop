@@ -5,3 +5,4 @@ Exec=foo
 NoDisplay=false
 Hidden=false
 Terminal=false
+Icon=foo.png

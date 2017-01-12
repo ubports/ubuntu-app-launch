@@ -18,14 +18,14 @@
  */
 
 #include <algorithm>
-#include <functional>
 #include <fcntl.h>
+#include <functional>
 #include <future>
-#include <numeric>
-#include <thread>
 #include <gio/gio.h>
+#include <glib/gstdio.h>
 #include <gtest/gtest.h>
 #include <libdbustest/dbus-test.h>
+#include <numeric>
 #include <thread>
 #include <zeitgeist.h>
 
@@ -37,6 +37,10 @@
 
 #include "eventually-fixture.h"
 #include "mir-mock.h"
+
+#ifdef ENABLE_SNAPPY
+#include "snapd-mock.h"
+#endif
 
 class LibUAL : public EventuallyFixture
 {
@@ -103,6 +107,13 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
+#ifdef ENABLE_SNAPPY
+        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
+        g_unlink(SNAPD_TEST_SOCKET);
+#endif
+
         service = dbus_test_service_new(NULL);
 
         debugConnection();
@@ -117,6 +128,8 @@ protected:
         dbus_test_dbus_mock_object_add_method(mock, obj, "GetJobByName", G_VARIANT_TYPE("s"), G_VARIANT_TYPE("o"),
                                               "if args[0] == 'application-click':\n"
                                               "	ret = dbus.ObjectPath('/com/test/application_click')\n"
+                                              "elif args[0] == 'application-snap':\n"
+                                              "	ret = dbus.ObjectPath('/com/test/application_snap')\n"
                                               "elif args[0] == 'application-legacy':\n"
                                               "	ret = dbus.ObjectPath('/com/test/application_legacy')\n"
                                               "elif args[0] == 'untrusted-helper':\n"
@@ -131,7 +144,7 @@ protected:
 
         dbus_test_dbus_mock_object_add_method(
             mock, jobobj, "Start", G_VARIANT_TYPE("(asb)"), NULL,
-            "if args[0][0] == 'APP_ID=com.test.good_application_1.2.3':"
+            "if 'APP_ID=com.test.good_application_1.2.3' in args[0]:"
             "    raise dbus.exceptions.DBusException('Foo running', name='com.ubuntu.Upstart0_6.Error.AlreadyStarted')",
             NULL);
 
@@ -152,6 +165,36 @@ protected:
         dbus_test_dbus_mock_object_add_property(mock, instobj, "processes", G_VARIANT_TYPE("a(si)"),
                                                 g_variant_new_parsed(process_var), NULL);
         g_free(process_var);
+
+#ifdef ENABLE_SNAPPY
+        /* Snap App */
+        auto snapjobobj =
+            dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
+
+        dbus_test_dbus_mock_object_add_method(
+            mock, snapjobobj, "Start", G_VARIANT_TYPE("(asb)"), NULL,
+            "if args[0][0] == 'APP_ID=unity8-package_foo_x123':"
+            "    raise dbus.exceptions.DBusException('Foo running', name='com.ubuntu.Upstart0_6.Error.AlreadyStarted')",
+            NULL);
+
+        dbus_test_dbus_mock_object_add_method(mock, snapjobobj, "Stop", G_VARIANT_TYPE("(asb)"), NULL, "", NULL);
+
+        dbus_test_dbus_mock_object_add_method(mock, snapjobobj, "GetAllInstances", NULL, G_VARIANT_TYPE("ao"),
+                                              "ret = [ dbus.ObjectPath('/com/test/snapp_instance') ]", NULL);
+
+        dbus_test_dbus_mock_object_add_method(mock, snapjobobj, "GetInstanceByName", G_VARIANT_TYPE_STRING,
+                                              G_VARIANT_TYPE("o"), "ret = dbus.ObjectPath('/com/test/snapp_instance')",
+                                              NULL);
+
+        auto snapinstobj =
+            dbus_test_dbus_mock_get_object(mock, "/com/test/snapp_instance", "com.ubuntu.Upstart0_6.Instance", NULL);
+        dbus_test_dbus_mock_object_add_property(mock, snapinstobj, "name", G_VARIANT_TYPE_STRING,
+                                                g_variant_new_string("unity8-package_foo_x123-"), NULL);
+        gchar* snapprocess_var = g_strdup_printf("[('main', %d)]", getpid());
+        dbus_test_dbus_mock_object_add_property(mock, snapinstobj, "processes", G_VARIANT_TYPE("a(si)"),
+                                                g_variant_new_parsed(snapprocess_var), NULL);
+        g_free(snapprocess_var);
+#endif
 
         /*  Legacy App */
         DbusTestDbusMockObject* ljobobj =
@@ -248,7 +291,11 @@ protected:
 
         g_object_unref(bus);
 
-        EXPECT_EVENTUALLY_EQ(nullptr, bus);
+        ASSERT_EVENTUALLY_EQ(nullptr, bus);
+
+#ifdef ENABLE_SNAPPY
+        g_unlink(SNAPD_TEST_SOCKET);
+#endif
     }
 
     GVariant* find_env(GVariant* env_array, const gchar* var)
@@ -311,7 +358,7 @@ protected:
     }
 };
 
-TEST_F(LibUAL, StartApplication)
+TEST_F(LibUAL, StartClickApplication)
 {
     DbusTestDbusMockObject* obj =
         dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -331,7 +378,7 @@ TEST_F(LibUAL, StartApplication)
     guint len = 0;
     const DbusTestDbusMockCall* calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     EXPECT_STREQ("Start", calls->name);
     EXPECT_EQ(2, g_variant_n_children(calls->params));
@@ -357,7 +404,7 @@ TEST_F(LibUAL, StartApplication)
     len = 0;
     calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     env = g_variant_get_child_value(calls->params, 0);
     EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
@@ -368,7 +415,7 @@ TEST_F(LibUAL, StartApplication)
     return;
 }
 
-TEST_F(LibUAL, StartApplicationTest)
+TEST_F(LibUAL, StartClickApplicationTest)
 {
     DbusTestDbusMockObject* obj =
         dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -381,7 +428,7 @@ TEST_F(LibUAL, StartApplicationTest)
     guint len = 0;
     const DbusTestDbusMockCall* calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     EXPECT_STREQ("Start", calls->name);
     EXPECT_EQ(2, g_variant_n_children(calls->params));
@@ -396,12 +443,151 @@ TEST_F(LibUAL, StartApplicationTest)
     g_variant_unref(env);
 }
 
-TEST_F(LibUAL, StopApplication)
+TEST_F(LibUAL, StopClickApplication)
 {
     DbusTestDbusMockObject* obj =
         dbus_test_dbus_mock_get_object(mock, "/com/test/application_click", "com.ubuntu.Upstart0_6.Job", NULL);
 
     auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
+    auto app = ubuntu::app_launch::Application::create(appid, registry);
+
+    ASSERT_TRUE(app->hasInstances());
+    ASSERT_EQ(1, app->instances().size());
+
+    app->instances()[0]->stop();
+
+    ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
+}
+
+#ifdef ENABLE_SNAPPY
+/* Snapd mock data */
+static std::pair<std::string, std::string> interfaces{
+    "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(
+        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single"}}})))};
+static std::pair<std::string, std::string> u8Package{
+    "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
+
+TEST_F(LibUAL, ApplicationIdSnap)
+{
+    SnapdMock snapd{SNAPD_TEST_SOCKET,
+                    {u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package,
+                     u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package}};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    EXPECT_EQ("unity8-package_foo_x123", (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package"));
+    EXPECT_EQ("unity8-package_foo_x123",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo"));
+    EXPECT_EQ("unity8-package_single_x123",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "single"));
+    EXPECT_EQ("unity8-package_single_x123",
+              (std::string)ubuntu::app_launch::AppID::discover(
+                  registry, "unity8-package", ubuntu::app_launch::AppID::ApplicationWildcard::LAST_LISTED));
+    EXPECT_EQ("unity8-package_foo_x123",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo", "x123"));
+
+    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "unity7-package"));
+}
+
+TEST_F(LibUAL, StartSnapApplication)
+{
+    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
+
+    /* Basic make sure we can send the event */
+    auto appid = ubuntu::app_launch::AppID::parse("unity8-package_single_x123");
+    auto app = ubuntu::app_launch::Application::create(appid, registry);
+    app->launch();
+
+    EXPECT_EQ(1, dbus_test_dbus_mock_object_check_method_call(mock, obj, "Start", NULL, NULL));
+
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+    /* Now look at the details of the call */
+    app->launch();
+
+    guint len = 0;
+    const DbusTestDbusMockCall* calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+    EXPECT_NE(nullptr, calls);
+    EXPECT_EQ(1, len);
+
+    EXPECT_STREQ("Start", calls->name);
+    EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+    GVariant* block = g_variant_get_child_value(calls->params, 1);
+    EXPECT_TRUE(g_variant_get_boolean(block));
+    g_variant_unref(block);
+
+    GVariant* env = g_variant_get_child_value(calls->params, 0);
+    EXPECT_TRUE(check_env(env, "APP_ID", "unity8-package_single_x123"));
+    g_variant_unref(env);
+
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+
+    /* Let's pass some URLs */
+    std::vector<ubuntu::app_launch::Application::URL> urls{
+        ubuntu::app_launch::Application::URL::from_raw("http://ubuntu.com/"),
+        ubuntu::app_launch::Application::URL::from_raw("https://ubuntu.com/"),
+        ubuntu::app_launch::Application::URL::from_raw("file:///home/phablet/test.txt")};
+
+    app->launch(urls);
+
+    len = 0;
+    calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+    EXPECT_NE(nullptr, calls);
+    EXPECT_EQ(1, len);
+
+    env = g_variant_get_child_value(calls->params, 0);
+    EXPECT_TRUE(check_env(env, "APP_ID", "unity8-package_single_x123"));
+    EXPECT_TRUE(
+        check_env(env, "APP_URIS", "'http://ubuntu.com/' 'https://ubuntu.com/' 'file:///home/phablet/test.txt'"));
+    g_variant_unref(env);
+
+    return;
+}
+
+TEST_F(LibUAL, StartSnapApplicationTest)
+{
+    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
+
+    /* Basic make sure we can send the event */
+    auto appid = ubuntu::app_launch::AppID::parse("unity8-package_single_x123");
+    auto app = ubuntu::app_launch::Application::create(appid, registry);
+    app->launchTest();
+
+    guint len = 0;
+    auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
+    EXPECT_NE(nullptr, calls);
+    EXPECT_EQ(1, len);
+
+    EXPECT_STREQ("Start", calls->name);
+    EXPECT_EQ(2, g_variant_n_children(calls->params));
+
+    GVariant* block = g_variant_get_child_value(calls->params, 1);
+    EXPECT_TRUE(g_variant_get_boolean(block));
+    g_variant_unref(block);
+
+    GVariant* env = g_variant_get_child_value(calls->params, 0);
+    EXPECT_TRUE(check_env(env, "APP_ID", "unity8-package_single_x123"));
+    EXPECT_TRUE(check_env(env, "QT_LOAD_TESTABILITY", "1"));
+    g_variant_unref(env);
+}
+
+TEST_F(LibUAL, StopSnapApplication)
+{
+    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
+
+    auto appid = ubuntu::app_launch::AppID::parse("unity8-package_foo_x123");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_TRUE(app->hasInstances());
@@ -411,6 +597,7 @@ TEST_F(LibUAL, StopApplication)
 
     ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 }
+#endif
 
 /* NOTE: The fact that there is 'libertine-data' in these strings is because
    we're using one CACHE_HOME for this test suite and the libertine functions
@@ -425,7 +612,7 @@ TEST_F(LibUAL, ApplicationLog)
         std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log"),
         app->instances()[0]->logPath());
 
-    appid = ubuntu::app_launch::AppID::find("single");
+    appid = ubuntu::app_launch::AppID::find(registry, "single");
     app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_LT(0, app->instances().size());
@@ -433,7 +620,7 @@ TEST_F(LibUAL, ApplicationLog)
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
               app->instances()[0]->logPath());
 
-    appid = ubuntu::app_launch::AppID::find("multiple");
+    appid = ubuntu::app_launch::AppID::find(registry, "multiple");
     app = ubuntu::app_launch::Application::create(appid, registry);
 
     EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log"),
@@ -455,9 +642,10 @@ TEST_F(LibUAL, ApplicationPid)
     EXPECT_TRUE(app->instances()[0]->hasPid(300));
 
     /* Check primary pid, which comes from Upstart */
+    EXPECT_TRUE(app->instances()[0]->isRunning());
     EXPECT_EQ(getpid(), app->instances()[0]->primaryPid());
 
-    auto multiappid = ubuntu::app_launch::AppID::find("multiple");
+    auto multiappid = ubuntu::app_launch::AppID::find(registry, "multiple");
     auto multiapp = ubuntu::app_launch::Application::create(multiappid, registry);
     auto instances = multiapp->instances();
     ASSERT_LT(0, instances.size());
@@ -473,7 +661,7 @@ TEST_F(LibUAL, ApplicationPid)
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
     EXPECT_TRUE(app->instances()[0]->hasPid(100));
     calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
     EXPECT_STREQ("GetTasksRecursive", calls->name);
     EXPECT_TRUE(g_variant_equal(
         calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
@@ -482,21 +670,21 @@ TEST_F(LibUAL, ApplicationPid)
     /* Click out of the set */
     EXPECT_FALSE(app->instances()[0]->hasPid(101));
     calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
     EXPECT_STREQ("GetTasksRecursive", calls->name);
     EXPECT_TRUE(g_variant_equal(
         calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 
     /* Legacy Single Instance */
-    auto singleappid = ubuntu::app_launch::AppID::find("single");
+    auto singleappid = ubuntu::app_launch::AppID::find(registry, "single");
     auto singleapp = ubuntu::app_launch::Application::create(singleappid, registry);
 
     ASSERT_LT(0, singleapp->instances().size());
     EXPECT_TRUE(singleapp->instances()[0]->hasPid(100));
 
     calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
     EXPECT_STREQ("GetTasksRecursive", calls->name);
     EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-single-")));
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
@@ -504,7 +692,7 @@ TEST_F(LibUAL, ApplicationPid)
     /* Legacy Multi Instance */
     EXPECT_TRUE(multiapp->instances()[0]->hasPid(100));
     calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
     EXPECT_STREQ("GetTasksRecursive", calls->name);
     EXPECT_TRUE(g_variant_equal(calls->params,
                                 g_variant_new("(ss)", "freezer", "upstart/application-legacy-multiple-2342345")));
@@ -518,50 +706,53 @@ TEST_F(LibUAL, ApplicationId)
 
     /* Test with current-user-version, should return the version in the manifest */
     EXPECT_EQ("com.test.good_application_1.2.3",
-              (std::string)ubuntu::app_launch::AppID::discover("com.test.good", "application"));
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.good", "application"));
 
     /* Test with version specified, shouldn't even read the manifest */
     EXPECT_EQ("com.test.good_application_1.2.4",
-              (std::string)ubuntu::app_launch::AppID::discover("com.test.good", "application", "1.2.4"));
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.good", "application", "1.2.4"));
 
     /* Test with out a version or app, should return the version in the manifest */
-    EXPECT_EQ("com.test.good_application_1.2.3", (std::string)ubuntu::app_launch::AppID::discover(
-                                                     "com.test.good", "first-listed-app", "current-user-version"));
+    EXPECT_EQ("com.test.good_application_1.2.3",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.good", "first-listed-app",
+                                                               "current-user-version"));
 
     /* Make sure we can select the app from a list correctly */
     EXPECT_EQ("com.test.multiple_first_1.2.3",
               (std::string)ubuntu::app_launch::AppID::discover(
-                  "com.test.multiple", ubuntu::app_launch::AppID::ApplicationWildcard::FIRST_LISTED));
-    EXPECT_EQ("com.test.multiple_first_1.2.3", (std::string)ubuntu::app_launch::AppID::discover("com.test.multiple"));
+                  registry, "com.test.multiple", ubuntu::app_launch::AppID::ApplicationWildcard::FIRST_LISTED));
+    EXPECT_EQ("com.test.multiple_first_1.2.3",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.multiple"));
     EXPECT_EQ("com.test.multiple_fifth_1.2.3",
               (std::string)ubuntu::app_launch::AppID::discover(
-                  "com.test.multiple", ubuntu::app_launch::AppID::ApplicationWildcard::LAST_LISTED));
+                  registry, "com.test.multiple", ubuntu::app_launch::AppID::ApplicationWildcard::LAST_LISTED));
     EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(
-                      "com.test.multiple", ubuntu::app_launch::AppID::ApplicationWildcard::ONLY_LISTED));
+                      registry, "com.test.multiple", ubuntu::app_launch::AppID::ApplicationWildcard::ONLY_LISTED));
     EXPECT_EQ("com.test.good_application_1.2.3",
               (std::string)ubuntu::app_launch::AppID::discover(
-                  "com.test.good", ubuntu::app_launch::AppID::ApplicationWildcard::ONLY_LISTED));
+                  registry, "com.test.good", ubuntu::app_launch::AppID::ApplicationWildcard::ONLY_LISTED));
 
     /* A bunch that should be NULL */
-    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover("com.test.no-hooks"));
-    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover("com.test.no-json"));
-    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover("com.test.no-object"));
-    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover("com.test.no-version"));
+    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.no-hooks"));
+    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.no-json"));
+    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.no-object"));
+    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.no-version"));
 
     /* Libertine tests */
-    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover("container-name"));
-    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover("container-name", "not-exist"));
-    EXPECT_EQ("container-name_test_0.0", (std::string)ubuntu::app_launch::AppID::discover("container-name", "test"));
+    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "container-name"));
+    EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "container-name", "not-exist"));
+    EXPECT_EQ("container-name_test_0.0",
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "container-name", "test"));
     EXPECT_EQ("container-name_user-app_0.0",
-              (std::string)ubuntu::app_launch::AppID::discover("container-name", "user-app"));
+              (std::string)ubuntu::app_launch::AppID::discover(registry, "container-name", "user-app"));
 }
 
 TEST_F(LibUAL, AppIdParse)
 {
     EXPECT_FALSE(ubuntu::app_launch::AppID::parse("com.ubuntu.test_test_123").empty());
-    EXPECT_FALSE(ubuntu::app_launch::AppID::find("inkscape").empty());
+    EXPECT_FALSE(ubuntu::app_launch::AppID::find(registry, "inkscape").empty());
     EXPECT_FALSE(ubuntu::app_launch::AppID::parse("chatter.robert-ancell_chatter_2").empty());
-    EXPECT_FALSE(ubuntu::app_launch::AppID::find("chatter.robert-ancell_chatter").empty());
+    EXPECT_FALSE(ubuntu::app_launch::AppID::find(registry, "chatter.robert-ancell_chatter").empty());
 
     auto id = ubuntu::app_launch::AppID::parse("com.ubuntu.test_test_123");
 
@@ -575,9 +766,18 @@ TEST_F(LibUAL, AppIdParse)
 
 TEST_F(LibUAL, ApplicationList)
 {
+#ifdef ENABLE_SNAPPY
+    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+#endif
+
     auto apps = ubuntu::app_launch::Registry::runningApps(registry);
 
+#ifdef ENABLE_SNAPPY
+    ASSERT_EQ(4, apps.size());
+#else
     ASSERT_EQ(3, apps.size());
+#endif
 
     apps.sort([](const std::shared_ptr<ubuntu::app_launch::Application>& a,
                  const std::shared_ptr<ubuntu::app_launch::Application>& b) {
@@ -588,15 +788,9 @@ TEST_F(LibUAL, ApplicationList)
     });
 
     EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.front()->appId());
-    EXPECT_EQ("single", (std::string)apps.back()->appId());
-}
-
-
-TEST_F(LibUAL, InstalledApplicationList)
-{
-    auto apps = ubuntu::app_launch::Registry::installedApps(registry);
-
-    ASSERT_EQ(12, apps.size());
+#ifdef ENABLE_SNAPPY
+    EXPECT_EQ("unity8-package_foo_x123", (std::string)apps.back()->appId());
+#endif
 }
 
 typedef struct
@@ -896,7 +1090,7 @@ TEST_F(LibUAL, LegacySingleInstance)
         dbus_test_dbus_mock_get_object(mock, "/com/test/application_legacy", "com.ubuntu.Upstart0_6.Job", NULL);
 
     /* Check for a single-instance app */
-    auto singleappid = ubuntu::app_launch::AppID::find("single");
+    auto singleappid = ubuntu::app_launch::AppID::find(registry, "single");
     auto singleapp = ubuntu::app_launch::Application::create(singleappid, registry);
 
     singleapp->launch();
@@ -904,7 +1098,7 @@ TEST_F(LibUAL, LegacySingleInstance)
     guint len = 0;
     const DbusTestDbusMockCall* calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     EXPECT_STREQ("Start", calls->name);
     EXPECT_EQ(2, g_variant_n_children(calls->params));
@@ -921,7 +1115,7 @@ TEST_F(LibUAL, LegacySingleInstance)
     ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
 
     /* Check for a multi-instance app */
-    auto multipleappid = ubuntu::app_launch::AppID::find("multiple");
+    auto multipleappid = ubuntu::app_launch::AppID::find(registry, "multiple");
     auto multipleapp = ubuntu::app_launch::Application::create(multipleappid, registry);
 
     multipleapp->launch();
@@ -929,7 +1123,7 @@ TEST_F(LibUAL, LegacySingleInstance)
     len = 0;
     calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     EXPECT_STREQ("Start", calls->name);
     EXPECT_EQ(2, g_variant_n_children(calls->params));
@@ -1023,7 +1217,7 @@ TEST_F(LibUAL, StartHelper)
     guint len = 0;
     auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     EXPECT_STREQ("Start", calls->name);
     EXPECT_EQ(2, g_variant_n_children(calls->params));
@@ -1049,7 +1243,7 @@ TEST_F(LibUAL, StartHelper)
     len = 0;
     calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     env = g_variant_get_child_value(calls->params, 0);
     EXPECT_TRUE(check_env(env, "APP_ID", "com.test.multiple_first_1.2.3"));
@@ -1094,7 +1288,7 @@ TEST_F(LibUAL, StopHelper)
     guint len = 0;
     auto calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Stop", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     EXPECT_STREQ("Stop", calls->name);
     EXPECT_EQ(2, g_variant_n_children(calls->params));
@@ -1329,13 +1523,7 @@ private:
     }
 };
 
-static void signal_increment(GDBusConnection* connection,
-                             const gchar* sender,
-                             const gchar* path,
-                             const gchar* interface,
-                             const gchar* signal,
-                             GVariant* params,
-                             gpointer user_data)
+static void signal_increment(const gchar* appid, GPid* pids, gpointer user_data)
 {
     guint* count = (guint*)user_data;
     g_debug("Count incremented to: %d", *count + 1);
@@ -1383,15 +1571,12 @@ TEST_F(LibUAL, DISABLED_PauseResume)
     /* Setup signal handling */
     guint paused_count = 0;
     guint resumed_count = 0;
-    guint paused_signal =
-        g_dbus_connection_signal_subscribe(bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationPaused", "/",
-                                           nullptr, G_DBUS_SIGNAL_FLAGS_NONE, signal_increment, &paused_count, nullptr);
-    guint resumed_signal = g_dbus_connection_signal_subscribe(
-        bus, nullptr, "com.canonical.UbuntuAppLaunch", "ApplicationResumed", "/", nullptr, G_DBUS_SIGNAL_FLAGS_NONE,
-        signal_increment, &resumed_count, nullptr);
+
+    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_paused(signal_increment, &paused_count));
+    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resumed(signal_increment, &resumed_count));
 
     /* Get our app object */
-    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_EQ(1, app->instances().size());
@@ -1445,8 +1630,8 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
 
-    g_dbus_connection_signal_unsubscribe(bus, paused_signal);
-    g_dbus_connection_signal_unsubscribe(bus, resumed_signal);
+    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_paused(signal_increment, &paused_count));
+    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_resumed(signal_increment, &resumed_count));
 }
 
 TEST_F(LibUAL, MultiPause)
@@ -1492,12 +1677,19 @@ TEST_F(LibUAL, MultiPause)
     do
     {
         g_debug("Giving mocks a chance to start");
-        pause(200);
+        pause(20);
     } while (dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)) != DBUS_TEST_TASK_STATE_RUNNING &&
              dbus_test_task_get_state(DBUS_TEST_TASK(zgmock)) != DBUS_TEST_TASK_STATE_RUNNING);
 
+    /* Setup signal handling */
+    guint paused_count = 0;
+    guint resumed_count = 0;
+
+    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_paused(signal_increment, &paused_count));
+    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resumed(signal_increment, &resumed_count));
+
     /* Get our app object */
-    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_EQ(1, app->instances().size());
@@ -1511,6 +1703,8 @@ TEST_F(LibUAL, MultiPause)
     /* Pause the app */
     instance->pause();
 
+    EXPECT_EVENTUALLY_EQ(1, paused_count);
+
     std::for_each(spews.begin(), spews.end(), [](SpewMaster& spew) { spew.reset(); });
     pause(50);
 
@@ -1520,6 +1714,8 @@ TEST_F(LibUAL, MultiPause)
 
     /* Now Resume the App */
     instance->resume();
+
+    EXPECT_EVENTUALLY_EQ(1, resumed_count);
 
     pause(50);
 
@@ -1529,6 +1725,8 @@ TEST_F(LibUAL, MultiPause)
     /* Pause the app */
     instance->pause();
 
+    EXPECT_EVENTUALLY_EQ(2, paused_count);
+
     std::for_each(spews.begin(), spews.end(), [](SpewMaster& spew) { spew.reset(); });
     pause(50);
 
@@ -1539,12 +1737,17 @@ TEST_F(LibUAL, MultiPause)
     /* Now Resume the App */
     instance->resume();
 
+    EXPECT_EVENTUALLY_EQ(2, resumed_count);
+
     pause(50);
 
     EXPECT_NE(0, std::accumulate(spews.begin(), spews.end(), int{0},
                                  [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
 
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
+
+    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_paused(signal_increment, &paused_count));
+    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_resumed(signal_increment, &resumed_count));
 }
 
 TEST_F(LibUAL, OOMSet)
@@ -1578,7 +1781,7 @@ TEST_F(LibUAL, OOMSet)
     EXPECT_EVENTUALLY_EQ(DBUS_TEST_TASK_STATE_RUNNING, dbus_test_task_get_state(DBUS_TEST_TASK(cgmock2)));
 
     /* Get our app object */
-    auto appid = ubuntu::app_launch::AppID::find("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     ASSERT_EQ(1, app->instances().size());
@@ -1651,7 +1854,7 @@ TEST_F(LibUAL, StartSessionHelper)
     guint len = 0;
     const DbusTestDbusMockCall* calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, NULL);
     EXPECT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     EXPECT_STREQ("Start", calls->name);
     EXPECT_EQ(2, g_variant_n_children(calls->params));
@@ -1735,7 +1938,7 @@ TEST_F(LibUAL, SetExec)
     guint len = 0;
     const DbusTestDbusMockCall* calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
     ASSERT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     gchar* appexecstr = g_strdup_printf("APP_EXEC=%s", exec);
     GVariant* appexecenv = g_variant_get_child_value(calls[0].params, 1);
@@ -1751,7 +1954,7 @@ TEST_F(LibUAL, SetExec)
 
     calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
     ASSERT_NE(nullptr, calls);
-    EXPECT_EQ(1, len);
+    ASSERT_EQ(1, len);
 
     gchar* demangleexecstr = g_strdup_printf("APP_EXEC=%s %s", SOCKET_DEMANGLER_INSTALL, exec);
     appexecenv = g_variant_get_child_value(calls[0].params, 1);
@@ -1789,15 +1992,20 @@ TEST_F(LibUAL, AppInfo)
     EXPECT_EQ("Application", app->info()->name().value());
 
     /* Correct values from a legacy */
-    auto barid = ubuntu::app_launch::AppID::find("bar");
+    auto barid = ubuntu::app_launch::AppID::find(registry, "bar");
     EXPECT_THROW(ubuntu::app_launch::Application::create(barid, registry), std::runtime_error);
 
     /* Correct values for libertine */
     auto libertineid = ubuntu::app_launch::AppID::parse("container-name_test_0.0");
     auto libertine = ubuntu::app_launch::Application::create(libertineid, registry);
 
-    auto info = libertine->info();
-    EXPECT_TRUE((bool)info);
+    EXPECT_TRUE((bool)libertine->info());
+    EXPECT_EQ("Test", libertine->info()->name().value());
 
-    EXPECT_EQ("Test", info->name().value());
+    /* Correct values for nested libertine */
+    auto nestedlibertineid = ubuntu::app_launch::AppID::parse("container-name_test-nested_0.0");
+    auto nestedlibertine = ubuntu::app_launch::Application::create(nestedlibertineid, registry);
+
+    EXPECT_TRUE((bool)nestedlibertine->info());
+    EXPECT_EQ("Test Nested", nestedlibertine->info()->name().value());
 }

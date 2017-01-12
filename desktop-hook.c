@@ -47,6 +47,7 @@ You should not modify them and expect any executing under Unity to change.
 #include <click.h>
 #include <string.h>
 #include <errno.h>
+#include <libwhoopsie/recoverable-problem.h>
 
 #include "helpers.h"
 
@@ -225,123 +226,24 @@ dir_for_each (const gchar * dirname, void(*func)(const gchar * dir, const gchar 
 	return;
 }
 
-/* Helpers to ensure we write nicely */
-static void 
-write_string (int          fd,
-              const gchar *string)
-{
-	int res; 
-	do
-		res = write (fd, string, strlen (string));
-	while (G_UNLIKELY (res == -1 && errno == EINTR));
-}
-
-/* Make NULLs fast and fun! */
-static void 
-write_null (int fd)
-{
-	int res; 
-	do
-		res = write (fd, "", 1);
-	while (G_UNLIKELY (res == -1 && errno == EINTR));
-}
-
-/* Child watcher */
-static gboolean
-apport_child_watch (GPid pid, gint status, gpointer user_data)
-{
-	g_main_loop_quit((GMainLoop *)user_data);
-	return FALSE;
-}
-
-static gboolean
-apport_child_timeout (gpointer user_data)
-{
-	g_warning("Recoverable Error Reporter Timeout");
-	g_main_loop_quit((GMainLoop *)user_data);
-	return FALSE;
-}
-
-
 /* Code to report an error, so we can start tracking how important this is */
 static void
 report_recoverable_error (const gchar * app_id, const gchar * iconfield, const gchar * originalicon, const gchar * iconpath)
 {
-	GError * error = NULL;
-	gint error_stdin = 0;
-	GPid pid = 0;
-	gchar * argv[2] = {
-		"/usr/share/apport/recoverable_problem",
+	const char * properties[9] = {
+		"IconValue", NULL,
+		"AppID", NULL,
+		"IconPath", NULL,
+		"IconField", NULL,
 		NULL
 	};
 
-	g_spawn_async_with_pipes(NULL, /* cwd */
-		argv,
-		NULL, /* envp */
-		G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL | G_SPAWN_DO_NOT_REAP_CHILD,
-		NULL, NULL, /* child setup func */
-		&pid,
-		&error_stdin,
-		NULL, /* stdout */
-		NULL, /* stderr */
-		&error);
+	properties[1] = originalicon;
+	properties[3] = app_id;
+	properties[5] = iconpath;
+	properties[7] = iconfield;
 
-	if (error != NULL) {
-		g_warning("Unable to report a recoverable error: %s", error->message);
-		g_error_free(error);
-	}
-
-	if (error_stdin != 0) {
-		write_string(error_stdin, "IconValue");
-		write_null(error_stdin);
-		write_string(error_stdin, originalicon);
-		write_null(error_stdin);
-
-		write_string(error_stdin, "AppID");
-		write_null(error_stdin);
-		write_string(error_stdin, app_id);
-		write_null(error_stdin);
-
-		write_string(error_stdin, "IconPath");
-		write_null(error_stdin);
-		write_string(error_stdin, iconpath);
-		write_null(error_stdin);
-
-		write_string(error_stdin, "IconField");
-		write_null(error_stdin);
-		write_string(error_stdin, iconfield);
-		write_null(error_stdin);
-
-		write_string(error_stdin, "DuplicateSignature");
-		write_null(error_stdin);
-		write_string(error_stdin, "icon-path-unhandled");
-		/* write_null(error_stdin); -- No final NULL */
-
-		close(error_stdin);
-	}
-
-	if (pid != 0) {
-		GSource * child_source, * timeout_source;
-		GMainContext * context = g_main_context_new();
-		GMainLoop * loop = g_main_loop_new(context, FALSE);
-
-		child_source = g_child_watch_source_new(pid);
-		g_source_attach(child_source, context);
-		g_source_set_callback(child_source, (GSourceFunc)apport_child_watch, loop, NULL);
-
-		timeout_source = g_timeout_source_new_seconds(5);
-		g_source_attach(timeout_source, context);
-		g_source_set_callback(timeout_source, apport_child_timeout, loop, NULL);
-
-		g_main_loop_run(loop);
-
-		g_source_destroy(timeout_source);
-		g_source_destroy(child_source);
-		g_main_loop_unref(loop);
-		g_main_context_unref(context);
-
-		g_spawn_close_pid(pid);
-	}
+	whoopsie_report_recoverable_problem("icon-path-unhandled", 0, TRUE, properties);
 
 	return;
 }

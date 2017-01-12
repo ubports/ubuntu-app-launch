@@ -87,6 +87,7 @@ void Registry::Impl::initClick()
             }
         }
 
+        g_debug("Initialized Click DB");
         return true;
     });
 
@@ -94,6 +95,31 @@ void Registry::Impl::initClick()
     {
         throw std::runtime_error("Unable to initialize the Click Database");
     }
+}
+
+/** Helper function for printing JSON objects to debug output */
+std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
+{
+    auto node = json_node_alloc();
+    json_node_init_object(node, jsonobj.get());
+
+    auto snode = std::shared_ptr<JsonNode>(node, json_node_unref);
+    return printJson(snode);
+}
+
+/** Helper function for printing JSON nodes to debug output */
+std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
+{
+    std::string retval;
+    auto gstr = json_to_string(jsonnode.get(), TRUE);
+
+    if (gstr != nullptr)
+    {
+        retval = gstr;
+        g_free(gstr);
+    }
+
+    return retval;
 }
 
 std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& package)
@@ -116,10 +142,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
 
         auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
 
-#if JSON_CHECK_VERSION(1, 1, 2)
-        // Not available in json-glib 1.0, so must leak there.
-        json_node_unref(node);
-#endif
+        json_node_free(node);
 
         return retval;
     });
@@ -147,7 +170,7 @@ std::list<AppID::Package> Registry::Impl::getClickPackages()
         std::list<AppID::Package> list;
         for (GList* item = pkgs; item != NULL; item = g_list_next(item))
         {
-            auto pkgobj = reinterpret_cast<char*>(item->data);
+            auto pkgobj = reinterpret_cast<gchar*>(item->data);
             if (pkgobj)
             {
                 list.emplace_back(AppID::Package::from_raw(pkgobj));
@@ -187,17 +210,13 @@ void Registry::Impl::initCGManager()
     if (cgManager_)
         return;
 
-    std::promise<std::shared_ptr<GDBusConnection>> promise;
-    auto future = promise.get_future();
-
-    thread.executeOnThread([this, &promise]() {
+    cgManager_ = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this]() {
         bool use_session_bus = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS") != nullptr;
         if (use_session_bus)
         {
             /* For working dbusmock */
             g_debug("Connecting to CG Manager on session bus");
-            promise.set_value(_dbus);
-            return;
+            return _dbus;
         }
 
         auto cancel =
@@ -206,28 +225,25 @@ void Registry::Impl::initCGManager()
         /* Ensure that we do not wait for more than a second */
         thread.timeoutSeconds(std::chrono::seconds{1}, [cancel]() { g_cancellable_cancel(cancel.get()); });
 
-        g_dbus_connection_new_for_address(
-            CGMANAGER_DBUS_PATH,                           /* cgmanager path */
-            G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, /* flags */
-            nullptr,                                       /* Auth Observer */
-            cancel.get(),                                  /* Cancellable */
-            [](GObject* obj, GAsyncResult* res, gpointer data) -> void {
-                GError* error = nullptr;
-                auto promise = reinterpret_cast<std::promise<std::shared_ptr<GDBusConnection>>*>(data);
+        GError* error = nullptr;
+        auto retval = std::shared_ptr<GDBusConnection>(
+            g_dbus_connection_new_for_address_sync(CGMANAGER_DBUS_PATH,                           /* cgmanager path */
+                                                   G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT, /* flags */
+                                                   nullptr,                                       /* Auth Observer */
+                                                   cancel.get(),                                  /* Cancellable */
+                                                   &error),
+            [](GDBusConnection* con) { g_clear_object(&con); });
 
-                auto gcon = g_dbus_connection_new_for_address_finish(res, &error);
-                if (error != nullptr)
-                {
-                    g_error_free(error);
-                }
+        if (error != nullptr)
+        {
+            g_warning("Unable to get CGManager connection: %s", error->message);
+            g_error_free(error);
+        }
 
-                auto con = std::shared_ptr<GDBusConnection>(gcon, [](GDBusConnection* con) { g_clear_object(&con); });
-                promise->set_value(con);
-            },
-            &promise);
+        return retval;
     });
 
-    cgManager_ = future.get();
+    /* NOTE: This will execute on the thread */
     thread.timeoutSeconds(std::chrono::seconds{10}, [this]() { cgManager_.reset(); });
 }
 
@@ -235,18 +251,18 @@ void Registry::Impl::initCGManager()
     all of the PIDs. It is important to note that this is an IPC call, so it can
     by its nature, be racy. Once the message has been sent the group can change.
     You should take that into account in your usage of it. */
-std::vector<pid_t> Registry::Impl::pidsFromCgroup(const std::string& job, const std::string& instance)
+std::vector<pid_t> Registry::Impl::pidsFromCgroup(const std::string& jobpath)
 {
     initCGManager();
     auto lmanager = cgManager_; /* Grab a local copy so we ensure it lasts through our lifetime */
 
-    return thread.executeOnThread<std::vector<pid_t>>([&job, &instance, lmanager]() -> std::vector<pid_t> {
+    return thread.executeOnThread<std::vector<pid_t>>([&jobpath, lmanager]() -> std::vector<pid_t> {
         GError* error = nullptr;
         const gchar* name = g_getenv("UBUNTU_APP_LAUNCH_CG_MANAGER_NAME");
         std::string groupname;
-        if (!job.empty())
+        if (!jobpath.empty())
         {
-            groupname = "upstart/" + job + "-" + instance;
+            groupname = "upstart/" + jobpath;
         }
 
         g_debug("Looking for cg manager '%s' group '%s'", name, groupname.c_str());
@@ -310,7 +326,7 @@ std::string Registry::Impl::upstartJobPath(const std::string& job)
                                                                      G_VARIANT_TYPE("(o)"),             /* return */
                                                                      G_DBUS_CALL_FLAGS_NONE,            /* flags */
                                                                      -1, /* timeout: default */
-                                                                     thread.getCancellable().get(), /* cancelable */
+                                                                     thread.getCancellable().get(), /* cancellable */
                                                                      &error);                       /* error */
 
             if (error != nullptr)
@@ -363,7 +379,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
                                                                G_VARIANT_TYPE("(ao)"),        /* return type */
                                                                G_DBUS_CALL_FLAGS_NONE,        /* flags */
                                                                -1,                            /* timeout: default */
-                                                               thread.getCancellable().get(), /* cancelable */
+                                                               thread.getCancellable().get(), /* cancellable */
                                                                &error);
 
         if (error != nullptr)
@@ -398,7 +414,7 @@ std::list<std::string> Registry::Impl::upstartInstancesForJob(const std::string&
                                             G_VARIANT_TYPE("(a{sv})"),                             /* return type */
                                             G_DBUS_CALL_FLAGS_NONE,                                /* flags */
                                             -1,                            /* timeout: default */
-                                            thread.getCancellable().get(), /* cancelable */
+                                            thread.getCancellable().get(), /* cancellable */
                                             &error);
 
             if (error != nullptr)

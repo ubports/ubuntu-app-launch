@@ -2,3 +2,4 @@
 Name=User App
 Type=Application
 Exec=user-app
+Icon=user-app.png
