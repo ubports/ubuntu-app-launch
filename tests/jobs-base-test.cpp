@@ -138,7 +138,7 @@ TEST_F(JobBaseTest, pauseResume)
         .WillOnce(testing::Return());
 
     /* Make sure it is running */
-    EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
+    EXPECT_EVENTUALLY_FUNC_NE(gsize{0}, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
     /*** Do Pause ***/
     instance->pause();
@@ -160,7 +160,7 @@ TEST_F(JobBaseTest, pauseResume)
     /*** Do Resume ***/
     instance->resume();
 
-    EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
+    EXPECT_EVENTUALLY_FUNC_NE(gsize{0}, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
     EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
 }
@@ -208,7 +208,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
     /* Make sure it is running */
     for (auto& spew : spews)
     {
-        EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
+        EXPECT_EVENTUALLY_FUNC_NE(gsize{0}, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
     }
 
     /*** Do Pause ***/
@@ -242,7 +242,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
 
     for (auto& spew : spews)
     {
-        EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
+        EXPECT_EVENTUALLY_FUNC_NE(gsize{0}, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
         EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
     }
