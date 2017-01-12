@@ -293,9 +293,11 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
             auto onlyshowin = stringlistFromKeyfileSet(keyfile, "OnlyShowIn");
             auto noshowin = stringlistFromKeyfileSet(keyfile, "NoShowIn");
 
-            if ((!std::includes(cdesktops.begin(), cdesktops.end(), onlyshowin.begin(), onlyshowin.end()) &&
-                 !onlyshowin.empty()) ||
-                std::includes(cdesktops.begin(), cdesktops.end(), noshowin.begin(), noshowin.end()))
+            auto hasAnyOf = [](std::set<std::string>& a, std::set<std::string>& b) {
+                return std::find_first_of(a.cbegin(), a.cend(), b.cbegin(), b.cend()) != a.cend();
+            };
+
+            if ((!hasAnyOf(onlyshowin, cdesktops) && !onlyshowin.empty()) || hasAnyOf(noshowin, cdesktops))
             {
                 throw std::runtime_error("Application is not shown in '" + std::string{xdg_current_desktop} + "'");
             }
