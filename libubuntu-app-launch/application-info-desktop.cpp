@@ -291,7 +291,7 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
             g_strfreev(current_desktops);
 
             auto onlyshowin = stringlistFromKeyfileSet(keyfile, "OnlyShowIn");
-            auto noshowin = stringlistFromKeyfileSet(keyfile, "NoShowIn");
+            auto noshowin = stringlistFromKeyfileSet(keyfile, "NotShowIn");
 
             auto hasAnyOf = [](std::set<std::string>& a, std::set<std::string>& b) {
                 return std::find_first_of(a.cbegin(), a.cend(), b.cbegin(), b.cend()) != a.cend();
