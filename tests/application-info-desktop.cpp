@@ -123,12 +123,16 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
     // not shown in Unity
     auto notshowin = defaultKeyfile();
     g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_dekstop_env + ";").c_str());
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/"), std::runtime_error);
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
 
     // only show in not Unity
     auto onlyshowin = defaultKeyfile();
     g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", "KDE;Gnome;");
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/"), std::runtime_error);
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
 }
 
 TEST_F(ApplicationInfoDesktop, KeyfileIconPatterns)
