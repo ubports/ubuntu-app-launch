@@ -5,7 +5,7 @@ Maintainer: Ted Gould <ted@ubuntu.com>
 Build-Depends: abi-compliance-checker,
                click-dev (>= 0.2.2),
                cmake,
-               cmake-extras,
+               cmake-extras (>= 0.10),
                dbus-x11,
                dbus-test-runner,
                debhelper (>= 9),
