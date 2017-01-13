@@ -126,15 +126,6 @@ add_library(helpers STATIC helpers.c helpers-shared.c)
 target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
 
 ####################
-# desktop-hook
-####################
-
-add_executable(desktop-hook desktop-hook.c)
-set_target_properties(desktop-hook PROPERTIES OUTPUT_NAME "desktop-hook")
-target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
-install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
 # exec-line-exec
 ####################
 
