@@ -67,6 +67,14 @@ target_link_libraries (jobs-base-test ${GMOCK_LIBRARIES} ${GTEST_MAIN_LIBRARIES}
 
 add_test(NAME jobs-base-test COMMAND jobs-base-test)
 
+# Jobs Systemd Test
+
+add_executable (jobs-systemd
+	jobs-systemd.cpp)
+target_link_libraries (jobs-systemd ${GMOCK_LIBRARIES} launcher-static ${DBUSTEST_LIBRARIES})
+
+add_test(NAME jobs-systemd COMMAND jobs-systemd)
+
 # Snapd Info Test
 
 if(CURL_FOUND)
@@ -167,9 +175,11 @@ add_custom_target(format-tests
 	list-apps.cpp
 	eventually-fixture.h
 	jobs-base-test.cpp
+	jobs-systemd.cpp
 	registry-mock.h
 	snapd-info-test.cpp
 	snapd-mock.h
 	spew-master.h
+	systemd-mock.h
 	zg-test.cc
 )
