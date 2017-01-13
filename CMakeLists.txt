@@ -59,11 +59,6 @@ add_compile_options(
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-#STRING(TOLOWER "${CMAKE_BUILD_TYPE}" LOWER_CMAKE_BUILD_TYPE)
-#if ("${LOWER_CMAKE_BUILD_TYPE}" STREQUAL "coverage")
-#	set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} -lgcov")
-#endif()
-
 enable_testing()
 
 pkg_check_modules(GLIB2 REQUIRED glib-2.0)
