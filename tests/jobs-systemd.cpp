@@ -28,17 +28,23 @@ class JobsSystemd : public EventuallyFixture
 protected:
     std::shared_ptr<DbusTestService> service;
     std::shared_ptr<RegistryMock> registry;
+    std::shared_ptr<SystemdMock> systemd;
 
     virtual void SetUp()
     {
         service = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
                                                    [](DbusTestService* service) { g_clear_object(&service); });
+
+        systemd = std::make_shared<SystemdMock>();
+        dbus_test_service_add_task(service.get(), *systemd);
+
         dbus_test_service_start_tasks(service.get());
         registry = std::make_shared<RegistryMock>();
     }
 
     virtual void TearDown()
     {
+        systemd.reset();
         registry.reset();
         service.reset();
     }
