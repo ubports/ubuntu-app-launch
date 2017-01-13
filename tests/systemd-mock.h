@@ -22,6 +22,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <type_traits>
 
 #include <gio/gio.h>
@@ -37,7 +38,14 @@ class SystemdMock
     GLib::ContextThread thread;
 
 public:
-    SystemdMock()
+    struct Instance
+    {
+        std::string job;
+        std::string appid;
+        std::string instanceid;
+    };
+
+    SystemdMock(std::list<Instance> instances)
     {
         mock = dbus_test_dbus_mock_new("org.freedesktop.systemd1");
         dbus_test_task_set_bus(DBUS_TEST_TASK(mock), DBUS_TEST_SERVICE_BUS_SESSION);
@@ -47,9 +55,22 @@ public:
                                                     "org.freedesktop.systemd1.Manager", nullptr);
 
         dbus_test_dbus_mock_object_add_method(mock, managerobj, "Subscribe", nullptr, nullptr, "", nullptr);
-        dbus_test_dbus_mock_object_add_method(mock, managerobj, "ListUnits", nullptr,
-                                              G_VARIANT_TYPE("(a(ssssssouso))"), /* ret type */
-                                              "ret = []", nullptr);
+        dbus_test_dbus_mock_object_add_method(
+            mock, managerobj, "ListUnits", nullptr, G_VARIANT_TYPE("(a(ssssssouso))"), /* ret type */
+            ("ret = [ " + std::accumulate(instances.begin(), instances.end(), std::string{},
+                                          [](const std::string accum, Instance& inst) {
+                                              std::string retval = accum;
+
+                                              if (!retval.empty())
+                                              {
+                                                  retval += ", ";
+                                              }
+
+                                              return retval;
+                                          }) +
+             "]")
+                .c_str(),
+            nullptr);
     }
 
     ~SystemdMock()
