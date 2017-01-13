@@ -64,10 +64,8 @@ public:
     /** DBus shared connection for the session bus */
     std::shared_ptr<GDBusConnection> _dbus;
 
-#ifdef ENABLE_SNAPPY
     /** Snapd information object */
     snapd::Info snapdInfo;
-#endif
 
     std::shared_ptr<jobs::manager::Base> jobs;
 

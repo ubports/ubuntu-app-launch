@@ -23,9 +23,7 @@ extern "C" {
 
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
-#ifdef ENABLE_SNAPPY
 #include "application-impl-snap.h"
-#endif
 #include "application.h"
 #include "jobs-base.h"
 #include "registry-impl.h"
@@ -208,11 +206,9 @@ struct DiscoverTools
 
 /** The tools in order that they should be used */
 static const std::vector<DiscoverTools> discoverTools{
-#ifdef ENABLE_SNAPPY
     /* Snap */
     {app_impls::Snap::verifyPackage, app_impls::Snap::verifyAppname, app_impls::Snap::findAppname,
      app_impls::Snap::findVersion, app_impls::Snap::hasAppId},
-#endif
     /* Libertine */
     {app_impls::Libertine::verifyPackage, app_impls::Libertine::verifyAppname, app_impls::Libertine::findAppname,
      app_impls::Libertine::findVersion, app_impls::Libertine::hasAppId},

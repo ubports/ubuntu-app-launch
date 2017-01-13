@@ -45,6 +45,8 @@ application-impl-legacy.h
 application-impl-legacy.cpp
 application-impl-libertine.h
 application-impl-libertine.cpp
+application-impl-snap.h
+application-impl-snap.cpp
 application-info-desktop.h
 application-info-desktop.cpp
 application-icon-finder.h
@@ -58,6 +60,8 @@ jobs-systemd.h
 jobs-systemd.cpp
 jobs-upstart.h
 jobs-upstart.cpp
+snapd-info.h
+snapd-info.cpp
 )
 
 set(LAUNCHER_SOURCES
@@ -66,16 +70,6 @@ second-exec-core.c
 ubuntu-app-launch-trace.c
 app-info.c
 )
-
-if(CURL_FOUND)
-add_definitions ( -DENABLE_SNAPPY=1 )
-list(APPEND LAUNCHER_CPP_SOURCES
-application-impl-snap.h
-application-impl-snap.cpp
-snapd-info.h
-snapd-info.cpp
-)
-endif()
 
 add_custom_target(format
 	COMMAND clang-format -i -style=file ${LAUNCHER_CPP_HEADERS} ${LAUNCHER_CPP_SOURCES}
