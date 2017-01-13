@@ -21,7 +21,6 @@
 #include "jobs-base.h"
 #include "registry.h"
 #include "snapd-info.h"
-#include <click.h>
 #include <gio/gio.h>
 #include <json-glib/json-glib.h>
 #include <map>
