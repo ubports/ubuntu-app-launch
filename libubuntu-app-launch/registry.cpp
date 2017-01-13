@@ -24,7 +24,6 @@
 #include "registry-impl.h"
 #include "registry.h"
 
-#include "application-impl-click.h"
 #include "application-impl-legacy.h"
 #include "application-impl-libertine.h"
 #ifdef ENABLE_SNAPPY

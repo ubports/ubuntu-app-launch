@@ -41,8 +41,6 @@ registry-impl.h
 registry-impl.cpp
 application-impl-base.h
 application-impl-base.cpp
-application-impl-click.h
-application-impl-click.cpp
 application-impl-legacy.h
 application-impl-legacy.cpp
 application-impl-libertine.h
