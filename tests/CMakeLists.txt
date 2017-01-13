@@ -1,13 +1,5 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-configure_file ("click-db-dir/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-db-dir/test.conf" @ONLY)
-set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_CURRENT_BINARY_DIR}/click-db-dir/test.conf")
-
-if(CURL_FOUND)
-add_definitions ( -DENABLE_SNAPPY=1 )
-endif()
-
-
 # Google Test
 
 find_package(GMock)
@@ -145,12 +137,6 @@ add_executable (cgroup-reap-test
 	cgroup-reap-test.cc)
 target_link_libraries (cgroup-reap-test gtest_main ${GTEST_MAIN_LIBRARIES} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
 add_test (cgroup-reap-test cgroup-reap-test)
-
-# Desktop Hook Test
-
-configure_file ("click-desktop-hook-db/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-desktop-hook-db/test.conf" @ONLY)
-configure_file ("desktop-hook-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/desktop-hook-test.sh" @ONLY)
-add_test (desktop-hook-test desktop-hook-test.sh)
 
 # XMir helper Test
 
