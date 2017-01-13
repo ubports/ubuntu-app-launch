@@ -167,6 +167,7 @@ add_custom_target(format-tests
 	list-apps.cpp
 	eventually-fixture.h
 	jobs-base-test.cpp
+	registry-mock.h
 	snapd-info-test.cpp
 	snapd-mock.h
 	spew-master.h
