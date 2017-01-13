@@ -224,8 +224,13 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                 if (error != nullptr)
                 {
                     g_warning("Unable to list SystemD units: %s", error->message);
+
+                    if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED) == FALSE)
+                    {
+                        pthis->unitPathsInitPromise.set_value(false);
+                    }
+
                     g_error_free(error);
-                    pthis->unitPathsInitPromise.set_value(false);
                     return;
                 }
 
