@@ -27,8 +27,6 @@ gboolean  app_id_to_triplet      (const gchar *   app_id,
                                   gchar **        package,
                                   gchar **        application,
                                   gchar **        version);
-gchar *   manifest_to_desktop    (const gchar *   app_dir,
-                                  const gchar *   app_id);
 gchar *   desktop_to_exec        (GKeyFile *      desktop_file,
                                   const gchar *   from);
 GArray *  desktop_exec_parse     (const gchar *   execline,
