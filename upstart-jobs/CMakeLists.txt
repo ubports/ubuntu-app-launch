@@ -16,14 +16,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf" DESTINATION 
 add_test(application-legacy.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-legacy.conf")
 
 ####################
-# application-click.conf
-####################
-
-configure_file("application-click.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf" DESTINATION "${CMAKE_INSTALL_DATADIR}/upstart/sessions")
-add_test(application-click.conf.test "${CMAKE_CURRENT_SOURCE_DIR}/test-conffile.sh" "${CMAKE_CURRENT_BINARY_DIR}/application-click.conf")
-
-####################
 # application-snap.conf
 ####################
 

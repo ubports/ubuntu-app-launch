@@ -6,7 +6,6 @@ task
 
 # Events aren't emitted directly, but start is used to create them
 emits application-legacy-start
-emits application-click-start
 
 env APP_ID
 export APP_ID

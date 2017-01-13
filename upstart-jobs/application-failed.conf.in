@@ -1,6 +1,6 @@
 description "Application Failing"
 
-start on stopped application-legacy RESULT=failed or stopped application-click RESULT=failed or stopped application-snap RESULT=failed
+start on stopped application-legacy RESULT=failed or stopped application-snap RESULT=failed
 task
 
 exec @pkglibexecdir@/application-failed
