@@ -50,10 +50,6 @@ public:
         thread.quit();
     }
 
-    std::shared_ptr<JsonObject> getClickManifest(const std::string& package);
-    std::list<AppID::Package> getClickPackages();
-    std::string getClickDir(const std::string& package);
-
     static void setManager(const std::shared_ptr<Registry::Manager>& manager,
                            const std::shared_ptr<Registry>& registry);
     void clearManager();
@@ -89,11 +85,6 @@ public:
 
 private:
     Registry* _registry; /**< The Registry that we're spawned from */
-
-    std::shared_ptr<ClickDB> _clickDB;     /**< Shared instance of the Click Database */
-    std::shared_ptr<ClickUser> _clickUser; /**< Click database filtered by the current user */
-
-    void initClick();
 
     /** Shared instance of the Zeitgeist Log */
     std::shared_ptr<ZeitgeistLog> zgLog_;
