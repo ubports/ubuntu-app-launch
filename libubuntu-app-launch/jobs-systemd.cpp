@@ -804,7 +804,7 @@ std::string SystemD::userBusPath()
 
 /* TODO: Application job names */
 const std::regex unitNaming{
-    "^ubuntu\\-app\\-launch\\-(application\\-(?:click|legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
+    "^ubuntu\\-app\\-launch\\-(application\\-(?:legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
 
 SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
 {

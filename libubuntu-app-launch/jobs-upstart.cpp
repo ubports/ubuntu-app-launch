@@ -101,10 +101,6 @@ pid_t Upstart::primaryPid()
         GError* error = nullptr;
 
         std::string instancename = std::string(appId_);
-        if (job_ != "application-click")
-        {
-            instancename += "-" + instance_;
-        }
 
         g_debug("Getting instance by name: %s", instance_.c_str());
         auto vinstance_path =
@@ -193,17 +189,12 @@ pid_t Upstart::primaryPid()
 
 /** Generate the full name of the Upstart job for the job, the
     instance and how all those fit together.
-
-    Handles the special case of application-click which isn't designed
-    to have multi-instance apps.
 */
 std::string Upstart::upstartName()
 {
     std::string path = job_ + "-" + std::string(appId_);
-    if (job_ != "application-click")
-    {
-        path += "-";
-    }
+    path += "-";
+
     if (!instance_.empty())
     {
         path += instance_;
@@ -643,11 +634,7 @@ std::shared_ptr<Application::Instance> Upstart::existing(const AppID& appId,
 std::vector<std::shared_ptr<instance::Base>> Upstart::instances(const AppID& appID, const std::string& job)
 {
     std::vector<std::shared_ptr<instance::Base>> vect;
-    auto startsWith = std::string(appID);
-    if (job != "application-click")
-    {
-        startsWith += "-";
-    }
+    auto startsWith = std::string(appID) + "-";
 
     auto regexstr =
         std::string{"^(?:"} + std::regex_replace(startsWith, regexCharacters, "\\$&") + std::string{")(\\d*)$"};
@@ -680,7 +667,7 @@ struct upstartEventData
 };
 
 /** Regex to parse the JOB environment variable from Upstart */
-const std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
+const std::regex jobenv_regex{"^JOB=(application\\-(?:snap|legacy))$"};
 /** Regex to parse the INSTANCE environment variable from Upstart */
 const std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
 
@@ -1178,12 +1165,6 @@ std::list<std::shared_ptr<Application>> Upstart::runningApps()
     {
         if (!instance.empty())
             instanceset.insert(instance);
-    }
-
-    /* Add in the click instances */
-    for (auto instance : upstartInstancesForJob("application-click"))
-    {
-        instanceset.insert(instance);
     }
 
     g_debug("Overall there are %d instances: %s", int(instanceset.size()),

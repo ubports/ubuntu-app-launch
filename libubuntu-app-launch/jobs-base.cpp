@@ -39,7 +39,7 @@ namespace manager
 
 Base::Base(const std::shared_ptr<Registry>& registry)
     : registry_(registry)
-    , allJobs_{"application-click", "application-legacy", "application-snap"}
+    , allJobs_{"application-legacy", "application-snap"}
     , dbus_(registry->impl->_dbus)
 {
 }
