@@ -18,65 +18,11 @@
  */
 
 #include <json-glib/json-glib.h>
-#include <click.h>
 
 #include "ubuntu-app-launch.h"
 
 /* Prototypes */
 static gboolean app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop);
-
-/* Try and get a manifest and do a couple sanity checks on it */
-static JsonObject *
-get_manifest (const gchar * pkg, gchar ** pkgpath)
-{
-	/* Get the directory from click */
-	GError * error = NULL;
-
-	ClickDB * db = click_db_new();
-	/* If TEST_CLICK_DB is unset, this reads the system database. */
-	click_db_read(db, g_getenv("TEST_CLICK_DB"), &error);
-	if (error != NULL) {
-		g_warning("Unable to read Click database: %s", error->message);
-		g_error_free(error);
-		g_object_unref(db);
-		return NULL;
-	}
-	/* If TEST_CLICK_USER is unset, this uses the current user name. */
-	ClickUser * user = click_user_new_for_user(db, g_getenv("TEST_CLICK_USER"), &error);
-	if (error != NULL) {
-		g_warning("Unable to read Click database: %s", error->message);
-		g_error_free(error);
-		g_object_unref(db);
-		return NULL;
-	}
-	g_object_unref(db);
-	JsonObject * manifest = click_user_get_manifest(user, pkg, &error);
-	if (error != NULL) {
-		g_warning("Unable to get manifest for '%s' package: %s", pkg, error->message);
-		g_error_free(error);
-		g_object_unref(user);
-		return NULL;
-	}
-
-	if (pkgpath != NULL) {
-		*pkgpath = click_user_get_path(user, pkg, &error);
-		if (error != NULL) {
-			g_warning("Unable to get the Click package directory for %s: %s", pkg, error->message);
-			g_error_free(error);
-			g_object_unref(user);
-			return NULL;
-		}
-	}
-	g_object_unref(user);
-
-	if (!json_object_has_member(manifest, "version")) {
-		g_warning("Manifest file for package '%s' does not have a version", pkg);
-		json_object_unref(manifest);
-		return NULL;
-	}
-
-	return manifest;
-}
 
 /* Look to see if the app id results in a desktop file, if so, fill in the params */
 static gboolean
@@ -178,78 +124,6 @@ app_info_libertine (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 	return TRUE;
 }
 
-/* Get the information on where the desktop file is from libclick */
-static gboolean
-app_info_click (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
-{
-	gchar * package = NULL;
-	gchar * application = NULL;
-
-	if (!ubuntu_app_launch_app_id_parse(appid, &package, &application, NULL)) {
-		return FALSE;
-	}
-
-	JsonObject * manifest = get_manifest(package, appdir);
-	if (manifest == NULL) {
-		g_free(package);
-		g_free(application);
-		return FALSE;
-	}
-
-	g_free(package);
-
-	if (appdesktop != NULL) {
-		JsonObject * hooks = json_object_get_object_member(manifest, "hooks");
-		if (hooks == NULL) {
-			json_object_unref(manifest);
-			g_free(application);
-			return FALSE;
-		}
-
-		JsonObject * appobj = json_object_get_object_member(hooks, application);
-		g_free(application);
-
-		if (appobj == NULL) {
-			json_object_unref(manifest);
-			return FALSE;
-		}
-
-		const gchar * desktop = json_object_get_string_member(appobj, "desktop");
-		if (desktop == NULL) {
-			json_object_unref(manifest);
-			return FALSE;
-		}
-
-		*appdesktop = g_strdup(desktop);
-	} else {
-		g_free(application);
-	}
-
-	json_object_unref(manifest);
-
-	return TRUE;
-}
-
-/* Determine whether it's a click package by looking for the symlink
-   that is created by the desktop hook */
-static gboolean
-is_click (const gchar * appid)
-{
-	gchar * appiddesktop = g_strdup_printf("%s.desktop", appid);
-	gchar * click_link = NULL;
-	const gchar * link_farm_dir = g_getenv("UBUNTU_APP_LAUNCH_LINK_FARM");
-	if (G_LIKELY(link_farm_dir == NULL)) {
-		click_link = g_build_filename(g_get_user_cache_dir(), "ubuntu-app-launch", "desktop", appiddesktop, NULL);
-	} else {
-		click_link = g_build_filename(link_farm_dir, appiddesktop, NULL);
-	}
-	g_free(appiddesktop);
-	gboolean click = g_file_test(click_link, G_FILE_TEST_EXISTS);
-	g_free(click_link);
-
-	return click;
-}
-
 /* Determine whether an AppId is realated to a Libertine container by
    checking the container and program name. */
 static gboolean
@@ -266,9 +140,7 @@ is_libertine (const gchar * appid)
 gboolean
 ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
 {
-	if (is_click(appid)) {
-		return app_info_click(appid, appdir, appdesktop);
-	} else if (is_libertine(appid)) {
+	if (is_libertine(appid)) {
 		return app_info_libertine(appid, appdir, appdesktop);
 	} else {
 		return app_info_legacy(appid, appdir, appdesktop);
