@@ -202,6 +202,39 @@ TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
                           ("Gnome;" + test_desktop_env + ";KDE;").c_str());
     EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowinmiddle, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
+
+    // Chance current to be a list
+    setenv("XDG_CURRENT_DESKTOP", ("notafreedesktop:" + test_desktop_env + "::someotherdesktop").c_str(), true);
+
+    // Make sure we can parse it and just not blow up
+    auto base = defaultKeyfile();
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(base, "/", {},
+                                                          ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
+
+    // Put in both, make sure we reject
+    auto everything = defaultKeyfile();
+    g_key_file_set_string(everything.get(), DESKTOP, "OnlyShowIn", ("Gnome;" + test_desktop_env + ";KDE;").c_str());
+    g_key_file_set_string(everything.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_desktop_env + ";").c_str());
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(everything, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
+
+    // Reject us
+    auto notlist = defaultKeyfile();
+    g_key_file_set_string(notlist.get(), DESKTOP, "NotShowIn", ("Gnome;Foo;" + test_desktop_env + ";KDE;").c_str());
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notlist, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
+
+    // Only Show us
+    g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_desktop_env + ";Gnome;").c_str());
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
+                                                          ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
+
+    // Make sure we can still go with nothing set
+    auto notset = defaultKeyfile();
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(notset, "/", {},
+                                                          ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 }
 
 TEST_F(ApplicationInfoDesktop, Orientations)
