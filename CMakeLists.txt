@@ -81,9 +81,6 @@ include_directories(${JSONGLIB_INCLUDE_DIRS})
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
-pkg_check_modules(CLICK REQUIRED click-0.4>=0.4.18)
-include_directories(${CLICK_INCLUDE_DIRS})
-
 pkg_check_modules(LIBUPSTART REQUIRED libupstart)
 include_directories(${LIBUPSTART_INCLUDE_DIRS})
 
@@ -229,12 +226,6 @@ set_target_properties(snappy-xmir-envvars PROPERTIES OUTPUT_NAME "snappy-xmir-en
 # No libs, otherwise we have to worry about how to handle finding them
 install(TARGETS snappy-xmir-envvars RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
-
-####################
-# ubuntu-app-launch-desktop.click-hook
-####################
-
-configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/ubuntu-app-launch-desktop.click-hook" @ONLY)
 
 add_subdirectory(libubuntu-app-launch)
 add_subdirectory(upstart-jobs)
