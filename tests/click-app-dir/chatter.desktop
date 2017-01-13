@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Chatter
-Comment=Chat on Internet Relay Chat (IRC) networks
-Keywords=irc,online,chat,freenode
-Exec=chatter
-Icon=chatter.png
-Terminal=false
-Type=Application
-X-Ubuntu-Touch=true

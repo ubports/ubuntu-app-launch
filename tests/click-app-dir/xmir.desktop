@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=X Application
-Type=Application
-Exec=xfoo
-NoDisplay=false
-Hidden=false
-Terminal=false
-X-Ubuntu-XMir-Enable=true
-Icon=xfoo.png

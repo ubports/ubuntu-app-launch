@@ -1,8 +1,0 @@
-{
-	"version": "1.2.3",
-	"hookie": {
-		"application": {
-			"desktop": "application.desktop"
-		}
-	}
-}
