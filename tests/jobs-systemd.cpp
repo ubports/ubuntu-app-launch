@@ -35,7 +35,9 @@ protected:
         service = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
                                                    [](DbusTestService* service) { g_clear_object(&service); });
 
-        systemd = std::make_shared<SystemdMock>(std::list<SystemdMock::Instance>{});
+        systemd = std::make_shared<SystemdMock>(
+            std::list<SystemdMock::Instance>{{"application-foobar", "package_application_15", "1234567890"},
+                                             {"application-barfoo", "package_application_15", "1234567890"}});
         dbus_test_service_add_task(service.get(), *systemd);
 
         dbus_test_service_start_tasks(service.get());

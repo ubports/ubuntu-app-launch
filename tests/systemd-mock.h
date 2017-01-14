@@ -33,10 +33,6 @@
 
 class SystemdMock
 {
-    DbusTestDbusMock* mock = nullptr;
-    DbusTestDbusMockObject* managerobj = nullptr;
-    GLib::ContextThread thread;
-
 public:
     struct Instance
     {
@@ -45,6 +41,13 @@ public:
         std::string instanceid;
     };
 
+private:
+    DbusTestDbusMock* mock = nullptr;
+    DbusTestDbusMockObject* managerobj = nullptr;
+    GLib::ContextThread thread;
+    std::list<std::pair<Instance, DbusTestDbusMockObject*>> insts;
+
+public:
     SystemdMock(std::list<Instance> instances)
     {
         mock = dbus_test_dbus_mock_new("org.freedesktop.systemd1");
@@ -66,17 +69,60 @@ public:
                                                   retval += ", ";
                                               }
 
+                                              retval += std::string{"("} + /* start tuple */
+                                                        "'ubuntu-app-launch-" + inst.job + "-" + inst.appid + "-" +
+                                                        inst.instanceid + "', " +        /* id */
+                                                        "'unused', " +                   /* description */
+                                                        "'unused', " +                   /* load state */
+                                                        "'unused', " +                   /* active state */
+                                                        "'unused', " +                   /* substate */
+                                                        "'unused', " +                   /* following */
+                                                        "'unused', " +                   /* path */
+                                                        "5, " +                          /* jobId */
+                                                        "'unused', " +                   /* jobType */
+                                                        "'" + instancePath(inst) + "'" + /* jobPath */
+                                                        ")";                             /* finish tuple */
+
                                               return retval;
                                           }) +
              "]")
                 .c_str(),
             nullptr);
+
+        for (auto& instance : instances)
+        {
+            auto obj = dbus_test_dbus_mock_get_object(mock, instancePath(instance).c_str(),
+                                                      "org.freedesktop.systemd1.Unit", nullptr);
+            insts.emplace_back(std::make_pair(instance, obj));
+        }
     }
 
     ~SystemdMock()
     {
         g_debug("Destroying the Systemd Mock");
         g_clear_object(&mock);
+    }
+
+    static std::string dbusSafe(std::string& input)
+    {
+        std::string output = input;
+        std::transform(output.begin(), output.end(), output.begin(), [](char in) {
+            if (std::isalpha(in) || std::isdigit(in))
+            {
+                return in;
+            }
+            else
+            {
+                return '_';
+            }
+
+        });
+        return output;
+    }
+
+    static std::string instancePath(Instance& inst)
+    {
+        return std::string{"/"} + dbusSafe(inst.job) + "/" + dbusSafe(inst.appid) + "/" + dbusSafe(inst.instanceid);
     }
 
     operator std::shared_ptr<DbusTestTask>()
