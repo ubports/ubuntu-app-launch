@@ -124,7 +124,7 @@ private:
         std::future<bool> pathfuture;
     };
 
-    std::promise<bool> unitPathsInitPromise;
+    std::shared_ptr<std::promise<bool>> unitPathsInitPromise;
     std::future<bool> unitPathsInitFuture;
     void unitPathsInit(void)
     {

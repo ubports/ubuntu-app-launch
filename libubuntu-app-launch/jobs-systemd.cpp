@@ -111,7 +111,8 @@ static const std::string SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Se
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
 {
-    unitPathsInitFuture = unitPathsInitPromise.get_future();
+    unitPathsInitPromise = std::make_shared<std::promise<bool>>();
+    unitPathsInitFuture = unitPathsInitPromise->get_future();
 
     auto cancel = registry->impl->thread.getCancellable();
     userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
@@ -219,6 +220,14 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                                this,     /* user data */
                                                nullptr); /* user data destroy */
 
+        struct ListUnitsData
+        {
+            SystemD* pthis;
+            std::shared_ptr<std::promise<bool>> listcomplete;
+        };
+
+        auto ludata = new ListUnitsData{this, unitPathsInitPromise};
+
         g_dbus_connection_call(
             bus.get(),                          /* user bus */
             SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
@@ -231,20 +240,19 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
             -1,                                 /* timeout */
             cancel.get(),                       /* cancellable */
             [](GObject* obj, GAsyncResult* res, gpointer user_data) {
-                auto pthis = static_cast<SystemD*>(user_data);
+                auto ludata = static_cast<ListUnitsData*>(user_data);
+                auto pthis = ludata->pthis;
+                auto promise = ludata->listcomplete;
+                delete ludata;
+
                 GError* error{nullptr};
                 GVariant* callt = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
                 if (error != nullptr)
                 {
                     g_warning("Unable to list SystemD units: %s", error->message);
-
-                    if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED) == FALSE)
-                    {
-                        pthis->unitPathsInitPromise.set_value(false);
-                    }
-
                     g_error_free(error);
+                    promise->set_value(false);
                     return;
                 }
 
@@ -271,9 +279,9 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
                 g_variant_iter_free(iter);
                 g_variant_unref(call);
-                pthis->unitPathsInitPromise.set_value(true);
+                promise->set_value(true);
             },
-            this);
+            ludata);
 
         return bus;
     });
@@ -292,6 +300,8 @@ SystemD::~SystemD()
     dohandle(handle_unitNew);
     dohandle(handle_unitRemoved);
     dohandle(handle_appFailed);
+
+    unitPathsInit();
 }
 
 std::string SystemD::findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env)
