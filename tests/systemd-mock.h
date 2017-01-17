@@ -77,7 +77,7 @@ public:
                                                         "'unused', " +                   /* active state */
                                                         "'unused', " +                   /* substate */
                                                         "'unused', " +                   /* following */
-                                                        "'unused', " +                   /* path */
+                                                        "'/unused', " +                  /* path */
                                                         "5, " +                          /* jobId */
                                                         "'unused', " +                   /* jobType */
                                                         "'" + instancePath(inst) + "'" + /* jobPath */

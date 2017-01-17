@@ -29,6 +29,7 @@ protected:
     std::shared_ptr<DbusTestService> service;
     std::shared_ptr<RegistryMock> registry;
     std::shared_ptr<SystemdMock> systemd;
+    GDBusConnection* bus = nullptr;
 
     virtual void SetUp()
     {
@@ -45,6 +46,10 @@ protected:
 
         dbus_test_service_start_tasks(service.get());
         registry = std::make_shared<RegistryMock>();
+
+        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
+        g_dbus_connection_set_exit_on_close(bus, FALSE);
+        g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
     }
 
     virtual void TearDown()
@@ -52,6 +57,9 @@ protected:
         systemd.reset();
         registry.reset();
         service.reset();
+
+        g_object_unref(bus);
+        ASSERT_EVENTUALLY_EQ(nullptr, bus);
     }
 
     ubuntu::app_launch::AppID simpleAppID()
