@@ -32,6 +32,9 @@ protected:
 
     virtual void SetUp()
     {
+        /* Force over to session bus */
+        g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH", "/this/should/not/exist", TRUE);
+
         service = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
                                                    [](DbusTestService* service) { g_clear_object(&service); });
 
