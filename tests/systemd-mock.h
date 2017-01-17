@@ -1,5 +1,5 @@
 /*
- * Copyright © 2015 Canonical Ltd.
+ * Copyright © 2017 Canonical Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -140,5 +140,47 @@ public:
     operator DbusTestDbusMock*()
     {
         return mock;
+    }
+
+    unsigned int subscribeCallsCnt()
+    {
+        guint len = 0;
+        GError* error = nullptr;
+
+        dbus_test_dbus_mock_object_get_method_calls(mock,        /* mock */
+                                                    managerobj,  /* manager */
+                                                    "Subscribe", /* function */
+                                                    &len,        /* number */
+                                                    &error       /* error */
+                                                    );
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to get 'Subscribe' calls from systemd mock: %s", error->message);
+            g_error_free(error);
+        }
+
+        return len;
+    }
+
+    unsigned int listCallsCnt()
+    {
+        guint len = 0;
+        GError* error = nullptr;
+
+        dbus_test_dbus_mock_object_get_method_calls(mock,        /* mock */
+                                                    managerobj,  /* manager */
+                                                    "ListUnits", /* function */
+                                                    &len,        /* number */
+                                                    &error       /* error */
+                                                    );
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to get 'Subscribe' calls from systemd mock: %s", error->message);
+            g_error_free(error);
+        }
+
+        return len;
     }
 };
