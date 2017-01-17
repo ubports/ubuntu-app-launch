@@ -117,13 +117,27 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
     userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
         GError* error = nullptr;
         auto bus = std::shared_ptr<GDBusConnection>(
-            g_dbus_connection_new_for_address_sync(
-                ("unix:path=" + userBusPath()).c_str(), /* path to the user bus */
-                (GDBusConnectionFlags)(G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
-                                       G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION), /* It is a message bus */
-                nullptr,                                                                /* observer */
-                cancel.get(), /* cancellable from the thread */
-                &error),      /* error */
+            [&]() -> GDBusConnection* {
+                if (g_file_test(SystemD::userBusPath().c_str(), G_FILE_TEST_EXISTS))
+                {
+                    return g_dbus_connection_new_for_address_sync(
+                        ("unix:path=" + userBusPath()).c_str(), /* path to the user bus */
+                        (GDBusConnectionFlags)(
+                            G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
+                            G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION), /* It is a message bus */
+                        nullptr,                                             /* observer */
+                        cancel.get(),                                        /* cancellable from the thread */
+                        &error);                                             /* error */
+                }
+                else
+                {
+                    /* Fallback mostly for testing */
+                    g_debug("Using session bus for systemd user bus");
+                    return g_bus_get_sync(G_BUS_TYPE_SESSION, /* type */
+                                          cancel.get(),       /* thread cancellable */
+                                          &error);            /* error */
+                }
+            }(),
             [](GDBusConnection* bus) { g_clear_object(&bus); });
 
         if (error != nullptr)
