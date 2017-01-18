@@ -49,6 +49,7 @@ public:
     bool hasPid(pid_t pid) override;
     void pause() override;
     void resume() override;
+    void focus() override;
 
     /* OOM Functions */
     void setOomAdjustment(const oom::Score score) override;
@@ -136,6 +137,10 @@ public:
                          const std::shared_ptr<Application::Instance>&,
                          const std::vector<pid_t>&>&
         appResumed();
+    virtual core::Signal<const std::shared_ptr<Application>&,
+                         const std::shared_ptr<Application::Instance>&,
+                         const std::vector<pid_t>&>&
+        appFocused();
 
     /* App manager */
     virtual void setManager(std::shared_ptr<Registry::Manager> manager);
@@ -173,6 +178,11 @@ protected:
                  const std::shared_ptr<Application::Instance>&,
                  const std::vector<pid_t>&>
         sig_appResumed;
+    /** Signal object for applications focused */
+    core::Signal<const std::shared_ptr<Application>&,
+                 const std::shared_ptr<Application::Instance>&,
+                 const std::vector<pid_t>&>
+        sig_appFocused;
 
 private:
     guint handle_managerSignalFocus{0};    /**< GDBus signal watcher handle for app focused signal */
@@ -180,6 +190,7 @@ private:
     guint handle_managerSignalStarting{0}; /**< GDBus signal watcher handle for app starting signal */
     guint handle_appPaused{0};             /**< GDBus signal watcher handle for app paused signal */
     guint handle_appResumed{0};            /**< GDBus signal watcher handle for app resumed signal */
+    guint handle_appFocused{0};            /**< GDBus signal watcher handle for app resumed signal */
 
     std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
                                            signals of focused, resumed and starting */
@@ -187,6 +198,9 @@ private:
         flag_appPaused; /**< Variable to track to see if signal handlers are installed for application paused */
     std::once_flag flag_appResumed; /**< Variable to track to see if signal handlers are installed for application
                                        resumed */
+
+    std::once_flag flag_appFocused; /**< Variable to track to see if signal handlers are installed for application
+                                       focused */
 
     void pauseEventEmitted(core::Signal<const std::shared_ptr<Application>&,
                                         const std::shared_ptr<Application::Instance>&,

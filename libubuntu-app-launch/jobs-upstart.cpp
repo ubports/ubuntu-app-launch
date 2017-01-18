@@ -69,6 +69,7 @@ public:
     void stop() override;
     void pause() override;
     void resume() override;
+    void focus() override;
 
     /* C Callback */
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
@@ -456,6 +457,25 @@ void Upstart::resume()
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
+}
+
+/** Resumes this application by sending SIGCONT to all the PIDs in the
+    cgroup and tells the shell to focus the application. */
+void Upstart::focus()
+{
+    g_debug("Focusing application: %s", std::string(appId_).c_str());
+
+    auto registry = registry_;
+    auto appid = appId_;
+    auto instance = instance_;
+    auto jobpath = upstartJobPath();
+
+    this->resume();
+
+    registry->impl->thread.executeOnThread([registry, appid, instance, jobpath] {
+        //auto pids = pids(registry, appid, jobpath);
+        pidListToDbus(registry, appid, instance, pids(registry, appid, jobpath), "ApplicationFocused");
+    });
 }
 
 std::vector<pid_t> Upstart::pids(const std::shared_ptr<Registry>& reg, const AppID& appid, const std::string& jobpath)

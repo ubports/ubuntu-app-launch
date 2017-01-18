@@ -127,6 +127,18 @@ public:
                         const std::vector<pid_t>&>&
         appResumed(const std::shared_ptr<Registry>& reg = getDefault());
 
+    /** Get the signal object that is signaled when an application has been
+        focused.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Application>&,
+                        const std::shared_ptr<Application::Instance>&,
+                        const std::vector<pid_t>&>&
+        appFocused(const std::shared_ptr<Registry>& reg = getDefault());
+
     /** The Application Manager, almost always if you're not Unity8, don't
         use this API. Testing is a special case. Subclass this interface and
         implement these functions.

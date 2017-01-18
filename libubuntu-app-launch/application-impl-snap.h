@@ -76,6 +76,7 @@ public:
                                       const std::shared_ptr<Registry>& registry);
 
     virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) override;
+    virtual std::shared_ptr<Application::Instance> findInstance(const pid_t& pid) override;
 
 private:
     /** AppID of the Snap. Should be the name of the snap package.
