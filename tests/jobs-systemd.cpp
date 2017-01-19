@@ -23,6 +23,8 @@
 #include "registry-mock.h"
 #include "systemd-mock.h"
 
+#define CGROUP_DIR (CMAKE_BINARY_DIR "/systemd-cgroups")
+
 class JobsSystemd : public EventuallyFixture
 {
 protected:
@@ -36,6 +38,9 @@ protected:
         /* Get the applications dir */
         g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
 
+        /* Setting the cgroup temp directory */
+        g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_CGROUP_ROOT", CGROUP_DIR, TRUE);
+
         /* Force over to session bus */
         g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH", "/this/should/not/exist", TRUE);
 
@@ -43,9 +48,11 @@ protected:
                                                    [](DbusTestService *service) { g_clear_object(&service); });
 
         systemd = std::make_shared<SystemdMock>(
-            std::list<SystemdMock::Instance>{{defaultJobName(), std::string{multipleAppID()}, "1234567890"},
-                                             {defaultJobName(), std::string{multipleAppID()}, "0987654321"},
-                                             {defaultJobName(), std::string{singleAppID()}, {}}});
+            std::list<SystemdMock::Instance>{
+                {defaultJobName(), std::string{multipleAppID()}, "1234567890", 11, {12, 13, 11}},
+                {defaultJobName(), std::string{multipleAppID()}, "0987654321", 10, {10}},
+                {defaultJobName(), std::string{singleAppID()}, {}, 5, {1, 2, 3, 4, 5}}},
+            CGROUP_DIR);
         dbus_test_service_add_task(service.get(), *systemd);
 
         dbus_test_service_start_tasks(service.get());
@@ -145,3 +152,16 @@ TEST_F(JobsSystemd, UserBusPath)
     unsetenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH");
     EXPECT_EQ(std::string{"/run/user/"} + std::to_string(getuid()) + std::string{"/bus"}, manager->userBusPath());
 }
+
+/* PID Tools */
+TEST_F(JobsSystemd, PidTools)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    EXPECT_EQ(5, manager->unitPrimaryPid(singleAppID(), defaultJobName(), {}));
+    std::vector<pid_t> pidlist{1, 2, 3, 4, 5};
+    EXPECT_EQ(pidlist, manager->unitPids(singleAppID(), defaultJobName(), {}));
+}
+
+// void stopUnit(const AppID& appId, const std::string& job, const std::string& instance);

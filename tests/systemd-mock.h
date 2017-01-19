@@ -39,6 +39,8 @@ public:
         std::string job;
         std::string appid;
         std::string instanceid;
+        pid_t primaryPid;
+        std::vector<pid_t> pids;
     };
 
 private:
@@ -48,7 +50,7 @@ private:
     std::list<std::pair<Instance, DbusTestDbusMockObject*>> insts;
 
 public:
-    SystemdMock(std::list<Instance> instances)
+    SystemdMock(const std::list<Instance>& instances, const std::string& controlGroupPath)
     {
         mock = dbus_test_dbus_mock_new("org.freedesktop.systemd1");
         dbus_test_task_set_bus(DBUS_TEST_TASK(mock), DBUS_TEST_SERVICE_BUS_SESSION);
@@ -61,7 +63,7 @@ public:
         dbus_test_dbus_mock_object_add_method(
             mock, managerobj, "ListUnits", nullptr, G_VARIANT_TYPE("(a(ssssssouso))"), /* ret type */
             ("ret = [ " + std::accumulate(instances.begin(), instances.end(), std::string{},
-                                          [](const std::string accum, Instance& inst) {
+                                          [](const std::string accum, const Instance& inst) {
                                               std::string retval = accum;
 
                                               if (!retval.empty())
@@ -91,7 +93,7 @@ public:
         dbus_test_dbus_mock_object_add_method(
             mock, managerobj, "GetUnit", G_VARIANT_TYPE_STRING, G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
             std::accumulate(instances.begin(), instances.end(), std::string{},
-                            [](const std::string accum, Instance& inst) {
+                            [](const std::string accum, const Instance& inst) {
                                 std::string retval = accum;
 
                                 retval += "if args[0] == '" + instanceName(inst) + "':\n";
@@ -105,7 +107,36 @@ public:
         for (auto& instance : instances)
         {
             auto obj = dbus_test_dbus_mock_get_object(mock, instancePath(instance).c_str(),
-                                                      "org.freedesktop.systemd1.Unit", nullptr);
+                                                      "org.freedesktop.systemd1.Service", nullptr);
+            dbus_test_dbus_mock_object_add_property(mock, obj, "MainPID", G_VARIANT_TYPE_UINT32,
+                                                    g_variant_new_uint32(instance.primaryPid), nullptr);
+
+            /* Control Group */
+            auto dir = g_build_filename(controlGroupPath.c_str(), instancePath(instance).c_str(), nullptr);
+            auto tasks = g_build_filename(dir, "tasks", nullptr);
+
+            g_mkdir_with_parents(dir, 0777);
+
+            g_file_set_contents(tasks, std::accumulate(instance.pids.begin(), instance.pids.end(), std::string{},
+                                                       [](const std::string& accum, pid_t pid) {
+                                                           if (accum.empty())
+                                                           {
+                                                               return std::to_string(pid);
+                                                           }
+                                                           else
+                                                           {
+                                                               return accum + "\n" + std::to_string(pid);
+                                                           }
+                                                       })
+                                           .c_str(),
+                                -1, nullptr);
+
+            g_free(tasks);
+            g_free(dir);
+
+            dbus_test_dbus_mock_object_add_property(mock, obj, "ControlGroup", G_VARIANT_TYPE_STRING,
+                                                    g_variant_new_string(instancePath(instance).c_str()), nullptr);
+
             insts.emplace_back(std::make_pair(instance, obj));
         }
     }
@@ -116,7 +147,7 @@ public:
         g_clear_object(&mock);
     }
 
-    static std::string dbusSafe(std::string& input)
+    static std::string dbusSafe(const std::string& input)
     {
         std::string output = input;
         std::transform(output.begin(), output.end(), output.begin(), [](char in) {
@@ -133,7 +164,7 @@ public:
         return output;
     }
 
-    static std::string instancePath(Instance& inst)
+    static std::string instancePath(const Instance& inst)
     {
         std::string retval = std::string{"/"} + dbusSafe(inst.job) + "/" + dbusSafe(inst.appid);
 
@@ -145,7 +176,7 @@ public:
         return retval;
     }
 
-    static std::string instanceName(Instance& inst)
+    static std::string instanceName(const Instance& inst)
     {
         return std::string{"ubuntu-app-launch-"} + inst.job + "-" + inst.appid + "-" + inst.instanceid + ".service";
     }
