@@ -69,10 +69,12 @@ std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
        around the case of being relocated by the snappy environment */
     if (g_file_test(SystemD::userBusPath().c_str(), G_FILE_TEST_EXISTS))
     {
+        g_debug("Building a systemd jobs manager");
         return std::make_shared<jobs::manager::SystemD>(registry);
     }
     else
     {
+        g_debug("Building an Upstart jobs manager");
         return std::make_shared<jobs::manager::Upstart>(registry);
     }
 }

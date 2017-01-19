@@ -7,5 +7,5 @@ Exec=single
 NoDisplay=false
 Hidden=false
 Terminal=false
-Icon=single.png
+Icon=${SNAP}/single.png
 X-Ubuntu-Single-Instance=true

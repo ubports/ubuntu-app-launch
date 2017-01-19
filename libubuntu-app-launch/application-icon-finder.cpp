@@ -43,6 +43,7 @@ constexpr auto DIRECTORIES_PROPERTY = "Directories";
 constexpr auto ICON_THEME_KEY = "Icon Theme";
 constexpr auto PIXMAPS_PATH = "/pixmaps/";
 constexpr auto ICON_TYPES = {".png", ".svg", ".xpm"};
+constexpr auto METAGUI_PATH = "/meta/gui";
 
 static const std::regex iconSizeDirname = std::regex("^(\\d+)x\\1$");
 }  // anonymous namespace
@@ -361,6 +362,17 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
         iconPaths.emplace_back(IconFinder::ThemeSubdirectory{pixmapsPath, 1});
     }
     g_free(pixmapsPath);
+
+    /* Add the snap meta/gui path as a fallback if it exists */
+    auto snapMetaGuiPath = g_build_filename(basePath.c_str(), METAGUI_PATH, nullptr);
+    if (g_file_test(snapMetaGuiPath, G_FILE_TEST_IS_DIR))
+    {
+        iconPaths.emplace_back(IconFinder::ThemeSubdirectory{snapMetaGuiPath, 1});
+    }
+    g_free(snapMetaGuiPath);
+
+    /* Add the base directory itself as a fallback, for "foo.png" icon names */
+    iconPaths.emplace_back(IconFinder::ThemeSubdirectory{basePath, 1});
 
     // find icons sorted by size, highest to lowest
     iconPaths.sort([](const ThemeSubdirectory& lhs, const ThemeSubdirectory& rhs) { return lhs.size > rhs.size; });
