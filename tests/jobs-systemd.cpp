@@ -93,6 +93,7 @@ TEST_F(JobsSystemd, Startup)
     EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([this]() -> bool { return systemd->listCallsCnt() > 0; }));
 }
 
+/* Get the running apps and check out their instances */
 TEST_F(JobsSystemd, RunningApps)
 {
     auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
