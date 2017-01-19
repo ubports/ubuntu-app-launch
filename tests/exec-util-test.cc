@@ -26,16 +26,21 @@
 #include <libubuntu-app-launch/ubuntu-app-launch.h>
 #include <libubuntu-app-launch/registry.h>
 
-class ExecUtil : public ::testing::Test
+#include "eventually-fixture.h"
+
+class ExecUtil : public EventuallyFixture
 {
 	protected:
 		DbusTestService * service = NULL;
 		DbusTestDbusMock * mock = NULL;
 		GDBusConnection * bus = NULL;
+		std::string laststarted;
 
 	protected:
 		static void starting_cb (const gchar * appid, gpointer user_data) {
 			g_debug("I'm too sexy to callback");
+			auto pthis = static_cast<ExecUtil*>(user_data);
+			pthis->laststarted = appid;
 		}
 
 		virtual void SetUp() {
@@ -76,11 +81,11 @@ class ExecUtil : public ::testing::Test
 			g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 
 			/* Make the handshake clear faster */
-			ubuntu_app_launch_observer_add_app_starting(starting_cb, NULL);
+			ubuntu_app_launch_observer_add_app_starting(starting_cb, this);
 		}
 
 		virtual void TearDown() {
-			ubuntu_app_launch_observer_delete_app_starting(starting_cb, NULL);
+			ubuntu_app_launch_observer_delete_app_starting(starting_cb, this);
 			ubuntu::app_launch::Registry::clearDefault();
 
 			g_clear_object(&mock);
@@ -88,14 +93,7 @@ class ExecUtil : public ::testing::Test
 
 			g_object_unref(bus);
 
-			unsigned int cleartry = 0;
-			while (bus != NULL && cleartry < 100) {
-				g_usleep(100000);
-				while (g_main_pending()) {
-					g_main_iteration(TRUE);
-				}
-				cleartry++;
-			}
+			ASSERT_EVENTUALLY_EQ(nullptr, bus);
 		}
 
 		inline void StartCheckEnv (const std::string& appid, std::map<std::string, std::function<void(const gchar *)>> enums) {
@@ -106,7 +104,9 @@ class ExecUtil : public ::testing::Test
 			g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 			g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", CMAKE_SOURCE_DIR "/link-farm", TRUE);
 
+			laststarted.clear();
 			ASSERT_TRUE(ubuntu_app_launch_start_application(appid.c_str(), nullptr));
+			ASSERT_EVENTUALLY_EQ(appid, laststarted);
 
 			guint len = 0;
 			const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "Start", &len, nullptr);
