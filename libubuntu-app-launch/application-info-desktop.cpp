@@ -20,6 +20,7 @@
 #include "application-info-desktop.h"
 #include "application-icon-finder.h"
 #include "registry-impl.h"
+#include <algorithm>
 #include <cstdlib>
 
 namespace ubuntu
@@ -30,6 +31,25 @@ namespace app_info
 {
 namespace
 {
+
+static std::set<std::string> strvToSet(gchar** strv)
+{
+    std::set<std::string> retval;
+
+    if (strv != nullptr)
+    {
+        for (int i = 0; strv[i] != nullptr; i++)
+        {
+            if (strv[i][0] != '\0')
+            {
+                retval.emplace(strv[i]);
+            }
+        }
+    }
+
+    return retval;
+}
+
 constexpr const char* DESKTOP_GROUP = "Desktop Entry";
 
 struct TypeTag;
@@ -224,6 +244,21 @@ bool stringlistFromKeyfileContains(const std::shared_ptr<GKeyFile>& keyfile,
     return result;
 }
 
+std::set<std::string> stringlistFromKeyfileSet(const std::shared_ptr<GKeyFile>& keyfile, const gchar* key)
+{
+    GError* error = nullptr;
+    auto results = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, &error);
+    if (error != nullptr)
+    {
+        g_error_free(error);
+        return {};
+    }
+
+    auto retval = strvToSet(results);
+    g_strfreev(results);
+    return retval;
+}
+
 Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
                  const std::string& basePath,
                  const std::string& rootDir,
@@ -250,12 +285,21 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
         auto xdg_current_desktop = getenv("XDG_CURRENT_DESKTOP");
         if (xdg_current_desktop != nullptr)
         {
-            if (stringlistFromKeyfileContains(keyfile, "NotShowIn", xdg_current_desktop, false) ||
-                !stringlistFromKeyfileContains(keyfile, "OnlyShowIn", xdg_current_desktop, true))
+            /* Split the CURRENT_DESKTOP by colons if there are multiple */
+            auto current_desktops = g_strsplit(xdg_current_desktop, ":", -1);
+            auto cdesktops = strvToSet(current_desktops);
+            g_strfreev(current_desktops);
+
+            auto onlyshowin = stringlistFromKeyfileSet(keyfile, "OnlyShowIn");
+            auto noshowin = stringlistFromKeyfileSet(keyfile, "NotShowIn");
+
+            auto hasAnyOf = [](std::set<std::string>& a, std::set<std::string>& b) {
+                return std::find_first_of(a.cbegin(), a.cend(), b.cbegin(), b.cend()) != a.cend();
+            };
+
+            if ((!hasAnyOf(onlyshowin, cdesktops) && !onlyshowin.empty()) || hasAnyOf(noshowin, cdesktops))
             {
-                g_warning("Application is not shown in Unity");
-                // Exception removed for OTA11 as a temporary fix
-                // throw std::runtime_error("Application is not shown in Unity");
+                throw std::runtime_error("Application is not shown in '" + std::string{xdg_current_desktop} + "'");
             }
         }
 
