@@ -33,6 +33,9 @@ protected:
 
     virtual void SetUp()
     {
+        /* Get the applications dir */
+        g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+
         /* Force over to session bus */
         g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH", "/this/should/not/exist", TRUE);
 
@@ -40,8 +43,8 @@ protected:
                                                    [](DbusTestService* service) { g_clear_object(&service); });
 
         systemd = std::make_shared<SystemdMock>(
-            std::list<SystemdMock::Instance>{{"application-foobar", "package_application_15", "1234567890"},
-                                             {"application-barfoo", "package_application_15", "1234567890"}});
+            std::list<SystemdMock::Instance>{{defaultJobName(), std::string{simpleAppID()}, "1234567890"},
+                                             {defaultJobName(), std::string{simpleAppID()}, "0987654321"}});
         dbus_test_service_add_task(service.get(), *systemd);
 
         dbus_test_service_start_tasks(service.get());
@@ -62,27 +65,49 @@ protected:
         ASSERT_EVENTUALLY_EQ(nullptr, bus);
     }
 
+    std::string defaultJobName()
+    {
+        return "application-legacy";
+    }
+
     ubuntu::app_launch::AppID simpleAppID()
     {
-        return {ubuntu::app_launch::AppID::Package::from_raw("package"),
-                ubuntu::app_launch::AppID::AppName::from_raw("appname"),
-                ubuntu::app_launch::AppID::Version::from_raw("version")};
+        return {ubuntu::app_launch::AppID::Package::from_raw({}),
+                ubuntu::app_launch::AppID::AppName::from_raw("single"),
+                ubuntu::app_launch::AppID::Version::from_raw({})};
     }
 };
 
 /* Make sure we can build an object and destroy it */
 TEST_F(JobsSystemd, Init)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
-
-    manager.reset();
+    registry->impl->jobs = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
 }
 
 /* Make sure we make the initial call to get signals and an initial list */
 TEST_F(JobsSystemd, Startup)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
 
     EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([this]() { return systemd->subscribeCallsCnt() > 0; }));
     EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([this]() -> bool { return systemd->listCallsCnt() > 0; }));
+}
+
+TEST_F(JobsSystemd, RunningApps)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    auto apps = manager->runningApps();
+    ASSERT_FALSE(apps.empty());
+    EXPECT_EQ(1u, apps.size());
+
+    auto app = *apps.begin();
+
+    EXPECT_EQ(simpleAppID(), app->appId());
+
+    auto instances = app->instances();
+
+    ASSERT_FALSE(instances.empty());
+    EXPECT_EQ(2u, instances.size());
 }

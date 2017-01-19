@@ -30,6 +30,12 @@ public:
     RegistryImplMock(ubuntu::app_launch::Registry* reg)
         : ubuntu::app_launch::Registry::Impl(reg)
     {
+        g_debug("Registry Mock Implementation Created");
+    }
+
+    ~RegistryImplMock()
+    {
+        g_debug("Registry Mock Implementation taken down");
     }
 
     MOCK_METHOD2(zgSendEvent, void(ubuntu::app_launch::AppID, const std::string& eventtype));
@@ -40,6 +46,12 @@ class RegistryMock : public ubuntu::app_launch::Registry
 public:
     RegistryMock()
     {
+        g_debug("Registry Mock Created");
         impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(this));
+    }
+
+    ~RegistryMock()
+    {
+        g_debug("Registry Mock taken down");
     }
 };

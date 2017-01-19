@@ -69,23 +69,36 @@ public:
                                                   retval += ", ";
                                               }
 
-                                              retval += std::string{"("} + /* start tuple */
-                                                        "'ubuntu-app-launch-" + inst.job + "-" + inst.appid + "-" +
-                                                        inst.instanceid + "', " +        /* id */
-                                                        "'unused', " +                   /* description */
-                                                        "'unused', " +                   /* load state */
-                                                        "'unused', " +                   /* active state */
-                                                        "'unused', " +                   /* substate */
-                                                        "'unused', " +                   /* following */
-                                                        "'/unused', " +                  /* path */
-                                                        "5, " +                          /* jobId */
-                                                        "'unused', " +                   /* jobType */
-                                                        "'" + instancePath(inst) + "'" + /* jobPath */
-                                                        ")";                             /* finish tuple */
+                                              retval += std::string{"("} +                 /* start tuple */
+                                                        "'" + instanceName(inst) + "', " + /* id */
+                                                        "'unused', " +                     /* description */
+                                                        "'unused', " +                     /* load state */
+                                                        "'unused', " +                     /* active state */
+                                                        "'unused', " +                     /* substate */
+                                                        "'unused', " +                     /* following */
+                                                        "'/unused', " +                    /* path */
+                                                        "5, " +                            /* jobId */
+                                                        "'unused', " +                     /* jobType */
+                                                        "'" + instancePath(inst) + "'" +   /* jobPath */
+                                                        ")";                               /* finish tuple */
 
                                               return retval;
                                           }) +
              "]")
+                .c_str(),
+            nullptr);
+
+        dbus_test_dbus_mock_object_add_method(
+            mock, managerobj, "GetUnit", G_VARIANT_TYPE_STRING, G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
+            std::accumulate(instances.begin(), instances.end(), std::string{},
+                            [](const std::string accum, Instance& inst) {
+                                std::string retval = accum;
+
+                                retval += "if args[0] == '" + instanceName(inst) + "':\n";
+                                retval += "\tret = '" + instancePath(inst) + "'\n";
+
+                                return retval;
+                            })
                 .c_str(),
             nullptr);
 
@@ -125,6 +138,11 @@ public:
         return std::string{"/"} + dbusSafe(inst.job) + "/" + dbusSafe(inst.appid) + "/" + dbusSafe(inst.instanceid);
     }
 
+    static std::string instanceName(Instance& inst)
+    {
+        return std::string{"ubuntu-app-launch-"} + inst.job + "-" + inst.appid + "-" + inst.instanceid + ".service";
+    }
+
     operator std::shared_ptr<DbusTestTask>()
     {
         std::shared_ptr<DbusTestTask> retval(DBUS_TEST_TASK(g_object_ref(mock)),
@@ -158,6 +176,7 @@ public:
         {
             g_warning("Unable to get 'Subscribe' calls from systemd mock: %s", error->message);
             g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
         }
 
         return len;
@@ -179,6 +198,7 @@ public:
         {
             g_warning("Unable to get 'Subscribe' calls from systemd mock: %s", error->message);
             g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
         }
 
         return len;
