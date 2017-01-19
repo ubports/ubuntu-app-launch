@@ -121,7 +121,7 @@ TEST_F(JobsSystemd, RunningApps)
     EXPECT_TRUE(single);
 
     auto multiple = *std::find_if(apps.begin(), apps.end(), findAppID(multipleAppID()));
-    EXPECT_TRUE(single);
+    EXPECT_TRUE(multiple);
 
     auto sinstances = single->instances();
 
@@ -132,4 +132,16 @@ TEST_F(JobsSystemd, RunningApps)
 
     ASSERT_FALSE(minstances.empty());
     EXPECT_EQ(2u, minstances.size());
+}
+
+/* Check to make sure we're getting the user bus path correctly */
+TEST_F(JobsSystemd, UserBusPath)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    EXPECT_EQ(std::string{"/this/should/not/exist"}, manager->userBusPath());
+
+    unsetenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH");
+    EXPECT_EQ(std::string{"/run/user/"} + std::to_string(getuid()) + std::string{"/bus"}, manager->userBusPath());
 }
