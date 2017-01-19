@@ -42,6 +42,7 @@ Base::Base(const std::shared_ptr<Registry>& registry)
     , allJobs_{"application-click", "application-legacy", "application-snap"}
     , dbus_(registry->impl->_dbus)
 {
+    g_debug("Application instance created: %p", static_cast<void*>(this));
 }
 
 Base::~Base()
@@ -59,6 +60,8 @@ Base::~Base()
     dohandle(handle_managerSignalStarting);
     dohandle(handle_appPaused);
     dohandle(handle_appResumed);
+
+    g_debug("Application instance destroyed: %p", static_cast<void*>(this));
 }
 
 std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)

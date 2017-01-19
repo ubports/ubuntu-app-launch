@@ -129,7 +129,7 @@ private:
     std::string unitName(const UnitInfo& info);
     std::string unitPath(const UnitInfo& info);
 
-    void unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus);
+    UnitInfo unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus);
     void unitRemoved(const std::string& name, const std::string& path);
     void emitSignal(
         core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& sig,

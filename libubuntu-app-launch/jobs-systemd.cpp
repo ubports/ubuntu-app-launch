@@ -42,7 +42,7 @@ namespace jobs
 namespace instance
 {
 
-class SystemD : public Base
+class SystemD : public instance::Base
 {
     friend class manager::SystemD;
 
@@ -82,6 +82,7 @@ pid_t SystemD::primaryPid()
 std::string SystemD::logPath()
 {
     /* NOTE: We can never get this for systemd */
+    g_warning("Log paths aren't available for systemd");
     return {};
 }
 
@@ -190,7 +191,15 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
                                                    g_variant_get(params, "(&s&o)", &unitname, &unitpath);
 
-                                                   pthis->unitNew(unitname, unitpath, pthis->userbus_);
+                                                   try
+                                                   {
+                                                       auto info = pthis->unitNew(unitname, unitpath, pthis->userbus_);
+                                                       pthis->emitSignal(pthis->sig_appStarted, info);
+                                                   }
+                                                   catch (std::runtime_error& e)
+                                                   {
+                                                       g_warning("%s", e.what());
+                                                   }
                                                },        /* callback */
                                                this,     /* user data */
                                                nullptr); /* user data destroy */
@@ -279,7 +288,14 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
                                &following, &path, &jobId, &jobType, &jobPath))
     {
         g_debug("List Units: %s", id);
-        unitNew(id, jobPath, bus);
+        try
+        {
+            unitNew(id, jobPath, bus);
+        }
+        catch (std::runtime_error& e)
+        {
+            g_debug("%s", e.what());
+        }
     }
 
     g_variant_iter_free(iter);
@@ -831,26 +847,18 @@ std::string SystemD::unitPath(const SystemD::UnitInfo& info)
     return registry->impl->thread.executeOnThread<std::string>([&data]() { return data->unitpath; });
 }
 
-void SystemD::unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus)
+SystemD::UnitInfo SystemD::unitNew(const std::string& name,
+                                   const std::string& path,
+                                   const std::shared_ptr<GDBusConnection>& bus)
 {
     if (path == "/")
     {
-        /* Job paths of '/' means there is no job, and it's likely the unit failed */
-        return;
+        throw std::runtime_error{"Job path for unit is '/' so likely failed"};
     }
 
     g_debug("New Unit: %s", name.c_str());
 
-    UnitInfo info;
-    try
-    {
-        info = parseUnit(name);
-    }
-    catch (std::runtime_error& e)
-    {
-        g_debug("%s", e.what());
-        return;
-    }
+    auto info = parseUnit(name);
 
     auto data = std::make_shared<UnitData>();
     data->jobpath = path;
@@ -858,7 +866,7 @@ void SystemD::unitNew(const std::string& name, const std::string& path, const st
     /* We already have this one, continue on */
     if (!unitPaths.insert(std::make_pair(info, data)).second)
     {
-        return;
+        throw std::runtime_error{"Duplicate unit, not really new"};
     }
 
     /* We need to get the path, we're blocking everyone else on
@@ -872,7 +880,7 @@ void SystemD::unitNew(const std::string& name, const std::string& path, const st
     if (!reg)
     {
         g_warning("Unable to get SystemD unit path for '%s': Registry out of scope", name.c_str());
-        return;
+        throw std::runtime_error{"Unable to get SystemD unit path for '" + name + "': Registry out of scope"};
     }
 
     GVariant* call = g_dbus_connection_call_sync(bus.get(),                                /* user bus */
@@ -889,9 +897,9 @@ void SystemD::unitNew(const std::string& name, const std::string& path, const st
 
     if (error != nullptr)
     {
-        g_warning("Unable to get SystemD unit path for '%s': %s", name.c_str(), error->message);
+        std::string message = "Unable to get SystemD unit path for '" + name + "': " + error->message;
         g_error_free(error);
-        return;
+        throw std::runtime_error{message};
     }
 
     /* Parse variant */
@@ -904,7 +912,7 @@ void SystemD::unitNew(const std::string& name, const std::string& path, const st
 
     g_variant_unref(call);
 
-    emitSignal(sig_appStarted, info);
+    return info;
 }
 
 void SystemD::unitRemoved(const std::string& name, const std::string& path)
