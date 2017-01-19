@@ -135,7 +135,14 @@ public:
 
     static std::string instancePath(Instance& inst)
     {
-        return std::string{"/"} + dbusSafe(inst.job) + "/" + dbusSafe(inst.appid) + "/" + dbusSafe(inst.instanceid);
+        std::string retval = std::string{"/"} + dbusSafe(inst.job) + "/" + dbusSafe(inst.appid);
+
+        if (!inst.instanceid.empty())
+        {
+            retval += "/" + dbusSafe(inst.instanceid);
+        }
+
+        return retval;
     }
 
     static std::string instanceName(Instance& inst)

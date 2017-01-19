@@ -29,7 +29,7 @@ protected:
     std::shared_ptr<DbusTestService> service;
     std::shared_ptr<RegistryMock> registry;
     std::shared_ptr<SystemdMock> systemd;
-    GDBusConnection* bus = nullptr;
+    GDBusConnection *bus = nullptr;
 
     virtual void SetUp()
     {
@@ -40,11 +40,12 @@ protected:
         g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH", "/this/should/not/exist", TRUE);
 
         service = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
-                                                   [](DbusTestService* service) { g_clear_object(&service); });
+                                                   [](DbusTestService *service) { g_clear_object(&service); });
 
         systemd = std::make_shared<SystemdMock>(
-            std::list<SystemdMock::Instance>{{defaultJobName(), std::string{simpleAppID()}, "1234567890"},
-                                             {defaultJobName(), std::string{simpleAppID()}, "0987654321"}});
+            std::list<SystemdMock::Instance>{{defaultJobName(), std::string{multipleAppID()}, "1234567890"},
+                                             {defaultJobName(), std::string{multipleAppID()}, "0987654321"},
+                                             {defaultJobName(), std::string{singleAppID()}, {}}});
         dbus_test_service_add_task(service.get(), *systemd);
 
         dbus_test_service_start_tasks(service.get());
@@ -52,7 +53,7 @@ protected:
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
-        g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
+        g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
     }
 
     virtual void TearDown()
@@ -70,10 +71,17 @@ protected:
         return "application-legacy";
     }
 
-    ubuntu::app_launch::AppID simpleAppID()
+    ubuntu::app_launch::AppID singleAppID()
     {
         return {ubuntu::app_launch::AppID::Package::from_raw({}),
                 ubuntu::app_launch::AppID::AppName::from_raw("single"),
+                ubuntu::app_launch::AppID::Version::from_raw({})};
+    }
+
+    ubuntu::app_launch::AppID multipleAppID()
+    {
+        return {ubuntu::app_launch::AppID::Package::from_raw({}),
+                ubuntu::app_launch::AppID::AppName::from_raw("multiple"),
                 ubuntu::app_launch::AppID::Version::from_raw({})};
     }
 };
@@ -93,6 +101,12 @@ TEST_F(JobsSystemd, Startup)
     EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([this]() -> bool { return systemd->listCallsCnt() > 0; }));
 }
 
+std::function<bool(const std::shared_ptr<ubuntu::app_launch::Application> &app)> findAppID(
+    const ubuntu::app_launch::AppID &appid)
+{
+    return [appid](const std::shared_ptr<ubuntu::app_launch::Application> &app) { return appid == app->appId(); };
+}
+
 /* Get the running apps and check out their instances */
 TEST_F(JobsSystemd, RunningApps)
 {
@@ -101,14 +115,21 @@ TEST_F(JobsSystemd, RunningApps)
 
     auto apps = manager->runningApps();
     ASSERT_FALSE(apps.empty());
-    EXPECT_EQ(1u, apps.size());
+    EXPECT_EQ(2u, apps.size());
 
-    auto app = *apps.begin();
+    auto single = *std::find_if(apps.begin(), apps.end(), findAppID(singleAppID()));
+    EXPECT_TRUE(single);
 
-    EXPECT_EQ(simpleAppID(), app->appId());
+    auto multiple = *std::find_if(apps.begin(), apps.end(), findAppID(multipleAppID()));
+    EXPECT_TRUE(single);
 
-    auto instances = app->instances();
+    auto sinstances = single->instances();
 
-    ASSERT_FALSE(instances.empty());
-    EXPECT_EQ(2u, instances.size());
+    ASSERT_FALSE(sinstances.empty());
+    EXPECT_EQ(1u, sinstances.size());
+
+    auto minstances = multiple->instances();
+
+    ASSERT_FALSE(minstances.empty());
+    EXPECT_EQ(2u, minstances.size());
 }
