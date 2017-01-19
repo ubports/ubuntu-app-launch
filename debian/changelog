@@ -1,3 +1,19 @@
+ubuntu-app-launch (0.9+17.04.20170113.1-0ubuntu1) zesty; urgency=medium
+
+  [ Pete Woods ]
+  * Compatibility with unversioned cmake-extras modules (LP: #1563573)
+
+  [ Rodney Dawes ]
+  * Handle more common Icon entries in .desktop files for snaps. (LP:
+    #1639952)
+
+  [ Ted Gould ]
+  * Fixes to the exec-util test to ensure it is more reliable
+  * Reenable OnlyShowIn checking for Desktop files (LP: #1580092,
+    #1606593, #1608546)
+
+ -- Ted Gould <ted@gould.cx>  Fri, 13 Jan 2017 22:16:18 +0000
+
 ubuntu-app-launch (0.9+17.04.20161110.1-0ubuntu1) zesty; urgency=medium
 
   * Make pause/resume non-blocking

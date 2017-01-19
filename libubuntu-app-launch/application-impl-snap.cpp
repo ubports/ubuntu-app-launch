@@ -77,6 +77,36 @@ public:
                                                "' because: " + perror.get()->message);
                   }
 
+                  /* For bad reasons the Icon values in snaps have gotten to be a
+                     bit crazy. We're going to try to un-fu-bar a few common patterns
+                     here, but eh, we're just encouraging bad behavior */
+                  auto iconvalue = g_key_file_get_string(keyfile.get(), "Desktop Entry", "Icon", nullptr);
+                  if (iconvalue != nullptr)
+                  {
+                      const gchar* prefix{nullptr};
+                      if (g_str_has_prefix(iconvalue, "${SNAP}/"))
+                      {
+                          /* There isn't environment parsing in desktop file values :-( */
+                          prefix = "${SNAP}/";
+                      }
+
+                      auto currentdir = std::string{"/snap/"} + appid.package.value() + "/current/";
+                      if (g_str_has_prefix(iconvalue, currentdir.c_str()))
+                      {
+                          /* What? Why would we encode the snap path from root in a package
+                             format that is supposed to be relocatable? */
+                          prefix = currentdir.c_str();
+                      }
+
+                      if (prefix != nullptr)
+                      {
+                          g_key_file_set_string(keyfile.get(), "Desktop Entry", "Icon", iconvalue + strlen(prefix) - 1);
+                          /* -1 to leave trailing slash */
+                      }
+
+                      g_free(iconvalue);
+                  }
+
                   return keyfile;
               }(),
               snapDir,
