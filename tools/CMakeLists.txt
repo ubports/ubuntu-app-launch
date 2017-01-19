@@ -26,6 +26,15 @@ set_target_properties(ubuntu-app-info PROPERTIES OUTPUT_NAME "ubuntu-app-info")
 target_link_libraries(ubuntu-app-info ubuntu-launcher)
 install(TARGETS ubuntu-app-info RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
+########################
+# ubuntu-app-focus
+########################
+
+add_executable(ubuntu-app-focus ubuntu-app-focus.cpp)
+set_target_properties(ubuntu-app-focus PROPERTIES OUTPUT_NAME "ubuntu-app-focus")
+target_link_libraries(ubuntu-app-focus ubuntu-launcher)
+install(TARGETS ubuntu-app-focus RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
 ###########################
 # ubuntu-app-launch-appids
 ###########################
@@ -123,6 +132,7 @@ install(TARGETS ubuntu-app-usage RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDI
 add_custom_target(format-tools
 	COMMAND clang-format -i -style=file
     ubuntu-app-info.cpp
+    ubuntu-app-focus.cpp
     ubuntu-app-launch-appids.cpp
     ubuntu-app-launch.cpp
     ubuntu-app-list.cpp
