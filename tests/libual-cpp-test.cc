@@ -549,7 +549,7 @@ TEST_F(LibUAL, ApplicationIdSnap)
 TEST_F(LibUAL, ApplicationIconSnap)
 {
     /* Queries come in threes, apparently */
-    SnapdMock snapd{SNAPD_TEST_SOCKET,
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET,
             {
                 u8Package, interfaces, u8Package,
                 u8Package, interfaces, u8Package,
