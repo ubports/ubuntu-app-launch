@@ -52,6 +52,10 @@ public:
                      const std::string& instance,
                      const std::vector<Application::URL>& urls,
                      const std::shared_ptr<Registry>& registry);
+    virtual ~SystemD()
+    {
+        g_debug("Destroying a SystemD for '%s' instance '%s'", std::string(appId_).c_str(), instance_.c_str());
+    }
 
     /* Query lifecycle */
     pid_t primaryPid() override;
