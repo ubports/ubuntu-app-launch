@@ -5,4 +5,4 @@ Exec=foo
 NoDisplay=false
 Hidden=false
 Terminal=false
-Icon=foo.png
+Icon=/snap/unity8-package/current/foo.png
