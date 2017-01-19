@@ -42,6 +42,12 @@ namespace app_impls
 Base::Base(const std::shared_ptr<Registry>& registry)
     : _registry(registry)
 {
+    g_debug("Application construction:   %p", static_cast<void*>(this));
+}
+
+Base::~Base()
+{
+    g_debug("Application deconstruction: %p", static_cast<void*>(this));
 }
 
 bool Base::hasInstances()

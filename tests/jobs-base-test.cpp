@@ -19,34 +19,13 @@
 
 #include "appid.h"
 #include "jobs-base.h"
-#include "registry-impl.h"
-#include "registry.h"
 
 #include "eventually-fixture.h"
+#include "registry-mock.h"
 #include "spew-master.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <libdbustest/dbus-test.h>
-
-class RegistryImplMock : public ubuntu::app_launch::Registry::Impl
-{
-public:
-    RegistryImplMock(ubuntu::app_launch::Registry* reg)
-        : ubuntu::app_launch::Registry::Impl(reg)
-    {
-    }
-
-    MOCK_METHOD2(zgSendEvent, void(ubuntu::app_launch::AppID, const std::string& eventtype));
-};
-
-class RegistryMock : public ubuntu::app_launch::Registry
-{
-public:
-    RegistryMock()
-    {
-        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(this));
-    }
-};
 
 class instanceMock : public ubuntu::app_launch::jobs::instance::Base
 {
@@ -138,7 +117,7 @@ TEST_F(JobBaseTest, pauseResume)
         .WillOnce(testing::Return());
 
     /* Make sure it is running */
-    EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
+    EXPECT_EVENTUALLY_FUNC_NE(gsize{0}, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
     /*** Do Pause ***/
     instance->pause();
@@ -160,7 +139,7 @@ TEST_F(JobBaseTest, pauseResume)
     /*** Do Resume ***/
     instance->resume();
 
-    EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
+    EXPECT_EVENTUALLY_FUNC_NE(gsize{0}, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
     EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
 }
@@ -208,7 +187,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
     /* Make sure it is running */
     for (auto& spew : spews)
     {
-        EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
+        EXPECT_EVENTUALLY_FUNC_NE(gsize{0}, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
     }
 
     /*** Do Pause ***/
@@ -242,7 +221,7 @@ TEST_F(JobBaseTest, pauseResumeMany)
 
     for (auto& spew : spews)
     {
-        EXPECT_EVENTUALLY_FUNC_NE(0ul, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
+        EXPECT_EVENTUALLY_FUNC_NE(gsize{0}, std::function<gsize()>{[&spew] { return spew.dataCnt(); }});
 
         EXPECT_EQ(std::to_string(int(ubuntu::app_launch::oom::focused())), spew.oomScore());
     }

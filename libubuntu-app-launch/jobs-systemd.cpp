@@ -42,7 +42,7 @@ namespace jobs
 namespace instance
 {
 
-class SystemD : public Base
+class SystemD : public instance::Base
 {
     friend class manager::SystemD;
 
@@ -52,6 +52,10 @@ public:
                      const std::string& instance,
                      const std::vector<Application::URL>& urls,
                      const std::shared_ptr<Registry>& registry);
+    virtual ~SystemD()
+    {
+        g_debug("Destroying a SystemD for '%s' instance '%s'", std::string(appId_).c_str(), instance_.c_str());
+    }
 
     /* Query lifecycle */
     pid_t primaryPid() override;
@@ -82,6 +86,7 @@ pid_t SystemD::primaryPid()
 std::string SystemD::logPath()
 {
     /* NOTE: We can never get this for systemd */
+    g_warning("Log paths aren't available for systemd");
     return {};
 }
 
@@ -111,19 +116,31 @@ static const std::string SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Se
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
 {
-    unitPathsInitFuture = unitPathsInitPromise.get_future();
-
     auto cancel = registry->impl->thread.getCancellable();
     userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
         GError* error = nullptr;
         auto bus = std::shared_ptr<GDBusConnection>(
-            g_dbus_connection_new_for_address_sync(
-                ("unix:path=" + userBusPath()).c_str(), /* path to the user bus */
-                (GDBusConnectionFlags)(G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
-                                       G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION), /* It is a message bus */
-                nullptr,                                                                /* observer */
-                cancel.get(), /* cancellable from the thread */
-                &error),      /* error */
+            [&]() -> GDBusConnection* {
+                if (g_file_test(SystemD::userBusPath().c_str(), G_FILE_TEST_EXISTS))
+                {
+                    return g_dbus_connection_new_for_address_sync(
+                        ("unix:path=" + userBusPath()).c_str(), /* path to the user bus */
+                        (GDBusConnectionFlags)(
+                            G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
+                            G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION), /* It is a message bus */
+                        nullptr,                                             /* observer */
+                        cancel.get(),                                        /* cancellable from the thread */
+                        &error);                                             /* error */
+                }
+                else
+                {
+                    /* Fallback mostly for testing */
+                    g_debug("Using session bus for systemd user bus");
+                    return g_bus_get_sync(G_BUS_TYPE_SESSION, /* type */
+                                          cancel.get(),       /* thread cancellable */
+                                          &error);            /* error */
+                }
+            }(),
             [](GDBusConnection* bus) { g_clear_object(&bus); });
 
         if (error != nullptr)
@@ -178,7 +195,15 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
                                                    g_variant_get(params, "(&s&o)", &unitname, &unitpath);
 
-                                                   pthis->unitNew(unitname, unitpath);
+                                                   try
+                                                   {
+                                                       auto info = pthis->unitNew(unitname, unitpath, pthis->userbus_);
+                                                       pthis->emitSignal(pthis->sig_appStarted, info);
+                                                   }
+                                                   catch (std::runtime_error& e)
+                                                   {
+                                                       g_warning("%s", e.what());
+                                                   }
                                                },        /* callback */
                                                this,     /* user data */
                                                nullptr); /* user data destroy */
@@ -205,56 +230,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                                this,     /* user data */
                                                nullptr); /* user data destroy */
 
-        g_dbus_connection_call(
-            bus.get(),                          /* user bus */
-            SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
-            SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
-            SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
-            "ListUnits",                        /* method */
-            nullptr,                            /* params */
-            G_VARIANT_TYPE("(a(ssssssouso))"),  /* ret type */
-            G_DBUS_CALL_FLAGS_NONE,             /* flags */
-            -1,                                 /* timeout */
-            cancel.get(),                       /* cancellable */
-            [](GObject* obj, GAsyncResult* res, gpointer user_data) {
-                auto pthis = static_cast<SystemD*>(user_data);
-                GError* error{nullptr};
-                GVariant* callt = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
-
-                if (error != nullptr)
-                {
-                    g_warning("Unable to list SystemD units: %s", error->message);
-                    g_error_free(error);
-                    pthis->unitPathsInitPromise.set_value(false);
-                    return;
-                }
-
-                GVariant* call = g_variant_get_child_value(callt, 0);
-                g_variant_unref(callt);
-
-                const gchar* id;
-                const gchar* description;
-                const gchar* loadState;
-                const gchar* activeState;
-                const gchar* subState;
-                const gchar* following;
-                const gchar* path;
-                guint32 jobId;
-                const gchar* jobType;
-                const gchar* jobPath;
-                auto iter = g_variant_iter_new(call);
-                while (g_variant_iter_loop(iter, "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState,
-                                           &subState, &following, &path, &jobId, &jobType, &jobPath))
-                {
-                    g_debug("List Units: %s", id);
-                    pthis->unitNew(id, jobPath);
-                }
-
-                g_variant_iter_free(iter);
-                g_variant_unref(call);
-                pthis->unitPathsInitPromise.set_value(true);
-            },
-            this);
+        getInitialUnits(bus, cancel);
 
         return bus;
     });
@@ -273,6 +249,61 @@ SystemD::~SystemD()
     dohandle(handle_unitNew);
     dohandle(handle_unitRemoved);
     dohandle(handle_appFailed);
+}
+
+void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const std::shared_ptr<GCancellable>& cancel)
+{
+    GError* error = nullptr;
+
+    auto callt = g_dbus_connection_call_sync(bus.get(),                          /* user bus */
+                                             SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
+                                             SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
+                                             SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
+                                             "ListUnits",                        /* method */
+                                             nullptr,                            /* params */
+                                             G_VARIANT_TYPE("(a(ssssssouso))"),  /* ret type */
+                                             G_DBUS_CALL_FLAGS_NONE,             /* flags */
+                                             -1,                                 /* timeout */
+                                             cancel.get(),                       /* cancellable */
+                                             &error);
+
+    if (error != nullptr)
+    {
+        g_warning("Unable to list SystemD units: %s", error->message);
+        g_error_free(error);
+        return;
+    }
+
+    GVariant* call = g_variant_get_child_value(callt, 0);
+    g_variant_unref(callt);
+
+    const gchar* id;
+    const gchar* description;
+    const gchar* loadState;
+    const gchar* activeState;
+    const gchar* subState;
+    const gchar* following;
+    const gchar* path;
+    guint32 jobId;
+    const gchar* jobType;
+    const gchar* jobPath;
+    auto iter = g_variant_iter_new(call);
+    while (g_variant_iter_loop(iter, "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState, &subState,
+                               &following, &path, &jobId, &jobType, &jobPath))
+    {
+        g_debug("List Units: %s", id);
+        try
+        {
+            unitNew(id, jobPath, bus);
+        }
+        catch (std::runtime_error& e)
+        {
+            g_debug("%s", e.what());
+        }
+    }
+
+    g_variant_iter_free(iter);
+    g_variant_unref(call);
 }
 
 std::string SystemD::findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env)
@@ -726,8 +757,6 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
         return {};
     }
 
-    unitPathsInit();
-
     for (const auto& unit : unitPaths)
     {
         const SystemD::UnitInfo& unitinfo = unit.first;
@@ -762,8 +791,6 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
         return {};
     }
 
-    unitPathsInit();
-
     for (const auto& unit : unitPaths)
     {
         const SystemD::UnitInfo& unitinfo = unit.first;
@@ -779,7 +806,7 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
     std::list<std::shared_ptr<Application>> apps;
     for (const auto& appid : appids)
     {
-        auto id = AppID::find(appid);
+        auto id = AppID::find(registry, appid);
         if (id.empty())
         {
             g_debug("Unable to handle AppID: %s", appid.c_str());
@@ -831,38 +858,39 @@ std::string SystemD::unitPath(const SystemD::UnitInfo& info)
         return {};
     }
 
-    data->pathfuture.wait();
-    return data->unitpath;
+    auto registry = registry_.lock();
+
+    if (!registry)
+    {
+        g_warning("Unable to get registry to determine path");
+        return {};
+    }
+
+    /* Execute on the thread so that we're sure that we're not in
+       a dbus call to get the value. No racey for you! */
+    return registry->impl->thread.executeOnThread<std::string>([&data]() { return data->unitpath; });
 }
 
-void SystemD::unitNew(const std::string& name, const std::string& path)
+SystemD::UnitInfo SystemD::unitNew(const std::string& name,
+                                   const std::string& path,
+                                   const std::shared_ptr<GDBusConnection>& bus)
 {
     if (path == "/")
     {
-        /* Job paths of '/' means there is no job, and it's likely the unit failed */
-        return;
+        throw std::runtime_error{"Job path for unit is '/' so likely failed"};
     }
 
     g_debug("New Unit: %s", name.c_str());
 
-    UnitInfo info;
-    try
-    {
-        info = parseUnit(name);
-    }
-    catch (std::runtime_error& e)
-    {
-        return;
-    }
+    auto info = parseUnit(name);
 
     auto data = std::make_shared<UnitData>();
     data->jobpath = path;
-    data->pathfuture = data->pathpromise.get_future();
 
     /* We already have this one, continue on */
     if (!unitPaths.insert(std::make_pair(info, data)).second)
     {
-        return;
+        throw std::runtime_error{"Duplicate unit, not really new"};
     }
 
     /* We need to get the path, we're blocking everyone else on
@@ -872,7 +900,14 @@ void SystemD::unitNew(const std::string& name, const std::string& path)
        app, but not yet its path */
     GError* error{nullptr};
     auto reg = registry_.lock();
-    GVariant* call = g_dbus_connection_call_sync(userbus_.get(),                           /* user bus */
+
+    if (!reg)
+    {
+        g_warning("Unable to get SystemD unit path for '%s': Registry out of scope", name.c_str());
+        throw std::runtime_error{"Unable to get SystemD unit path for '" + name + "': Registry out of scope"};
+    }
+
+    GVariant* call = g_dbus_connection_call_sync(bus.get(),                                /* user bus */
                                                  SYSTEMD_DBUS_ADDRESS.c_str(),             /* bus name */
                                                  SYSTEMD_DBUS_PATH_MANAGER.c_str(),        /* path */
                                                  SYSTEMD_DBUS_IFACE_MANAGER.c_str(),       /* interface */
@@ -886,9 +921,9 @@ void SystemD::unitNew(const std::string& name, const std::string& path)
 
     if (error != nullptr)
     {
-        g_warning("Unable to get SystemD unit path for '%s': %s", name.c_str(), error->message);
+        std::string message = "Unable to get SystemD unit path for '" + name + "': " + error->message;
         g_error_free(error);
-        return;
+        throw std::runtime_error{message};
     }
 
     /* Parse variant */
@@ -901,9 +936,7 @@ void SystemD::unitNew(const std::string& name, const std::string& path)
 
     g_variant_unref(call);
 
-    data->pathpromise.set_value(true);
-
-    emitSignal(sig_appStarted, info);
+    return info;
 }
 
 void SystemD::unitRemoved(const std::string& name, const std::string& path)
@@ -954,8 +987,6 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
         g_warning("Unable to get registry to determine primary PID");
         return 0;
     }
-
-    unitPathsInit();
 
     auto unitinfo = SystemD::UnitInfo{appId, job, instance};
     auto unitname = unitName(unitinfo);
@@ -1011,8 +1042,6 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         g_warning("Unable to get registry to determine primary PID");
         return {};
     }
-
-    unitPathsInit();
 
     auto unitinfo = SystemD::UnitInfo{appId, job, instance};
     auto unitname = unitName(unitinfo);

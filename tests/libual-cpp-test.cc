@@ -41,6 +41,8 @@
 
 #ifdef ENABLE_SNAPPY
 #include "snapd-mock.h"
+
+#define LOCAL_SNAPD_TEST_SOCKET (SNAPD_TEST_SOCKET "-libual-cpp-test")
 #endif
 
 class LibUAL : public EventuallyFixture
@@ -150,10 +152,10 @@ protected:
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
 #ifdef ENABLE_SNAPPY
-        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", LOCAL_SNAPD_TEST_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
-        g_unlink(SNAPD_TEST_SOCKET);
+        g_unlink(LOCAL_SNAPD_TEST_SOCKET);
 #endif
         g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH", "/this/should/not/exist", TRUE);
 
@@ -342,7 +344,7 @@ protected:
         ASSERT_EVENTUALLY_EQ(nullptr, bus);
 
 #ifdef ENABLE_SNAPPY
-        g_unlink(SNAPD_TEST_SOCKET);
+        g_unlink(LOCAL_SNAPD_TEST_SOCKET);
 #endif
     }
 
@@ -526,7 +528,7 @@ static std::pair<std::string, std::string> u8Package{
 
 TEST_F(LibUAL, ApplicationIdSnap)
 {
-    SnapdMock snapd{SNAPD_TEST_SOCKET,
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET,
                     {u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package,
                      u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
@@ -548,7 +550,7 @@ TEST_F(LibUAL, ApplicationIdSnap)
 TEST_F(LibUAL, ApplicationIconSnap)
 {
     /* Queries come in threes, apparently */
-    SnapdMock snapd{SNAPD_TEST_SOCKET,
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET,
             {
                 u8Package, interfaces, u8Package,
                 u8Package, interfaces, u8Package,
@@ -586,7 +588,7 @@ TEST_F(LibUAL, ApplicationIconSnap)
 
 TEST_F(LibUAL, StartSnapApplication)
 {
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -645,7 +647,7 @@ TEST_F(LibUAL, StartSnapApplication)
 
 TEST_F(LibUAL, StartSnapApplicationTest)
 {
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -675,7 +677,7 @@ TEST_F(LibUAL, StartSnapApplicationTest)
 
 TEST_F(LibUAL, StopSnapApplication)
 {
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -860,7 +862,7 @@ TEST_F(LibUAL, AppIdParse)
 TEST_F(LibUAL, ApplicationList)
 {
 #ifdef ENABLE_SNAPPY
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 #endif
 

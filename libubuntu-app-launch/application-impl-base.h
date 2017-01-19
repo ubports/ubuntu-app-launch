@@ -41,6 +41,7 @@ class Base : public ubuntu::app_launch::Application
 {
 public:
     Base(const std::shared_ptr<Registry>& registry);
+    virtual ~Base();
 
     bool hasInstances() override;
 
