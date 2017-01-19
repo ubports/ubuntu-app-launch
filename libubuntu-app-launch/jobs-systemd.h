@@ -116,19 +116,12 @@ private:
         }
     };
 
+    void getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const std::shared_ptr<GCancellable>& cancel);
+
     struct UnitData
     {
         std::string jobpath;
         std::string unitpath;
-        std::promise<bool> pathpromise;
-        std::future<bool> pathfuture;
-    };
-
-    std::shared_ptr<std::promise<bool>> unitPathsInitPromise;
-    std::future<bool> unitPathsInitFuture;
-    void unitPathsInit(void)
-    {
-        unitPathsInitFuture.wait();
     };
 
     std::map<UnitInfo, std::shared_ptr<UnitData>> unitPaths;
@@ -136,7 +129,7 @@ private:
     std::string unitName(const UnitInfo& info);
     std::string unitPath(const UnitInfo& info);
 
-    void unitNew(const std::string& name, const std::string& path);
+    void unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus);
     void unitRemoved(const std::string& name, const std::string& path);
     void emitSignal(
         core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& sig,
