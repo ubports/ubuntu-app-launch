@@ -138,7 +138,7 @@ protected:
     virtual void SetUp()
     {
         /* Click DB test mode */
-        g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+        g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
         gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
@@ -518,11 +518,11 @@ TEST_F(LibUAL, StopClickApplication)
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
-        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single"}}})))};
+        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single", "xmir", "noxmir"}}})))};
 static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
+        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single", "xmir", "noxmir"})))};
 
 TEST_F(LibUAL, ApplicationIdSnap)
 {
@@ -536,13 +536,52 @@ TEST_F(LibUAL, ApplicationIdSnap)
               (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo"));
     EXPECT_EQ("unity8-package_single_x123",
               (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "single"));
-    EXPECT_EQ("unity8-package_single_x123",
+    EXPECT_EQ("unity8-package_xmir_x123",
               (std::string)ubuntu::app_launch::AppID::discover(
                   registry, "unity8-package", ubuntu::app_launch::AppID::ApplicationWildcard::LAST_LISTED));
     EXPECT_EQ("unity8-package_foo_x123",
               (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo", "x123"));
 
     EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "unity7-package"));
+}
+
+TEST_F(LibUAL, ApplicationIconSnap)
+{
+    /* Queries come in threes, apparently */
+    SnapdMock snapd{SNAPD_TEST_SOCKET,
+            {
+                u8Package, interfaces, u8Package,
+                u8Package, interfaces, u8Package,
+                u8Package, interfaces, u8Package,
+                u8Package, interfaces, u8Package,
+            }};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    std::string snapRoot{SNAP_BASEDIR};
+
+    /* Check the /snap/foo/current/ prefixed case */
+    auto appid = ubuntu::app_launch::AppID::parse("unity8-package_foo_x123");
+    auto app = ubuntu::app_launch::Application::create(appid, registry);
+    auto expected = snapRoot + "/unity8-package/x123/foo.png";
+    EXPECT_EQ(expected, app->info()->iconPath().value());
+
+    /* Check the ${SNAP}/ prefixed case */
+    appid = ubuntu::app_launch::AppID::parse("unity8-package_single_x123");
+    app = ubuntu::app_launch::Application::create(appid, registry);
+    expected = snapRoot + "/unity8-package/x123/single.png";
+    EXPECT_EQ(expected, app->info()->iconPath().value());
+
+    /* Check the un-prefixed "foo.png" case in meta/gui dir */
+    appid = ubuntu::app_launch::AppID::parse("unity8-package_xmir_x123");
+    app = ubuntu::app_launch::Application::create(appid, registry);
+    expected = snapRoot + "/unity8-package/x123/meta/gui/xmir.png";
+    EXPECT_EQ(expected, app->info()->iconPath().value());
+
+    /* Check the un-prefixed "foo.png" case in snap's root dir */
+    appid = ubuntu::app_launch::AppID::parse("unity8-package_noxmir_x123");
+    app = ubuntu::app_launch::Application::create(appid, registry);
+    expected = snapRoot + "/unity8-package/x123/no-xmir.png";
+    EXPECT_EQ(expected, app->info()->iconPath().value());
 }
 
 TEST_F(LibUAL, StartSnapApplication)
