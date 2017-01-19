@@ -786,7 +786,7 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
     std::list<std::shared_ptr<Application>> apps;
     for (const auto& appid : appids)
     {
-        auto id = AppID::find(appid);
+        auto id = AppID::find(registry, appid);
         if (id.empty())
         {
             g_debug("Unable to handle AppID: %s", appid.c_str());
