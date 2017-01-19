@@ -59,11 +59,6 @@ add_compile_options(
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-STRING(TOLOWER "${CMAKE_BUILD_TYPE}" LOWER_CMAKE_BUILD_TYPE)
-if ("${LOWER_CMAKE_BUILD_TYPE}" STREQUAL "coverage")
-	set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} -lgcov")
-endif()
-
 enable_testing()
 
 pkg_check_modules(GLIB2 REQUIRED glib-2.0)
@@ -231,7 +226,7 @@ if (${enable_tests})
   add_subdirectory(tests)
 endif ()
 
-include(EnableCoverageReport)
+find_package(CoverageReport)
 set(filter-list)
 list(APPEND filter-list "/usr/include")
 list(APPEND filter-list "${CMAKE_SOURCE_DIR}/tests/*")
@@ -253,7 +248,7 @@ ENABLE_COVERAGE_REPORT(
 	libual-test
 	libual-cpp-test
 	list-apps
-#	snap-info-test
+	snapd-info-test
 	zg-test
   FILTER
   	${filter-list}

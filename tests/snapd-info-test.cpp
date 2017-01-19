@@ -23,17 +23,19 @@
 #include <glib/gstdio.h>
 #include <gtest/gtest.h>
 
+#define LOCAL_SNAPD_TEST_SOCKET (SNAPD_TEST_SOCKET "-info-test")
+
 class SnapdInfo : public ::testing::Test
 {
 protected:
     virtual void SetUp()
     {
-        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", LOCAL_SNAPD_TEST_SOCKET, TRUE);
     }
 
     virtual void TearDown()
     {
-        g_unlink(SNAPD_TEST_SOCKET);
+        g_unlink(LOCAL_SNAPD_TEST_SOCKET);
     }
 };
 
@@ -46,7 +48,7 @@ TEST_F(SnapdInfo, Init)
 
 TEST_F(SnapdInfo, PackageInfo)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET,
+    SnapdMock mock{LOCAL_SNAPD_TEST_SOCKET,
                    {{"GET /v2/snaps/test-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
                      SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
                          "test-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))}}};
@@ -67,7 +69,7 @@ TEST_F(SnapdInfo, PackageInfo)
 
 TEST_F(SnapdInfo, AppsForInterface)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET,
+    SnapdMock mock{LOCAL_SNAPD_TEST_SOCKET,
                    {{"GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
                      SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
                          SnapdMock::interfacesJson({{"unity8", "test-package", {"foo", "bar"}}})))},
@@ -88,7 +90,7 @@ TEST_F(SnapdInfo, AppsForInterface)
 
 TEST_F(SnapdInfo, InterfacesForAppID)
 {
-    SnapdMock mock{SNAPD_TEST_SOCKET,
+    SnapdMock mock{LOCAL_SNAPD_TEST_SOCKET,
                    {{"GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
                      SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
                          SnapdMock::interfacesJson({{"unity8", "test-package", {"foo"}},
@@ -112,7 +114,7 @@ TEST_F(SnapdInfo, InterfacesForAppID)
 TEST_F(SnapdInfo, BadJson)
 {
     SnapdMock mock{
-        SNAPD_TEST_SOCKET,
+        LOCAL_SNAPD_TEST_SOCKET,
         {
             {"GET /v2/snaps/test-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
              SnapdMock::httpJsonResponse("«This is not valid JSON»")},

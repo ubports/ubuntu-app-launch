@@ -41,6 +41,8 @@
 
 #ifdef ENABLE_SNAPPY
 #include "snapd-mock.h"
+
+#define LOCAL_SNAPD_TEST_SOCKET (SNAPD_TEST_SOCKET "-libual-cpp-test")
 #endif
 
 class LibUAL : public EventuallyFixture
@@ -138,7 +140,7 @@ protected:
     virtual void SetUp()
     {
         /* Click DB test mode */
-        g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
+        g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
         g_setenv("TEST_CLICK_USER", "test-user", TRUE);
 
         gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
@@ -150,10 +152,10 @@ protected:
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
 #ifdef ENABLE_SNAPPY
-        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_TEST_SOCKET, TRUE);
+        g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", LOCAL_SNAPD_TEST_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
-        g_unlink(SNAPD_TEST_SOCKET);
+        g_unlink(LOCAL_SNAPD_TEST_SOCKET);
 #endif
         g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH", "/this/should/not/exist", TRUE);
 
@@ -342,7 +344,7 @@ protected:
         ASSERT_EVENTUALLY_EQ(nullptr, bus);
 
 #ifdef ENABLE_SNAPPY
-        g_unlink(SNAPD_TEST_SOCKET);
+        g_unlink(LOCAL_SNAPD_TEST_SOCKET);
 #endif
     }
 
@@ -518,15 +520,15 @@ TEST_F(LibUAL, StopClickApplication)
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
-        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single"}}})))};
+        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single", "xmir", "noxmir"}}})))};
 static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
+        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single", "xmir", "noxmir"})))};
 
 TEST_F(LibUAL, ApplicationIdSnap)
 {
-    SnapdMock snapd{SNAPD_TEST_SOCKET,
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET,
                     {u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package,
                      u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
@@ -536,7 +538,7 @@ TEST_F(LibUAL, ApplicationIdSnap)
               (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "foo"));
     EXPECT_EQ("unity8-package_single_x123",
               (std::string)ubuntu::app_launch::AppID::discover(registry, "unity8-package", "single"));
-    EXPECT_EQ("unity8-package_single_x123",
+    EXPECT_EQ("unity8-package_xmir_x123",
               (std::string)ubuntu::app_launch::AppID::discover(
                   registry, "unity8-package", ubuntu::app_launch::AppID::ApplicationWildcard::LAST_LISTED));
     EXPECT_EQ("unity8-package_foo_x123",
@@ -545,9 +547,48 @@ TEST_F(LibUAL, ApplicationIdSnap)
     EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "unity7-package"));
 }
 
+TEST_F(LibUAL, ApplicationIconSnap)
+{
+    /* Queries come in threes, apparently */
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET,
+            {
+                u8Package, interfaces, u8Package,
+                u8Package, interfaces, u8Package,
+                u8Package, interfaces, u8Package,
+                u8Package, interfaces, u8Package,
+            }};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    std::string snapRoot{SNAP_BASEDIR};
+
+    /* Check the /snap/foo/current/ prefixed case */
+    auto appid = ubuntu::app_launch::AppID::parse("unity8-package_foo_x123");
+    auto app = ubuntu::app_launch::Application::create(appid, registry);
+    auto expected = snapRoot + "/unity8-package/x123/foo.png";
+    EXPECT_EQ(expected, app->info()->iconPath().value());
+
+    /* Check the ${SNAP}/ prefixed case */
+    appid = ubuntu::app_launch::AppID::parse("unity8-package_single_x123");
+    app = ubuntu::app_launch::Application::create(appid, registry);
+    expected = snapRoot + "/unity8-package/x123/single.png";
+    EXPECT_EQ(expected, app->info()->iconPath().value());
+
+    /* Check the un-prefixed "foo.png" case in meta/gui dir */
+    appid = ubuntu::app_launch::AppID::parse("unity8-package_xmir_x123");
+    app = ubuntu::app_launch::Application::create(appid, registry);
+    expected = snapRoot + "/unity8-package/x123/meta/gui/xmir.png";
+    EXPECT_EQ(expected, app->info()->iconPath().value());
+
+    /* Check the un-prefixed "foo.png" case in snap's root dir */
+    appid = ubuntu::app_launch::AppID::parse("unity8-package_noxmir_x123");
+    app = ubuntu::app_launch::Application::create(appid, registry);
+    expected = snapRoot + "/unity8-package/x123/no-xmir.png";
+    EXPECT_EQ(expected, app->info()->iconPath().value());
+}
+
 TEST_F(LibUAL, StartSnapApplication)
 {
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -606,7 +647,7 @@ TEST_F(LibUAL, StartSnapApplication)
 
 TEST_F(LibUAL, StartSnapApplicationTest)
 {
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -636,7 +677,7 @@ TEST_F(LibUAL, StartSnapApplicationTest)
 
 TEST_F(LibUAL, StopSnapApplication)
 {
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto obj = dbus_test_dbus_mock_get_object(mock, "/com/test/application_snap", "com.ubuntu.Upstart0_6.Job", NULL);
@@ -821,7 +862,7 @@ TEST_F(LibUAL, AppIdParse)
 TEST_F(LibUAL, ApplicationList)
 {
 #ifdef ENABLE_SNAPPY
-    SnapdMock snapd{SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 #endif
 
