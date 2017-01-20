@@ -194,4 +194,21 @@ TEST_F(JobsSystemd, StopUnit)
               *stopcalls.begin());
 }
 
-// launch
+TEST_F(JobsSystemd, LaunchJob)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    bool gotenv{false};
+    std::function<std::list<std::pair<std::string, std::string>>()> getenvfunc =
+        [&]() -> std::list<std::pair<std::string, std::string>> {
+        gotenv = true;
+        return {};
+    };
+
+    auto app = manager->launch(multipleAppID(), defaultJobName(), "123", {},
+                               ubuntu::app_launch::jobs::manager::launchMode::STANDARD, getenvfunc);
+
+    EXPECT_TRUE(app);
+    EXPECT_TRUE(gotenv);
+}
