@@ -295,4 +295,21 @@ public:
 
         return retval;
     }
+
+    void managerClear()
+    {
+        GError* error = nullptr;
+
+        dbus_test_dbus_mock_object_clear_method_calls(mock,       /* mock */
+                                                      managerobj, /* manager */
+                                                      &error      /* error */
+                                                      );
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to clear manager calls: %s", error->message);
+            g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
+        }
+    }
 };

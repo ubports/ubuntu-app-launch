@@ -180,6 +180,20 @@ TEST_F(JobsSystemd, StopUnit)
 
     EXPECT_EQ(SystemdMock::instanceName({defaultJobName(), std::string{singleAppID()}, {}, 5, {1, 2, 3, 4, 5}}),
               *stopcalls.begin());
+
+    systemd->managerClear();
+    stopcalls.clear();
+
+    manager->stopUnit(multipleAppID(), defaultJobName(), "1234567890");
+
+    EXPECT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int()>([&]() {
+                                  stopcalls = systemd->stopCalls();
+                                  return stopcalls.size();
+                              }));
+
+    EXPECT_EQ(
+        SystemdMock::instanceName({defaultJobName(), std::string{multipleAppID()}, "1234567890", 11, {12, 13, 11}}),
+        *stopcalls.begin());
 }
 
 // launch
