@@ -103,6 +103,7 @@ public:
                             })
                 .c_str(),
             nullptr);
+
         dbus_test_dbus_mock_object_add_method(
             mock, managerobj, "StopUnit", G_VARIANT_TYPE("(ss)"), G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
             std::accumulate(instances.begin(), instances.end(), std::string{},
@@ -116,6 +117,11 @@ public:
                             })
                 .c_str(),
             nullptr);
+
+        dbus_test_dbus_mock_object_add_method(mock, managerobj, "StartTransientUnit",
+                                              G_VARIANT_TYPE("(ssa(sv)a(sa(sv)))"),
+                                              G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
+                                              "ret = '/'", nullptr);
 
         for (auto& instance : instances)
         {
@@ -291,6 +297,54 @@ public:
             }
 
             retval.emplace_back(name);
+        }
+
+        return retval;
+    }
+
+    struct TransientUnit
+    {
+        std::string name;
+    };
+
+    std::list<TransientUnit> unitCalls()
+    {
+        guint len = 0;
+        GError* error = nullptr;
+
+        auto calls = dbus_test_dbus_mock_object_get_method_calls(mock,                 /* mock */
+                                                                 managerobj,           /* manager */
+                                                                 "StartTransientUnit", /* function */
+                                                                 &len,                 /* number */
+                                                                 &error                /* error */
+                                                                 );
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to get 'StartTransientUnit' calls from systemd mock: %s", error->message);
+            g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
+        }
+
+        std::list<TransientUnit> retval;
+
+        for (unsigned int i = 0; i < len; i++)
+        {
+            auto& call = calls[i];
+            gchar* name = nullptr;
+
+            g_variant_get_child(call.params, 0, "&s", &name);
+
+            if (name == nullptr)
+            {
+                g_warning("Invalid 'name' on 'StartTransientUnit' call");
+                continue;
+            }
+
+            TransientUnit unit;
+            unit.name = name;
+
+            retval.emplace_back(unit);
         }
 
         return retval;

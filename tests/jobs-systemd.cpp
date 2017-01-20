@@ -206,9 +206,18 @@ TEST_F(JobsSystemd, LaunchJob)
         return {};
     };
 
-    auto app = manager->launch(multipleAppID(), defaultJobName(), "123", {},
-                               ubuntu::app_launch::jobs::manager::launchMode::STANDARD, getenvfunc);
+    auto inst = manager->launch(multipleAppID(), defaultJobName(), "123", {},
+                                ubuntu::app_launch::jobs::manager::launchMode::STANDARD, getenvfunc);
 
-    EXPECT_TRUE(app);
+    EXPECT_TRUE(inst);
     EXPECT_TRUE(gotenv);
+
+    std::list<SystemdMock::TransientUnit> units;
+    EXPECT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int()>([&]() {
+                                  units = systemd->unitCalls();
+                                  return units.size();
+                              }));
+
+    EXPECT_EQ(SystemdMock::instanceName({defaultJobName(), std::string{multipleAppID()}, "123", 1, {}}),
+              units.begin()->name);
 }
