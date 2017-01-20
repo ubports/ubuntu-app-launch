@@ -164,4 +164,22 @@ TEST_F(JobsSystemd, PidTools)
     EXPECT_EQ(pidlist, manager->unitPids(singleAppID(), defaultJobName(), {}));
 }
 
-// void stopUnit(const AppID& appId, const std::string& job, const std::string& instance);
+/* Stopping a Job */
+TEST_F(JobsSystemd, StopUnit)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    manager->stopUnit(singleAppID(), defaultJobName(), {});
+
+    std::list<std::string> stopcalls;
+    EXPECT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int()>([&]() {
+                                  stopcalls = systemd->stopCalls();
+                                  return stopcalls.size();
+                              }));
+
+    EXPECT_EQ(SystemdMock::instanceName({defaultJobName(), std::string{singleAppID()}, {}, 5, {1, 2, 3, 4, 5}}),
+              *stopcalls.begin());
+}
+
+// launch

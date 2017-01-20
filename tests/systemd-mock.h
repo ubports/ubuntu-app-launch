@@ -103,6 +103,19 @@ public:
                             })
                 .c_str(),
             nullptr);
+        dbus_test_dbus_mock_object_add_method(
+            mock, managerobj, "StopUnit", G_VARIANT_TYPE("(ss)"), G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
+            std::accumulate(instances.begin(), instances.end(), std::string{},
+                            [](const std::string accum, const Instance& inst) {
+                                std::string retval = accum;
+
+                                retval += "if args[0] == '" + instanceName(inst) + "':\n";
+                                retval += "\tret = '" + instancePath(inst) + "'\n";
+
+                                return retval;
+                            })
+                .c_str(),
+            nullptr);
 
         for (auto& instance : instances)
         {
@@ -240,5 +253,46 @@ public:
         }
 
         return len;
+    }
+
+    std::list<std::string> stopCalls()
+    {
+        guint len = 0;
+        GError* error = nullptr;
+
+        auto calls = dbus_test_dbus_mock_object_get_method_calls(mock,       /* mock */
+                                                                 managerobj, /* manager */
+                                                                 "StopUnit", /* function */
+                                                                 &len,       /* number */
+                                                                 &error      /* error */
+                                                                 );
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to get 'StopUnit' calls from systemd mock: %s", error->message);
+            g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
+        }
+
+        std::list<std::string> retval;
+
+        for (unsigned int i = 0; i < len; i++)
+        {
+            auto& call = calls[i];
+            gchar* name = nullptr;
+            gchar* inst = nullptr;
+
+            g_variant_get(call.params, "(&s&s)", &name, &inst);
+
+            if (name == nullptr)
+            {
+                g_warning("Invalid 'name' on 'StopUnit' call");
+                continue;
+            }
+
+            retval.emplace_back(name);
+        }
+
+        return retval;
     }
 };
