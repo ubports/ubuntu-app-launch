@@ -321,3 +321,39 @@ TEST_F(JobsSystemd, SignalNew)
 
     EXPECT_EQ(multipleAppID(), newunit.get_future().get());
 }
+
+TEST_F(JobsSystemd, SignalRemove)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    std::promise<ubuntu::app_launch::AppID> removeunit;
+    manager->appStopped().connect([&](const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                      const std::shared_ptr<ubuntu::app_launch::Application::Instance> &inst) {
+        try
+        {
+            if (!app)
+            {
+                throw std::runtime_error("Invalid Application");
+            }
+
+            if (!inst)
+            {
+                throw std::runtime_error("Invalid Instance");
+            }
+
+            removeunit.set_value(app->appId());
+        }
+        catch (...)
+        {
+            removeunit.set_exception(std::current_exception());
+        }
+    });
+
+    systemd->managerEmitRemoved(SystemdMock::instanceName(
+
+                                    {defaultJobName(), std::string{multipleAppID()}, "1234567890", 1, {}}),
+                                "/foo");
+
+    EXPECT_EQ(multipleAppID(), removeunit.get_future().get());
+}
