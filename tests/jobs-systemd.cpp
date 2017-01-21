@@ -164,6 +164,20 @@ TEST_F(JobsSystemd, PidTools)
     EXPECT_EQ(pidlist, manager->unitPids(singleAppID(), defaultJobName(), {}));
 }
 
+/* PID Instance */
+TEST_F(JobsSystemd, PidInstance)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    auto inst = manager->existing(singleAppID(), defaultJobName(), {}, {});
+    EXPECT_TRUE(inst);
+
+    EXPECT_EQ(5, inst->primaryPid());
+    std::vector<pid_t> pidlist{1, 2, 3, 4, 5};
+    EXPECT_EQ(pidlist, inst->pids());
+}
+
 /* Stopping a Job */
 TEST_F(JobsSystemd, StopUnit)
 {
@@ -194,6 +208,27 @@ TEST_F(JobsSystemd, StopUnit)
               *stopcalls.begin());
 }
 
+/* Stop Instance */
+TEST_F(JobsSystemd, StopInstance)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    auto inst = manager->existing(singleAppID(), defaultJobName(), {}, {});
+    EXPECT_TRUE(inst);
+
+    inst->stop();
+
+    std::list<std::string> stopcalls;
+    EXPECT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int()>([&]() {
+                                  stopcalls = systemd->stopCalls();
+                                  return stopcalls.size();
+                              }));
+
+    EXPECT_EQ(SystemdMock::instanceName({defaultJobName(), std::string{singleAppID()}, {}, 1, {}}), *stopcalls.begin());
+}
+
+/* Starting a new job */
 TEST_F(JobsSystemd, LaunchJob)
 {
     auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
