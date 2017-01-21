@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "application-impl-base.h"
 #include "helpers.h"
 #include "jobs-systemd.h"
 #include "registry-impl.h"
@@ -964,10 +965,9 @@ void SystemD::emitSignal(
 
     auto appid = AppID::find(reg, info.appid);
     auto app = Application::create(appid, reg);
+    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(info.inst);
 
-    // TODO: Figure otu creating instances
-
-    sig(app, {});
+    sig(app, inst);
 }
 
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)

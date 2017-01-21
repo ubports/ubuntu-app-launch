@@ -285,3 +285,39 @@ TEST_F(JobsSystemd, LaunchJob)
     EXPECT_NE(units.begin()->environment.end(),
               units.begin()->environment.find("ARBITRARY_KEY=EVEN_MORE_ARBITRARY_VALUE"));
 }
+
+TEST_F(JobsSystemd, SignalNew)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    std::promise<ubuntu::app_launch::AppID> newunit;
+    manager->appStarted().connect([&](const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                      const std::shared_ptr<ubuntu::app_launch::Application::Instance> &inst) {
+        try
+        {
+            if (!app)
+            {
+                throw std::runtime_error("Invalid Application");
+            }
+
+            if (!inst)
+            {
+                throw std::runtime_error("Invalid Instance");
+            }
+
+            newunit.set_value(app->appId());
+        }
+        catch (...)
+        {
+            newunit.set_exception(std::current_exception());
+        }
+    });
+
+    systemd->managerEmitNew(SystemdMock::instanceName(
+
+                                {defaultJobName(), std::string{multipleAppID()}, "1234", 1, {}}),
+                            "/foo");
+
+    EXPECT_EQ(multipleAppID(), newunit.get_future().get());
+}

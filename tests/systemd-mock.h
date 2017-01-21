@@ -92,15 +92,15 @@ public:
 
         dbus_test_dbus_mock_object_add_method(
             mock, managerobj, "GetUnit", G_VARIANT_TYPE_STRING, G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
-            std::accumulate(instances.begin(), instances.end(), std::string{},
-                            [](const std::string accum, const Instance& inst) {
-                                std::string retval = accum;
+            ("ret = '/'\n" + std::accumulate(instances.begin(), instances.end(), std::string{},
+                                             [](const std::string accum, const Instance& inst) {
+                                                 std::string retval = accum;
 
-                                retval += "if args[0] == '" + instanceName(inst) + "':\n";
-                                retval += "\tret = '" + instancePath(inst) + "'\n";
+                                                 retval += "if args[0] == '" + instanceName(inst) + "':\n";
+                                                 retval += "\tret = '" + instancePath(inst) + "'\n";
 
-                                return retval;
-                            })
+                                                 return retval;
+                                             }))
                 .c_str(),
             nullptr);
 
@@ -386,6 +386,36 @@ public:
         if (error != nullptr)
         {
             g_warning("Unable to clear manager calls: %s", error->message);
+            g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
+        }
+    }
+
+    void managerEmitNew(const std::string& name, const std::string& path)
+    {
+        GError* error = nullptr;
+
+        dbus_test_dbus_mock_object_emit_signal(mock, managerobj, "UnitNew", G_VARIANT_TYPE("(so)"),
+                                               g_variant_new("(so)", name.c_str(), path.c_str()), &error);
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to emit 'UnitNew': %s", error->message);
+            g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
+        }
+    }
+
+    void managerEmitRemoved(const std::string& name, const std::string& path)
+    {
+        GError* error = nullptr;
+
+        dbus_test_dbus_mock_object_emit_signal(mock, managerobj, "UnitRemoved", G_VARIANT_TYPE("(so)"),
+                                               g_variant_new("(so)", name.c_str(), path.c_str()), &error);
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to emit 'UnitRemoved': %s", error->message);
             g_error_free(error);
             throw std::runtime_error{"Mock disfunctional"};
         }
