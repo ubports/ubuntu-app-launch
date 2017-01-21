@@ -305,6 +305,7 @@ public:
     struct TransientUnit
     {
         std::string name;
+        std::set<std::string> environment;
     };
 
     std::list<TransientUnit> unitCalls()
@@ -343,6 +344,29 @@ public:
 
             TransientUnit unit;
             unit.name = name;
+
+            auto paramarray = g_variant_get_child_value(call.params, 2);
+            gchar* key;
+            GVariant* var;
+            GVariantIter iter;
+            g_variant_iter_init(&iter, paramarray);
+            while (g_variant_iter_loop(&iter, "(sv)", &key, &var))
+            {
+                g_debug("Looking at parameter: %s", key);
+
+                if (std::string{key} == "Environment")
+                {
+                    GVariantIter array;
+                    gchar* envvar;
+                    g_variant_iter_init(&array, var);
+
+                    while (g_variant_iter_loop(&array, "&s", &envvar))
+                    {
+                        unit.environment.emplace(envvar);
+                    }
+                }
+            }
+            g_variant_unref(paramarray);
 
             retval.emplace_back(unit);
         }

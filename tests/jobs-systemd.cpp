@@ -212,12 +212,41 @@ TEST_F(JobsSystemd, LaunchJob)
     EXPECT_TRUE(inst);
     EXPECT_TRUE(gotenv);
 
+    /* Check to see that we got called */
     std::list<SystemdMock::TransientUnit> units;
     EXPECT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int()>([&]() {
                                   units = systemd->unitCalls();
                                   return units.size();
                               }));
 
+    /* Make sure it was the right one */
     EXPECT_EQ(SystemdMock::instanceName({defaultJobName(), std::string{multipleAppID()}, "123", 1, {}}),
               units.begin()->name);
+
+    /* Check some standard environment variables */
+    EXPECT_NE(units.begin()->environment.end(),
+              units.begin()->environment.find(std::string{"APP_ID="} + std::string(multipleAppID())));
+    EXPECT_NE(
+        units.begin()->environment.end(),
+        units.begin()->environment.find(std::string{"DBUS_SESSION_BUS_ADDRESS="} + getenv("DBUS_SESSION_BUS_ADDRESS")));
+
+    /* Try an entirely custom variable */
+    systemd->managerClear();
+    units.clear();
+
+    std::function<std::list<std::pair<std::string, std::string>>()> arbitraryenvfunc =
+        [&]() -> std::list<std::pair<std::string, std::string>> {
+        return {{"ARBITRARY_KEY", "EVEN_MORE_ARBITRARY_VALUE"}};
+    };
+
+    manager->launch(multipleAppID(), defaultJobName(), "123", {},
+                    ubuntu::app_launch::jobs::manager::launchMode::STANDARD, arbitraryenvfunc);
+
+    EXPECT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int()>([&]() {
+                                  units = systemd->unitCalls();
+                                  return units.size();
+                              }));
+
+    EXPECT_NE(units.begin()->environment.end(),
+              units.begin()->environment.find("ARBITRARY_KEY=EVEN_MORE_ARBITRARY_VALUE"));
 }
