@@ -5,7 +5,7 @@
 export G_MESSAGES_DEBUG=all
 
 # Ensure tests fail with criticals
-export G_DEBUG=fatal_criticals
+#export G_DEBUG=fatal_criticals
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
