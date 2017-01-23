@@ -4,6 +4,9 @@
 # Get full logs in tests
 export G_MESSAGES_DEBUG=all
 
+# Ensure tests fail with criticals
+export G_DEBUG=fatal_criticals
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 export DPKG_GENSYMBOLS_CHECK_LEVEL=4
