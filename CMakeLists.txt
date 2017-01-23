@@ -240,7 +240,8 @@ ENABLE_COVERAGE_REPORT(
   TESTS
   	application-icon-finder-test
 	application-info-desktop-test
-	cgroup-reap-test exec-util-test
+	cgroup-reap-test
+	exec-util-test
 	failure-test
 	helper-test
 	helper-handshake-test
