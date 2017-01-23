@@ -62,6 +62,10 @@ class Registry;
 */
 class Helper
 {
+protected:
+    Helper() = default;
+    virtual ~Helper() = default;
+
 public:
     /** \private */
     struct TypeTag;
@@ -87,6 +91,10 @@ public:
     /** Running instance of a a Helper */
     class Instance
     {
+    protected:
+        Instance() = default;
+        virtual ~Instance() = default;
+
     public:
         /** Check to see if this instance is running */
         virtual bool isRunning() = 0;

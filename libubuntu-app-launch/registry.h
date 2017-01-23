@@ -187,6 +187,7 @@ public:
 
     protected:
         Manager() = default;
+        virtual ~Manager() = default;
     };
 
     /** Set the manager of applications, which gives permissions for them to
