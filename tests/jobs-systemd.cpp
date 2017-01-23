@@ -125,10 +125,10 @@ TEST_F(JobsSystemd, RunningApps)
     EXPECT_EQ(2u, apps.size());
 
     auto single = *std::find_if(apps.begin(), apps.end(), findAppID(singleAppID()));
-    EXPECT_TRUE(single);
+    EXPECT_TRUE(bool(single));
 
     auto multiple = *std::find_if(apps.begin(), apps.end(), findAppID(multipleAppID()));
-    EXPECT_TRUE(multiple);
+    EXPECT_TRUE(bool(multiple));
 
     auto sinstances = single->instances();
 
@@ -171,7 +171,7 @@ TEST_F(JobsSystemd, PidInstance)
     registry->impl->jobs = manager;
 
     auto inst = manager->existing(singleAppID(), defaultJobName(), {}, {});
-    EXPECT_TRUE(inst);
+    EXPECT_TRUE(bool(inst));
 
     EXPECT_EQ(5, inst->primaryPid());
     std::vector<pid_t> pidlist{1, 2, 3, 4, 5};
@@ -215,7 +215,7 @@ TEST_F(JobsSystemd, StopInstance)
     registry->impl->jobs = manager;
 
     auto inst = manager->existing(singleAppID(), defaultJobName(), {}, {});
-    EXPECT_TRUE(inst);
+    EXPECT_TRUE(bool(inst));
 
     inst->stop();
 
@@ -244,7 +244,7 @@ TEST_F(JobsSystemd, LaunchJob)
     auto inst = manager->launch(multipleAppID(), defaultJobName(), "123", {},
                                 ubuntu::app_launch::jobs::manager::launchMode::STANDARD, getenvfunc);
 
-    EXPECT_TRUE(inst);
+    EXPECT_TRUE(bool(inst));
     EXPECT_TRUE(gotenv);
 
     /* Check to see that we got called */
