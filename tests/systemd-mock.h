@@ -49,9 +49,22 @@ private:
     GLib::ContextThread thread;
     std::list<std::pair<Instance, DbusTestDbusMockObject*>> insts;
 
+    void throwError(GError* error)
+    {
+        if (error == nullptr)
+        {
+            return;
+        }
+
+        auto message = std::string{"Error in systemd mock: "} + error->message;
+        g_error_free(error);
+        throw std::runtime_error{message};
+    }
+
 public:
     SystemdMock(const std::list<Instance>& instances, const std::string& controlGroupPath)
     {
+        GError* error = nullptr;
         mock = dbus_test_dbus_mock_new("org.freedesktop.systemd1");
         dbus_test_task_set_bus(DBUS_TEST_TASK(mock), DBUS_TEST_SERVICE_BUS_SESSION);
         dbus_test_task_set_name(DBUS_TEST_TASK(mock), "systemd");
@@ -88,7 +101,8 @@ public:
                                           }) +
              "]")
                 .c_str(),
-            nullptr);
+            &error);
+        throwError(error);
 
         dbus_test_dbus_mock_object_add_method(
             mock, managerobj, "GetUnit", G_VARIANT_TYPE_STRING, G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
@@ -102,7 +116,8 @@ public:
                                                  return retval;
                                              }))
                 .c_str(),
-            nullptr);
+            &error);
+        throwError(error);
 
         dbus_test_dbus_mock_object_add_method(
             mock, managerobj, "StopUnit", G_VARIANT_TYPE("(ss)"), G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
@@ -116,19 +131,23 @@ public:
                                 return retval;
                             })
                 .c_str(),
-            nullptr);
+            &error);
+        throwError(error);
 
         dbus_test_dbus_mock_object_add_method(mock, managerobj, "StartTransientUnit",
                                               G_VARIANT_TYPE("(ssa(sv)a(sa(sv)))"),
                                               G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
-                                              "ret = '/'", nullptr);
+                                              "ret = '/'", &error);
+        throwError(error);
 
         for (auto& instance : instances)
         {
             auto obj = dbus_test_dbus_mock_get_object(mock, instancePath(instance).c_str(),
-                                                      "org.freedesktop.systemd1.Service", nullptr);
+                                                      "org.freedesktop.systemd1.Service", &error);
+            throwError(error);
             dbus_test_dbus_mock_object_add_property(mock, obj, "MainPID", G_VARIANT_TYPE_UINT32,
-                                                    g_variant_new_uint32(instance.primaryPid), nullptr);
+                                                    g_variant_new_uint32(instance.primaryPid), &error);
+            throwError(error);
 
             /* Control Group */
             auto dir = g_build_filename(controlGroupPath.c_str(), instancePath(instance).c_str(), nullptr);
@@ -148,7 +167,8 @@ public:
                                                            }
                                                        })
                                            .c_str(),
-                                -1, nullptr);
+                                -1, &error);
+            throwError(error);
 
             g_free(tasks);
             g_free(dir);
