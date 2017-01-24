@@ -519,12 +519,12 @@ TEST_F(LibUAL, StopClickApplication)
 /* Snapd mock data */
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
-    SnapdMock::httpJsonResponse(
-        SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single", "xmir", "noxmir"}}})))};
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
+        SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single", "xmir", "noxmir"}}})))};
 static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
-    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single", "xmir", "noxmir"})))};
+    SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
+        "unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single", "xmir", "noxmir"})))};
 
 TEST_F(LibUAL, ApplicationIdSnap)
 {
@@ -551,12 +551,12 @@ TEST_F(LibUAL, ApplicationIconSnap)
 {
     /* Queries come in threes, apparently */
     SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET,
-            {
-                u8Package, interfaces, u8Package,
-                u8Package, interfaces, u8Package,
-                u8Package, interfaces, u8Package,
-                u8Package, interfaces, u8Package,
-            }};
+                    {
+                        u8Package, interfaces, u8Package, /* App 1 */
+                        u8Package, interfaces, u8Package, /* App 2 */
+                        u8Package, interfaces, u8Package, /* App 3 */
+                        u8Package, interfaces, u8Package, /* App 4 */
+                    }};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     std::string snapRoot{SNAP_BASEDIR};

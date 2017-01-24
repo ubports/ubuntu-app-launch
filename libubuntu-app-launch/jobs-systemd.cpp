@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "application-impl-base.h"
 #include "helpers.h"
 #include "jobs-systemd.h"
 #include "registry-impl.h"
@@ -116,6 +117,18 @@ static const std::string SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Se
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
 {
+    auto gcgroup_root = getenv("UBUNTU_APP_LAUNCH_SYSTEMD_CGROUP_ROOT");
+    if (gcgroup_root == nullptr)
+    {
+        auto cpath = g_build_filename("/sys", "fs", "cgroup", "systemd", nullptr);
+        cgroup_root_ = cpath;
+        g_free(cpath);
+    }
+    else
+    {
+        cgroup_root_ = gcgroup_root;
+    }
+
     auto cancel = registry->impl->thread.getCancellable();
     userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
         GError* error = nullptr;
@@ -550,10 +563,15 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             copyEnv("DISPLAY", env);
             copyEnvByPrefix("DBUS_", env);
             copyEnvByPrefix("MIR_", env);
-            // copyEnvByPrefix("QT_", env);
             copyEnvByPrefix("UBUNTU_APP_LAUNCH_", env);
-            //copyEnvByPrefix("UNITY_", env);
-            // copyEnvByPrefix("XDG_", env);
+
+            /* If we're in deb mode and launching legacy apps, they're gonna need
+             * more context, they really have no other way to get it. */
+            if (g_getenv("SNAP") == nullptr && appId.package.value().empty())
+            {
+                copyEnvByPrefix("QT_", env);
+                copyEnvByPrefix("XDG_", env);
+            }
 
             if (!urls.empty())
             {
@@ -972,10 +990,9 @@ void SystemD::emitSignal(
 
     auto appid = AppID::find(reg, info.appid);
     auto app = Application::create(appid, reg);
+    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(info.inst);
 
-    // TODO: Figure otu creating instances
-
-    sig(app, {});
+    sig(app, inst);
 }
 
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
@@ -1096,7 +1113,7 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         return group;
     });
 
-    gchar* fullpath = g_build_filename("/sys", "fs", "cgroup", "systemd", cgrouppath.c_str(), "tasks", nullptr);
+    gchar* fullpath = g_build_filename(cgroup_root_.c_str(), cgrouppath.c_str(), "tasks", nullptr);
     gchar* pidstr = nullptr;
     GError* error = nullptr;
 

@@ -73,6 +73,7 @@ public:
     void stopUnit(const AppID& appId, const std::string& job, const std::string& instance);
 
 private:
+    std::string cgroup_root_;
     std::shared_ptr<GDBusConnection> userbus_;
 
     guint handle_unitNew{0};     /**< GDBus signal watcher handle for the unit new signal */
