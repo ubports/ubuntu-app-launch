@@ -35,14 +35,21 @@ main (int argc, char * argv[])
 	}
 
 	gchar * appid = g_strdup(instance);
+	gchar * lasthyphenstanding = NULL;
 	if (g_strcmp0(job, "application-legacy") == 0
 			|| g_strcmp0(job, "application-snap") == 0) {
-		gchar * lasthyphenstanding = g_strrstr(appid, "-");
+		lasthyphenstanding = g_strrstr(appid, "-");
 		if (lasthyphenstanding != NULL) {
 			lasthyphenstanding[0] = '\0';
 		} else {
 			g_warning("Legacy job instance '%s' is missing a hyphen", appid);
 		}
+	}
+
+	if (lasthyphenstanding == NULL) {
+		lasthyphenstanding = "";
+	} else {
+		lasthyphenstanding++;
 	}
 
 	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
@@ -54,7 +61,7 @@ main (int argc, char * argv[])
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch",
 		"ApplicationFailed",
-		g_variant_new("(ss)", appid, crashed ? "crash" : "start-failure"),
+		g_variant_new("(sss)", appid, lasthyphenstanding, crashed ? "crash" : "start-failure"),
 		&error);
 
 	g_debug("Emitting failed event '%s' for app '%s'", crashed ? "crash" : "start-failure", appid);

@@ -43,6 +43,8 @@ public:
 
     bool hasInstances() override;
 
+    virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) = 0;
+
 protected:
     /** Pointer to the registry so we can ask it for things */
     std::shared_ptr<Registry> _registry;

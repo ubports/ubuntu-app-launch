@@ -48,6 +48,7 @@ void        env_handle_finish    (EnvHandle *     handle);
 
 typedef struct _handshake_t handshake_t;
 handshake_t * starting_handshake_start   (const gchar *   app_id,
+                                          const gchar *   instance_id,
                                           int timeout_s);
 void      starting_handshake_wait        (handshake_t *   handshake);
 

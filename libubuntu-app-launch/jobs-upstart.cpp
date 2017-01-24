@@ -27,6 +27,7 @@
 #include <cgmanager/cgmanager.h>
 #include <upstart.h>
 
+#include "application-impl-base.h"
 #include "helpers.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
@@ -380,6 +381,7 @@ void Upstart::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
                             data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
                             data->ptr->primaryPid(),                                   /* primary pid */
                             std::string(data->ptr->appId_).c_str(),                    /* appid */
+                            std::string(data->ptr->instance_).c_str(),                 /* instance */
                             urls.get());                                               /* urls */
             }
 
@@ -439,9 +441,10 @@ void Upstart::pause()
 
     auto registry = registry_;
     auto appid = appId_;
+    auto instance = instance_;
     auto jobpath = upstartJobPath();
 
-    registry->impl->thread.executeOnThread([registry, appid, jobpath] {
+    registry->impl->thread.executeOnThread([registry, appid, instance, jobpath] {
         auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::paused();
             g_debug("Pausing PID: %d (%d)", pid, int(oomval));
@@ -449,7 +452,7 @@ void Upstart::pause()
             oomValueToPid(pid, oomval);
         });
 
-        pidListToDbus(registry, appid, pids, "ApplicationPaused");
+        pidListToDbus(registry, appid, instance, pids, "ApplicationPaused");
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_LEAVE_EVENT);
@@ -463,9 +466,10 @@ void Upstart::resume()
 
     auto registry = registry_;
     auto appid = appId_;
+    auto instance = instance_;
     auto jobpath = upstartJobPath();
 
-    registry->impl->thread.executeOnThread([registry, appid, jobpath] {
+    registry->impl->thread.executeOnThread([registry, appid, instance, jobpath] {
         auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::focused();
             g_debug("Resuming PID: %d (%d)", pid, int(oomval));
@@ -473,7 +477,7 @@ void Upstart::resume()
             oomValueToPid(pid, oomval);
         });
 
-        pidListToDbus(registry, appid, pids, "ApplicationResumed");
+        pidListToDbus(registry, appid, instance, pids, "ApplicationResumed");
     });
 
     registry_->impl->zgSendEvent(appId_, ZEITGEIST_ZG_ACCESS_EVENT);
@@ -555,7 +559,7 @@ std::shared_ptr<Application::Instance> Upstart::launch(
                 timeout = 0;
             }
 
-            auto handshake = starting_handshake_start(appIdStr.c_str(), timeout);
+            auto handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
             if (handshake == nullptr)
             {
                 g_warning("Unable to setup starting handshake");
@@ -749,10 +753,9 @@ void Upstart::upstartEventEmitted(
 
     auto appid = AppID::find(reg, sappid);
     auto app = Application::create(appid, reg);
+    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instance);
 
-    // TODO: Figure otu creating instances
-
-    signal(app, {});
+    signal(app, inst);
 }
 
 /** Grab the signal object for application startup. If we're not already listing for
@@ -878,10 +881,11 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                     }
 
                     const gchar* sappid = nullptr;
+                    const gchar* sinstid = nullptr;
                     const gchar* typestr = nullptr;
 
                     Registry::FailureType type = Registry::FailureType::CRASH;
-                    g_variant_get(params, "(&s&s)", &sappid, &typestr);
+                    g_variant_get(params, "(&s&s&s)", &sappid, &sinstid, &typestr);
 
                     if (g_strcmp0("crash", typestr) == 0)
                     {
@@ -898,8 +902,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
                     auto appid = AppID::find(reg, sappid);
                     auto app = Application::create(appid, reg);
-
-                    /* TODO: Instance issues */
+                    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(sinstid);
 
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
                     upstart->sig_appFailed(app, {}, type);
