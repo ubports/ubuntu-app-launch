@@ -62,9 +62,10 @@ class Registry;
 */
 class Helper
 {
+/*
 protected:
     Helper() = default;
-    /* virtual ~Helper() = default;
+    virtual ~Helper() = default;
        TODO: Next ABI break */
 
 public:
@@ -92,9 +93,10 @@ public:
     /** Running instance of a a Helper */
     class Instance
     {
+/*
     protected:
         Instance() = default;
-        /* virtual ~Instance() = default;
+        virtual ~Instance() = default;
            TODO: Next ABI break */
 
     public:
