@@ -18,6 +18,7 @@
  */
 
 #include "glib-thread.h"
+#include "jobs-base.h"
 #include "registry.h"
 #include "snapd-info.h"
 #include <click.h>
@@ -68,15 +69,11 @@ public:
     snapd::Info snapdInfo;
 #endif
 
+    std::shared_ptr<jobs::manager::Base> jobs;
+
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
     void zgSendEvent(AppID appid, const std::string& eventtype);
-
-    std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
-
-    /* Upstart Jobs */
-    std::list<std::string> upstartInstancesForJob(const std::string& job);
-    std::string upstartJobPath(const std::string& job);
 
     static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
     static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
@@ -175,18 +172,9 @@ private:
     /** Shared instance of the Zeitgeist Log */
     std::shared_ptr<ZeitgeistLog> zgLog_;
 
-    /** Shared connection to CGManager */
-    std::shared_ptr<GDBusConnection> cgManager_;
-
-    void initCGManager();
-
     /** All of our icon finders based on the path that they're looking
         into */
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
-
-    /** Getting the Upstart job path is relatively expensive in
-        that it requires a DBus call. Worth keeping a cache of. */
-    std::map<std::string, std::string> upstartJobPathCache_;
 };
 
 }  // namespace app_launch

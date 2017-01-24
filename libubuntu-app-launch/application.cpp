@@ -28,6 +28,8 @@ extern "C" {
 #include "application-impl-snap.h"
 #endif
 #include "application.h"
+#include "jobs-base.h"
+#include "registry-impl.h"
 #include "registry.h"
 
 #include <functional>
@@ -49,6 +51,11 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
     if (!registry || !registry->impl)
     {
         throw std::runtime_error("Invalid registry object");
+    }
+
+    if (!registry->impl->jobs)
+    {
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
     }
 
     if (app_impls::Click::hasAppId(appid, registry))

@@ -1613,13 +1613,6 @@ private:
     }
 };
 
-static void signal_increment(const gchar* appid, GPid* pids, gpointer user_data)
-{
-    guint* count = (guint*)user_data;
-    g_debug("Count incremented to: %d", *count + 1);
-    *count = *count + 1;
-}
-
 // DISABLED: Skipping these tests to not block on bug #1584849
 TEST_F(LibUAL, DISABLED_PauseResume)
 {
@@ -1662,8 +1655,24 @@ TEST_F(LibUAL, DISABLED_PauseResume)
     guint paused_count = 0;
     guint resumed_count = 0;
 
-    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_paused(signal_increment, &paused_count));
-    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resumed(signal_increment, &resumed_count));
+    ubuntu::app_launch::Registry::appPaused(registry).connect([&paused_count](
+        const std::shared_ptr<ubuntu::app_launch::Application>& app,
+        const std::shared_ptr<ubuntu::app_launch::Application::Instance>& inst, const std::vector<pid_t>& pids) {
+        g_debug("App paused: %s (%s)", std::string(app->appId()).c_str(),
+                std::accumulate(pids.begin(), pids.end(), std::string{}, [](const std::string& accum, pid_t pid) {
+                    return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
+                }).c_str());
+        paused_count++;
+    });
+    ubuntu::app_launch::Registry::appResumed(registry).connect([&resumed_count](
+        const std::shared_ptr<ubuntu::app_launch::Application>& app,
+        const std::shared_ptr<ubuntu::app_launch::Application::Instance>& inst, const std::vector<pid_t>& pids) {
+        g_debug("App resumed: %s (%s)", std::string(app->appId()).c_str(),
+                std::accumulate(pids.begin(), pids.end(), std::string{}, [](const std::string& accum, pid_t pid) {
+                    return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
+                }).c_str());
+        resumed_count++;
+    });
 
     /* Get our app object */
     auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
@@ -1719,9 +1728,6 @@ TEST_F(LibUAL, DISABLED_PauseResume)
     EXPECT_EQ("100", spew.oomScore());
 
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
-
-    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_paused(signal_increment, &paused_count));
-    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_resumed(signal_increment, &resumed_count));
 }
 
 TEST_F(LibUAL, MultiPause)
@@ -1775,8 +1781,24 @@ TEST_F(LibUAL, MultiPause)
     guint paused_count = 0;
     guint resumed_count = 0;
 
-    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_paused(signal_increment, &paused_count));
-    ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resumed(signal_increment, &resumed_count));
+    ubuntu::app_launch::Registry::appPaused(registry).connect([&paused_count](
+        const std::shared_ptr<ubuntu::app_launch::Application>& app,
+        const std::shared_ptr<ubuntu::app_launch::Application::Instance>& inst, const std::vector<pid_t>& pids) {
+        g_debug("App paused: %s (%s)", std::string(app->appId()).c_str(),
+                std::accumulate(pids.begin(), pids.end(), std::string{}, [](const std::string& accum, pid_t pid) {
+                    return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
+                }).c_str());
+        paused_count++;
+    });
+    ubuntu::app_launch::Registry::appResumed(registry).connect([&resumed_count](
+        const std::shared_ptr<ubuntu::app_launch::Application>& app,
+        const std::shared_ptr<ubuntu::app_launch::Application::Instance>& inst, const std::vector<pid_t>& pids) {
+        g_debug("App resumed: %s (%s)", std::string(app->appId()).c_str(),
+                std::accumulate(pids.begin(), pids.end(), std::string{}, [](const std::string& accum, pid_t pid) {
+                    return accum.empty() ? std::to_string(pid) : accum + ", " + std::to_string(pid);
+                }).c_str());
+        resumed_count++;
+    });
 
     /* Get our app object */
     auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
@@ -1835,9 +1857,6 @@ TEST_F(LibUAL, MultiPause)
                                  [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
 
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
-
-    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_paused(signal_increment, &paused_count));
-    ASSERT_TRUE(ubuntu_app_launch_observer_delete_app_resumed(signal_increment, &resumed_count));
 }
 
 TEST_F(LibUAL, OOMSet)
