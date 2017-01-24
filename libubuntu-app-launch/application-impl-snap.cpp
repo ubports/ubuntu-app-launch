@@ -34,8 +34,6 @@ namespace app_impls
  ** Interface Lists
  ************************/
 
-/** All the interfaces that we support running applications with */
-const std::set<std::string> SUPPORTED_INTERFACES{"unity8", "unity7", "x11"};
 /** All the interfaces that we run XMir for by default */
 const std::set<std::string> XMIR_INTERFACES{"unity7", "x11"};
 /** All the interfaces that we tell Unity support lifecycle */
@@ -239,6 +237,12 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
 }
 
+/** Operator to compare apps for our sets */
+bool operator<(const std::shared_ptr<Application>& a, const std::shared_ptr<Application>& b)
+{
+    return a->appId() < b->appId();
+}
+
 /** Lists all the Snappy apps that are using one of our supported interfaces.
     Also makes sure they're valid.
 
@@ -246,25 +250,35 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
 */
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
 {
-    std::list<std::shared_ptr<Application>> apps;
+    std::set<std::shared_ptr<Application>> apps;
 
-    for (const auto& interface : SUPPORTED_INTERFACES)
-    {
+    auto addAppsForInterface = [&](const std::string& interface) {
         for (const auto& id : registry->impl->snapdInfo.appsForInterface(interface))
         {
             try
             {
                 auto app = std::make_shared<Snap>(id, registry, interface);
-                apps.emplace_back(app);
+                apps.emplace(app);
             }
             catch (std::runtime_error& e)
             {
                 g_warning("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
             }
         }
+    };
+
+    for (const auto& interface : XMIR_INTERFACES)
+    {
+        addAppsForInterface(interface);
     }
 
-    return apps;
+    /* If an app has both, this will replace */
+    for (const auto& interface : LIFECYCLE_INTERFACES)
+    {
+        addAppsForInterface(interface);
+    }
+
+    return std::list<std::shared_ptr<Application>>(apps.begin(), apps.end());
 }
 
 /** Returns the stored AppID */
@@ -283,7 +297,15 @@ std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Regist
 {
     auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
 
-    for (const auto& interface : SUPPORTED_INTERFACES)
+    for (const auto& interface : LIFECYCLE_INTERFACES)
+    {
+        if (ifaceset.find(interface) != ifaceset.end())
+        {
+            return interface;
+        }
+    }
+
+    for (const auto& interface : XMIR_INTERFACES)
     {
         if (ifaceset.find(interface) != ifaceset.end())
         {
