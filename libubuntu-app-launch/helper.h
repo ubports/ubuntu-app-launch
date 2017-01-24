@@ -64,7 +64,8 @@ class Helper
 {
 protected:
     Helper() = default;
-    virtual ~Helper() = default;
+    /* virtual ~Helper() = default;
+       TODO: Next ABI break */
 
 public:
     /** \private */
@@ -93,7 +94,8 @@ public:
     {
     protected:
         Instance() = default;
-        virtual ~Instance() = default;
+        /* virtual ~Instance() = default;
+           TODO: Next ABI break */
 
     public:
         /** Check to see if this instance is running */
