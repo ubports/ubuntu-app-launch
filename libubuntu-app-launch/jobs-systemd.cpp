@@ -1132,17 +1132,21 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
 
     registry->impl->thread.executeOnThread<bool>([this, registry, unitname] {
         GError* error{nullptr};
-        GVariant* call = g_dbus_connection_call_sync(userbus_.get(),                                  /* user bus */
-                                                     SYSTEMD_DBUS_ADDRESS.c_str(),                    /* bus name */
-                                                     SYSTEMD_DBUS_PATH_MANAGER.c_str(),               /* path */
-                                                     SYSTEMD_DBUS_IFACE_MANAGER.c_str(),              /* interface */
-                                                     "StopUnit",                                      /* method */
-                                                     g_variant_new("(ss)", unitname.c_str(), "fail"), /* params */
-                                                     G_VARIANT_TYPE("(o)"),                           /* ret type */
-                                                     G_DBUS_CALL_FLAGS_NONE,                          /* flags */
-                                                     -1,                                              /* timeout */
-                                                     registry->impl->thread.getCancellable().get(),   /* cancellable */
-                                                     &error);
+        GVariant* call = g_dbus_connection_call_sync(
+            userbus_.get(),                     /* user bus */
+            SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
+            SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
+            SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
+            "StopUnit",                         /* method */
+            g_variant_new(
+                "(ss)",                  /* params */
+                unitname.c_str(),        /* param: specify unit */
+                "replace-irreversibly"), /* param: replace the current job but don't allow us to be replaced */
+            G_VARIANT_TYPE("(o)"),       /* ret type */
+            G_DBUS_CALL_FLAGS_NONE,      /* flags */
+            -1,                          /* timeout */
+            registry->impl->thread.getCancellable().get(), /* cancellable */
+            &error);
 
         if (error != nullptr)
         {
