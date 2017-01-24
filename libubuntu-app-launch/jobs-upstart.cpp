@@ -108,7 +108,7 @@ pid_t Upstart::primaryPid()
         }
 
         g_debug("Getting instance by name: %s", instance_.c_str());
-        GVariant* vinstance_path =
+        auto vinstance_path =
             g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* connection */
                                         DBUS_SERVICE_UPSTART,                           /* service */
                                         jobpath.c_str(),                                /* object path */
@@ -145,7 +145,7 @@ pid_t Upstart::primaryPid()
             return 0;
         }
 
-        GVariant* props_tuple =
+        auto props_tuple =
             g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                          /* connection */
                                         DBUS_SERVICE_UPSTART,                                  /* service */
                                         instance_path.c_str(),                                 /* object path */
@@ -166,15 +166,15 @@ pid_t Upstart::primaryPid()
             return 0;
         }
 
-        GVariant* props_dict = g_variant_get_child_value(props_tuple, 0);
+        auto props_dict = g_variant_get_child_value(props_tuple, 0);
 
         pid_t retval = 0;
-        GVariant* processes = g_variant_lookup_value(props_dict, "processes", G_VARIANT_TYPE("a(si)"));
+        auto processes = g_variant_lookup_value(props_dict, "processes", G_VARIANT_TYPE("a(si)"));
         if (processes != nullptr && g_variant_n_children(processes) > 0)
         {
 
-            GVariant* first_entry = g_variant_get_child_value(processes, 0);
-            GVariant* pidv = g_variant_get_child_value(first_entry, 1);
+            auto first_entry = g_variant_get_child_value(processes, 0);
+            auto pidv = g_variant_get_child_value(first_entry, 1);
 
             retval = g_variant_get_int32(pidv);
 
@@ -267,7 +267,7 @@ void Upstart::stop()
             g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE)); /* wait */
 
             GError* error = nullptr;
-            GVariant* stop_variant =
+            auto stop_variant =
                 g_dbus_connection_call_sync(registry_->impl->_dbus.get(),                   /* Dbus */
                                             DBUS_SERVICE_UPSTART,                           /* Upstart name */
                                             jobpath.c_str(),                                /* path */
@@ -499,6 +499,17 @@ Upstart::Upstart(std::shared_ptr<Registry> registry)
 
 Upstart::~Upstart()
 {
+    auto dohandle = [&](guint& handle) {
+        if (handle != 0)
+        {
+            g_dbus_connection_signal_unsubscribe(dbus_.get(), handle);
+            handle = 0;
+        }
+    };
+
+    dohandle(handle_appStarted);
+    dohandle(handle_appStopped);
+    dohandle(handle_appFailed);
 }
 
 /** Launch an application and create a new Upstart instance object to track
@@ -523,6 +534,13 @@ std::shared_ptr<Application::Instance> Upstart::launch(
         return {};
 
     auto registry = registry_.lock();
+
+    if (!registry)
+    {
+        g_warning("Registry object invalid!");
+        return {};
+    }
+
     return registry->impl->thread.executeOnThread<std::shared_ptr<instance::Upstart>>(
         [&]() -> std::shared_ptr<instance::Upstart> {
             auto manager = std::dynamic_pointer_cast<manager::Upstart>(registry->impl->jobs);
@@ -672,6 +690,233 @@ std::vector<std::shared_ptr<instance::Base>> Upstart::instances(const AppID& app
     return vect;
 }
 
+/** Structure to track the data needed for upstart events. This cleans
+    up the lifecycle as we're passing this as a pointer through the
+    GLib calls. */
+struct upstartEventData
+{
+    /** Keeping a weak pointer because the handle is held by
+        the registry implementation. */
+    std::weak_ptr<Registry> weakReg;
+};
+
+/** Regex to parse the JOB environment variable from Upstart */
+const std::regex jobenv_regex{"^JOB=(application\\-(?:click|snap|legacy))$"};
+/** Regex to parse the INSTANCE environment variable from Upstart */
+const std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
+
+/** Core of most of the events that come from Upstart directly. Includes parsing of the
+    Upstart event environment and calling the appropriate signal with the right Application
+    object and eventually its instance */
+void Upstart::upstartEventEmitted(
+    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& signal,
+    std::shared_ptr<GVariant> params,
+    const std::shared_ptr<Registry>& reg)
+{
+    std::string jobname;
+    std::string sappid;
+    std::string instance;
+
+    gchar* env = nullptr;
+    auto envs = g_variant_get_child_value(params.get(), 1);
+    GVariantIter iter;
+    g_variant_iter_init(&iter, envs);
+
+    while (g_variant_iter_loop(&iter, "s", &env))
+    {
+        std::smatch match;
+        std::string senv = env;
+
+        if (std::regex_match(senv, match, jobenv_regex))
+        {
+            jobname = match[1].str();
+        }
+        else if (std::regex_match(senv, match, instanceenv_regex))
+        {
+            sappid = match[1].str();
+            instance = match[2].str();
+        }
+    }
+
+    g_variant_unref(envs);
+
+    if (jobname.empty())
+    {
+        return;
+    }
+
+    g_debug("Upstart Event for job '%s' appid '%s' instance '%s'", jobname.c_str(), sappid.c_str(), instance.c_str());
+
+    auto appid = AppID::find(reg, sappid);
+    auto app = Application::create(appid, reg);
+
+    // TODO: Figure otu creating instances
+
+    signal(app, {});
+}
+
+/** Grab the signal object for application startup. If we're not already listing for
+    those signals this sets up a listener for them. */
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Upstart::appStarted()
+{
+    std::call_once(flag_appStarted, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            handle_appStarted = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(), /* bus */
+                nullptr,                /* sender */
+                DBUS_INTERFACE_UPSTART, /* interface */
+                "EventEmitted",         /* signal */
+                DBUS_PATH_UPSTART,      /* path */
+                "started",              /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
+                    upstart->upstartEventEmitted(upstart->sig_appStarted, sparams, reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            return true;
+        });
+    });
+
+    return sig_appStarted;
+}
+
+/** Grab the signal object for application stopping. If we're not already listing for
+    those signals this sets up a listener for them. */
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Upstart::appStopped()
+{
+    std::call_once(flag_appStopped, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            handle_appStopped = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(), /* bus */
+                nullptr,                /* sender */
+                DBUS_INTERFACE_UPSTART, /* interface */
+                "EventEmitted",         /* signal */
+                DBUS_PATH_UPSTART,      /* path */
+                "stopped",              /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
+                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
+                    upstart->upstartEventEmitted(upstart->sig_appStopped, sparams, reg);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            return true;
+        });
+    });
+
+    return sig_appStopped;
+}
+
+/** Grab the signal object for application failing. If we're not already listing for
+    those signals this sets up a listener for them. */
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
+    Upstart::appFailed()
+{
+    std::call_once(flag_appFailed, [this]() {
+        auto reg = registry_.lock();
+
+        reg->impl->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
+
+            handle_appFailed = g_dbus_connection_signal_subscribe(
+                reg->impl->_dbus.get(),          /* bus */
+                nullptr,                         /* sender */
+                "com.canonical.UbuntuAppLaunch", /* interface */
+                "ApplicationFailed",             /* signal */
+                "/",                             /* path */
+                nullptr,                         /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
+                    auto reg = data->weakReg.lock();
+
+                    if (!reg)
+                    {
+                        g_warning("Registry object invalid!");
+                        return;
+                    }
+
+                    const gchar* sappid = nullptr;
+                    const gchar* typestr = nullptr;
+
+                    Registry::FailureType type = Registry::FailureType::CRASH;
+                    g_variant_get(params, "(&s&s)", &sappid, &typestr);
+
+                    if (g_strcmp0("crash", typestr) == 0)
+                    {
+                        type = Registry::FailureType::CRASH;
+                    }
+                    else if (g_strcmp0("start-failure", typestr) == 0)
+                    {
+                        type = Registry::FailureType::START_FAILURE;
+                    }
+                    else
+                    {
+                        g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
+                    }
+
+                    auto appid = AppID::find(reg, sappid);
+                    auto app = Application::create(appid, reg);
+
+                    /* TODO: Instance issues */
+
+                    auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
+                    upstart->sig_appFailed(app, {}, type);
+                },    /* callback */
+                data, /* user data */
+                [](gpointer user_data) {
+                    auto data = static_cast<upstartEventData*>(user_data);
+                    delete data;
+                }); /* user data destroy */
+
+            return true;
+        });
+    });
+
+    return sig_appFailed;
+}
+
 /** Initialize the CGManager connection, including a timeout to disconnect
     as CGManager doesn't free resources entirely well. So it's better if
     we connect and disconnect occationally */
@@ -741,9 +986,9 @@ std::vector<pid_t> Upstart::pidsFromCgroup(const std::string& jobpath)
 
         g_debug("Looking for cg manager '%s' group '%s'", name, groupname.c_str());
 
-        GVariant* vtpids = g_dbus_connection_call_sync(
+        auto vtpids = g_dbus_connection_call_sync(
             lmanager.get(),                     /* connection */
-            name,                               /* bus name for direct connection is NULL */
+            name,                               /* bus name for direct connection is nullptr */
             "/org/linuxcontainers/cgmanager",   /* object */
             "org.linuxcontainers.cgmanager0_0", /* interface */
             "GetTasksRecursive",                /* method */
@@ -792,7 +1037,7 @@ std::string Upstart::upstartJobPath(const std::string& job)
         auto registry = registry_.lock();
         auto path = registry->impl->thread.executeOnThread<std::string>([this, &job, &registry]() -> std::string {
             GError* error = nullptr;
-            GVariant* job_path_variant =
+            auto job_path_variant =
                 g_dbus_connection_call_sync(registry->impl->_dbus.get(),                   /* connection */
                                             DBUS_SERVICE_UPSTART,                          /* service */
                                             DBUS_PATH_UPSTART,                             /* path */
@@ -848,7 +1093,7 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
     return registry->impl->thread.executeOnThread<std::list<std::string>>(
         [this, &job, &jobpath, &registry]() -> std::list<std::string> {
             GError* error = nullptr;
-            GVariant* instance_tuple =
+            auto instance_tuple =
                 g_dbus_connection_call_sync(registry->impl->_dbus.get(),                   /* connection */
                                             DBUS_SERVICE_UPSTART,                          /* service */
                                             jobpath.c_str(),                               /* object path */
@@ -883,7 +1128,7 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
 
             while (g_variant_iter_loop(&instance_iter, "&o", &instance_path))
             {
-                GVariant* props_tuple =
+                auto props_tuple =
                     g_dbus_connection_call_sync(registry->impl->_dbus.get(),                           /* connection */
                                                 DBUS_SERVICE_UPSTART,                                  /* service */
                                                 instance_path,                                         /* object path */
@@ -909,7 +1154,7 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
                 auto namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
                 if (namev != nullptr)
                 {
-                    auto name = g_variant_get_string(namev, NULL);
+                    auto name = g_variant_get_string(namev, nullptr);
                     g_debug("Adding instance for job '%s': %s", job.c_str(), name);
                     instances.push_back(name);
                     g_variant_unref(namev);

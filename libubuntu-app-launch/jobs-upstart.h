@@ -54,6 +54,16 @@ public:
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
 
+    /* Signals to apps */
+    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+        appStarted() override;
+    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
+        appStopped() override;
+    virtual core::Signal<const std::shared_ptr<Application>&,
+                         const std::shared_ptr<Application::Instance>&,
+                         Registry::FailureType>&
+        appFailed() override;
+
     std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
 
     std::list<std::string> upstartInstancesForJob(const std::string& job);
@@ -67,6 +77,22 @@ private:
     /** Getting the Upstart job path is relatively expensive in
         that it requires a DBus call. Worth keeping a cache of. */
     std::map<std::string, std::string> upstartJobPathCache_;
+
+    guint handle_appStarted{0}; /**< GDBus signal watcher handle for app started signal */
+    guint handle_appStopped{0}; /**< GDBus signal watcher handle for app stopped signal */
+    guint handle_appFailed{0};  /**< GDBus signal watcher handle for app failed signal */
+
+    std::once_flag flag_appStarted; /**< Variable to track to see if signal handlers are installed for application
+                                       started */
+    std::once_flag flag_appStopped; /**< Variable to track to see if signal handlers are installed for application
+                                       stopped */
+    std::once_flag
+        flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
+
+    void upstartEventEmitted(
+        core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& signal,
+        std::shared_ptr<GVariant> params,
+        const std::shared_ptr<Registry>& reg);
 };
 
 }  // namespace manager
