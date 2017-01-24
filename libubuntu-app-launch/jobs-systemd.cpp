@@ -567,7 +567,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
             /* If we're in deb mode and launching legacy apps, they're gonna need
              * more context, they really have no other way to get it. */
-            if (getenv("SNAP") == nullptr && appId.package.value().empty())
+            if (g_getenv("SNAP") == nullptr && appId.package.value().empty())
             {
                 copyEnvByPrefix("QT_", env);
                 copyEnvByPrefix("XDG_", env);
