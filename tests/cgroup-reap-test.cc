@@ -137,7 +137,7 @@ TEST_F(CGroupReap, KillSleep)
 	guint len = 0;
 
 	calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
-	EXPECT_EQ(2, len);
+	EXPECT_EQ(2u, len);
 	EXPECT_STREQ("GetTasksRecursive", calls->name);
 	EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "")));
 	ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));

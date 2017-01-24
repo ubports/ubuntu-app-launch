@@ -73,7 +73,7 @@ public:
 
     std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
 
-    void zgSendEvent(AppID appid, const std::string& eventtype);
+    virtual void zgSendEvent(AppID appid, const std::string& eventtype);
 
     static std::string printJson(std::shared_ptr<JsonObject> jsonobj);
     static std::string printJson(std::shared_ptr<JsonNode> jsonnode);
