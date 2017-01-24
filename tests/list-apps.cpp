@@ -205,9 +205,9 @@ static std::pair<std::string, std::string> x11Package{
 TEST_F(ListApps, ListSnap)
 {
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
-                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
-                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
+                   {interfaces, u7Package, u7Package, u7Package,    /* unity7 check */
+                    interfaces, x11Package, x11Package, x11Package, /* x11 check */
+                    interfaces, u8Package, u8Package, u8Package}};  /* unity8 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
@@ -232,9 +232,9 @@ TEST_F(ListApps, ListAll)
 {
 #ifdef ENABLE_SNAPPY
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
-                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
-                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
+                   {interfaces, u7Package, u7Package, u7Package,    /* unity7 check */
+                    interfaces, x11Package, x11Package, x11Package, /* x11 check */
+                    interfaces, u8Package, u8Package, u8Package}};  /* unity8 check */
 #endif
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
