@@ -272,6 +272,12 @@ public:
         \param urls A list of URLs to pass to the application command line
     */
     virtual std::shared_ptr<Instance> launchTest(const std::vector<URL>& urls = {}) = 0;
+
+    /** Get a a pointer to the running instances of this application based on the pid
+
+        \param pid The pid to find the instance of
+    */
+    virtual std::shared_ptr<Instance> findInstance(const pid_t& pid) = 0;
 };
 
 }  // namespace app_launch
