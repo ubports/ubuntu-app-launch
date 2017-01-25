@@ -238,10 +238,14 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
 }
 
 /** Operator to compare apps for our sets */
-bool operator<(const std::shared_ptr<Application>& a, const std::shared_ptr<Application>& b)
+struct appcompare
 {
-    return a->appId() < b->appId();
-}
+    bool operator()(const std::shared_ptr<Application>& a, const std::shared_ptr<Application>& b) const
+    {
+        g_debug("Using operator");
+        return a->appId() < b->appId();
+    }
+};
 
 /** Lists all the Snappy apps that are using one of our supported interfaces.
     Also makes sure they're valid.
@@ -250,7 +254,7 @@ bool operator<(const std::shared_ptr<Application>& a, const std::shared_ptr<Appl
 */
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
 {
-    std::set<std::shared_ptr<Application>> apps;
+    std::set<std::shared_ptr<Application>, appcompare> apps;
 
     auto addAppsForInterface = [&](const std::string& interface) {
         for (const auto& id : registry->impl->snapdInfo.appsForInterface(interface))
