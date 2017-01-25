@@ -185,6 +185,7 @@ static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
         SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "bar"}},
+                                                        {"unity7", "unity8-package", {"foo"}},
                                                         {"unity7", "unity7-package", {"single", "multiple"}},
                                                         {"x11", "x11-package", {"multiple", "hidden"}}
 
@@ -205,9 +206,9 @@ static std::pair<std::string, std::string> x11Package{
 TEST_F(ListApps, ListSnap)
 {
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u7Package, u7Package, u7Package,    /* unity7 check */
-                    interfaces, x11Package, x11Package, x11Package, /* x11 check */
-                    interfaces, u8Package, u8Package, u8Package}};  /* unity8 check */
+                   {interfaces, u8Package, u7Package, u7Package, u7Package, u8Package, /* unity7 check */
+                    interfaces, x11Package, x11Package, x11Package,                    /* x11 check */
+                    interfaces, u8Package, u8Package, u8Package}};                     /* unity8 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
@@ -232,9 +233,9 @@ TEST_F(ListApps, ListAll)
 {
 #ifdef ENABLE_SNAPPY
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u7Package, u7Package, u7Package,    /* unity7 check */
-                    interfaces, x11Package, x11Package, x11Package, /* x11 check */
-                    interfaces, u8Package, u8Package, u8Package}};  /* unity8 check */
+                   {interfaces, u8Package, u7Package, u7Package, u7Package, u8Package, /* unity7 check */
+                    interfaces, x11Package, x11Package, x11Package,                    /* x11 check */
+                    interfaces, u8Package, u8Package, u8Package}};                     /* unity8 check */
 #endif
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
