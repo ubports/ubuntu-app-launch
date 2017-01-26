@@ -17,22 +17,23 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include <algorithm>
-#include <gio/gio.h>
-#include <numeric>
-#include <regex>
-#include <sys/types.h>
-#include <unistd.h>
-
+#include "jobs-systemd.h"
 #include "application-impl-base.h"
 #include "helpers.h"
-#include "jobs-systemd.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
 
 extern "C" {
 #include "ubuntu-app-launch-trace.h"
 }
+
+#include <gio/gio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <algorithm>
+#include <numeric>
+#include <regex>
 
 namespace ubuntu
 {
