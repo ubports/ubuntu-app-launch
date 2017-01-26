@@ -76,6 +76,8 @@ public:
                                       const AppID::AppName& appname,
                                       const std::shared_ptr<Registry>& registry);
 
+    virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) override;
+
 private:
     AppID _appid;
 

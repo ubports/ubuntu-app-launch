@@ -39,7 +39,7 @@ install(TARGETS ubuntu-app-launch-appids RUNTIME DESTINATION "${CMAKE_INSTALL_FU
 # ubuntu-app-launch
 ########################
 
-add_executable(ubuntu-app-launch ubuntu-app-launch.c)
+add_executable(ubuntu-app-launch ubuntu-app-launch.cpp)
 set_target_properties(ubuntu-app-launch PROPERTIES OUTPUT_NAME "ubuntu-app-launch")
 target_link_libraries(ubuntu-app-launch ubuntu-launcher)
 install(TARGETS ubuntu-app-launch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
@@ -48,7 +48,7 @@ install(TARGETS ubuntu-app-launch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BIND
 # ubuntu-app-watch
 ########################
 
-add_executable(ubuntu-app-watch ubuntu-app-watch.c)
+add_executable(ubuntu-app-watch ubuntu-app-watch.cpp)
 set_target_properties(ubuntu-app-watch PROPERTIES OUTPUT_NAME "ubuntu-app-watch")
 target_link_libraries(ubuntu-app-watch ubuntu-launcher)
 install(TARGETS ubuntu-app-watch RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
@@ -116,3 +116,22 @@ set_target_properties(ubuntu-app-usage PROPERTIES OUTPUT_NAME "ubuntu-app-usage"
 target_link_libraries(ubuntu-app-usage ubuntu-launcher)
 install(TARGETS ubuntu-app-usage RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
 
+########################
+# Formatting
+########################
+
+add_custom_target(format-tools
+	COMMAND clang-format -i -style=file
+    ubuntu-app-info.cpp
+    ubuntu-app-launch-appids.cpp
+    ubuntu-app-launch.cpp
+    ubuntu-app-list.cpp
+    ubuntu-app-list-pids.cpp
+    ubuntu-app-pid.cpp
+    ubuntu-app-stop.cpp
+    ubuntu-app-triplet.cpp
+    ubuntu-app-watch.cpp
+    ubuntu-helper-list.cpp
+    ubuntu-helper-start.cpp
+    ubuntu-helper-stop.cpp
+)

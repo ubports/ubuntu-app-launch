@@ -1,3 +1,14 @@
+ubuntu-app-launch (0.9+17.04.20170124-0ubuntu1) zesty; urgency=medium
+
+  * Change signals into C++ core::signal objects (LP: #1590442)
+  * Abstract out jobs backends and make Upstart one
+  * Move the signals into the jobs classes
+  * Make the signals support finding the instance of the application
+    (LP: #1589637)
+  * Jobs interface specific tests
+
+ -- Ted Gould <ted@gould.cx>  Tue, 24 Jan 2017 14:15:17 +0000
+
 ubuntu-app-launch (0.9+17.04.20170113.1-0ubuntu1) zesty; urgency=medium
 
   [ Pete Woods ]

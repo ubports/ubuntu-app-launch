@@ -133,7 +133,7 @@ TEST_F(ListApps, ListClick)
 
     printApps(apps);
 
-    EXPECT_EQ(11, apps.size());
+    EXPECT_EQ(11, int(apps.size()));
 
     EXPECT_TRUE(findApp(apps, "chatter.robert-ancell_chatter_2"));
     EXPECT_TRUE(findApp(apps, "com.test.bad-version_application_4.5.6"));
@@ -160,7 +160,7 @@ TEST_F(ListApps, ListLegacy)
 
     printApps(apps);
 
-    EXPECT_EQ(1, apps.size());
+    EXPECT_EQ(1, int(apps.size()));
 
     EXPECT_TRUE(findApp(apps, ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw({}),
                                                         ubuntu::app_launch::AppID::AppName::from_raw("no-exec"),
@@ -174,7 +174,7 @@ TEST_F(ListApps, ListLibertine)
 
     printApps(apps);
 
-    EXPECT_EQ(3, apps.size());
+    EXPECT_EQ(3, int(apps.size()));
 
     EXPECT_TRUE(findApp(apps, "container-name_test_0.0"));
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
@@ -216,7 +216,7 @@ TEST_F(ListApps, ListSnap)
 
     mock.result();
 
-    EXPECT_EQ(4, apps.size());
+    EXPECT_EQ(4, int(apps.size()));
     EXPECT_TRUE(findApp(apps, "unity8-package_foo_x123"));
     EXPECT_TRUE(findApp(apps, "unity7-package_single_x123"));
     EXPECT_TRUE(findApp(apps, "unity7-package_multiple_x123"));
@@ -244,8 +244,8 @@ TEST_F(ListApps, ListAll)
     printApps(apps);
 
 #ifdef ENABLE_SNAPPY
-    EXPECT_EQ(19, apps.size());
+    EXPECT_EQ(19, int(apps.size()));
 #else
-    EXPECT_EQ(15, apps.size());
+    EXPECT_EQ(15, int(apps.size()));
 #endif
 }

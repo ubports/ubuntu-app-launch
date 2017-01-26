@@ -52,6 +52,10 @@ application-icon-finder.cpp
 helper-impl-click.cpp
 glib-thread.h
 glib-thread.cpp
+jobs-base.h
+jobs-base.cpp
+jobs-upstart.h
+jobs-upstart.cpp
 )
 
 set(LAUNCHER_SOURCES

@@ -129,7 +129,7 @@ public:
             EXPECT_EQ(testcase.input, testcase.result);
         }
 
-        EXPECT_EQ(0, extraCases.size());
+        EXPECT_EQ(0, int(extraCases.size()));
 
         for (auto testcase : extraCases)
         {

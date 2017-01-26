@@ -323,21 +323,8 @@ std::list<std::shared_ptr<Application>> Click::list(const std::shared_ptr<Regist
 
 std::vector<std::shared_ptr<Application::Instance>> Click::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    std::string sappid = appId();
-
-    for (auto instancename : _registry->impl->upstartInstancesForJob("application-click"))
-    {
-        /* There an be only one, but we want to make sure it is
-           there or return an empty vector */
-        if (sappid == instancename)
-        {
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-click", std::string{},
-                                                                std::vector<Application::URL>{}, _registry));
-            break;
-        }
-    }
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-click");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment variables for the application to
@@ -361,15 +348,20 @@ std::list<std::pair<std::string, std::string>> Click::launchEnv()
 std::shared_ptr<Application::Instance> Click::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-click", {}, urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-click", {}, urls, jobs::manager::launchMode::STANDARD,
+                                         envfunc);
 }
 
 std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-click", {}, urls, _registry, UpstartInstance::launchMode::TEST,
-                                   envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-click", {}, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
+}
+
+std::shared_ptr<Application::Instance> Click::findInstance(const std::string& instanceid)
+{
+    return _registry->impl->jobs->existing(appId(), "application-click", instanceid, std::vector<Application::URL>{});
 }
 
 }  // namespace app_impls

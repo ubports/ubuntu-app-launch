@@ -39,6 +39,7 @@ extern "C" {
 #include "appid.h"
 #include "registry.h"
 #include "registry-impl.h"
+#include <algorithm>
 
 static void free_helper (gpointer value);
 int kill (pid_t pid, int signal) noexcept;
@@ -271,504 +272,365 @@ struct _failed_observer_t {
 	gpointer user_data;
 };
 
-/* The data we keep for each failed observer */
-typedef struct _paused_resumed_observer_t paused_resumed_observer_t;
-struct _paused_resumed_observer_t {
-	GDBusConnection * conn;
-	guint sighandle;
-	UbuntuAppLaunchAppPausedResumedObserver func;
-	gpointer user_data;
-	const gchar * lttng_signal;
-};
-
-/* The lists of Observers */
-static GList * starting_array = NULL;
-static GList * started_array = NULL;
-static GList * stop_array = NULL;
-static GList * focus_array = NULL;
-static GList * resume_array = NULL;
-static GList * failed_array = NULL;
-static GList * paused_array = NULL;
-static GList * resumed_array = NULL;
-
-static void
-observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
+/* Function to take a work function and have it execute on a given
+   GMainContext */
+static void executeOnContext (const std::shared_ptr<GMainContext>& context, std::function<void()> work)
 {
-	observer_t * observer = (observer_t *)user_data;
-
-	const gchar * signalname = NULL;
-	g_variant_get_child(params, 0, "&s", &signalname);
-
-	ual_tracepoint(observer_start, signalname);
-
-	gchar * env = NULL;
-	GVariant * envs = g_variant_get_child_value(params, 1);
-	GVariantIter iter;
-	g_variant_iter_init(&iter, envs);
-
-	gboolean job_found = FALSE;
-	gboolean job_legacy = FALSE;
-	gchar * instance = NULL;
-
-	while (g_variant_iter_loop(&iter, "s", &env)) {
-		if (g_strcmp0(env, "JOB=application-click") == 0) {
-			job_found = TRUE;
-		} else if (g_strcmp0(env, "JOB=application-legacy") == 0) {
-			job_found = TRUE;
-			job_legacy = TRUE;
-		} else if (g_strcmp0(env, "JOB=application-snap") == 0) {
-			job_found = TRUE;
-			job_legacy = TRUE;
-		} else if (g_str_has_prefix(env, "INSTANCE=")) {
-			instance = g_strdup(env + strlen("INSTANCE="));
-		}
+	if (!context) {
+		work();
+		return;
 	}
 
-	g_variant_unref(envs);
+    auto heapWork = new std::function<void()>(work);
 
-	if (job_legacy && instance != NULL) {
-		gchar * dash = g_strrstr(instance, "-");
-		if (dash != NULL) {
-			dash[0] = '\0';
-		}
-	}
+    auto source = std::shared_ptr<GSource>(g_idle_source_new(), [](GSource* src) { g_clear_pointer(&src, g_source_unref); });
+    g_source_set_callback(source.get(),
+                          [](gpointer data) {
+                              auto heapWork = static_cast<std::function<void()>*>(data);
+                              (*heapWork)();
+                              return G_SOURCE_REMOVE;
+                          },
+                          heapWork,
+                          [](gpointer data) {
+                              auto heapWork = static_cast<std::function<void()>*>(data);
+                              delete heapWork;
+                          });
 
-	if (job_found && instance != NULL) {
-		observer->func(instance, observer->user_data);
-	}
-
-	ual_tracepoint(observer_finish, signalname);
-
-	g_free(instance);
+    g_source_attach(source.get(), context.get());
 }
 
-/* Creates the observer structure and registers for the signal with
-   GDBus so that we can get a callback */
+/** A handy helper function that is based of a function to get
+    a signal and put it into a map. */
+template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Application>&, const std::shared_ptr<ubuntu::app_launch::Application::Instance>&>& (*getSignal)(const std::shared_ptr<ubuntu::app_launch::Registry>&)>
 static gboolean
-add_app_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, const gchar * signal, GList ** list)
+observer_add (UbuntuAppLaunchAppObserver observer, gpointer user_data, std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> &observers)
 {
-	GDBusConnection * conn = gdbus_upstart_ref();
+	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
-	if (conn == NULL) {
-		return FALSE;
-	}
-
-	observer_t * observert = g_new0(observer_t, 1);
-
-	observert->conn = conn;
-	observert->func = observer;
-	observert->user_data = user_data;
-
-	*list = g_list_prepend(*list, observert);
-
-	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
-		NULL, /* sender */
-		DBUS_INTERFACE_UPSTART, /* interface */
-		"EventEmitted", /* signal */
-		DBUS_PATH_UPSTART, /* path */
-		signal, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NONE,
-		observer_cb,
-		observert,
-		NULL); /* user data destroy */
+	observers.emplace(std::make_pair(
+		std::make_pair(observer, user_data),
+		core::ScopedConnection(
+			getSignal(ubuntu::app_launch::Registry::getDefault())
+				.connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance) {
+					std::string appid = app->appId();
+					executeOnContext(context, [appid, observer, user_data]() {
+						observer(appid.c_str(), user_data);
+					});
+			})
+		)
+		));
 
 	return TRUE;
 }
+
+/** A handy helper to delete items from an observer map */
+template<typename observertype>
+static gboolean
+observer_delete (observertype observer, gpointer user_data, std::map<std::pair<observertype, gpointer>, core::ScopedConnection> &observers)
+{
+	auto iter = observers.find(std::make_pair(observer, user_data));
+
+	if (iter == observers.end()) {
+		return FALSE;
+	}
+
+	observers.erase(iter);
+	return TRUE;
+}
+
+/** Map of all the observers listening for app started */
+static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> appStartedObservers;
 
 gboolean
 ubuntu_app_launch_observer_add_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return add_app_generic(observer, user_data, "started", &started_array);
-}
-
-gboolean
-ubuntu_app_launch_observer_add_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
-{
-	return add_app_generic(observer, user_data, "stopped", &stop_array);
-}
-
-/* Creates the observer structure and registers for the signal with
-   GDBus so that we can get a callback */
-static gboolean
-add_session_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, const gchar * signal, GList ** list, GDBusSignalCallback session_cb)
-{
-	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-
-	if (conn == NULL) {
-		return FALSE;
-	}
-
-	observer_t * observert = g_new0(observer_t, 1);
-
-	observert->conn = conn;
-	observert->func = observer;
-	observert->user_data = user_data;
-
-	*list = g_list_prepend(*list, observert);
-
-	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
-		NULL, /* sender */
-		"com.canonical.UbuntuAppLaunch", /* interface */
-		signal, /* signal */
-		"/", /* path */
-		NULL, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NONE,
-		session_cb,
-		observert,
-		NULL); /* user data destroy */
-
-	return TRUE;
-}
-
-/* Generic handler for a bunch of our signals */
-static inline void
-generic_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	observer_t * observer = (observer_t *)user_data;
-	const gchar * appid = NULL;
-
-	if (observer->func != NULL) {
-		g_variant_get(params, "(&s)", &appid);
-		observer->func(appid, observer->user_data);
-	}
-}
-
-/* Handle the focus signal when it occurs, call the observer */
-static void
-focus_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	ual_tracepoint(observer_start, "focus");
-
-	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
-
-	ual_tracepoint(observer_finish, "focus");
-}
-
-gboolean
-ubuntu_app_launch_observer_add_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
-{
-	return add_session_generic(observer, user_data, "UnityFocusRequest", &focus_array, focus_signal_cb);
-}
-
-/* Handle the resume signal when it occurs, call the observer, then send a signal back when we're done */
-static void
-resume_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	ual_tracepoint(observer_start, "resume");
-
-	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
-
-	GError * error = NULL;
-	g_dbus_connection_emit_signal(conn,
-		sender, /* destination */
-		"/", /* path */
-		"com.canonical.UbuntuAppLaunch", /* interface */
-		"UnityResumeResponse", /* signal */
-		params, /* params, the same */
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to emit response signal: %s", error->message);
-		g_error_free(error);
-	}
-
-	ual_tracepoint(observer_finish, "resume");
-}
-
-gboolean
-ubuntu_app_launch_observer_add_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
-{
-	return add_session_generic(observer, user_data, "UnityResumeRequest", &resume_array, resume_signal_cb);
-}
-
-/* Handle the starting signal when it occurs, call the observer, then send a signal back when we're done */
-static void
-starting_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	ual_tracepoint(observer_start, "starting");
-
-	generic_signal_cb(conn, sender, object, interface, signal, params, user_data);
-
-	GError * error = NULL;
-	g_dbus_connection_emit_signal(conn,
-		sender, /* destination */
-		"/", /* path */
-		"com.canonical.UbuntuAppLaunch", /* interface */
-		"UnityStartingSignal", /* signal */
-		params, /* params, the same */
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to emit response signal: %s", error->message);
-		g_error_free(error);
-	}
-
-	ual_tracepoint(observer_finish, "starting");
-}
-
-gboolean
-ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
-{
-	ubuntu::app_launch::Registry::Impl::watchingAppStarting(true);
-	return add_session_generic(observer, user_data, "UnityStartingBroadcast", &starting_array, starting_signal_cb);
-}
-
-/* Handle the failed signal when it occurs, call the observer */
-static void
-failed_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	failed_observer_t * observer = (failed_observer_t *)user_data;
-	const gchar * appid = NULL;
-	const gchar * typestr = NULL;
-
-	ual_tracepoint(observer_start, "failed");
-
-	if (observer->func != NULL) {
-		UbuntuAppLaunchAppFailed type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
-		g_variant_get(params, "(&s&s)", &appid, &typestr);
-
-		if (g_strcmp0("crash", typestr) == 0) {
-			type = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
-		} else if (g_strcmp0("start-failure", typestr) == 0) {
-			type = UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE;
-		} else {
-			g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
-		}
-
-		observer->func(appid, type, observer->user_data);
-	}
-
-	ual_tracepoint(observer_finish, "failed");
-}
-
-gboolean
-ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
-{
-	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-
-	if (conn == NULL) {
-		return FALSE;
-	}
-
-	failed_observer_t * observert = g_new0(failed_observer_t, 1);
-
-	observert->conn = conn;
-	observert->func = observer;
-	observert->user_data = user_data;
-
-	failed_array = g_list_prepend(failed_array, observert);
-
-	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
-		NULL, /* sender */
-		"com.canonical.UbuntuAppLaunch", /* interface */
-		"ApplicationFailed", /* signal */
-		"/", /* path */
-		NULL, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NONE,
-		failed_signal_cb,
-		observert,
-		NULL); /* user data destroy */
-
-	return TRUE;
-}
-
-/* Handle the paused signal when it occurs, call the observer */
-static void
-paused_signal_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	paused_resumed_observer_t * observer = (paused_resumed_observer_t *)user_data;
-
-	ual_tracepoint(observer_start, observer->lttng_signal);
-
-	if (observer->func != NULL) {
-		GArray * pidarray = g_array_new(TRUE, TRUE, sizeof(GPid));
-		GVariant * appid = g_variant_get_child_value(params, 0);
-		GVariant * pids = g_variant_get_child_value(params, 1);
-		guint64 pid;
-		GVariantIter thispid;
-		g_variant_iter_init(&thispid, pids);
-
-		while (g_variant_iter_loop(&thispid, "t", &pid)) {
-			GPid gpid = (GPid)pid; /* Should be a no-op for most architectures, but just in case */
-			g_array_append_val(pidarray, gpid);
-		}
-
-		observer->func(g_variant_get_string(appid, NULL), (GPid *)pidarray->data, observer->user_data);
-
-		g_array_free(pidarray, TRUE);
-		g_variant_unref(appid);
-		g_variant_unref(pids);
-	}
-
-	ual_tracepoint(observer_finish, observer->lttng_signal);
-}
-
-static gboolean
-paused_resumed_generic (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, GList ** queue, const gchar * signal_name, const gchar * lttng_signal)
-{
-	GDBusConnection * conn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-
-	if (conn == NULL) {
-		return FALSE;
-	}
-
-	paused_resumed_observer_t * observert = g_new0(paused_resumed_observer_t, 1);
-
-	observert->conn = conn;
-	observert->func = observer;
-	observert->user_data = user_data;
-	observert->lttng_signal = lttng_signal;
-
-	*queue = g_list_prepend(*queue, observert);
-
-	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
-		NULL, /* sender */
-		"com.canonical.UbuntuAppLaunch", /* interface */
-		signal_name, /* signal */
-		"/", /* path */
-		NULL, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NONE,
-		paused_signal_cb,
-		observert,
-		NULL); /* user data destroy */
-
-	return TRUE;
-}
-
-gboolean
-ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
-{
-	return paused_resumed_generic(observer, user_data, &paused_array, "ApplicationPaused", "paused");
-}
-
-gboolean
-ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
-{
-	return paused_resumed_generic(observer, user_data, &resumed_array, "ApplicationResumed", "resumed");
-}
-
-static gboolean
-delete_app_generic (UbuntuAppLaunchAppObserver observer, gpointer user_data, GList ** list)
-{
-	observer_t * observert = NULL;
-	GList * look;
-
-	for (look = *list; look != NULL; look = g_list_next(look)) {
-		observert = (observer_t *)look->data;
-
-		if (observert->func == observer && observert->user_data == user_data) {
-			break;
-		}
-	}
-
-	if (look == NULL) {
-		return FALSE;
-	}
-
-	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
-	g_object_unref(observert->conn);
-
-	g_free(observert);
-	*list = g_list_delete_link(*list, look);
-
-	return TRUE;
+	return observer_add<&ubuntu::app_launch::Registry::appStarted>(observer, user_data, appStartedObservers);
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_started (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return delete_app_generic(observer, user_data, &started_array);
+	return observer_delete<UbuntuAppLaunchAppObserver>(observer, user_data, appStartedObservers);
+}
+
+/* Map of all the observers listening for app stopped */
+static std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> appStoppedObservers;
+
+gboolean
+ubuntu_app_launch_observer_add_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+{
+	return observer_add<&ubuntu::app_launch::Registry::appStopped>(observer, user_data, appStoppedObservers);
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_stop (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return delete_app_generic(observer, user_data, &stop_array);
+	return observer_delete<UbuntuAppLaunchAppObserver>(observer, user_data, appStoppedObservers);
+}
+
+/** Class to implement the Registry::Manager interface for the C code
+    using a GLib mainloop. */
+class CManager : public ubuntu::app_launch::Registry::Manager
+{
+public:
+	CManager () {
+		g_debug("Creating the CManager object");
+	}
+	virtual ~CManager() {
+		g_debug("Removing the shared the CManager object");
+	}
+
+	void startingRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
+                                     std::function<void(bool)> reply) override {
+		requestImpl(app, instance, reply, "starting", startingList);
+	}
+
+	void focusRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                  const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
+                                  std::function<void(bool)> reply) override {
+		requestImpl(app, instance, reply, "focus", focusList);
+	}
+
+	void resumeRequest(const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                   const std::shared_ptr<ubuntu::app_launch::Application::Instance> &instance,
+                                   std::function<void(bool)> reply) override {
+		requestImpl(app, instance, reply, "resume", resumeList);
+	}
+
+private:
+	/** The Data that we track on an observer. It is the functions to
+	    call, the user data and the context to call it on. */
+	struct ObserverData {
+		UbuntuAppLaunchAppObserver observer;
+		gpointer user_data;
+		std::shared_ptr<GMainContext> context;
+
+		/** Handy constructor to get the context in one place */
+		ObserverData(UbuntuAppLaunchAppObserver obs, gpointer ud)
+			: observer(obs)
+			, user_data(ud) {
+			context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+		}
+	};
+
+	std::list<ObserverData> focusList;    /**< List of observers on the focus signal */
+	std::list<ObserverData> resumeList;   /**< List of observers on the resume signal */
+	std::list<ObserverData> startingList; /**< List of observers on the starting signal */
+
+	/** Removes an observer from a specified list */
+	bool removeObserver (std::list<ObserverData> &list, UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+		auto iter = std::find_if(list.begin(), list.end(), [observer, user_data](const ObserverData &data) {
+			return data.observer == observer && data.user_data == user_data;
+		});
+
+		if (iter == list.end()) {
+			return false;
+		}
+
+		list.erase(iter);
+		return true;
+	}
+
+	/** Implements a request for a specified list by calling each observer and then the reply */
+	inline void requestImpl ( const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                   const std::shared_ptr<ubuntu::app_launch::Application::Instance> &instance,
+                                   std::function<void(bool)> reply,
+				   const std::string& name,
+				   std::list<ObserverData>& list) {
+		std::string sappid = app->appId();
+		g_debug("CManager %s: %s", name.c_str(), sappid.c_str());
+
+		for (const auto &data : list) {
+			executeOnContext(data.context, [data, sappid]() {
+				data.observer(sappid.c_str(), data.user_data);
+			});
+		}
+
+		reply(true);
+	}
+
+public:
+	void addFocus (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+		focusList.emplace_back(ObserverData(observer, user_data));
+	}
+	void addResume (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+		resumeList.emplace_back(ObserverData(observer, user_data));
+	}
+	void addStarting (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+		startingList.emplace_back(ObserverData(observer, user_data));
+	}
+	bool deleteFocus (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+		return removeObserver(focusList, observer, user_data);
+	}
+	bool deleteResume (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+		return removeObserver(resumeList, observer, user_data);
+	}
+	bool deleteStarting (UbuntuAppLaunchAppObserver observer, gpointer user_data) {
+		return removeObserver(startingList, observer, user_data);
+	}
+};
+
+/** Weak pointer to the CManager if it is still in use. If it gets free'd by
+    the registry we're okay with that. */
+static std::weak_ptr<CManager> cmanager;
+
+/** Function to create the CManager if it doesn't currently exist. Otherwise
+    just return a lock to it */
+static std::shared_ptr<CManager>
+ensure_cmanager ()
+{
+	auto retval = cmanager.lock();
+
+	if (!retval) {
+		retval = std::make_shared<CManager>();
+		ubuntu::app_launch::Registry::setManager(retval, ubuntu::app_launch::Registry::getDefault());
+		cmanager = retval;
+	}
+
+	return retval;
 }
 
 gboolean
-ubuntu_app_launch_observer_delete_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+ubuntu_app_launch_observer_add_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return delete_app_generic(observer, user_data, &resume_array);
+	auto manager = ensure_cmanager();
+	manager->addFocus(observer, user_data);
+	return TRUE;
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_focus (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
-	return delete_app_generic(observer, user_data, &focus_array);
+	auto manager = ensure_cmanager();
+	return manager->deleteFocus(observer, user_data) ? TRUE : FALSE;
+}
+
+gboolean
+ubuntu_app_launch_observer_add_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+{
+	auto manager = ensure_cmanager();
+	manager->addResume(observer, user_data);
+	return TRUE;
+}
+
+gboolean
+ubuntu_app_launch_observer_delete_app_resume (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+{
+	auto manager = ensure_cmanager();
+	return manager->deleteResume(observer, user_data) ? TRUE : FALSE;
+}
+
+gboolean
+ubuntu_app_launch_observer_add_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
+{
+	auto manager = ensure_cmanager();
+	ubuntu::app_launch::Registry::Impl::watchingAppStarting(true);
+	manager->addStarting(observer, user_data);
+	return TRUE;
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_starting (UbuntuAppLaunchAppObserver observer, gpointer user_data)
 {
+	auto manager = ensure_cmanager();
 	ubuntu::app_launch::Registry::Impl::watchingAppStarting(false);
-	return delete_app_generic(observer, user_data, &starting_array);
+	return manager->deleteStarting(observer, user_data) ? TRUE : FALSE;
+}
+
+/* Map of all the observers listening for app stopped */
+static std::map<std::pair<UbuntuAppLaunchAppFailedObserver, gpointer>, core::ScopedConnection> appFailedObservers;
+
+gboolean
+ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
+{
+	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+
+	appFailedObservers.emplace(std::make_pair(
+		std::make_pair(observer, user_data),
+			core::ScopedConnection(
+				ubuntu::app_launch::Registry::appFailed().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
+					std::string appid = app->appId();
+					executeOnContext(context, [appid, type, observer, user_data]() {
+						UbuntuAppLaunchAppFailed ctype{UBUNTU_APP_LAUNCH_APP_FAILED_CRASH};
+
+						switch (type) {
+						case ubuntu::app_launch::Registry::FailureType::CRASH:
+							ctype = UBUNTU_APP_LAUNCH_APP_FAILED_CRASH;
+							break;
+						case ubuntu::app_launch::Registry::FailureType::START_FAILURE:
+							ctype = UBUNTU_APP_LAUNCH_APP_FAILED_START_FAILURE;
+							break;
+						}
+
+						observer(appid.c_str(), ctype, user_data);
+					});
+				})
+			)
+		));
+
+	return TRUE;
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
 {
-	failed_observer_t * observert = NULL;
-	GList * look;
+	return observer_delete<UbuntuAppLaunchAppFailedObserver>(observer, user_data, appFailedObservers);
+}
 
-	for (look = failed_array; look != NULL; look = g_list_next(look)) {
-		observert = (failed_observer_t *)look->data;
+/** Handy helper for pause and resume here */
+template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Application>&, const std::shared_ptr<ubuntu::app_launch::Application::Instance>&, const std::vector<pid_t>&>& (*getSignal)(const std::shared_ptr<ubuntu::app_launch::Registry>&)>
+static gboolean
+observer_add_pause (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> &observers)
+{
+	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
 
-		if (observert->func == observer && observert->user_data == user_data) {
-			break;
-		}
-	}
+	observers.emplace(std::make_pair(
+		std::make_pair(observer, user_data),
+		core::ScopedConnection(
+			getSignal(ubuntu::app_launch::Registry::getDefault())
+				.connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, const std::vector<pid_t> &pids) {
+					std::vector<pid_t> lpids = pids;
+					lpids.emplace_back(0);
 
-	if (look == NULL) {
-		return FALSE;
-	}
+					std::string appid = app->appId();
 
-	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
-	g_object_unref(observert->conn);
-
-	g_free(observert);
-	failed_array = g_list_delete_link(failed_array, look);
+					executeOnContext(context, [appid, observer, user_data, lpids]() {
+						observer(appid.c_str(), (int *)(lpids.data()), user_data);
+					});
+			})
+		)
+		));
 
 	return TRUE;
 }
 
-static gboolean
-paused_resumed_delete (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, GList ** list)
+static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> appPausedObservers;
+
+gboolean
+ubuntu_app_launch_observer_add_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	paused_resumed_observer_t * observert = NULL;
-	GList * look;
-
-	for (look = *list; look != NULL; look = g_list_next(look)) {
-		observert = (paused_resumed_observer_t *)look->data;
-
-		if (observert->func == observer && observert->user_data == user_data) {
-			break;
-		}
-	}
-
-	if (look == NULL) {
-		return FALSE;
-	}
-
-	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
-	g_object_unref(observert->conn);
-
-	g_free(observert);
-	*list = g_list_delete_link(*list, look);
-
-	return TRUE;
+	return observer_add_pause<&ubuntu::app_launch::Registry::appPaused>(observer, user_data, appPausedObservers);
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_paused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	return paused_resumed_delete(observer, user_data, &paused_array);
+	return observer_delete<UbuntuAppLaunchAppPausedResumedObserver>(observer, user_data, appPausedObservers);
+}
+
+static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> appResumedObservers;
+
+gboolean
+ubuntu_app_launch_observer_add_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
+{
+	return observer_add_pause<&ubuntu::app_launch::Registry::appResumed>(observer, user_data, appResumedObservers);
 }
 
 gboolean
 ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
 {
-	return paused_resumed_delete(observer, user_data, &resumed_array);
+	return observer_delete<UbuntuAppLaunchAppPausedResumedObserver>(observer, user_data, appResumedObservers);
 }
 
 typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);
