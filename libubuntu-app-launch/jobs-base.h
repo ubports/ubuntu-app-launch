@@ -115,7 +115,7 @@ public:
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
 
-    const std::set<std::string>& getAllJobs();
+    const std::set<std::string>& getAllJobs() const;
 
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
 
