@@ -101,7 +101,7 @@ std::vector<pid_t> SystemD::pids()
 void SystemD::stop()
 {
     auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
-    return manager->stopUnit(appId_, job_, instance_);
+    manager->stopUnit(appId_, job_, instance_);
 }
 
 }  // namespace instance
