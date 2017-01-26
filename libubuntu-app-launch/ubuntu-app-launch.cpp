@@ -376,6 +376,9 @@ public:
 	CManager () {
 		g_debug("Creating the CManager object");
 	}
+	virtual ~CManager() {
+		g_debug("Removing the shared the CManager object");
+	}
 
 	void startingRequest(const std::shared_ptr<ubuntu::app_launch::Application>& app,
                                      const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,

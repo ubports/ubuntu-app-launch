@@ -94,13 +94,13 @@ include_directories(${LTTNG_INCLUDE_DIRS})
 pkg_check_modules(CGMANAGER REQUIRED libcgmanager)
 include_directories(${CGMANAGER_INCLUDE_DIRS})
 
-pkg_check_modules(MIR mirclient)
+pkg_check_modules(MIR REQUIRED mirclient)
 include_directories(${MIR_INCLUDE_DIRS})
 
-pkg_check_modules(WHOOPSIE libwhoopsie)
+pkg_check_modules(WHOOPSIE REQUIRED libwhoopsie)
 include_directories(${WHOOPSIE_INCLUDE_DIRS})
 
-pkg_check_modules(LIBERTINE libertine)
+pkg_check_modules(LIBERTINE REQUIRED libertine)
 include_directories(${LIBERTINE_INCLUDE_DIRS})
 
 pkg_check_modules(CURL libcurl>=7.47)
@@ -240,7 +240,8 @@ ENABLE_COVERAGE_REPORT(
   TESTS
   	application-icon-finder-test
 	application-info-desktop-test
-	cgroup-reap-test exec-util-test
+	cgroup-reap-test
+	exec-util-test
 	failure-test
 	helper-test
 	helper-handshake-test
