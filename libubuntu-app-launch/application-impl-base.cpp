@@ -103,7 +103,7 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
 
 /** Generates an instance string based on the clock if we're a multi-instance
     application. */
-std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop)
+std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop) const
 {
     if (!desktop)
     {
