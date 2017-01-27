@@ -126,8 +126,8 @@ private:
     };
 
     std::map<UnitInfo, std::shared_ptr<UnitData>> unitPaths;
-    UnitInfo parseUnit(const std::string& unit);
-    std::string unitName(const UnitInfo& info);
+    UnitInfo parseUnit(const std::string& unit) const;
+    std::string unitName(const UnitInfo& info) const;
     std::string unitPath(const UnitInfo& info);
 
     UnitInfo unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus);

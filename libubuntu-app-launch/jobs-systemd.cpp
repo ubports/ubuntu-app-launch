@@ -884,7 +884,7 @@ std::string SystemD::userBusPath()
 const std::regex unitNaming{
     "^ubuntu\\-app\\-launch\\-(application\\-(?:click|legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
 
-SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
+SystemD::UnitInfo SystemD::parseUnit(const std::string& unit) const
 {
     std::smatch match;
     if (!std::regex_match(unit, match, unitNaming))
@@ -895,7 +895,7 @@ SystemD::UnitInfo SystemD::parseUnit(const std::string& unit)
     return {match[2].str(), match[1].str(), match[3].str()};
 }
 
-std::string SystemD::unitName(const SystemD::UnitInfo& info)
+std::string SystemD::unitName(const SystemD::UnitInfo& info) const
 {
     return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst + ".service";
 }
