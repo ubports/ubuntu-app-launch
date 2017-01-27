@@ -789,6 +789,7 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
         return {};
     }
 
+    std::string sappid{appID};
     for (const auto& unit : unitPaths)
     {
         const SystemD::UnitInfo& unitinfo = unit.first;
@@ -798,7 +799,7 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
             continue;
         }
 
-        if (std::string(appID) != unitinfo.appid)
+        if (sappid != unitinfo.appid)
         {
             continue;
         }
