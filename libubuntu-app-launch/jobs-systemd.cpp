@@ -189,7 +189,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                        return;
                                    }
 
-                                   g_variant_unref(callt);
+                                   g_clear_pointer(&callt, g_variant_unref);
                                    g_debug("Subscribed to Systemd");
                                },
                                nullptr);
@@ -937,7 +937,7 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
         data->unitpath = gpath;
     }
 
-    g_variant_unref(call);
+    g_clear_pointer(&call, g_variant_unref);
 
     return info;
 }
@@ -1025,11 +1025,11 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
         /* Parse variant */
         GVariant* vpid{nullptr};
         g_variant_get(call, "(v)", &vpid);
-        g_variant_unref(call);
+        g_clear_pointer(&call, g_variant_unref);
 
         pid_t pid;
         pid = g_variant_get_uint32(vpid);
-        g_variant_unref(vpid);
+        g_clear_pointer(&vpid, g_variant_unref);
 
         return pid;
     });
@@ -1080,7 +1080,7 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         /* Parse variant */
         GVariant* vstring = nullptr;
         g_variant_get(call, "(v)", &vstring);
-        g_variant_unref(call);
+        g_pointer_clear(&call, g_variant_unref);
 
         if (vstring == nullptr)
         {
@@ -1166,7 +1166,7 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
             throw std::runtime_error(message);
         }
 
-        g_variant_unref(call);
+        g_clear_pointer(&call, g_variant_unref);
 
         return true;
     });
@@ -1242,7 +1242,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                     auto vdict = g_variant_get_child_value(params, 1);
                     GVariantDict dict;
                     g_variant_dict_init(&dict, vdict);
-                    g_variant_unref(vdict);
+                    g_clear_pointer(&vdict, g_variant_unref);
 
                     if (g_variant_dict_contains(&dict, "Result") == FALSE)
                     {
