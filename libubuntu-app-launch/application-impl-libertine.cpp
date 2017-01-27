@@ -275,17 +275,8 @@ std::shared_ptr<Application::Info> Libertine::info()
 
 std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
 {
-    std::vector<std::shared_ptr<Instance>> vect;
-    std::string sappid = appId();
-
-    for (auto instancename : _registry->impl->upstartInstancesForJob("application-legacy"))
-    {
-        if (std::equal(sappid.begin(), sappid.end(), instancename.begin()))
-            vect.emplace_back(std::make_shared<UpstartInstance>(appId(), "application-legacy", std::string{},
-                                                                std::vector<Application::URL>{}, _registry));
-    }
-
-    return vect;
+    auto vbase = _registry->impl->jobs->instances(appId(), "application-legacy");
+    return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
 /** Grabs all the environment variables for the application to
@@ -327,15 +318,20 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-legacy", {}, urls, _registry,
-                                   UpstartInstance::launchMode::STANDARD, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::STANDARD,
+                                         envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return UpstartInstance::launch(appId(), "application-legacy", {}, urls, _registry,
-                                   UpstartInstance::launchMode::TEST, envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::TEST,
+                                         envfunc);
+}
+
+std::shared_ptr<Application::Instance> Libertine::findInstance(const std::string& instanceid)
+{
+    return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
 }
 
 }  // namespace app_impls

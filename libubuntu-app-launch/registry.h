@@ -73,28 +73,137 @@ public:
     */
     static std::list<std::shared_ptr<Application>> installedApps(std::shared_ptr<Registry> registry = getDefault());
 
-#if 0 /* TODO -- In next MR */
     /* Signals to discover what is happening to apps */
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStarted;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appStopped;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>, FailureType> appFailed;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appPaused;
-    core::Signal<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> appResumed;
+    /** Get the signal object that is signaled when an application has been
+        started.
 
-    /* The Application Manager, almost always if you're not Unity8, don't
-       use this API. Testing is a special case. */
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& appStarted(
+        const std::shared_ptr<Registry>& reg = getDefault());
+
+    /** Get the signal object that is signaled when an application has stopped.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& appStopped(
+        const std::shared_ptr<Registry>& reg = getDefault());
+
+    /** Get the signal object that is signaled when an application has failed.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
+    static core::
+        Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, FailureType>&
+        appFailed(const std::shared_ptr<Registry>& reg = getDefault());
+
+    /** Get the signal object that is signaled when an application has been
+        paused.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Application>&,
+                        const std::shared_ptr<Application::Instance>&,
+                        const std::vector<pid_t>&>&
+        appPaused(const std::shared_ptr<Registry>& reg = getDefault());
+
+    /** Get the signal object that is signaled when an application has been
+        resumed.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Application>&,
+                        const std::shared_ptr<Application::Instance>&,
+                        const std::vector<pid_t>&>&
+        appResumed(const std::shared_ptr<Registry>& reg = getDefault());
+
+    /** The Application Manager, almost always if you're not Unity8, don't
+        use this API. Testing is a special case. Subclass this interface and
+        implement these functions.
+
+        Each function here is being passed a function object that takes a boolean
+        to reply. This will accept or reject the request. The function object
+        can be copied to another thread and executed if needed.
+
+        The reply is required for the application to start. It will block (not
+        currently implemented) until approval is given. If there are multiple requests
+        sent they may be replied out of order if desired.
+    */
     class Manager
     {
-        virtual bool focusRequest (std::shared_ptr<Application> app, std::shared_ptr<Application::Instance> instance) = 0;
-        virtual bool startingRequest (std::shared_ptr<Application> app, std::shared_ptr<Application::Instance> instance) = 0;
+    public:
+        /** Application wishes to startup
+
+            \note This signal handler is activated on the UAL thread
+
+            \param app Application requesting startup
+            \param instance Instance of the app, always valid but not useful
+                        unless mulit-instance app.
+            \param reply Function object to reply if it is allowed to start
+        */
+        virtual void startingRequest(const std::shared_ptr<Application>& app,
+                                     const std::shared_ptr<Application::Instance>& instance,
+                                     std::function<void(bool)> reply) = 0;
+
+        /** Application wishes to have focus. Usually this occurs when
+            a URL for the application is activated and the running app is
+            requested.
+
+            \note This signal handler is activated on the UAL thread
+
+            \param app Application requesting focus
+            \param instance Instance of the app, always valid but not useful
+                        unless mulit-instance app.
+            \param reply Function object to reply if it is allowed to focus
+        */
+        virtual void focusRequest(const std::shared_ptr<Application>& app,
+                                  const std::shared_ptr<Application::Instance>& instance,
+                                  std::function<void(bool)> reply) = 0;
+
+        /** Application wishes to resume. Usually this occurs when
+            a URL for the application is activated and the running app is
+            requested.
+
+            \note This signal handler is activated on the UAL thread
+
+            \param app Application requesting resume
+            \param instance Instance of the app, always valid but not useful
+                        unless mulit-instance app.
+            \param reply Function object to reply if it is allowed to resume
+        */
+        virtual void resumeRequest(const std::shared_ptr<Application>& app,
+                                   const std::shared_ptr<Application::Instance>& instance,
+                                   std::function<void(bool)> reply) = 0;
 
     protected:
         Manager() = default;
+        /* virtual ~Manager() = default;
+           TODO: Next ABI break */
     };
 
-    void setManager (Manager* manager);
-    void clearManager ();
-#endif
+    /** Set the manager of applications, which gives permissions for them to
+        start and gain focus. In almost all cases this should be Unity8 as it
+        will be controlling applications.
+
+        This function will failure if there is already a manager set.
+
+        \param manager A reference to the Manager object to call
+        \param registry Registry to register the manager on
+    */
+    static void setManager(const std::shared_ptr<Manager>& manager, const std::shared_ptr<Registry>& registry);
+
+    /** Remove the current manager on the registry */
+    void clearManager();
 
     /* Helper Lists */
     /** Get a list of all the helpers for a given helper type

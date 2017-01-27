@@ -94,13 +94,13 @@ include_directories(${LTTNG_INCLUDE_DIRS})
 pkg_check_modules(CGMANAGER REQUIRED libcgmanager)
 include_directories(${CGMANAGER_INCLUDE_DIRS})
 
-pkg_check_modules(MIR mirclient)
+pkg_check_modules(MIR REQUIRED mirclient)
 include_directories(${MIR_INCLUDE_DIRS})
 
-pkg_check_modules(WHOOPSIE libwhoopsie)
+pkg_check_modules(WHOOPSIE REQUIRED libwhoopsie)
 include_directories(${WHOOPSIE_INCLUDE_DIRS})
 
-pkg_check_modules(LIBERTINE libertine)
+pkg_check_modules(LIBERTINE REQUIRED libertine)
 include_directories(${LIBERTINE_INCLUDE_DIRS})
 
 pkg_check_modules(CURL libcurl>=7.47)
@@ -222,9 +222,6 @@ add_subdirectory(ubuntu-app-test)
 
 # testing & coverage
 if (${enable_tests})
-  set (GTEST_SOURCE_DIR /usr/src/gtest/src)
-  set (GTEST_INCLUDE_DIR ${GTEST_SOURCE_DIR}/..)
-  set (GTEST_LIBS -lpthread)
   enable_testing ()
   add_subdirectory(tests)
 endif ()
@@ -237,7 +234,23 @@ if (NOT ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
   list(APPEND filter-list "${CMAKE_BINARY_DIR}/*")
 endif()
 ENABLE_COVERAGE_REPORT(
-  TARGETS ubuntu-launcher
-  TESTS application-icon-finder-test application-info-desktop-test cgroup-reap-test exec-util-test failure-test helper-test helper-handshake-test libual-test libual-cpp-test zg-test
-  FILTER ${filter-list}
+  TARGETS
+  	ubuntu-launcher
+	launcher-static
+  TESTS
+  	application-icon-finder-test
+	application-info-desktop-test
+	cgroup-reap-test
+	exec-util-test
+	failure-test
+	helper-test
+	helper-handshake-test
+	jobs-base-test
+	libual-test
+	libual-cpp-test
+	list-apps
+	snapd-info-test
+	zg-test
+  FILTER
+  	${filter-list}
 )

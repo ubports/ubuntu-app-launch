@@ -51,7 +51,7 @@ class HelperHandshakeTest : public ::testing::Test
 		GDBusMessage * FilterFunc (GDBusConnection * conn, GDBusMessage * message, gboolean incomming) {
 			if (g_strcmp0(g_dbus_message_get_member(message), "UnityStartingBroadcast") == 0) {
 				GVariant * body = g_dbus_message_get_body(message);
-				GVariant * correct_body = g_variant_new("(s)", "fooapp");
+				GVariant * correct_body = g_variant_new("(ss)", "fooapp", "instance");
 				g_variant_ref_sink(correct_body);
 
 				[body, correct_body]() {
@@ -77,7 +77,7 @@ TEST_F(HelperHandshakeTest, BaseHandshake)
 	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
 	guint filter = g_dbus_connection_add_filter(con, filter_func, this, NULL);
 
-	handshake_t * handshake = starting_handshake_start("fooapp", 1);
+	handshake_t * handshake = starting_handshake_start("fooapp", "instance", 1);
 
 	g_main_loop_run(mainloop);
 
@@ -88,7 +88,7 @@ TEST_F(HelperHandshakeTest, BaseHandshake)
 		"/", /* path */
 		"com.canonical.UbuntuAppLaunch", /* interface */
 		"UnityStartingSignal", /* signal */
-		g_variant_new("(s)", "fooapp"), /* params, the same */
+		g_variant_new("(ss)", "fooapp", "instance"), /* params, the same */
 		NULL);
 
 	starting_handshake_wait(handshake);
@@ -109,7 +109,7 @@ two_second_reached (gpointer user_data)
 TEST_F(HelperHandshakeTest, HandshakeTimeout)
 {
 	bool timeout_reached = false;
-	handshake_t * handshake = starting_handshake_start("fooapp", 1);
+	handshake_t * handshake = starting_handshake_start("fooapp", "instance", 1);
 
 	guint outertimeout = g_timeout_add_seconds(2, two_second_reached, &timeout_reached);
 
