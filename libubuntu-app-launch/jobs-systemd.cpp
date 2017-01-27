@@ -427,12 +427,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
 
     auto execarray = desktop_exec_parse(exec.c_str(), uris.c_str());
 
-    std::vector<std::string> retval;
-    retval.reserve(execarray->len);
-    for (unsigned int i = 0; i < execarray->len; i++)
-    {
-        retval.emplace_back(g_array_index(execarray, gchar*, i));
-    }
+    std::vector<std::string> retval = {execarray->data, execarray->data + execarray->len};
 
     g_array_set_clear_func(execarray, g_free);
     g_array_free(execarray, FALSE); /* TODO: Not TRUE? */
