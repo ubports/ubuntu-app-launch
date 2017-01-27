@@ -91,29 +91,13 @@ private:
 
         bool operator<(const UnitInfo& b) const
         {
-            if (job < b.job)
-            {
-                return true;
-            }
-            else if (job == b.job)
-            {
-                if (appid < b.appid)
-                {
-                    return true;
-                }
-                else if (appid == b.appid)
-                {
-                    return inst < b.inst;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                return false;
-            }
+            if (job != b.job)
+                return job < b.job;
+
+            if (appid != b.appid)
+                return appid < b.appid;
+
+            return inst < b.inst;
         }
     };
 
