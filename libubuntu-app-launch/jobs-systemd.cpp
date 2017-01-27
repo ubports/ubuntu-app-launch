@@ -466,15 +466,18 @@ struct StartCHelper
 void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data)
 {
     auto data = static_cast<StartCHelper*>(user_data);
-    GError* error{nullptr};
-    GVariant* result{nullptr};
 
     tracepoint(ubuntu_app_launch, libual_start_message_callback, std::string(data->ptr->appId_).c_str());
 
     g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
 
+    GError* error{nullptr};
+    GVariant* result{nullptr};
+
     result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
+    /* We don't care about the result but we need to make sure we don't
+       have a leak. */
     g_clear_pointer(&result, g_variant_unref);
 
     if (error != nullptr)
