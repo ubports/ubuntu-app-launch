@@ -109,11 +109,11 @@ void SystemD::stop()
 namespace manager
 {
 
-static const std::string SYSTEMD_DBUS_ADDRESS{"org.freedesktop.systemd1"};
-static const std::string SYSTEMD_DBUS_IFACE_MANAGER{"org.freedesktop.systemd1.Manager"};
-static const std::string SYSTEMD_DBUS_PATH_MANAGER{"/org/freedesktop/systemd1"};
-static const std::string SYSTEMD_DBUS_IFACE_UNIT{"org.freedesktop.systemd1.Unit"};
-static const std::string SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Service"};
+static const char* SYSTEMD_DBUS_ADDRESS{"org.freedesktop.systemd1"};
+static const char* SYSTEMD_DBUS_IFACE_MANAGER{"org.freedesktop.systemd1.Manager"};
+static const char* SYSTEMD_DBUS_PATH_MANAGER{"/org/freedesktop/systemd1"};
+// static const char * SYSTEMD_DBUS_IFACE_UNIT{"org.freedesktop.systemd1.Unit"};
+static const char* SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Service"};
 
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
@@ -165,16 +165,16 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
         }
 
         /* If we don't subscribe, it doesn't send us signals :-( */
-        g_dbus_connection_call(bus.get(),                          /* user bus */
-                               SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
-                               SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
-                               SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
-                               "Subscribe",                        /* method */
-                               nullptr,                            /* params */
-                               nullptr,                            /* ret type */
-                               G_DBUS_CALL_FLAGS_NONE,             /* flags */
-                               -1,                                 /* timeout */
-                               cancel.get(),                       /* cancellable */
+        g_dbus_connection_call(bus.get(),                  /* user bus */
+                               SYSTEMD_DBUS_ADDRESS,       /* bus name */
+                               SYSTEMD_DBUS_PATH_MANAGER,  /* path */
+                               SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
+                               "Subscribe",                /* method */
+                               nullptr,                    /* params */
+                               nullptr,                    /* ret type */
+                               G_DBUS_CALL_FLAGS_NONE,     /* flags */
+                               -1,                         /* timeout */
+                               cancel.get(),               /* cancellable */
                                [](GObject* obj, GAsyncResult* res, gpointer user_data) {
                                    GError* error{nullptr};
                                    GVariant* callt = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
@@ -193,12 +193,12 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
         /* Setup Unit add/remove signals */
         handle_unitNew =
-            g_dbus_connection_signal_subscribe(bus.get(),                          /* bus */
-                                               nullptr,                            /* sender */
-                                               SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
-                                               "UnitNew",                          /* signal */
-                                               SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
-                                               nullptr,                            /* arg0 */
+            g_dbus_connection_signal_subscribe(bus.get(),                  /* bus */
+                                               nullptr,                    /* sender */
+                                               SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
+                                               "UnitNew",                  /* signal */
+                                               SYSTEMD_DBUS_PATH_MANAGER,  /* path */
+                                               nullptr,                    /* arg0 */
                                                G_DBUS_SIGNAL_FLAGS_NONE,
                                                [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
                                                   const gchar*, GVariant* params, gpointer user_data) -> void {
@@ -223,12 +223,12 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                                nullptr); /* user data destroy */
 
         handle_unitRemoved =
-            g_dbus_connection_signal_subscribe(bus.get(),                          /* bus */
-                                               nullptr,                            /* sender */
-                                               SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
-                                               "UnitRemoved",                      /* signal */
-                                               SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
-                                               nullptr,                            /* arg0 */
+            g_dbus_connection_signal_subscribe(bus.get(),                  /* bus */
+                                               nullptr,                    /* sender */
+                                               SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
+                                               "UnitRemoved",              /* signal */
+                                               SYSTEMD_DBUS_PATH_MANAGER,  /* path */
+                                               nullptr,                    /* arg0 */
                                                G_DBUS_SIGNAL_FLAGS_NONE,
                                                [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
                                                   const gchar*, GVariant* params, gpointer user_data) -> void {
@@ -269,16 +269,16 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
 {
     GError* error = nullptr;
 
-    auto callt = g_dbus_connection_call_sync(bus.get(),                          /* user bus */
-                                             SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
-                                             SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
-                                             SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
-                                             "ListUnits",                        /* method */
-                                             nullptr,                            /* params */
-                                             G_VARIANT_TYPE("(a(ssssssouso))"),  /* ret type */
-                                             G_DBUS_CALL_FLAGS_NONE,             /* flags */
-                                             -1,                                 /* timeout */
-                                             cancel.get(),                       /* cancellable */
+    auto callt = g_dbus_connection_call_sync(bus.get(),                         /* user bus */
+                                             SYSTEMD_DBUS_ADDRESS,              /* bus name */
+                                             SYSTEMD_DBUS_PATH_MANAGER,         /* path */
+                                             SYSTEMD_DBUS_IFACE_MANAGER,        /* interface */
+                                             "ListUnits",                       /* method */
+                                             nullptr,                           /* params */
+                                             G_VARIANT_TYPE("(a(ssssssouso))"), /* ret type */
+                                             G_DBUS_CALL_FLAGS_NONE,            /* flags */
+                                             -1,                                /* timeout */
+                                             cancel.get(),                      /* cancellable */
                                              &error);
 
     if (error != nullptr)
@@ -712,9 +712,9 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             /* Call the job start function */
             g_debug("Asking systemd to start task for: %s", appIdStr.c_str());
             g_dbus_connection_call(manager->userbus_.get(),                       /* bus */
-                                   SYSTEMD_DBUS_ADDRESS.c_str(),                  /* service name */
-                                   SYSTEMD_DBUS_PATH_MANAGER.c_str(),             /* Path */
-                                   SYSTEMD_DBUS_IFACE_MANAGER.c_str(),            /* interface */
+                                   SYSTEMD_DBUS_ADDRESS,                          /* service name */
+                                   SYSTEMD_DBUS_PATH_MANAGER,                     /* Path */
+                                   SYSTEMD_DBUS_IFACE_MANAGER,                    /* interface */
                                    "StartTransientUnit",                          /* method */
                                    g_variant_builder_end(&builder),               /* params */
                                    G_VARIANT_TYPE("(o)"),                         /* return */
@@ -902,9 +902,9 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
     }
 
     GVariant* call = g_dbus_connection_call_sync(bus.get(),                                /* user bus */
-                                                 SYSTEMD_DBUS_ADDRESS.c_str(),             /* bus name */
-                                                 SYSTEMD_DBUS_PATH_MANAGER.c_str(),        /* path */
-                                                 SYSTEMD_DBUS_IFACE_MANAGER.c_str(),       /* interface */
+                                                 SYSTEMD_DBUS_ADDRESS,                     /* bus name */
+                                                 SYSTEMD_DBUS_PATH_MANAGER,                /* path */
+                                                 SYSTEMD_DBUS_IFACE_MANAGER,               /* interface */
                                                  "GetUnit",                                /* method */
                                                  g_variant_new("(s)", name.c_str()),       /* params */
                                                  G_VARIANT_TYPE("(o)"),                    /* ret type */
@@ -992,18 +992,18 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
 
     return registry->impl->thread.executeOnThread<pid_t>([this, registry, unitname, unitpath]() {
         GError* error{nullptr};
-        GVariant* call = g_dbus_connection_call_sync(
-            userbus_.get(),                                                       /* user bus */
-            SYSTEMD_DBUS_ADDRESS.c_str(),                                         /* bus name */
-            unitpath.c_str(),                                                     /* path */
-            "org.freedesktop.DBus.Properties",                                    /* interface */
-            "Get",                                                                /* method */
-            g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE.c_str(), "MainPID"), /* params */
-            G_VARIANT_TYPE("(v)"),                                                /* ret type */
-            G_DBUS_CALL_FLAGS_NONE,                                               /* flags */
-            -1,                                                                   /* timeout */
-            registry->impl->thread.getCancellable().get(),                        /* cancellable */
-            &error);
+        GVariant* call =
+            g_dbus_connection_call_sync(userbus_.get(),                                               /* user bus */
+                                        SYSTEMD_DBUS_ADDRESS,                                         /* bus name */
+                                        unitpath.c_str(),                                             /* path */
+                                        "org.freedesktop.DBus.Properties",                            /* interface */
+                                        "Get",                                                        /* method */
+                                        g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE, "MainPID"), /* params */
+                                        G_VARIANT_TYPE("(v)"),                                        /* ret type */
+                                        G_DBUS_CALL_FLAGS_NONE,                                       /* flags */
+                                        -1,                                                           /* timeout */
+                                        registry->impl->thread.getCancellable().get(),                /* cancellable */
+                                        &error);
 
         if (error != nullptr)
         {
@@ -1047,18 +1047,18 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
 
     auto cgrouppath = registry->impl->thread.executeOnThread<std::string>([this, registry, unitname, unitpath]() {
         GError* error{nullptr};
-        GVariant* call = g_dbus_connection_call_sync(
-            userbus_.get(),                                                            /* user bus */
-            SYSTEMD_DBUS_ADDRESS.c_str(),                                              /* bus name */
-            unitpath.c_str(),                                                          /* path */
-            "org.freedesktop.DBus.Properties",                                         /* interface */
-            "Get",                                                                     /* method */
-            g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE.c_str(), "ControlGroup"), /* params */
-            G_VARIANT_TYPE("(v)"),                                                     /* ret type */
-            G_DBUS_CALL_FLAGS_NONE,                                                    /* flags */
-            -1,                                                                        /* timeout */
-            registry->impl->thread.getCancellable().get(),                             /* cancellable */
-            &error);
+        GVariant* call =
+            g_dbus_connection_call_sync(userbus_.get(),                    /* user bus */
+                                        SYSTEMD_DBUS_ADDRESS,              /* bus name */
+                                        unitpath.c_str(),                  /* path */
+                                        "org.freedesktop.DBus.Properties", /* interface */
+                                        "Get",                             /* method */
+                                        g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE, "ControlGroup"), /* params */
+                                        G_VARIANT_TYPE("(v)"),                         /* ret type */
+                                        G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                        -1,                                            /* timeout */
+                                        registry->impl->thread.getCancellable().get(), /* cancellable */
+                                        &error);
 
         if (error != nullptr)
         {
@@ -1134,11 +1134,11 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
     registry->impl->thread.executeOnThread<bool>([this, registry, unitname] {
         GError* error{nullptr};
         GVariant* call = g_dbus_connection_call_sync(
-            userbus_.get(),                     /* user bus */
-            SYSTEMD_DBUS_ADDRESS.c_str(),       /* bus name */
-            SYSTEMD_DBUS_PATH_MANAGER.c_str(),  /* path */
-            SYSTEMD_DBUS_IFACE_MANAGER.c_str(), /* interface */
-            "StopUnit",                         /* method */
+            userbus_.get(),             /* user bus */
+            SYSTEMD_DBUS_ADDRESS,       /* bus name */
+            SYSTEMD_DBUS_PATH_MANAGER,  /* path */
+            SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
+            "StopUnit",                 /* method */
             g_variant_new(
                 "(ss)",                  /* params */
                 unitname.c_str(),        /* param: specify unit */
@@ -1192,12 +1192,12 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
             auto data = new FailedData{reg};
 
             handle_appFailed = g_dbus_connection_signal_subscribe(
-                reg->impl->_dbus.get(),             /* bus */
-                SYSTEMD_DBUS_ADDRESS.c_str(),       /* sender */
-                "org.freedesktop.DBus.Properties",  /* interface */
-                "PropertiesChanged",                /* signal */
-                nullptr,                            /* path */
-                SYSTEMD_DBUS_IFACE_SERVICE.c_str(), /* arg0 */
+                reg->impl->_dbus.get(),            /* bus */
+                SYSTEMD_DBUS_ADDRESS,              /* sender */
+                "org.freedesktop.DBus.Properties", /* interface */
+                "PropertiesChanged",               /* signal */
+                nullptr,                           /* path */
+                SYSTEMD_DBUS_IFACE_SERVICE,        /* arg0 */
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar* path, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) -> void {
