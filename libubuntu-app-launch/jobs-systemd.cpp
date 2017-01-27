@@ -195,57 +195,105 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                nullptr);
 
         /* Setup Unit add/remove signals */
-        handle_unitNew =
-            g_dbus_connection_signal_subscribe(bus.get(),                  /* bus */
-                                               nullptr,                    /* sender */
-                                               SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
-                                               "UnitNew",                  /* signal */
-                                               SYSTEMD_DBUS_PATH_MANAGER,  /* path */
-                                               nullptr,                    /* arg0 */
-                                               G_DBUS_SIGNAL_FLAGS_NONE,
-                                               [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
-                                                  const gchar*, GVariant* params, gpointer user_data) -> void {
-                                                   auto pthis = static_cast<SystemD*>(user_data);
+        handle_unitNew = g_dbus_connection_signal_subscribe(
+            bus.get(),                  /* bus */
+            nullptr,                    /* sender */
+            SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
+            "UnitNew",                  /* signal */
+            SYSTEMD_DBUS_PATH_MANAGER,  /* path */
+            nullptr,                    /* arg0 */
+            G_DBUS_SIGNAL_FLAGS_NONE,
+            [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+               gpointer user_data) -> void {
+                auto pthis = static_cast<SystemD*>(user_data);
 
-                                                   const gchar* unitname{nullptr};
-                                                   const gchar* unitpath{nullptr};
+                if (!g_variant_check_format_string(params, "(so)", FALSE))
+                {
+                    g_warning("Got 'UnitNew' signal with unknown parameter type: %s",
+                              g_variant_get_type_string(params));
+                    return;
+                }
 
-                                                   g_variant_get(params, "(&s&o)", &unitname, &unitpath);
+                const gchar* unitname{nullptr};
+                const gchar* unitpath{nullptr};
 
-                                                   try
-                                                   {
-                                                       auto info = pthis->unitNew(unitname, unitpath, pthis->userbus_);
-                                                       pthis->emitSignal(pthis->sig_appStarted, info);
-                                                   }
-                                                   catch (std::runtime_error& e)
-                                                   {
-                                                       g_warning("%s", e.what());
-                                                   }
-                                               },        /* callback */
-                                               this,     /* user data */
-                                               nullptr); /* user data destroy */
+                g_variant_get(params, "(&s&o)", &unitname, &unitpath);
 
-        handle_unitRemoved =
-            g_dbus_connection_signal_subscribe(bus.get(),                  /* bus */
-                                               nullptr,                    /* sender */
-                                               SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
-                                               "UnitRemoved",              /* signal */
-                                               SYSTEMD_DBUS_PATH_MANAGER,  /* path */
-                                               nullptr,                    /* arg0 */
-                                               G_DBUS_SIGNAL_FLAGS_NONE,
-                                               [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
-                                                  const gchar*, GVariant* params, gpointer user_data) -> void {
-                                                   auto pthis = static_cast<SystemD*>(user_data);
+                if (unitname == nullptr || unitpath == nullptr)
+                {
+                    g_warning("Got 'UnitNew' signal with funky params %p, %p", unitname, unitpath);
+                    return;
+                }
 
-                                                   const gchar* unitname{nullptr};
-                                                   const gchar* unitpath{nullptr};
+                try
+                {
+                    pthis->parseUnit(unitname);
+                }
+                catch (std::runtime_error& e)
+                {
+                    /* Not for UAL */
+                    g_debug("Unable to parse unit: %s", unitname);
+                    return;
+                }
 
-                                                   g_variant_get(params, "(&s&o)", &unitname, &unitpath);
+                try
+                {
+                    auto info = pthis->unitNew(unitname, unitpath, pthis->userbus_);
+                    pthis->emitSignal(pthis->sig_appStarted, info);
+                }
+                catch (std::runtime_error& e)
+                {
+                    g_warning("%s", e.what());
+                }
+            },        /* callback */
+            this,     /* user data */
+            nullptr); /* user data destroy */
 
-                                                   pthis->unitRemoved(unitname, unitpath);
-                                               },        /* callback */
-                                               this,     /* user data */
-                                               nullptr); /* user data destroy */
+        handle_unitRemoved = g_dbus_connection_signal_subscribe(
+            bus.get(),                  /* bus */
+            nullptr,                    /* sender */
+            SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
+            "UnitRemoved",              /* signal */
+            SYSTEMD_DBUS_PATH_MANAGER,  /* path */
+            nullptr,                    /* arg0 */
+            G_DBUS_SIGNAL_FLAGS_NONE,
+            [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+               gpointer user_data) -> void {
+                auto pthis = static_cast<SystemD*>(user_data);
+
+                if (!g_variant_check_format_string(params, "(so)", FALSE))
+                {
+                    g_warning("Got 'UnitRemoved' signal with unknown parameter type: %s",
+                              g_variant_get_type_string(params));
+                    return;
+                }
+
+                const gchar* unitname{nullptr};
+                const gchar* unitpath{nullptr};
+
+                g_variant_get(params, "(&s&o)", &unitname, &unitpath);
+
+                if (unitname == nullptr || unitpath == nullptr)
+                {
+                    g_warning("Got 'UnitRemoved' signal with funky params %p, %p", unitname, unitpath);
+                    return;
+                }
+
+                try
+                {
+                    pthis->parseUnit(unitname);
+                }
+                catch (std::runtime_error& e)
+                {
+                    /* Not for UAL */
+                    g_debug("Unable to parse unit: %s", unitname);
+                    return;
+                }
+
+                pthis->unitRemoved(unitname, unitpath);
+            },        /* callback */
+            this,     /* user data */
+            nullptr); /* user data destroy */
 
         getInitialUnits(bus, cancel);
 
@@ -1080,7 +1128,7 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         /* Parse variant */
         GVariant* vstring = nullptr;
         g_variant_get(call, "(v)", &vstring);
-        g_pointer_clear(&call, g_variant_unref);
+        g_clear_pointer(&call, g_variant_unref);
 
         if (vstring == nullptr)
         {
