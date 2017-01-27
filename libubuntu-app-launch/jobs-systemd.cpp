@@ -814,8 +814,6 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
 
 std::list<std::shared_ptr<Application>> SystemD::runningApps()
 {
-    auto allJobs = getAllJobs();
-    std::set<std::string> appids;
     auto registry = registry_.lock();
 
     if (!registry)
@@ -823,6 +821,9 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
         g_warning("Unable to list instances without a registry");
         return {};
     }
+
+    auto allJobs = getAllJobs();
+    std::set<std::string> appids;
 
     for (const auto& unit : unitPaths)
     {
