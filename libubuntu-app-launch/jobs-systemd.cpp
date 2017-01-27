@@ -588,12 +588,10 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
 
             copyEnv("DISPLAY", env);
-            copyEnvByPrefix("DBUS_", env);
-            copyEnvByPrefix("MIR_", env);
-            copyEnvByPrefix("QT_", env);
-            copyEnvByPrefix("UBUNTU_", env);
-            copyEnvByPrefix("UNITY_", env);
-            copyEnvByPrefix("XDG_", env);
+            for (const auto prefix : {"DBUS_", "MIR_", "QT_", "UBUNTU_", "UNITY_", "XDG_"})
+            {
+                copyEnvByPrefix(prefix, env);
+            }
 
             if (!urls.empty())
             {
@@ -704,20 +702,14 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             }
 
             /* Clean up env before shipping it */
-            removeEnv("APP_XMIR_ENABLE", env);
-            removeEnv("APP_DIR", env);
-            removeEnv("APP_URIS", env);
-            removeEnv("APP_EXEC", env);
-            removeEnv("APP_EXEC_POLICY", env);
-            removeEnv("APP_LAUNCHER_PID", env);
-            removeEnv("INSTANCE_ID", env);
-            removeEnv("MIR_SERVER_PLATFORM_PATH", env);
-            removeEnv("MIR_SERVER_PROMPT_FILE", env);
-            removeEnv("MIR_SERVER_HOST_SOCKET", env);
-            removeEnv("UBUNTU_APP_LAUNCH_DEMANGLER", env);
-            removeEnv("UBUNTU_APP_LAUNCH_OOM_HELPER", env);
-            removeEnv("UBUNTU_APP_LAUNCH_LEGACY_ROOT", env);
-            removeEnv("UBUNTU_APP_LAUNCH_XMIR_HELPER", env);
+            for (const auto rmenv :
+                 {"APP_XMIR_ENABLE", "APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
+                  "INSTANCE_ID", "MIR_SERVER_PLATFORM_PATH", "MIR_SERVER_PROMPT_FILE", "MIR_SERVER_HOST_SOCKET",
+                  "UBUNTU_APP_LAUNCH_DEMANGLER", "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT",
+                  "UBUNTU_APP_LAUNCH_XMIR_HELPER"})
+            {
+                removeEnv(rmenv, env);
+            }
 
             g_debug("Environment length: %d", envSize(env));
 
