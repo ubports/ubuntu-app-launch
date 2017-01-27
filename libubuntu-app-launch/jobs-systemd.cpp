@@ -1233,7 +1233,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                 G_DBUS_SIGNAL_FLAGS_NONE,
                 [](GDBusConnection*, const gchar*, const gchar* path, const gchar*, const gchar*, GVariant* params,
                    gpointer user_data) -> void {
-                    auto data = reinterpret_cast<FailedData*>(user_data);
+                    auto data = static_cast<FailedData*>(user_data);
                     auto reg = data->registry.lock();
 
                     if (!reg)
@@ -1297,7 +1297,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
-                    auto data = reinterpret_cast<FailedData*>(user_data);
+                    auto data = static_cast<FailedData*>(user_data);
                     delete data;
                 }); /* user data destroy */
 
