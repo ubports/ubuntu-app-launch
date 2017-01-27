@@ -1270,6 +1270,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                     if (g_variant_dict_contains(&dict, "Result") == FALSE)
                     {
                         /* We don't care about anything else */
+                        g_variant_dict_clear(&dict);
                         return;
                     }
 
@@ -1277,23 +1278,25 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                     const gchar* value{nullptr};
                     g_variant_dict_lookup(&dict, "Result", "&s", &value);
 
-                    if (value == std::string{"success"})
+                    if (g_strcmp0(value, "success") == 0)
                     {
+                        g_variant_dict_clear(&dict);
                         return;
                     }
+                    g_variant_dict_clear(&dict);
 
                     /* Oh, we might want to do something now */
                     auto reason{Registry::FailureType::CRASH};
-                    if (value == std::string{"exit-code"})
+                    if (g_strcmp0(value, "exit-code") == 0)
                     {
                         reason = Registry::FailureType::START_FAILURE;
                     }
 
                     auto appid = AppID::find(reg, unitinfo.appid);
                     auto app = Application::create(appid, reg);
+                    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(unitinfo.inst);
 
-                    // TODO: Instance
-                    manager->sig_appFailed(app, {}, reason);
+                    manager->sig_appFailed(app, inst, reason);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
