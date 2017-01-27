@@ -181,7 +181,10 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
                                    if (error != nullptr)
                                    {
-                                       g_warning("Unable to subscribe to SystemD: %s", error->message);
+                                       if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+                                       {
+                                           g_warning("Unable to subscribe to SystemD: %s", error->message);
+                                       }
                                        g_error_free(error);
                                        return;
                                    }
@@ -283,7 +286,10 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
 
     if (error != nullptr)
     {
-        g_warning("Unable to list SystemD units: %s", error->message);
+        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        {
+            g_warning("Unable to list SystemD units: %s", error->message);
+        }
         g_error_free(error);
         return;
     }
@@ -449,7 +455,10 @@ void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
         }
         else
         {
-            g_warning("Unable to emit event to start application: %s", error->message);
+            if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+            {
+                g_warning("Unable to emit event to start application: %s", error->message);
+            }
         }
         g_error_free(error);
     }
