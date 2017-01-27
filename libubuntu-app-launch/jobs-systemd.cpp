@@ -660,7 +660,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 }
 
                 g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-                for (auto param : commands)
+                for (const auto& param : commands)
                 {
                     g_variant_builder_add_value(&builder, g_variant_new_string(param.c_str()));
                 }
