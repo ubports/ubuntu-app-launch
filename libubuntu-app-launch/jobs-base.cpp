@@ -79,7 +79,7 @@ std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
     }
 }
 
-const std::set<std::string>& Base::getAllJobs()
+const std::set<std::string>& Base::getAllJobs() const
 {
     return allJobs_;
 }
