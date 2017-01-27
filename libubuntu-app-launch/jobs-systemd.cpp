@@ -420,7 +420,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     auto exec = findEnv("APP_EXEC", env);
     if (exec.empty())
     {
-        g_debug("Application exec line is empty?!?!?");
+        g_warning("Application exec line is empty?!?!?");
         return {};
     }
     auto uris = findEnv("APP_URIS", env);
