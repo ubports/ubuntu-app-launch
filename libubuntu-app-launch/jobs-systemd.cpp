@@ -975,15 +975,7 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
 
 void SystemD::unitRemoved(const std::string& name, const std::string& path)
 {
-    UnitInfo info;
-    try
-    {
-        info = parseUnit(name);
-    }
-    catch (std::runtime_error& e)
-    {
-        return;
-    }
+    UnitInfo info = parseUnit(name);
 
     auto it = unitPaths.find(info);
     if (it != unitPaths.end())
