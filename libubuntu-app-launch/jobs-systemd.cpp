@@ -539,17 +539,8 @@ void SystemD::copyEnvByPrefix(const std::string& prefix, std::list<std::pair<std
     {
         if (g_str_has_prefix(environ[i], prefix.c_str()))
         {
-            std::string envfull = environ[i];
-            std::string envname;
-            bool seenequal = false;
-            std::remove_copy_if(envfull.begin(), envfull.end(), std::back_inserter(envname),
-                                [&seenequal](const char c) {
-                                    if (c == '=')
-                                    {
-                                        seenequal = true;
-                                    }
-                                    return seenequal;
-                                });
+            std::string envname = environ[i];
+            envname.erase(envname.find('='));
             copyEnv(envname, env);
         }
     }
