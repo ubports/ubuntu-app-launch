@@ -185,7 +185,7 @@ public:
         }
         else
         {
-            binname = appId_.package.value() + " " + appId_.appname.value();
+            binname = appId_.package.value() + "." + appId_.appname.value();
         }
 
         binname = "/snap/bin/" + binname + " " + params;
