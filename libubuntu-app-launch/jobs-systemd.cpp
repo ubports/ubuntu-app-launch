@@ -303,7 +303,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
 SystemD::~SystemD()
 {
-    auto dohandle = [&](guint& handle) {
+    auto unsub = [&](guint& handle) {
         if (handle != 0)
         {
             g_dbus_connection_signal_unsubscribe(dbus_.get(), handle);
@@ -311,9 +311,9 @@ SystemD::~SystemD()
         }
     };
 
-    dohandle(handle_unitNew);
-    dohandle(handle_unitRemoved);
-    dohandle(handle_appFailed);
+    unsub(handle_unitNew);
+    unsub(handle_unitRemoved);
+    unsub(handle_appFailed);
 }
 
 void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const std::shared_ptr<GCancellable>& cancel)
