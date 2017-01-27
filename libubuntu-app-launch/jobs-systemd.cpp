@@ -430,7 +430,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     std::vector<std::string> retval = {execarray->data, execarray->data + execarray->len};
 
     g_array_set_clear_func(execarray, g_free);
-    g_array_free(execarray, FALSE); /* TODO: Not TRUE? */
+    g_array_free(execarray, TRUE);
 
     if (retval.empty())
     {
