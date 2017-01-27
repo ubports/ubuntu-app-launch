@@ -524,7 +524,7 @@ void SystemD::copyEnv(const std::string& envname, std::list<std::pair<std::strin
     g_debug("Copying Environment: %s", envname.c_str());
     if (cvalue != nullptr)
     {
-        std::string value = getenv(envname.c_str());
+        std::string value{cvalue};
         env.emplace_back(std::make_pair(envname, value));
     }
     else
