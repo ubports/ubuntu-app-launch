@@ -436,8 +436,9 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         retval.emplace_back(((gchar**)execarray->data)[i]);
     }
 
-    g_array_set_clear_func(execarray, g_free);
-    g_array_free(execarray, FALSE);
+    /* This seems to work better than array_free(), I can't figure out why */
+    auto strv = (gchar **)g_array_free(execarray, FALSE);
+    g_strfreev(strv);
 
     if (retval.empty())
     {
