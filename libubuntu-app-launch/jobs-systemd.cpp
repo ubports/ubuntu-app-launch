@@ -431,13 +431,17 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     auto execarray = desktop_exec_parse(exec.c_str(), uris.c_str());
 
     std::vector<std::string> retval;
-    for (unsigned int i = 0; ((gchar**)execarray->data)[i] != nullptr; i++)
+    for (unsigned int i = 0; i < execarray->len; i++)
     {
-        retval.emplace_back(((gchar**)execarray->data)[i]);
+        auto cstr = g_array_index(execarray, gchar*, i);
+        if (cstr != nullptr)
+        {
+            retval.emplace_back(cstr);
+        }
     }
 
     /* This seems to work better than array_free(), I can't figure out why */
-    auto strv = (gchar **)g_array_free(execarray, FALSE);
+    auto strv = (gchar**)g_array_free(execarray, FALSE);
     g_strfreev(strv);
 
     if (retval.empty())
