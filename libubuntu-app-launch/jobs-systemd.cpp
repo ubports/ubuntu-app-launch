@@ -425,12 +425,19 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     }
     auto uris = findEnv("APP_URIS", env);
 
+    g_debug("Exec line: %s", exec.c_str());
+    g_debug("App URLS:  %s", uris.c_str());
+
     auto execarray = desktop_exec_parse(exec.c_str(), uris.c_str());
 
-    std::vector<std::string> retval = {execarray->data, execarray->data + execarray->len};
+    std::vector<std::string> retval;
+    for (unsigned int i = 0; ((gchar**)execarray->data)[i] != nullptr; i++)
+    {
+        retval.emplace_back(((gchar**)execarray->data)[i]);
+    }
 
     g_array_set_clear_func(execarray, g_free);
-    g_array_free(execarray, TRUE);
+    g_array_free(execarray, FALSE);
 
     if (retval.empty())
     {

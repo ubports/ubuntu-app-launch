@@ -326,6 +326,8 @@ public:
     {
         std::string name;
         std::set<std::string> environment;
+        std::string execpath;
+        std::list<std::string> execline;
     };
 
     std::list<TransientUnit> unitCalls()
@@ -366,15 +368,16 @@ public:
             unit.name = name;
 
             auto paramarray = g_variant_get_child_value(call.params, 2);
-            gchar* key;
+            gchar* ckey;
             GVariant* var;
             GVariantIter iter;
             g_variant_iter_init(&iter, paramarray);
-            while (g_variant_iter_loop(&iter, "(sv)", &key, &var))
+            while (g_variant_iter_loop(&iter, "(sv)", &ckey, &var))
             {
-                g_debug("Looking at parameter: %s", key);
+                g_debug("Looking at parameter: %s", ckey);
+                std::string key{ckey};
 
-                if (std::string{key} == "Environment")
+                if (key == "Environment")
                 {
                     GVariantIter array;
                     gchar* envvar;
@@ -384,6 +387,41 @@ public:
                     {
                         unit.environment.emplace(envvar);
                     }
+                }
+                else if (key == "ExecStart")
+                {
+                    /* a(sasb) */
+                    if (g_variant_n_children(var) > 1)
+                    {
+                        g_warning("'ExecStart' has more than one entry, only processing the first");
+                    }
+
+                    auto tuple = g_variant_get_child_value(var, 0);
+
+                    const gchar* cpath = nullptr;
+                    g_variant_get_child(tuple, 0, "&s", &cpath);
+
+                    if (cpath != nullptr)
+                    {
+                        unit.execpath = cpath;
+                    }
+                    else
+                    {
+                        g_warning("'ExecStart[0][0]' isn't a string?");
+                    }
+
+                    auto vexecarray = g_variant_get_child_value(tuple, 1);
+                    GVariantIter execarray;
+                    g_variant_iter_init(&execarray, vexecarray);
+                    const gchar* execentry;
+
+                    while (g_variant_iter_loop(&execarray, "&s", &execentry))
+                    {
+                        unit.execline.emplace_back(execentry);
+                    }
+
+                    g_clear_pointer(&vexecarray, g_variant_unref);
+                    g_clear_pointer(&tuple, g_variant_unref);
                 }
             }
             g_variant_unref(paramarray);
