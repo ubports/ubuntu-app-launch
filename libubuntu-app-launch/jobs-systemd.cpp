@@ -444,7 +444,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
 
         if (getenv("SNAP") == nullptr)
         {
-            auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
+            auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_PATH");
             if (xmirenv == nullptr)
             {
                 retval.emplace(retval.begin(), XMIR_HELPER);
