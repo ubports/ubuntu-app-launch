@@ -61,8 +61,11 @@ UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC
 UBUNTU_APP_LAUNCH_SNAPD_SOCKET
   Path to the snapd socket.
 
-UBUNTU_APP_LAUNCH_XMIR_PATH
+UBUNTU_APP_LAUNCH_XMIR_HELPER
   Tool that helps to start XMir and sets the DISPLAY variable for applications
+
+UBUNTU_APP_LAUNCH_XMIR_PATH
+  Specifies the location of the XMir binary to use
 
 
 API Documentation

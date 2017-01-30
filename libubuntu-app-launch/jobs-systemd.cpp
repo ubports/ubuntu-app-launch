@@ -444,7 +444,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
 
         if (getenv("SNAP") == nullptr)
         {
-            auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_PATH");
+            auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
             if (xmirenv == nullptr)
             {
                 retval.emplace(retval.begin(), XMIR_HELPER);
@@ -609,7 +609,8 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
             copyEnv("DISPLAY", env);
 
-            for (const auto prefix : {"DBUS_", "MIR_", "UBUNTU_APP_LAUNCH_"}){
+            for (const auto prefix : {"DBUS_", "MIR_", "UBUNTU_APP_LAUNCH_"})
+            {
                 copyEnvByPrefix(prefix, env);
             }
 
@@ -619,6 +620,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             {
                 copyEnvByPrefix("QT_", env);
                 copyEnvByPrefix("XDG_", env);
+                copyEnv("UBUNTU_APP_LAUNCH_XMIR_PATH", env);
             }
 
             if (!urls.empty())
