@@ -129,7 +129,7 @@ main (int argc, char * argv[])
 	char readbuf[ENVVAR_SIZE] = {0};
 	int amountread = 0;
 	int thisread = 0;
-	while ((thisread = read(readsocket, readbuf + amountread, ENVVAR_SIZE - amountread))) {
+	while ((thisread = read(readsocket, readbuf + amountread, ENVVAR_SIZE - amountread)) > 0) {
 		amountread += thisread;
 
 		if (amountread == ENVVAR_SIZE) {
