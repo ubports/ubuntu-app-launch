@@ -84,7 +84,7 @@ public:
     static void watchingAppStarting(bool rWatching);
     static bool isWatchingAppStarting();
 
-    const std::string oomHelper()
+    const std::string& oomHelper() const
     {
         return oomHelper_;
     }
