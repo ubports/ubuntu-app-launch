@@ -271,13 +271,13 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
         }
     };
 
-    for (const auto& interface : XMIR_INTERFACES)
+    for (const auto& interface : LIFECYCLE_INTERFACES)
     {
         addAppsForInterface(interface);
     }
 
-    /* If an app has both, this will replace */
-    for (const auto& interface : LIFECYCLE_INTERFACES)
+    /* If an app has both, this will get rejected */
+    for (const auto& interface : XMIR_INTERFACES)
     {
         addAppsForInterface(interface);
     }
