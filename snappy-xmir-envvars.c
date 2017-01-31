@@ -95,7 +95,7 @@ main (int argc, char * argv[])
 	copyenv(socketfd, "DBUS_SESSION_BUS_ADDRESS", getenv("DBUS_SESSION_BUS_ADDRESS"));
 
 	char mypid[16];
-	snprintf(mypid, 16, "%d", getpid());
+	snprintf(mypid, 16, "%ld", (long)getpid());
 	copyenv(socketfd, "UBUNTU_APP_LAUNCH_SNAPPY_XMIR_ENVVARS_PID", mypid);
 
 	/* Close the socket */
