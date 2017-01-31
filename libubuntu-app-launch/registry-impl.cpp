@@ -50,11 +50,14 @@ Registry::Impl::Impl(Registry* registry)
     });
 
     /* Determine where we're getting the helper from */
-    oomHelper_ = OOM_HELPER;
     auto goomHelper = g_getenv("UBUNTU_APP_LAUNCH_OOM_HELPER");
     if (goomHelper != nullptr)
     {
         oomHelper_ = goomHelper;
+    }
+    else
+    {
+        oomHelper_ = OOM_HELPER;
     }
 }
 
