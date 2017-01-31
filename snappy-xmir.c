@@ -144,12 +144,13 @@ main (int argc, char * argv[])
 	/* Parse the environment into variables we can insert */
 	if (amountread > 0) {
 		char * startvar = readbuf;
+		int debug = (getenv("G_MESSAGES_DEBUG") != NULL);
 
 		do {
 			char * startval = startvar + strlen(startvar) + 1;
 			setenv(startvar, startval, 1);
 
-			if (getenv("G_MESSAGES_DEBUG") != NULL) {
+			if (debug) {
 				printf("Got env: %s=%s\n", startvar, startval);
 			}
 
