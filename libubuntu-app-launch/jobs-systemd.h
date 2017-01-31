@@ -91,29 +91,13 @@ private:
 
         bool operator<(const UnitInfo& b) const
         {
-            if (job < b.job)
-            {
-                return true;
-            }
-            else if (job == b.job)
-            {
-                if (appid < b.appid)
-                {
-                    return true;
-                }
-                else if (appid == b.appid)
-                {
-                    return inst < b.inst;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                return false;
-            }
+            if (job != b.job)
+                return job < b.job;
+
+            if (appid != b.appid)
+                return appid < b.appid;
+
+            return inst < b.inst;
         }
     };
 
@@ -126,8 +110,8 @@ private:
     };
 
     std::map<UnitInfo, std::shared_ptr<UnitData>> unitPaths;
-    UnitInfo parseUnit(const std::string& unit);
-    std::string unitName(const UnitInfo& info);
+    UnitInfo parseUnit(const std::string& unit) const;
+    std::string unitName(const UnitInfo& info) const;
     std::string unitPath(const UnitInfo& info);
 
     UnitInfo unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus);

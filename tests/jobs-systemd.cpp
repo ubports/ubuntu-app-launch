@@ -33,7 +33,7 @@ protected:
     std::shared_ptr<SystemdMock> systemd;
     GDBusConnection *bus = nullptr;
 
-    virtual void SetUp()
+    virtual void SetUp() override
     {
         /* Get the applications dir */
         g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
@@ -63,7 +63,7 @@ protected:
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
     }
 
-    virtual void TearDown()
+    virtual void TearDown() override
     {
         systemd.reset();
         registry.reset();
