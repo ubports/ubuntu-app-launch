@@ -442,7 +442,8 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     {
         retval.emplace(retval.begin(), findEnv("APP_ID", env));
 
-        if (getenv("SNAP") == nullptr)
+        auto snapenv = getenv("SNAP");
+        if (snapenv == nullptr)
         {
             auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
             if (xmirenv == nullptr)
@@ -458,7 +459,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         {
             /* If we're in a snap we need to use the utility which
                gets us back into the snap */
-            std::string snappath = getenv("SNAP");
+            std::string snappath{snapenv};
 
             retval.emplace(retval.begin(), snappath + SNAPPY_XMIR);
         }
