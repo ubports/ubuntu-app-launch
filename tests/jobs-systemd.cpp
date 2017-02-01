@@ -238,7 +238,7 @@ TEST_F(JobsSystemd, LaunchJob)
     std::function<std::list<std::pair<std::string, std::string>>()> getenvfunc =
         [&]() -> std::list<std::pair<std::string, std::string>> {
         gotenv = true;
-        return {};
+        return {{"APP_EXEC", "sh"}};
     };
 
     auto inst = manager->launch(multipleAppID(), defaultJobName(), "123", {},
@@ -264,6 +264,9 @@ TEST_F(JobsSystemd, LaunchJob)
     EXPECT_NE(
         units.begin()->environment.end(),
         units.begin()->environment.find(std::string{"DBUS_SESSION_BUS_ADDRESS="} + getenv("DBUS_SESSION_BUS_ADDRESS")));
+
+    /* Ensure the exec is correct */
+    EXPECT_EQ("/bin/sh", units.begin()->execpath);
 
     /* Try an entirely custom variable */
     systemd->managerClear();
