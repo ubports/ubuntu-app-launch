@@ -50,13 +50,13 @@ UBUNTU_APP_LAUNCH_OOM_HELPER
   Path to the setuid helper that configures OOM values on application processes that we otherwise couldn't, mostly this is for Oxide.
 
 UBUNTU_APP_LAUNCH_OOM_PROC_PATH
-  Path to look for the files to set OOM values, defaults to /proc.
+  Path to look for the files to set OOM values, defaults to `/proc`.
 
 UBUNTU_APP_LAUNCH_SNAP_BASEDIR
-  The place where snaps are installed in the system, /snap is the default.
+  The place where snaps are installed in the system, `/snap` is the default.
 
 UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC
-  A snappy command that is used to launch legacy applications in the current snap, to ensure the environment gets configured correctly.
+  A snappy command that is used to launch legacy applications in the current snap, to ensure the environment gets configured correctly, defaults to `/snap/bin/unity8-session.legacy-exec`
 
 UBUNTU_APP_LAUNCH_SNAPD_SOCKET
   Path to the snapd socket.

@@ -454,7 +454,8 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     {
         retval.emplace(retval.begin(), findEnv("APP_ID", env));
 
-        if (getenv("SNAP") == nullptr)
+        auto snapenv = getenv("SNAP");
+        if (snapenv == nullptr)
         {
             auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
             if (xmirenv == nullptr)
@@ -470,7 +471,7 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         {
             /* If we're in a snap we need to use the utility which
                gets us back into the snap */
-            std::string snappath = getenv("SNAP");
+            std::string snappath{snapenv};
 
             retval.emplace(retval.begin(), snappath + SNAPPY_XMIR);
         }
@@ -621,7 +622,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
             copyEnv("DISPLAY", env);
 
-            for (const auto prefix : {"DBUS_", "MIR_", "UBUNTU_APP_LAUNCH_"})
+            for (const auto& prefix : {"DBUS_", "MIR_", "UBUNTU_APP_LAUNCH_"})
             {
                 copyEnvByPrefix(prefix, env);
             }
@@ -744,7 +745,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             }
 
             /* Clean up env before shipping it */
-            for (const auto rmenv :
+            for (const auto& rmenv :
                  {"APP_XMIR_ENABLE", "APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
                   "INSTANCE_ID", "MIR_SERVER_PLATFORM_PATH", "MIR_SERVER_PROMPT_FILE", "MIR_SERVER_HOST_SOCKET",
                   "UBUNTU_APP_LAUNCH_DEMANGLER", "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT",
