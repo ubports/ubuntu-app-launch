@@ -19,6 +19,7 @@
 
 #define _POSIX_C_SOURCE 200212L
 
+#include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -136,6 +137,11 @@ main (int argc, char * argv[])
 			fprintf(stderr, "Environment is too large, abort!\n");
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	if (thisread < 0) {
+		fprintf(stderr, "Error reading environment variables from Xmir utilities: %s", strerror(errno));
+		exit(EXIT_FAILURE);
 	}
 
 	close(readsocket);
