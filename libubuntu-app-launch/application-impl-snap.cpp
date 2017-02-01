@@ -242,7 +242,6 @@ struct appcompare
 {
     bool operator()(const std::shared_ptr<Application>& a, const std::shared_ptr<Application>& b) const
     {
-        g_debug("Using operator");
         return a->appId() < b->appId();
     }
 };
