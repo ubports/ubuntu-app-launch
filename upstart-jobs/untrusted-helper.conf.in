@@ -12,7 +12,6 @@ env INSTANCE_ID=""
 env APP_URIS
 
 env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
-export UBUNTU_APP_LAUNCH_ARCH
 
 apparmor switch ${APP_ID}
 cgroup freezer

@@ -15,7 +15,6 @@ env APP_XMIR_ENABLE
 env INSTANCE_ID=""
 
 env UBUNTU_APP_LAUNCH_ARCH="@ubuntu_app_launch_arch@"
-export UBUNTU_APP_LAUNCH_ARCH
 
 # apparmor is taken care of by confine
 cgroup freezer
