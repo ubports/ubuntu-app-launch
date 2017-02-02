@@ -97,15 +97,35 @@ protected:
     bool findApp(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps,
                  const ubuntu::app_launch::AppID& appId)
     {
+        try
+        {
+            getApp(apps, appId);
+            return true;
+        }
+        catch (std::runtime_error& e)
+        {
+            return false;
+        }
+    }
+
+    std::shared_ptr<ubuntu::app_launch::Application> getApp(
+        const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps, const std::string& appid)
+    {
+        return getApp(apps, ubuntu::app_launch::AppID::parse(appid));
+    }
+
+    std::shared_ptr<ubuntu::app_launch::Application> getApp(
+        const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps, const ubuntu::app_launch::AppID& appId)
+    {
         for (auto app : apps)
         {
             if (app->appId() == appId)
             {
-                return true;
+                return app;
             }
         }
 
-        return false;
+        throw std::runtime_error{"Unable to find app: " + std::string{appId}};
     }
 
     void printApps(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps)
@@ -185,6 +205,7 @@ static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
         SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "bar"}},
+                                                        {"unity7", "unity8-package", {"foo"}},
                                                         {"unity7", "unity7-package", {"single", "multiple"}},
                                                         {"x11", "x11-package", {"multiple", "hidden"}}
 
@@ -205,9 +226,9 @@ static std::pair<std::string, std::string> x11Package{
 TEST_F(ListApps, ListSnap)
 {
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
-                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
-                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
+                   {interfaces, u8Package, u8Package, u8Package,                       /* unity8 check */
+                    interfaces, u8Package, u7Package, u7Package, u7Package, u8Package, /* unity7 check */
+                    interfaces, x11Package, x11Package, x11Package}};                  /* x11 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
@@ -225,6 +246,19 @@ TEST_F(ListApps, ListSnap)
     EXPECT_FALSE(findApp(apps, "unity8-package_bar_x123"));
     EXPECT_FALSE(findApp(apps, "unity7-package_scope_x123"));
     EXPECT_FALSE(findApp(apps, "x11-package_hidden_x123"));
+
+    EXPECT_EQ("unity8",
+              std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "unity8-package_foo_x123"))
+                  ->getInterface());
+    EXPECT_EQ("unity7",
+              std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "unity7-package_single_x123"))
+                  ->getInterface());
+    EXPECT_EQ("unity7", std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(
+                            getApp(apps, "unity7-package_multiple_x123"))
+                            ->getInterface());
+    EXPECT_EQ("x11",
+              std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "x11-package_multiple_x123"))
+                  ->getInterface());
 }
 #endif
 
@@ -232,9 +266,9 @@ TEST_F(ListApps, ListAll)
 {
 #ifdef ENABLE_SNAPPY
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u7Package, u7Package, u7Package,      /* unity7 check */
-                    interfaces, u8Package, u8Package, u8Package,      /* unity8 check */
-                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
+                   {interfaces, u8Package, u8Package, u8Package,                       /* unity8 check */
+                    interfaces, u8Package, u7Package, u7Package, u7Package, u8Package, /* unity7 check */
+                    interfaces, x11Package, x11Package, x11Package}};                  /* x11 check */
 #endif
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
