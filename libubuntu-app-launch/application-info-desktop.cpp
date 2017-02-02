@@ -396,6 +396,7 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
     , _xMirEnable(
           boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", (flags & DesktopFlags::XMIR_DEFAULT).any()))
     , _exec(stringFromKeyfile<Exec>(keyfile, "Exec"))
+    , _singleInstance(boolFromKeyfile<SingleInstance>(keyfile, "X-Ubuntu-Single-Instance", false))
 {
 }
 

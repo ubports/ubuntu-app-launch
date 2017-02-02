@@ -84,8 +84,6 @@ private:
                                          const AppID& appid,
                                          const std::string& jobpath,
                                          std::function<void(pid_t)> eachPid);
-
-    static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
 };
 
 /** Uses Upstart to get the primary PID of the instance using Upstart's
@@ -315,29 +313,6 @@ Upstart::Upstart(const AppID& appId,
     : Base(appId, job, instance, urls, registry)
 {
     g_debug("Creating a new Upstart for '%s' instance '%s'", std::string(appId).c_str(), instance.c_str());
-}
-
-/** Reformat a C++ vector of URLs into a C GStrv of strings
-
-    \param urls Vector of URLs to make into C strings
-*/
-std::shared_ptr<gchar*> Upstart::urlsToStrv(const std::vector<Application::URL>& urls)
-{
-    if (urls.empty())
-    {
-        return {};
-    }
-
-    auto array = g_array_new(TRUE, FALSE, sizeof(gchar*));
-
-    for (auto url : urls)
-    {
-        auto str = g_strdup(url.value().c_str());
-        g_debug("Converting URL: %s", str);
-        g_array_append_val(array, str);
-    }
-
-    return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
 /** Small helper that we can new/delete to work better with C stuff */

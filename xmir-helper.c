@@ -86,6 +86,8 @@ main (int argc, char * argv[])
 			NULL
 		};
 
+		printf("Executing XMir on PID: %d", getpid());
+
 		return execv(xmir, xmirexec);
 	}
 

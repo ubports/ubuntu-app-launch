@@ -88,7 +88,6 @@ private:
     std::regex instanceRegex_;
 
     std::list<std::pair<std::string, std::string>> launchEnv(const std::string& instance);
-    std::string getInstance();
 };
 
 }  // namespace app_impls

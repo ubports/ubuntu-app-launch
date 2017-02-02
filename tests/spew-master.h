@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "glib-thread.h"
+
 class SpewMaster
 {
 public:

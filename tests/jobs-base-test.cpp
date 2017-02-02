@@ -19,34 +19,13 @@
 
 #include "appid.h"
 #include "jobs-base.h"
-#include "registry-impl.h"
-#include "registry.h"
 
 #include "eventually-fixture.h"
+#include "registry-mock.h"
 #include "spew-master.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <libdbustest/dbus-test.h>
-
-class RegistryImplMock : public ubuntu::app_launch::Registry::Impl
-{
-public:
-    RegistryImplMock(ubuntu::app_launch::Registry* reg)
-        : ubuntu::app_launch::Registry::Impl(reg)
-    {
-    }
-
-    MOCK_METHOD2(zgSendEvent, void(ubuntu::app_launch::AppID, const std::string& eventtype));
-};
-
-class RegistryMock : public ubuntu::app_launch::Registry
-{
-public:
-    RegistryMock()
-    {
-        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(this));
-    }
-};
 
 class instanceMock : public ubuntu::app_launch::jobs::instance::Base
 {

@@ -226,6 +226,8 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
     }
 
     info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
+
+    g_debug("Application Snap object for AppID '%s'", std::string(appid).c_str());
 }
 
 /** Uses the findInterface() function to find the interface if we don't
@@ -259,7 +261,7 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
             }
             catch (std::runtime_error& e)
             {
-                g_warning("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
+                g_debug("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
             }
         }
     }
@@ -466,9 +468,10 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 */
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appid_, "application-snap", {}, urls, jobs::manager::launchMode::STANDARD,
-                                         envfunc);
+    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -478,8 +481,9 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 */
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appid_, "application-snap", {}, urls, jobs::manager::launchMode::TEST,
+    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::TEST,
                                          envfunc);
 }
 

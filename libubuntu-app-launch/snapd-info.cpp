@@ -170,7 +170,7 @@ std::shared_ptr<Info::PkgInfo> Info::pkgInfo(const AppID::Package &package) cons
     }
     catch (std::runtime_error &e)
     {
-        g_warning("Unable to get snap information for '%s': %s", package.value().c_str(), e.what());
+        g_debug("Unable to get snap information for '%s': %s", package.value().c_str(), e.what());
         return {};
     }
 }
