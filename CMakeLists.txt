@@ -111,6 +111,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 
 add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
+add_definitions( -DSNAPPY_XMIR="${CMAKE_INSTALL_FULL_BINDIR}/snappy-xmir" )
 
 ####################
 # Helpers
@@ -208,6 +209,30 @@ add_executable(socket-demangler-helper socket-demangler.c)
 set_target_properties(socket-demangler-helper PROPERTIES OUTPUT_NAME "socket-demangler")
 target_link_libraries(socket-demangler-helper ${GIO2_LIBRARIES})
 install(TARGETS socket-demangler-helper RUNTIME DESTINATION "${pkglibexecdir}")
+
+####################
+# snappy-xmir
+####################
+
+####################
+# NOTE: This only can link to libraries that are in
+# the base UBUNTU CORE image. Which is basically libc
+# and not much else. Don't add libs.
+####################
+
+add_executable(snappy-xmir snappy-xmir.c)
+set_target_properties(snappy-xmir PROPERTIES OUTPUT_NAME "snappy-xmir")
+install(TARGETS snappy-xmir RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
+####################
+# snappy-xmir-envvars
+####################
+
+add_executable(snappy-xmir-envvars snappy-xmir-envvars.c)
+set_target_properties(snappy-xmir-envvars PROPERTIES OUTPUT_NAME "snappy-xmir-envvars")
+# No libs, otherwise we have to worry about how to handle finding them
+install(TARGETS snappy-xmir-envvars RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+
 
 ####################
 # ubuntu-app-launch-desktop.click-hook

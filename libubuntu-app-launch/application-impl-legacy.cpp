@@ -299,7 +299,25 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
-    if (appinfo_->xMirEnable())
+    auto execline = appinfo_->execLine().value();
+
+    auto snappath = getenv("SNAP");
+    if (snappath != nullptr)
+    {
+        /* This means we're inside a snap, and if we're in a snap then
+           the legacy application is in a snap. We need to try and set
+           up the proper environment for that app */
+        retval.emplace_back(std::make_pair("SNAP", snappath));
+
+        const char* legacyexec = getenv("UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC");
+        if (legacyexec == nullptr)
+        {
+            legacyexec = "/snap/bin/unity8-session.legacy-exec";
+        }
+
+        execline = std::string{legacyexec} + " " + execline;
+    }
+    else if (appinfo_->xMirEnable().value())
     {
         /* If we're setting up XMir we also need the other helpers
            that libertine is helping with */
@@ -309,13 +327,10 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
             libertine_launch = LIBERTINE_LAUNCH;
         }
 
-        retval.emplace_back(
-            std::make_pair("APP_EXEC", std::string(libertine_launch) + " " + appinfo_->execLine().value()));
+        execline = std::string{libertine_launch} + " " + execline;
     }
-    else
-    {
-        retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
-    }
+
+    retval.emplace_back(std::make_pair("APP_EXEC", execline));
 
     /* Honor the 'Path' key if it is in the desktop file */
     if (g_key_file_has_key(_keyfile.get(), "Desktop Entry", "Path", nullptr))

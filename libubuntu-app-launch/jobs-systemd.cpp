@@ -453,7 +453,28 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
     if (findEnv("APP_XMIR_ENABLE", env) == "1" && getenv("DISPLAY") == nullptr)
     {
         retval.emplace(retval.begin(), findEnv("APP_ID", env));
-        retval.emplace(retval.begin(), XMIR_HELPER);
+
+        auto snapenv = getenv("SNAP");
+        if (snapenv == nullptr)
+        {
+            auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
+            if (xmirenv == nullptr)
+            {
+                retval.emplace(retval.begin(), XMIR_HELPER);
+            }
+            else
+            {
+                retval.emplace(retval.begin(), xmirenv);
+            }
+        }
+        else
+        {
+            /* If we're in a snap we need to use the utility which
+               gets us back into the snap */
+            std::string snappath{snapenv};
+
+            retval.emplace(retval.begin(), snappath + SNAPPY_XMIR);
+        }
     }
 
     /* See if we're doing apparmor by hand */
@@ -600,9 +621,33 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
 
             copyEnv("DISPLAY", env);
-            for (const auto prefix : {"DBUS_", "MIR_", "QT_", "UBUNTU_", "UNITY_", "XDG_"})
+
+            for (const auto& prefix : {"DBUS_", "MIR_", "UBUNTU_APP_LAUNCH_"})
             {
                 copyEnvByPrefix(prefix, env);
+            }
+
+            /* If we're in deb mode and launching legacy apps, they're gonna need
+             * more context, they really have no other way to get it. */
+            if (g_getenv("SNAP") == nullptr && appId.package.value().empty())
+            {
+                copyEnvByPrefix("QT_", env);
+                copyEnvByPrefix("XDG_", env);
+                copyEnv("UBUNTU_APP_LAUNCH_XMIR_PATH", env);
+
+                /* If we're in Unity8 we don't want to pass it's platform, we want
+                 * an application platform. */
+                if (findEnv("QT_QPA_PLATFORM", env) == "mirserver")
+                {
+                    removeEnv("QT_QPA_PLATFORM", env);
+                    env.emplace_back(std::make_pair("QT_QPA_PLATFORM", "ubuntumirclient"));
+                }
+            }
+
+            /* Mir socket if we don't have one in our env */
+            if (findEnv("MIR_SOCKET", env).empty())
+            {
+                env.emplace_back(std::make_pair("MIR_SOCKET", g_get_user_runtime_dir() + std::string{"/mir_socket"}));
             }
 
             if (!urls.empty())
@@ -714,7 +759,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             }
 
             /* Clean up env before shipping it */
-            for (const auto rmenv :
+            for (const auto& rmenv :
                  {"APP_XMIR_ENABLE", "APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
                   "INSTANCE_ID", "MIR_SERVER_PLATFORM_PATH", "MIR_SERVER_PROMPT_FILE", "MIR_SERVER_HOST_SOCKET",
                   "UBUNTU_APP_LAUNCH_DEMANGLER", "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT",

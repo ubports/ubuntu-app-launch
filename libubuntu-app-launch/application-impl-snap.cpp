@@ -441,7 +441,7 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     std::list<std::pair<std::string, std::string>> retval;
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", info_->xMirEnable().value() ? "1" : "0"));
-    if (info_->xMirEnable())
+    if (info_->xMirEnable() && getenv("SNAP") == nullptr)
     {
         /* If we're setting up XMir we also need the other helpers
            that libertine is helping with */
@@ -456,6 +456,8 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     }
     else
     {
+        /* If we're in a snap the libertine helpers are setup by
+           the snap stuff */
         retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
     }
 
