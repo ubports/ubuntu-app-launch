@@ -1342,6 +1342,9 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                     }
                     g_variant_dict_clear(&dict);
 
+                    /* Reset the failure bit on the unit */
+                    manager->resetUnit(unitinfo);
+
                     /* Oh, we might want to do something now */
                     auto reason{Registry::FailureType::CRASH};
                     if (g_strcmp0(value, "exit-code") == 0)
@@ -1366,6 +1369,46 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
     });
 
     return sig_appFailed;
+}
+
+void SystemD::resetUnit(const UnitInfo& info) const
+{
+    auto registry = registry_.lock();
+    auto unitname = unitName(info);
+    auto bus = userbus_;
+    auto cancel = registry->impl->thread.getCancellable();
+
+    registry->impl->thread.executeOnThread([bus, unitname, cancel] {
+        g_dbus_connection_call(bus.get(),                       /* user bus */
+                               SYSTEMD_DBUS_ADDRESS,            /* bus name */
+                               SYSTEMD_DBUS_PATH_MANAGER,       /* path */
+                               SYSTEMD_DBUS_IFACE_MANAGER,      /* interface */
+                               "ResetFailedUnit",               /* method */
+                               g_variant_new("(s)",             /* params */
+                                             unitname.c_str()), /* param: specify unit */
+                               nullptr,                         /* ret type */
+                               G_DBUS_CALL_FLAGS_NONE,          /* flags */
+                               -1,                              /* timeout */
+                               cancel.get(),                    /* cancellable */
+                               [](GObject* obj, GAsyncResult* res, gpointer user_data) {
+                                   GError* error{nullptr};
+                                   GVariant* callt = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+
+                                   if (error != nullptr)
+                                   {
+                                       if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+                                       {
+                                           g_warning("Unable to reset failed unit: %s", error->message);
+                                       }
+                                       g_error_free(error);
+                                       return;
+                                   }
+
+                                   g_clear_pointer(&callt, g_variant_unref);
+                                   g_debug("Reset Failed Unit");
+                               },
+                               nullptr);
+    });
 }
 
 }  // namespace manager
