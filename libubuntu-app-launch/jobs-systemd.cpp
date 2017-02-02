@@ -627,7 +627,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                  * an application platform. */
                 if (findEnv("QT_QPA_PLATFORM", env) == "mirserver")
                 {
-                    rmEnv("QT_QPA_PLATFORM", env);
+                    removeEnv("QT_QPA_PLATFORM", env);
                     env.emplace_back(std::make_pair("QT_QPA_PLATFORM", "ubuntumirclient"));
                 }
             }
