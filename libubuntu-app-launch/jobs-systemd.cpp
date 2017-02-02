@@ -624,6 +624,12 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 copyEnv("UBUNTU_APP_LAUNCH_XMIR_PATH", env);
             }
 
+            /* Mir socket if we don't have one in our env */
+            if (findEnv("MIR_SOCKET", env).empty())
+            {
+                env.emplace_back(std::make_pair("MIR_SOCKET", g_get_user_runtime_dir() + std::string{"/mir_socket"}));
+            }
+
             if (!urls.empty())
             {
                 auto accumfunc = [](const std::string& prev, Application::URL thisurl) -> std::string {
