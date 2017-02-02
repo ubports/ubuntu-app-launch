@@ -306,7 +306,7 @@ SystemD::~SystemD()
     auto unsub = [&](guint& handle) {
         if (handle != 0)
         {
-            g_dbus_connection_signal_unsubscribe(dbus_.get(), handle);
+            g_dbus_connection_signal_unsubscribe(userbus_.get(), handle);
             handle = 0;
         }
     };
@@ -784,7 +784,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             auto retval = std::make_shared<instance::SystemD>(appId, job, instance, urls, registry);
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
-            chelper->bus = manager->userbus_;
+            chelper->bus = registry->impl->_dbus;
 
             tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
             starting_handshake_wait(handshake);
@@ -1267,7 +1267,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
             auto data = new FailedData{reg};
 
             handle_appFailed = g_dbus_connection_signal_subscribe(
-                reg->impl->_dbus.get(),            /* bus */
+                userbus_.get(),                    /* bus */
                 SYSTEMD_DBUS_ADDRESS,              /* sender */
                 "org.freedesktop.DBus.Properties", /* interface */
                 "PropertiesChanged",               /* signal */
