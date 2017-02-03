@@ -73,6 +73,7 @@ public:
     void stopUnit(const AppID& appId, const std::string& job, const std::string& instance);
 
 private:
+    std::string cgroup_root_;
     std::shared_ptr<GDBusConnection> userbus_;
 
     guint handle_unitNew{0};     /**< GDBus signal watcher handle for the unit new signal */
@@ -90,53 +91,30 @@ private:
 
         bool operator<(const UnitInfo& b) const
         {
-            if (job < b.job)
-            {
-                return true;
-            }
-            else if (job == b.job)
-            {
-                if (appid < b.appid)
-                {
-                    return true;
-                }
-                else if (appid == b.appid)
-                {
-                    return inst < b.inst;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                return false;
-            }
+            if (job != b.job)
+                return job < b.job;
+
+            if (appid != b.appid)
+                return appid < b.appid;
+
+            return inst < b.inst;
         }
     };
+
+    void getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const std::shared_ptr<GCancellable>& cancel);
 
     struct UnitData
     {
         std::string jobpath;
         std::string unitpath;
-        std::promise<bool> pathpromise;
-        std::future<bool> pathfuture;
-    };
-
-    std::promise<bool> unitPathsInitPromise;
-    std::future<bool> unitPathsInitFuture;
-    void unitPathsInit(void)
-    {
-        unitPathsInitFuture.wait();
     };
 
     std::map<UnitInfo, std::shared_ptr<UnitData>> unitPaths;
-    UnitInfo parseUnit(const std::string& unit);
-    std::string unitName(const UnitInfo& info);
+    UnitInfo parseUnit(const std::string& unit) const;
+    std::string unitName(const UnitInfo& info) const;
     std::string unitPath(const UnitInfo& info);
 
-    void unitNew(const std::string& name, const std::string& path);
+    UnitInfo unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus);
     void unitRemoved(const std::string& name, const std::string& path);
     void emitSignal(
         core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& sig,

@@ -1,3 +1,39 @@
+ubuntu-app-launch (0.9+17.04.20170202.2-0ubuntu1) zesty; urgency=medium
+
+  * SystemD backend added
+  * Make UAL relocatable for Snappy installs (LP: #1623694)
+  * Prioritize 'unity8' interfaces over other supported interfaces
+  * Handle deprecated functions in Mir 0.26
+
+ -- Ted Gould <ted@gould.cx>  Thu, 02 Feb 2017 15:10:39 +0000
+
+ubuntu-app-launch (0.9+17.04.20170124-0ubuntu1) zesty; urgency=medium
+
+  * Change signals into C++ core::signal objects (LP: #1590442)
+  * Abstract out jobs backends and make Upstart one
+  * Move the signals into the jobs classes
+  * Make the signals support finding the instance of the application
+    (LP: #1589637)
+  * Jobs interface specific tests
+
+ -- Ted Gould <ted@gould.cx>  Tue, 24 Jan 2017 14:15:17 +0000
+
+ubuntu-app-launch (0.9+17.04.20170113.1-0ubuntu1) zesty; urgency=medium
+
+  [ Pete Woods ]
+  * Compatibility with unversioned cmake-extras modules (LP: #1563573)
+
+  [ Rodney Dawes ]
+  * Handle more common Icon entries in .desktop files for snaps. (LP:
+    #1639952)
+
+  [ Ted Gould ]
+  * Fixes to the exec-util test to ensure it is more reliable
+  * Reenable OnlyShowIn checking for Desktop files (LP: #1580092,
+    #1606593, #1608546)
+
+ -- Ted Gould <ted@gould.cx>  Fri, 13 Jan 2017 22:16:18 +0000
+
 ubuntu-app-launch (0.9+17.04.20161110.1-0ubuntu1) zesty; urgency=medium
 
   * Make pause/resume non-blocking

@@ -41,10 +41,11 @@ class Base : public ubuntu::app_launch::Application
 {
 public:
     Base(const std::shared_ptr<Registry>& registry);
+    virtual ~Base();
 
     bool hasInstances() override;
 
-    std::string getInstance(const std::shared_ptr<app_info::Desktop>& desktop);
+    std::string getInstance(const std::shared_ptr<app_info::Desktop>& desktop) const;
     virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) = 0;
 
 protected:

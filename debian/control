@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
 Build-Depends: abi-compliance-checker,
                cmake,
-               cmake-extras,
+               cmake-extras (>= 0.10),
                dbus-x11,
                dbus-test-runner,
                debhelper (>= 9),

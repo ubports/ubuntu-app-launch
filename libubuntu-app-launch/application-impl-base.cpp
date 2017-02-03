@@ -42,6 +42,12 @@ namespace app_impls
 Base::Base(const std::shared_ptr<Registry>& registry)
     : _registry(registry)
 {
+    g_debug("Application construction:   %p", static_cast<void*>(this));
+}
+
+Base::~Base()
+{
+    g_debug("Application deconstruction: %p", static_cast<void*>(this));
 }
 
 bool Base::hasInstances()
@@ -97,7 +103,7 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
 
 /** Generates an instance string based on the clock if we're a multi-instance
     application. */
-std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop)
+std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop) const
 {
     if (!desktop)
     {

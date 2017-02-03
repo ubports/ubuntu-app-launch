@@ -27,6 +27,7 @@ class EventuallyFixture : public ::testing::Test
 {
 protected:
     std::chrono::milliseconds _eventuallyTime = std::chrono::minutes{1};
+    std::once_flag checkEventuallyEnv_;
 
     static gboolean timeout_cb(gpointer user_data)
     {
@@ -45,6 +46,14 @@ protected:
 
     testing::AssertionResult eventuallyLoop(std::function<testing::AssertionResult(void)> &testfunc)
     {
+        std::call_once(checkEventuallyEnv_, [this]() {
+            auto eventuallyenv = getenv("EVENTUALLY_TIMEOUT");
+            if (eventuallyenv != nullptr)
+            {
+                _eventuallyTime = std::chrono::seconds{std::atoi(eventuallyenv)};
+            }
+        });
+
         auto loop = std::shared_ptr<GMainLoop>(g_main_loop_new(nullptr, FALSE),
                                                [](GMainLoop *loop) { g_clear_pointer(&loop, g_main_loop_unref); });
 

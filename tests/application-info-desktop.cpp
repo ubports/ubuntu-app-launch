@@ -30,13 +30,13 @@ class ApplicationInfoDesktop : public ::testing::Test
 {
 protected:
     ApplicationInfoDesktop()
-        : test_dekstop_env("SomeFreeDesktop")
+        : test_desktop_env("SomeFreeDesktop")
     {
     }
 
     virtual void SetUp()
     {
-        setenv("XDG_CURRENT_DESKTOP", test_dekstop_env.c_str(), true);
+        setenv("XDG_CURRENT_DESKTOP", test_desktop_env.c_str(), true);
     }
 
     virtual void TearDown()
@@ -53,7 +53,7 @@ protected:
         return keyfile;
     }
 
-    const std::string test_dekstop_env;
+    const std::string test_desktop_env;
 };
 
 TEST_F(ApplicationInfoDesktop, DefaultState)
@@ -120,18 +120,19 @@ TEST_F(ApplicationInfoDesktop, KeyfileErrors)
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
 
-/* Disabling for OTA11 */
-#if 0
     // not shown in Unity
     auto notshowin = defaultKeyfile();
-    g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_dekstop_env + ";").c_str());
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/"), std::runtime_error);
+    g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_desktop_env + ";").c_str());
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
 
     // only show in not Unity
     auto onlyshowin = defaultKeyfile();
     g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", "KDE;Gnome;");
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/"), std::runtime_error);
-#endif
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
 }
 
 TEST_F(ApplicationInfoDesktop, KeyfileIconPatterns)
@@ -191,15 +192,48 @@ TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
 
     // Appearing explicitly in only show list
     auto onlyshowin = defaultKeyfile();
-    g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_dekstop_env + ";Gnome;").c_str());
+    g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_desktop_env + ";Gnome;").c_str());
     EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 
     // Appearing explicitly in only show list not first
     auto onlyshowinmiddle = defaultKeyfile();
     g_key_file_set_string(onlyshowinmiddle.get(), DESKTOP, "OnlyShowIn",
-                          ("Gnome;" + test_dekstop_env + ";KDE;").c_str());
+                          ("Gnome;" + test_desktop_env + ";KDE;").c_str());
     EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowinmiddle, "/", {},
+                                                          ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
+
+    // Chance current to be a list
+    setenv("XDG_CURRENT_DESKTOP", ("notafreedesktop:" + test_desktop_env + "::someotherdesktop").c_str(), true);
+
+    // Make sure we can parse it and just not blow up
+    auto base = defaultKeyfile();
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(base, "/", {},
+                                                          ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
+
+    // Put in both, make sure we reject
+    auto everything = defaultKeyfile();
+    g_key_file_set_string(everything.get(), DESKTOP, "OnlyShowIn", ("Gnome;" + test_desktop_env + ";KDE;").c_str());
+    g_key_file_set_string(everything.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_desktop_env + ";").c_str());
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(everything, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
+
+    // Reject us
+    auto notlist = defaultKeyfile();
+    g_key_file_set_string(notlist.get(), DESKTOP, "NotShowIn", ("Gnome;Foo;" + test_desktop_env + ";KDE;").c_str());
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notlist, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
+
+    // Only Show us
+    g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_desktop_env + ";Gnome;").c_str());
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
+                                                          ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
+
+    // Make sure we can still go with nothing set
+    auto notset = defaultKeyfile();
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(notset, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 }
 

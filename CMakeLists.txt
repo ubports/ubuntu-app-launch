@@ -59,11 +59,6 @@ add_compile_options(
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-STRING(TOLOWER "${CMAKE_BUILD_TYPE}" LOWER_CMAKE_BUILD_TYPE)
-if ("${LOWER_CMAKE_BUILD_TYPE}" STREQUAL "coverage")
-	set(CMAKE_LINK_FLAGS "${CMAKE_LINK_FLAGS} -lgcov")
-endif()
-
 enable_testing()
 
 pkg_check_modules(GLIB2 REQUIRED glib-2.0)
@@ -96,13 +91,13 @@ include_directories(${LTTNG_INCLUDE_DIRS})
 pkg_check_modules(CGMANAGER REQUIRED libcgmanager)
 include_directories(${CGMANAGER_INCLUDE_DIRS})
 
-pkg_check_modules(MIR mirclient)
+pkg_check_modules(MIR REQUIRED mirclient)
 include_directories(${MIR_INCLUDE_DIRS})
 
-pkg_check_modules(WHOOPSIE libwhoopsie)
+pkg_check_modules(WHOOPSIE REQUIRED libwhoopsie)
 include_directories(${WHOOPSIE_INCLUDE_DIRS})
 
-pkg_check_modules(LIBERTINE libertine)
+pkg_check_modules(LIBERTINE REQUIRED libertine)
 include_directories(${LIBERTINE_INCLUDE_DIRS})
 
 pkg_check_modules(CURL libcurl>=7.47)
@@ -238,7 +233,7 @@ if (${enable_tests})
   add_subdirectory(tests)
 endif ()
 
-include(EnableCoverageReport)
+find_package(CoverageReport)
 set(filter-list)
 list(APPEND filter-list "/usr/include")
 list(APPEND filter-list "${CMAKE_SOURCE_DIR}/tests/*")
@@ -252,7 +247,8 @@ ENABLE_COVERAGE_REPORT(
   TESTS
   	application-icon-finder-test
 	application-info-desktop-test
-	cgroup-reap-test exec-util-test
+	cgroup-reap-test
+	exec-util-test
 	failure-test
 	helper-test
 	helper-handshake-test
@@ -260,7 +256,7 @@ ENABLE_COVERAGE_REPORT(
 	libual-test
 	libual-cpp-test
 	list-apps
-#	snap-info-test
+	snapd-info-test
 	zg-test
   FILTER
   	${filter-list}
