@@ -634,6 +634,14 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 copyEnvByPrefix("QT_", env);
                 copyEnvByPrefix("XDG_", env);
                 copyEnv("UBUNTU_APP_LAUNCH_XMIR_PATH", env);
+
+                /* If we're in Unity8 we don't want to pass it's platform, we want
+                 * an application platform. */
+                if (findEnv("QT_QPA_PLATFORM", env) == "mirserver")
+                {
+                    removeEnv("QT_QPA_PLATFORM", env);
+                    env.emplace_back(std::make_pair("QT_QPA_PLATFORM", "ubuntumirclient"));
+                }
             }
 
             /* Mir socket if we don't have one in our env */
