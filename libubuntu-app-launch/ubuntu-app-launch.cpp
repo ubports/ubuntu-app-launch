@@ -936,28 +936,29 @@ ubuntu_app_launch_start_multiple_helper (const gchar * type, const gchar * appid
 static void
 get_mir_session_fd_helper (MirPromptSession * session, size_t count, int const * fdin, void * user_data)
 {
+	auto promise = static_cast<std::promise<int> *>(user_data);
+
 	if (count != 1) {
 		g_warning("Mir trusted session returned %d FDs instead of one", (int)count);
+		promise->set_value(0);
 		return;
 	}
 
-	int * retfd = (int *)user_data;
-	*retfd = fdin[0];
+	promise->set_value(fdin[0]);
 }
 
 /* Setup to get the FD from Mir, blocking */
 static int
 get_mir_session_fd (MirPromptSession * session)
 {
-	int retfd = 0;
-	MirWaitHandle * wait = mir_prompt_session_new_fds_for_prompt_providers(session,
+	std::promise<int> promise;
+
+	mir_prompt_session_new_fds_for_prompt_providers(session,
 		1,
 		get_mir_session_fd_helper,
-		&retfd);
+		&promise);
 
-	mir_wait_for(wait);
-
-	return retfd;
+	return promise.get_future().get();
 }
 
 static GList * open_proxies = NULL;
