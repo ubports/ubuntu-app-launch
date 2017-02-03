@@ -1,3 +1,12 @@
+ubuntu-app-launch (0.9+17.04.20170202.2-0ubuntu1) zesty; urgency=medium
+
+  * SystemD backend added
+  * Make UAL relocatable for Snappy installs (LP: #1623694)
+  * Prioritize 'unity8' interfaces over other supported interfaces
+  * Handle deprecated functions in Mir 0.26
+
+ -- Ted Gould <ted@gould.cx>  Thu, 02 Feb 2017 15:10:39 +0000
+
 ubuntu-app-launch (0.9+17.04.20170124-0ubuntu1) zesty; urgency=medium
 
   * Change signals into C++ core::signal objects (LP: #1590442)
