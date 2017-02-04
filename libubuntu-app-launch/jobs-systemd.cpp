@@ -1371,6 +1371,10 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
     return sig_appFailed;
 }
 
+/** Requests that systemd reset a unit that has been marked as
+    failed so that we can continue to work with it. This includes
+    starting it anew, which can fail if it is left in the failed
+    state. */
 void SystemD::resetUnit(const UnitInfo& info) const
 {
     auto registry = registry_.lock();
