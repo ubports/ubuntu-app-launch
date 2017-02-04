@@ -148,6 +148,9 @@ public:
             dbus_test_dbus_mock_object_add_property(mock, obj, "MainPID", G_VARIANT_TYPE_UINT32,
                                                     g_variant_new_uint32(instance.primaryPid), &error);
             throwError(error);
+            dbus_test_dbus_mock_object_add_property(mock, obj, "Result", G_VARIANT_TYPE_STRING,
+                                                    g_variant_new_string("success"), &error);
+            throwError(error);
 
             /* Control Group */
             auto dir = g_build_filename(controlGroupPath.c_str(), instancePath(instance).c_str(), nullptr);
@@ -474,6 +477,31 @@ public:
         if (error != nullptr)
         {
             g_warning("Unable to emit 'UnitRemoved': %s", error->message);
+            g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
+        }
+    }
+
+    void managerEmitFailed(const Instance& inst)
+    {
+        auto instobj =
+            std::find_if(insts.begin(), insts.end(), [inst](const std::pair<Instance, DbusTestDbusMockObject*>& item) {
+                return item.first.job == inst.job && item.first.appid == inst.appid &&
+                       item.first.instanceid == inst.instanceid;
+            });
+
+        if (instobj == insts.end())
+        {
+            throw std::runtime_error{"Unable to find instance"};
+        }
+
+        GError* error = nullptr;
+        dbus_test_dbus_mock_object_update_property(mock, instobj->second, "Result", g_variant_new_string("fail"),
+                                                   &error);
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to set result to 'fail': %s", error->message);
             g_error_free(error);
             throw std::runtime_error{"Mock disfunctional"};
         }

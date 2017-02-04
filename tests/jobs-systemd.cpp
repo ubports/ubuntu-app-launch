@@ -360,3 +360,18 @@ TEST_F(JobsSystemd, SignalRemove)
 
     EXPECT_EQ(multipleAppID(), removeunit.get_future().get());
 }
+
+TEST_F(JobsSystemd, UnitFailure)
+{
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = manager;
+
+    ubuntu::app_launch::AppID failedappid;
+    manager->appFailed().connect([&](const std::shared_ptr<ubuntu::app_launch::Application> &app,
+                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance> &inst,
+                                     ubuntu::app_launch::Registry::FailureType type) { failedappid = app->appId(); });
+
+    systemd->managerEmitFailed({defaultJobName(), std::string{multipleAppID()}, "1234567890", 1, {}});
+
+    EXPECT_EVENTUALLY_EQ(multipleAppID(), failedappid);
+}
