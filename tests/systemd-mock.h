@@ -140,6 +140,11 @@ public:
                                               "ret = '/'", &error);
         throwError(error);
 
+        dbus_test_dbus_mock_object_add_method(mock, managerobj, "ResetFailedUnit", G_VARIANT_TYPE_STRING,
+                                              nullptr, /* ret type */
+                                              "", &error);
+        throwError(error);
+
         for (auto& instance : instances)
         {
             auto obj = dbus_test_dbus_mock_get_object(mock, instancePath(instance).c_str(),
@@ -430,6 +435,46 @@ public:
             g_variant_unref(paramarray);
 
             retval.emplace_back(unit);
+        }
+
+        return retval;
+    }
+
+    std::list<std::string> resetCalls()
+    {
+        guint len = 0;
+        GError* error = nullptr;
+
+        auto calls = dbus_test_dbus_mock_object_get_method_calls(mock,              /* mock */
+                                                                 managerobj,        /* manager */
+                                                                 "ResetFailedUnit", /* function */
+                                                                 &len,              /* number */
+                                                                 &error             /* error */
+                                                                 );
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to get 'ResetFailedUnit' calls from systemd mock: %s", error->message);
+            g_error_free(error);
+            throw std::runtime_error{"Mock disfunctional"};
+        }
+
+        std::list<std::string> retval;
+
+        for (unsigned int i = 0; i < len; i++)
+        {
+            auto& call = calls[i];
+            gchar* name = nullptr;
+
+            g_variant_get(call.params, "(&s)", &name);
+
+            if (name == nullptr)
+            {
+                g_warning("Invalid 'name' on 'ResetFailedUnit' call");
+                continue;
+            }
+
+            retval.emplace_back(name);
         }
 
         return retval;

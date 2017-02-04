@@ -374,4 +374,13 @@ TEST_F(JobsSystemd, UnitFailure)
     systemd->managerEmitFailed({defaultJobName(), std::string{multipleAppID()}, "1234567890", 1, {}});
 
     EXPECT_EVENTUALLY_EQ(multipleAppID(), failedappid);
+
+    std::list<std::string> resets;
+    EXPECT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int()>([&]() {
+                                  resets = systemd->resetCalls();
+                                  return resets.size();
+                              }));
+
+    EXPECT_EQ(SystemdMock::instanceName({defaultJobName(), std::string{multipleAppID()}, "1234567890", 1, {}}),
+              *resets.begin());
 }
