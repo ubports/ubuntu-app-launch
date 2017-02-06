@@ -160,5 +160,14 @@ core::Signal<const std::shared_ptr<Application>&,
     return reg->impl->jobs->appResumed();
 }
 
+core::Signal<const std::shared_ptr<Application>&,
+             const std::shared_ptr<Application::Instance>&,
+             const std::vector<pid_t>&>&
+    Registry::appFocused(const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->appResumed();
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -42,6 +42,7 @@ int main(int argc, char* argv[])
 
         for (auto instance : app->instances())
         {
+            std::cout << "Focusing instance with PID: " << instance->primaryPid() <<  "\n";
             instance->focus();
         }
     }

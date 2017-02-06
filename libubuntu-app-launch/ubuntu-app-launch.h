@@ -262,6 +262,19 @@ gboolean   ubuntu_app_launch_observer_add_app_resumed  (UbuntuAppLaunchAppPaused
                                                         gpointer                                user_data);
 
 /**
+ * ubuntu_app_launch_observer_add_app_focused:
+ * @observer: (scope notified): Callback when an application is focused
+ * @user_data: (allow-none) (closure): Data to pass to the observer
+ *
+ * Sets up a callback to get called each time an application
+ * is focused. Which is after the SIGCONT has been sent to the pids.
+ *
+ * Return value: Whether adding the observer was successful.
+ */
+gboolean   ubuntu_app_launch_observer_add_app_focused  (UbuntuAppLaunchAppObserver observer,
+                                                        gpointer                                user_data);
+
+/**
  * ubuntu_app_launch_observer_delete_app_starting:
  * @observer: (scope notified): Callback to remove
  * @user_data: (closure) (allow-none): Data that was passed to the observer
