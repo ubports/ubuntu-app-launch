@@ -305,5 +305,10 @@ bool Registry::Impl::isWatchingAppStarting()
     return watchingAppStarting_;
 }
 
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated()
+{
+    return sig_appInfoUpdated;
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

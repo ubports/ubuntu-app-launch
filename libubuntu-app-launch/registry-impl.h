@@ -89,6 +89,8 @@ public:
         return oomHelper_;
     }
 
+    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated();
+
 private:
     Registry* _registry; /**< The Registry that we're spawned from */
 
@@ -106,6 +108,9 @@ private:
 
     /** Path to the OOM Helper */
     std::string oomHelper_;
+
+    /** Signal for application info changing */
+    core::Signal<const std::shared_ptr<Application>&> sig_appInfoUpdated;
 };
 
 }  // namespace app_launch
