@@ -34,8 +34,6 @@ namespace app_impls
  ** Interface Lists
  ************************/
 
-/** All the interfaces that we support running applications with */
-const std::set<std::string> SUPPORTED_INTERFACES{"unity8", "unity7", "x11"};
 /** All the interfaces that we run XMir for by default */
 const std::set<std::string> XMIR_INTERFACES{"unity7", "x11"};
 /** All the interfaces that we tell Unity support lifecycle */
@@ -187,7 +185,7 @@ public:
         }
         else
         {
-            binname = appId_.package.value() + " " + appId_.appname.value();
+            binname = appId_.package.value() + "." + appId_.appname.value();
         }
 
         binname = "/snap/bin/" + binname + " " + params;
@@ -226,6 +224,8 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
     }
 
     info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
+
+    g_debug("Application Snap object for AppID '%s'", std::string(appid).c_str());
 }
 
 /** Uses the findInterface() function to find the interface if we don't
@@ -239,6 +239,15 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
 }
 
+/** Operator to compare apps for our sets */
+struct appcompare
+{
+    bool operator()(const std::shared_ptr<Application>& a, const std::shared_ptr<Application>& b) const
+    {
+        return a->appId() < b->appId();
+    }
+};
+
 /** Lists all the Snappy apps that are using one of our supported interfaces.
     Also makes sure they're valid.
 
@@ -246,25 +255,35 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
 */
 std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
 {
-    std::list<std::shared_ptr<Application>> apps;
+    std::set<std::shared_ptr<Application>, appcompare> apps;
 
-    for (const auto& interface : SUPPORTED_INTERFACES)
-    {
+    auto addAppsForInterface = [&](const std::string& interface) {
         for (const auto& id : registry->impl->snapdInfo.appsForInterface(interface))
         {
             try
             {
                 auto app = std::make_shared<Snap>(id, registry, interface);
-                apps.emplace_back(app);
+                apps.emplace(app);
             }
             catch (std::runtime_error& e)
             {
-                g_warning("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
+                g_debug("Unable to make Snap object for '%s': %s", std::string(id).c_str(), e.what());
             }
         }
+    };
+
+    for (const auto& interface : LIFECYCLE_INTERFACES)
+    {
+        addAppsForInterface(interface);
     }
 
-    return apps;
+    /* If an app has both, this will get rejected */
+    for (const auto& interface : XMIR_INTERFACES)
+    {
+        addAppsForInterface(interface);
+    }
+
+    return std::list<std::shared_ptr<Application>>(apps.begin(), apps.end());
 }
 
 /** Returns the stored AppID */
@@ -283,7 +302,15 @@ std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Regist
 {
     auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
 
-    for (const auto& interface : SUPPORTED_INTERFACES)
+    for (const auto& interface : LIFECYCLE_INTERFACES)
+    {
+        if (ifaceset.find(interface) != ifaceset.end())
+        {
+            return interface;
+        }
+    }
+
+    for (const auto& interface : XMIR_INTERFACES)
     {
         if (ifaceset.find(interface) != ifaceset.end())
         {
@@ -439,7 +466,7 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     std::list<std::pair<std::string, std::string>> retval;
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", info_->xMirEnable().value() ? "1" : "0"));
-    if (info_->xMirEnable())
+    if (info_->xMirEnable() && getenv("SNAP") == nullptr)
     {
         /* If we're setting up XMir we also need the other helpers
            that libertine is helping with */
@@ -454,6 +481,8 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
     }
     else
     {
+        /* If we're in a snap the libertine helpers are setup by
+           the snap stuff */
         retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
     }
 
@@ -466,9 +495,10 @@ std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 */
 std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appid_, "application-snap", {}, urls, jobs::manager::launchMode::STANDARD,
-                                         envfunc);
+    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -478,8 +508,9 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 */
 std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appid_, "application-snap", {}, urls, jobs::manager::launchMode::TEST,
+    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::TEST,
                                          envfunc);
 }
 

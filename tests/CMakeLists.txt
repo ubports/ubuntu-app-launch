@@ -67,6 +67,14 @@ target_link_libraries (jobs-base-test ${GMOCK_LIBRARIES} ${GTEST_MAIN_LIBRARIES}
 
 add_test(NAME jobs-base-test COMMAND jobs-base-test)
 
+# Jobs Systemd Test
+
+add_executable (jobs-systemd
+	jobs-systemd.cpp)
+target_link_libraries (jobs-systemd ${GMOCK_LIBRARIES} launcher-static ${DBUSTEST_LIBRARIES})
+
+add_test(NAME jobs-systemd COMMAND jobs-systemd)
+
 # Snapd Info Test
 
 if(CURL_FOUND)
@@ -157,6 +165,11 @@ add_test (desktop-hook-test desktop-hook-test.sh)
 configure_file ("xmir-helper-test.in" "${CMAKE_CURRENT_BINARY_DIR}/xmir-helper-test" @ONLY)
 add_test (xmir-helper-test xmir-helper-test)
 
+# Snappy XMir Wrapper Test
+
+configure_file("snappy-xmir-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/snappy-xmir-test.sh" @ONLY) 
+add_test (NAME snappy-xmir-test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/snappy-xmir-test.sh)
+
 # Formatted code
 
 add_custom_target(format-tests
@@ -167,8 +180,11 @@ add_custom_target(format-tests
 	list-apps.cpp
 	eventually-fixture.h
 	jobs-base-test.cpp
+	jobs-systemd.cpp
+	registry-mock.h
 	snapd-info-test.cpp
 	snapd-mock.h
 	spew-master.h
+	systemd-mock.h
 	zg-test.cc
 )

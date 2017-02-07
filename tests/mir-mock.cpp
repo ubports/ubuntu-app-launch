@@ -33,13 +33,12 @@ mir_prompt_session_release_sync (MirPromptSession * session)
 }
 
 MirWaitHandle *
-mir_prompt_session_new_fds_for_prompt_providers (MirPromptSession * session, unsigned int numfds, mir_client_fd_callback cb, void * data) {
+mir_prompt_session_new_fds_for_prompt_providers (MirPromptSession * session, unsigned int numfds, void(*cb)(MirPromptSession * session, size_t count, int const * fdin, void * user_data), void * data) {
 	if (reinterpret_cast<char *>(session) != valid_trust_session) {
 		std::cerr << "Releasing a Mir Trusted Prompt that isn't valid" << std::endl;
 		exit(1);
 	}
 
-	/* TODO: Put in another thread to be more mir like */
 	std::thread * thread = new std::thread([session, numfds, cb, data]() {
 		int fdlist[numfds];
 
@@ -49,18 +48,9 @@ mir_prompt_session_new_fds_for_prompt_providers (MirPromptSession * session, uns
 		cb(session, numfds, fdlist, data);
 	});
 
+	thread->detach();
+
 	return reinterpret_cast<MirWaitHandle *>(thread);
-}
-
-void
-mir_wait_for (MirWaitHandle * wait)
-{
-	auto thread = reinterpret_cast<std::thread *>(wait);
-
-	if (thread->joinable())
-		thread->join();
-
-	delete thread;
 }
 
 static const char * valid_connection_str = "Valid Mir Connection";

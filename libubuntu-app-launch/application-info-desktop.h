@@ -106,6 +106,13 @@ public:
         return _exec;
     }
 
+    struct SingleInstanceTag;
+    typedef TypeTagger<SingleInstanceTag, bool> SingleInstance;
+    virtual SingleInstance singleInstance()
+    {
+        return _singleInstance;
+    }
+
 protected:
     std::shared_ptr<GKeyFile> _keyfile;
     std::string _basePath;
@@ -125,6 +132,7 @@ protected:
 
     XMirEnable _xMirEnable;
     Exec _exec;
+    SingleInstance _singleInstance;
 };
 
 }  // namespace AppInfo

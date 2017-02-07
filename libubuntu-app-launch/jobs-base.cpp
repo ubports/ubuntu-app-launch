@@ -24,6 +24,7 @@
 
 #include "application-impl-base.h"
 #include "jobs-base.h"
+#include "jobs-systemd.h"
 #include "jobs-upstart.h"
 #include "registry-impl.h"
 
@@ -38,6 +39,7 @@ namespace manager
 
 Base::Base(const std::shared_ptr<Registry>& registry)
     : registry_(registry)
+    , allJobs_{"application-click", "application-legacy", "application-snap"}
     , dbus_(registry->impl->_dbus)
 {
 }
@@ -61,7 +63,25 @@ Base::~Base()
 
 std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
 {
-    return std::make_shared<jobs::manager::Upstart>(registry);
+    /* Checking to see if we have a user bus, that is only started
+       by systemd so we're in good shape if we have one. We're using
+       the path instead of the RUNTIME variable because we want to work
+       around the case of being relocated by the snappy environment */
+    if (g_file_test(SystemD::userBusPath().c_str(), G_FILE_TEST_EXISTS))
+    {
+        g_debug("Building a systemd jobs manager");
+        return std::make_shared<jobs::manager::SystemD>(registry);
+    }
+    else
+    {
+        g_debug("Building an Upstart jobs manager");
+        return std::make_shared<jobs::manager::Upstart>(registry);
+    }
+}
+
+const std::set<std::string>& Base::getAllJobs() const
+{
+    return allJobs_;
 }
 
 /** Structure to track the data needed for upstart events. This cleans
@@ -438,7 +458,9 @@ bool Base::isRunning()
 bool Base::hasPid(pid_t pid)
 {
     auto vpids = pids();
-    return std::find(vpids.begin(), vpids.end(), pid) != vpids.end();
+    bool hasit = std::find(vpids.begin(), vpids.end(), pid) != vpids.end();
+    g_debug("Checking for PID %d on AppID '%s' result: %s", pid, std::string(appId_).c_str(), hasit ? "YES" : "NO");
+    return hasit;
 }
 
 /** Pauses this application by sending SIGSTOP to all the PIDs in the
@@ -743,6 +765,29 @@ void Base::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
         g_error_free(error);
         return;
     }
+}
+
+/** Reformat a C++ vector of URLs into a C GStrv of strings
+
+    \param urls Vector of URLs to make into C strings
+*/
+std::shared_ptr<gchar*> Base::urlsToStrv(const std::vector<Application::URL>& urls)
+{
+    if (urls.empty())
+    {
+        return {};
+    }
+
+    auto array = g_array_new(TRUE, FALSE, sizeof(gchar*));
+
+    for (auto url : urls)
+    {
+        auto str = g_strdup(url.value().c_str());
+        g_debug("Converting URL: %s", str);
+        g_array_append_val(array, str);
+    }
+
+    return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
 }
 
 }  // namespace instance

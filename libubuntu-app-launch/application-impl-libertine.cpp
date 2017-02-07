@@ -65,6 +65,12 @@ Libertine::Libertine(const AppID::Package& container,
     if (!_keyfile)
         throw std::runtime_error{"Unable to find a keyfile for application '" + appname.value() + "' in container '" +
                                  container.value() + "'"};
+
+    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path,
+                                                   app_info::DesktopFlags::XMIR_DEFAULT, _registry);
+
+    g_debug("Application Libertine object for container '%s' app '%s'", container.value().c_str(),
+            appname.value().c_str());
 }
 
 std::shared_ptr<GKeyFile> Libertine::keyfileFromPath(const std::string& pathname)
@@ -265,11 +271,6 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 
 std::shared_ptr<Application::Info> Libertine::info()
 {
-    if (!appinfo_)
-    {
-        appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path,
-                                                       app_info::DesktopFlags::XMIR_DEFAULT, _registry);
-    }
     return appinfo_;
 }
 
@@ -317,15 +318,17 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
 
 std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::STANDARD,
-                                         envfunc);
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls,
+                                         jobs::manager::launchMode::STANDARD, envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appId(), "application-legacy", {}, urls, jobs::manager::launchMode::TEST,
+    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
                                          envfunc);
 }
 

@@ -25,6 +25,8 @@
 
 #include <sys/wait.h>
 
+#include <future>
+
 gboolean
 timeout (gpointer ploop)
 {
@@ -47,13 +49,15 @@ app_failed (const gchar * appid, UbuntuAppLaunchAppFailed failure_type, gpointer
 void
 fd_getter (MirPromptSession * session, size_t count, int const * fdsin, void * pfds)
 {
+	auto promise = reinterpret_cast<std::promise<int> *>(pfds);
+
 	if (count != 1) {
 		g_warning("Didn't get the right number of FDs");
+		promise->set_value(0);
 		return;
 	}
 
-	int * fds = (int *)pfds;
-	fds[0] = fdsin[0];
+	promise->set_value(fdsin[0]);
 }
 
 int
@@ -98,10 +102,10 @@ main (int argc, char * argv[])
 
 	MirPromptSession * session = mir_connection_create_prompt_session_sync(mir, pid, NULL, NULL);
 
-	int fd = 0;
-	MirWaitHandle * wait = mir_prompt_session_new_fds_for_prompt_providers(session, 1, fd_getter, &fd);
+	std::promise<int> fdpromise;
+	mir_prompt_session_new_fds_for_prompt_providers(session, 1, fd_getter, &fdpromise);
 
-	mir_wait_for(wait);
+	auto fd = fdpromise.get_future().get(); 
 
 	if (fd == 0) {
 		g_critical("Unable to get FD for prompt session");

@@ -42,6 +42,12 @@ namespace app_impls
 Base::Base(const std::shared_ptr<Registry>& registry)
     : _registry(registry)
 {
+    g_debug("Application construction:   %p", static_cast<void*>(this));
+}
+
+Base::~Base()
+{
+    g_debug("Application deconstruction: %p", static_cast<void*>(this));
 }
 
 bool Base::hasInstances()
@@ -93,6 +99,26 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
     g_free(nv_shader_cachedir);
 
     return retval;
+}
+
+/** Generates an instance string based on the clock if we're a multi-instance
+    application. */
+std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop) const
+{
+    if (!desktop)
+    {
+        g_warning("Invalid desktop file passed to getInstance");
+        return {};
+    }
+
+    if (desktop->singleInstance())
+    {
+        return {};
+    }
+    else
+    {
+        return std::to_string(g_get_real_time());
+    }
 }
 
 }  // namespace app_impls

@@ -48,6 +48,17 @@ Registry::Impl::Impl(Registry* registry)
         return std::shared_ptr<GDBusConnection>(g_bus_get_sync(G_BUS_TYPE_SESSION, cancel.get(), nullptr),
                                                 [](GDBusConnection* bus) { g_clear_object(&bus); });
     });
+
+    /* Determine where we're getting the helper from */
+    auto goomHelper = g_getenv("UBUNTU_APP_LAUNCH_OOM_HELPER");
+    if (goomHelper != nullptr)
+    {
+        oomHelper_ = goomHelper;
+    }
+    else
+    {
+        oomHelper_ = OOM_HELPER;
+    }
 }
 
 void Registry::Impl::initClick()
@@ -132,7 +143,7 @@ std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& 
         if (error != nullptr)
         {
             auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            g_critical("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
+            g_debug("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
             return std::shared_ptr<JsonObject>();
         }
 

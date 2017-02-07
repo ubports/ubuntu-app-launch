@@ -74,6 +74,8 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
     {
         throw std::runtime_error{"Looking like a legacy app, but should be a Snap: " + appname.value()};
     }
+
+    g_debug("Application Legacy object for app '%s'", appname.value().c_str());
 }
 
 std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(const AppID::AppName& name)
@@ -297,7 +299,25 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     info();
 
     retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
-    if (appinfo_->xMirEnable())
+    auto execline = appinfo_->execLine().value();
+
+    auto snappath = getenv("SNAP");
+    if (snappath != nullptr)
+    {
+        /* This means we're inside a snap, and if we're in a snap then
+           the legacy application is in a snap. We need to try and set
+           up the proper environment for that app */
+        retval.emplace_back(std::make_pair("SNAP", snappath));
+
+        const char* legacyexec = getenv("UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC");
+        if (legacyexec == nullptr)
+        {
+            legacyexec = "/snap/bin/unity8-session.legacy-exec";
+        }
+
+        execline = std::string{legacyexec} + " " + execline;
+    }
+    else if (appinfo_->xMirEnable().value())
     {
         /* If we're setting up XMir we also need the other helpers
            that libertine is helping with */
@@ -307,13 +327,10 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
             libertine_launch = LIBERTINE_LAUNCH;
         }
 
-        retval.emplace_back(
-            std::make_pair("APP_EXEC", std::string(libertine_launch) + " " + appinfo_->execLine().value()));
+        execline = std::string{libertine_launch} + " " + execline;
     }
-    else
-    {
-        retval.emplace_back(std::make_pair("APP_EXEC", appinfo_->execLine().value()));
-    }
+
+    retval.emplace_back(std::make_pair("APP_EXEC", execline));
 
     /* Honor the 'Path' key if it is in the desktop file */
     if (g_key_file_has_key(_keyfile.get(), "Desktop Entry", "Path", nullptr))
@@ -342,21 +359,6 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     return retval;
 }
 
-/** Generates an instance string based on the clock if we're a multi-instance
-    application. */
-std::string Legacy::getInstance()
-{
-    auto single = g_key_file_get_boolean(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Single-Instance", nullptr);
-    if (single)
-    {
-        return {};
-    }
-    else
-    {
-        return std::to_string(g_get_real_time());
-    }
-}
-
 /** Create an UpstartInstance for this AppID using the UpstartInstance launch
     function.
 
@@ -364,7 +366,7 @@ std::string Legacy::getInstance()
 */
 std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Application::URL>& urls)
 {
-    std::string instance = getInstance();
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
@@ -379,7 +381,7 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
 */
 std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Application::URL>& urls)
 {
-    std::string instance = getInstance();
+    auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };

@@ -84,6 +84,11 @@ public:
     static void watchingAppStarting(bool rWatching);
     static bool isWatchingAppStarting();
 
+    const std::string& oomHelper() const
+    {
+        return oomHelper_;
+    }
+
 private:
     Registry* _registry; /**< The Registry that we're spawned from */
 
@@ -98,6 +103,9 @@ private:
     /** All of our icon finders based on the path that they're looking
         into */
     std::unordered_map<std::string, std::shared_ptr<IconFinder>> _iconFinders;
+
+    /** Path to the OOM Helper */
+    std::string oomHelper_;
 };
 
 }  // namespace app_launch

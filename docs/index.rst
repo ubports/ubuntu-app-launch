@@ -18,6 +18,56 @@ in a way that they're discoverable and usable by higher level applications.
 
 .. _Upstart: http://upstart.ubuntu.com/
 
+
+Environment Variables
+=====================
+
+There are a few environment variables that can effect the behavior of UAL while
+it is running.
+
+UBUNTU_APP_LAUNCH_CG_MANAGER_NAME
+  The DBus name that CG Manager registers under if it is on the session bus.
+
+UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS
+  Tell UAL to look on the session bus for CG Manager.
+
+UBUNTU_APP_LAUNCH_DEMANGLER
+  Path to the UAL demangler tool that will get the Mir FD for trusted prompt session.
+
+UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT
+  Wait as long as Snapd wants to return data instead of erroring after 100ms.
+
+UBUNTU_APP_LAUNCH_LEGACY_ROOT
+  Set the path that represents the root for legacy applications.
+
+UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH
+  Path to the libertine launch utility for setting up libertine containers and XMir based legacy apps.
+
+UBUNTU_APP_LAUNCH_LINK_FARM
+  Path to the link farm that is created by Click of all the installed Click applications.
+
+UBUNTU_APP_LAUNCH_OOM_HELPER
+  Path to the setuid helper that configures OOM values on application processes that we otherwise couldn't, mostly this is for Oxide.
+
+UBUNTU_APP_LAUNCH_OOM_PROC_PATH
+  Path to look for the files to set OOM values, defaults to `/proc`.
+
+UBUNTU_APP_LAUNCH_SNAP_BASEDIR
+  The place where snaps are installed in the system, `/snap` is the default.
+
+UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC
+  A snappy command that is used to launch legacy applications in the current snap, to ensure the environment gets configured correctly, defaults to `/snap/bin/unity8-session.legacy-exec`
+
+UBUNTU_APP_LAUNCH_SNAPD_SOCKET
+  Path to the snapd socket.
+
+UBUNTU_APP_LAUNCH_XMIR_HELPER
+  Tool that helps to start XMir and sets the DISPLAY variable for applications
+
+UBUNTU_APP_LAUNCH_XMIR_PATH
+  Specifies the location of the XMir binary to use
+
+
 API Documentation
 =================
 

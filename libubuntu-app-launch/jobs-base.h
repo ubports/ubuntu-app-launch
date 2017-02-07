@@ -24,6 +24,7 @@
 
 #include <core/signal.h>
 #include <gio/gio.h>
+#include <set>
 
 namespace ubuntu
 {
@@ -76,6 +77,7 @@ protected:
     static void oomValueToPid(pid_t pid, const oom::Score oomvalue);
     static void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
     static std::string pidToOomPath(pid_t pid);
+    static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
 };
 
 }  // namespace instance
@@ -113,6 +115,8 @@ public:
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
 
+    const std::set<std::string>& getAllJobs() const;
+
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
 
     /* Signals to apps */
@@ -140,6 +144,9 @@ public:
 protected:
     /** A link to the registry */
     std::weak_ptr<Registry> registry_;
+
+    /** A set of all the job names */
+    std::set<std::string> allJobs_;
 
     /** The DBus connection we're connecting to */
     std::shared_ptr<GDBusConnection> dbus_;
