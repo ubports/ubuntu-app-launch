@@ -59,6 +59,18 @@ int main(int argc, char* argv[])
 
         std::cout << ")" << std::endl;
     });
+    registry.appFocused().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app,
+                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
+                                     const std::vector<pid_t>& pids) {
+        std::cout << "Focused: " << (std::string)app->appId() << " (";
+
+        for (auto pid : pids)
+        {
+            std::cout << std::to_string(pid) << " ";
+        }
+
+        std::cout << ")" << std::endl;
+    });
     registry.appFailed().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app,
                                     const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                                     ubuntu::app_launch::Registry::FailureType type) {
