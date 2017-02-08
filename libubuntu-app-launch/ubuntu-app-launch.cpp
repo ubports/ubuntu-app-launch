@@ -635,18 +635,6 @@ ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedOb
 
 static std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> appFocusedObservers;
 
-gboolean
-ubuntu_app_launch_observer_add_app_focused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
-{
-        return observer_add_pause<&ubuntu::app_launch::Registry::appFocused>(observer, user_data, appFocusedObservers);
-}
-
-gboolean
-ubuntu_app_launch_observer_delete_app_focused (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data)
-{
-        return observer_delete<UbuntuAppLaunchAppPausedResumedObserver>(observer, user_data, appFocusedObservers);
-}
-
 typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);
 
 static void

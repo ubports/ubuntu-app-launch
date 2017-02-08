@@ -59,7 +59,6 @@ Base::~Base()
     dohandle(handle_managerSignalStarting);
     dohandle(handle_appPaused);
     dohandle(handle_appResumed);
-    dohandle(handle_appFocused);
 }
 
 std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
@@ -228,55 +227,6 @@ core::Signal<const std::shared_ptr<Application>&,
     });
 
     return sig_appResumed;
-}
-
-/** Grab the signal object for application resumed. If we're not already listing for
-    those signals this sets up a listener for them. */
-core::Signal<const std::shared_ptr<Application>&,
-             const std::shared_ptr<Application::Instance>&,
-             const std::vector<pid_t>&>&
-    Base::appFocused()
-{
-    std::call_once(flag_appFocused, [this]() {
-        auto reg = registry_.lock();
-
-        reg->impl->thread.executeOnThread<bool>([this, reg]() {
-            upstartEventData* data = new upstartEventData{reg};
-
-            handle_appFocused = g_dbus_connection_signal_subscribe(
-                reg->impl->_dbus.get(),          /* bus */
-                nullptr,                         /* sender */
-                "com.canonical.UbuntuAppLaunch", /* interface */
-                "ApplicationFocused",            /* signal */
-                "/",                             /* path */
-                nullptr,                         /* arg0 */
-                G_DBUS_SIGNAL_FLAGS_NONE,
-                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    auto reg = data->weakReg.lock();
-
-                    if (!reg)
-                    {
-                        g_warning("Registry object invalid!");
-                        return;
-                    }
-
-                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                    auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
-                    manager->pauseEventEmitted(manager->sig_appFocused, sparams, reg);
-                },    /* callback */
-                data, /* user data */
-                [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    delete data;
-                }); /* user data destroy */
-
-            return true;
-        });
-    });
-
-    return sig_appFocused;
 }
 
 /** Take the GVariant of parameters and turn them into an application and

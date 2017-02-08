@@ -248,12 +248,11 @@ public:
         virtual void pause() = 0;
         /** Resume, or send SIGCONT, to the PIDs in this Application::Instance */
         virtual void resume() = 0;
-        /** Resume, or send SIGCONT, to the PIDs in this Application::Instance 
-            and signal the shell to focus the Application */
-        virtual void focus() = 0;
         /** Stop, or send SIGTERM, to the PIDs in this Application::Instance, if
             the PIDs do not respond to the SIGTERM they will be SIGKILL'd */
         virtual void stop() = 0;
+        /** Signal the shell to focus the Application::Instance */
+        virtual void focus() = 0;
     };
 
     /** A quick check to see if this application has any running instances */
