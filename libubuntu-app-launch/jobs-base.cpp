@@ -553,7 +553,26 @@ void Base::focus()
 {
     g_debug("Focusing application: %s", std::string(appId_).c_str());
 
-    pidListToDbus(registry_, appId_, instance_, pids(), "ApplicationFocused");
+    GError* error = nullptr;
+    g_dbus_connection_emit_signal(registry_->impl->_dbus.get(),          /* bus */
+                                  nullptr,                         /* destination */
+                                  "/",                             /* path */
+                                  "com.canonical.UbuntuAppLaunch", /* interface */
+                                  "UnityFocusRequest",                  /* signal */
+                                  g_variant_new("(ss)", std::string(appId_).c_str(), instance_.c_str()),
+                                  &error);                         /* error */
+
+    if (error != nullptr)
+    {
+        g_warning("Unable to emit signal 'UnityFocusRequest' for appid '%s': '%s'", std::string(appId_).c_str(),
+                  error->message);
+        g_error_free(error);
+    }
+    else
+    {
+        g_debug("Emmitted 'UnityFocusRequest' to DBus");
+        pidListToDbus(registry_, appId_, instance_, pids(), "ApplicationFocused");
+    }
 }
 
 /** Go through the list of PIDs calling a function and handling
