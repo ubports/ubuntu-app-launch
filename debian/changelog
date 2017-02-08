@@ -1,3 +1,9 @@
+ubuntu-app-launch (0.9+17.04.20170206-0ubuntu1) zesty; urgency=medium
+
+  * Reset failed units so they can be tried again (LP: #1655754)
+
+ -- Ted Gould <ted@gould.cx>  Mon, 06 Feb 2017 16:00:40 +0000
+
 ubuntu-app-launch (0.9+17.04.20170202.2-0ubuntu1) zesty; urgency=medium
 
   * SystemD backend added
