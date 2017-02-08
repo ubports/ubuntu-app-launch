@@ -450,25 +450,6 @@ TEST_F(LibUAL, StopApplication)
 
 }
 
-/* NOTE: The fact that there is 'libertine-data' in these strings is because
-   we're using one CACHE_HOME for this test suite and the libertine functions
-   need to pull things from there, where these are only comparisons. It's just
-   what value is in the environment variable */
-TEST_F(LibUAL, ApplicationLog)
-{
-	gchar * click_log = ubuntu_app_launch_application_log_path("com.test.good_application_1.2.3");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log", click_log);
-	g_free(click_log);
-
-	gchar * legacy_single = ubuntu_app_launch_application_log_path("single");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log", legacy_single);
-	g_free(legacy_single);
-
-	gchar * legacy_multiple = ubuntu_app_launch_application_log_path("multiple");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log", legacy_multiple);
-	g_free(legacy_multiple);
-}
-
 TEST_F(LibUAL, ApplicationPid)
 {
 	/* Check bad params */

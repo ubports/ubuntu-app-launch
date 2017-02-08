@@ -694,34 +694,6 @@ TEST_F(LibUAL, StopSnapApplication)
 }
 #endif
 
-/* NOTE: The fact that there is 'libertine-data' in these strings is because
-   we're using one CACHE_HOME for this test suite and the libertine functions
-   need to pull things from there, where these are only comparisons. It's just
-   what value is in the environment variable */
-TEST_F(LibUAL, ApplicationLog)
-{
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
-    auto app = ubuntu::app_launch::Application::create(appid, registry);
-
-    EXPECT_EQ(
-        std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log"),
-        app->instances()[0]->logPath());
-
-    appid = ubuntu::app_launch::AppID::find(registry, "single");
-    app = ubuntu::app_launch::Application::create(appid, registry);
-
-    ASSERT_LT(0, int(app->instances().size()));
-
-    EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
-              app->instances()[0]->logPath());
-
-    appid = ubuntu::app_launch::AppID::find(registry, "multiple");
-    app = ubuntu::app_launch::Application::create(appid, registry);
-
-    EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log"),
-              app->instances()[0]->logPath());
-}
-
 TEST_F(LibUAL, ApplicationPid)
 {
     /* Check bad params */
