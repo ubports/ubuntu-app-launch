@@ -62,7 +62,6 @@ public:
 
     /* Query lifecycle */
     pid_t primaryPid() override;
-    std::string logPath() override;
     std::vector<pid_t> pids() override;
 
     /* Manage lifecycle */
@@ -208,18 +207,6 @@ std::string Upstart::upstartName()
     {
         path += instance_;
     }
-
-    return path;
-}
-
-/** Gets the path to the log file for this instance */
-std::string Upstart::logPath()
-{
-    std::string logfile = upstartName() + ".log";
-
-    gchar* cpath = g_build_filename(g_get_user_cache_dir(), "upstart", logfile.c_str(), nullptr);
-    std::string path(cpath);
-    g_free(cpath);
 
     return path;
 }

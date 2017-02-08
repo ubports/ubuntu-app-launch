@@ -215,10 +215,6 @@ public:
         virtual bool isRunning() = 0;
 
         /* Instance Info */
-        /** Path to the log file for stdout/stderr for this instance of the
-            application. */
-        virtual std::string logPath() = 0;
-
         /* PIDs */
         /** Get the primary PID for this Application::Instance, this will return
             zero when it is not running. The primary PID is the PID keeping the
