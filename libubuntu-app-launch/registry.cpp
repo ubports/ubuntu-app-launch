@@ -166,7 +166,7 @@ core::Signal<const std::shared_ptr<Application>&,
     Registry::appFocused(const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);
-    return reg->impl->jobs->appResumed();
+    return reg->impl->jobs->appFocused();
 }
 
 }  // namespace app_launch
