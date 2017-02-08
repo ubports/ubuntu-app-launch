@@ -27,7 +27,7 @@ Build-Depends: abi-compliance-checker,
                libproperties-cpp-dev,
 # For ABI check to distro version
 # Make sure to set DEB_BUILD_PROFILES when bootstrapping
-               libubuntu-app-launch2-dev <!stage1>,
+               libubuntu-app-launch3-dev <!stage1>,
                libupstart-dev,
                libwhoopsie-dev (>= 0.2.52),
                libzeitgeist-2.0-dev,
