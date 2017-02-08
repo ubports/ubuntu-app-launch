@@ -22,5 +22,3 @@ override_dh_installdeb:
 		debian/ubuntu-app-launch.postinst.in \
 		> debian/ubuntu-app-launch.postinst
 	dh_installdeb
-
-override_dh_auto_test:
