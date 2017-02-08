@@ -370,18 +370,6 @@ std::shared_ptr<Application::Instance> Click::findInstance(const std::string& in
     return _registry->impl->jobs->existing(appId(), "application-click", instanceid, std::vector<Application::URL>{});
 }
 
-std::shared_ptr<Application::Instance> Click::findInstance(const pid_t& pid)
-{
-    for (auto instance : instances())
-    {
-        if (instance->hasPid(pid))
-        {
-            return instance;
-        }
-    }
-    return nullptr;
-}
-
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -519,18 +519,6 @@ std::shared_ptr<Application::Instance> Snap::findInstance(const std::string& ins
     return _registry->impl->jobs->existing(appId(), "application-snap", instanceid, std::vector<Application::URL>{});
 }
 
-std::shared_ptr<Application::Instance> Snap::findInstance(const pid_t& pid)
-{
-    for (auto instance : instances())
-    {
-        if (instance->hasPid(pid))
-        {
-            return instance;
-        }
-    }
-    return nullptr;
-}
-
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu
