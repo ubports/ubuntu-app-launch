@@ -554,12 +554,16 @@ void Base::focus()
     g_debug("Focusing application: %s", std::string(appId_).c_str());
 
     GError* error = nullptr;
-    g_dbus_connection_emit_signal(registry_->impl->_dbus.get(),          /* bus */
+    GVariantBuilder params;
+    g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
+    g_variant_builder_add_value(&params, g_variant_new_string(std::string(appId_).c_str()));
+    g_variant_builder_add_value(&params, g_variant_new_string(instance_.c_str()));
+    g_dbus_connection_emit_signal(registry_->impl->_dbus.get(),    /* bus */
                                   nullptr,                         /* destination */
                                   "/",                             /* path */
                                   "com.canonical.UbuntuAppLaunch", /* interface */
-                                  "UnityFocusRequest",                  /* signal */
-                                  g_variant_new("(ss)", std::string(appId_).c_str(), instance_.c_str()),
+                                  "UnityFocusRequest",             /* signal */
+                                  g_variant_builder_end(&params),  /* params */
                                   &error);                         /* error */
 
     if (error != nullptr)
