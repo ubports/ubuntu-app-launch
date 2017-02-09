@@ -53,12 +53,19 @@ protected:
         return keyfile;
     }
 
+    ubuntu::app_launch::AppID simpleAppID()
+    {
+        return {ubuntu::app_launch::AppID::Package::from_raw("package"),
+                ubuntu::app_launch::AppID::AppName::from_raw("appname"),
+                ubuntu::app_launch::AppID::Version::from_raw("version")};
+    }
+
     const std::string test_desktop_env;
 };
 
 TEST_F(ApplicationInfoDesktop, DefaultState)
 {
-    auto appinfo = ubuntu::app_launch::app_info::Desktop(defaultKeyfile(), "/", {},
+    auto appinfo = ubuntu::app_launch::app_info::Desktop(simpleAppID(), defaultKeyfile(), "/", {},
                                                          ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr);
 
     EXPECT_EQ("Foo App", appinfo.name().value());
@@ -86,51 +93,51 @@ TEST_F(ApplicationInfoDesktop, DefaultState)
 TEST_F(ApplicationInfoDesktop, KeyfileErrors)
 {
     // empty
-    EXPECT_THROW(
-        ubuntu::app_launch::app_info::Desktop({}, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
-        std::runtime_error);
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), {}, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
+                 std::runtime_error);
 
     // empty name
     auto noname = defaultKeyfile();
     g_key_file_remove_key(noname.get(), DESKTOP, "Name", nullptr);
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(noname, "/", {},
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), noname, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
 
     // wrong type
     auto wrongtype = defaultKeyfile();
     g_key_file_set_string(wrongtype.get(), DESKTOP, "Type", "MimeType");
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(wrongtype, "/", {},
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), wrongtype, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
 
     // not displayable
     auto nodisplay = defaultKeyfile();
     g_key_file_set_boolean(nodisplay.get(), DESKTOP, "NoDisplay", TRUE);
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(nodisplay, "/", {},
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), nodisplay, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
     EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(
-        nodisplay, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::ALLOW_NO_DISPLAY, nullptr));
+        simpleAppID(), nodisplay, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::ALLOW_NO_DISPLAY, nullptr));
 
     // hidden
     auto hidden = defaultKeyfile();
     g_key_file_set_string(hidden.get(), DESKTOP, "Hidden", "true");
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(hidden, "/", {},
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), hidden, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
 
     // not shown in Unity
     auto notshowin = defaultKeyfile();
     g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_desktop_env + ";").c_str());
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/", {},
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), notshowin, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
 
     // only show in not Unity
     auto onlyshowin = defaultKeyfile();
     g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", "KDE;Gnome;");
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), onlyshowin, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
 }
@@ -141,13 +148,13 @@ TEST_F(ApplicationInfoDesktop, KeyfileIconPatterns)
     std::string datadir = "/foo/usr/share";
     std::string basedir = "/foo";
 
-    auto defappinfo = ubuntu::app_launch::app_info::Desktop(defkeyfile, datadir, basedir,
+    auto defappinfo = ubuntu::app_launch::app_info::Desktop(simpleAppID(), defkeyfile, datadir, basedir,
                                                             ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr);
     EXPECT_EQ("/foo/usr/share/foo.png", defappinfo.iconPath().value());
 
     auto rootkeyfile = defaultKeyfile();
     g_key_file_set_string(rootkeyfile.get(), DESKTOP, "Icon", "/bar/foo.png");
-    auto rootappinfo = ubuntu::app_launch::app_info::Desktop(rootkeyfile, datadir, basedir,
+    auto rootappinfo = ubuntu::app_launch::app_info::Desktop(simpleAppID(), rootkeyfile, datadir, basedir,
                                                              ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr);
     EXPECT_EQ("/foo/bar/foo.png", rootappinfo.iconPath().value());
 }
@@ -156,7 +163,7 @@ TEST_F(ApplicationInfoDesktop, KeyfileDefaultDepartment)
 {
     auto keyfile = defaultKeyfile();
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Default-Department-ID", "foo");
-    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(keyfile, "/", {},
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 }
 
@@ -164,10 +171,11 @@ TEST_F(ApplicationInfoDesktop, KeyfileScreenshotPath)
 {
     auto keyfile = defaultKeyfile();
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Screenshot", "foo.png");
-    EXPECT_EQ("/foo.png", ubuntu::app_launch::app_info::Desktop(
-                              keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                              .screenshotPath()
-                              .value());
+    EXPECT_EQ("/foo.png",
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
+                  .screenshotPath()
+                  .value());
 }
 
 TEST_F(ApplicationInfoDesktop, KeyfileKeywords)
@@ -176,10 +184,11 @@ TEST_F(ApplicationInfoDesktop, KeyfileKeywords)
 
     auto keyfile = defaultKeyfile();
     g_key_file_set_string(keyfile.get(), DESKTOP, "Keywords", "foo;bar;baz;");
-    EXPECT_EQ(expectedKeywords, ubuntu::app_launch::app_info::Desktop(
-                                    keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                                    .keywords()
-                                    .value());
+    EXPECT_EQ(expectedKeywords,
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
+                  .keywords()
+                  .value());
 }
 
 TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
@@ -187,20 +196,20 @@ TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
     // Not appearing in not show list
     auto notshowin = defaultKeyfile();
     g_key_file_set_string(notshowin.get(), DESKTOP, "NotShowIn", "Gnome;KDE;");
-    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(notshowin, "/", {},
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), notshowin, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 
     // Appearing explicitly in only show list
     auto onlyshowin = defaultKeyfile();
     g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_desktop_env + ";Gnome;").c_str());
-    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), onlyshowin, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 
     // Appearing explicitly in only show list not first
     auto onlyshowinmiddle = defaultKeyfile();
     g_key_file_set_string(onlyshowinmiddle.get(), DESKTOP, "OnlyShowIn",
                           ("Gnome;" + test_desktop_env + ";KDE;").c_str());
-    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowinmiddle, "/", {},
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), onlyshowinmiddle, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 
     // Chance current to be a list
@@ -208,32 +217,32 @@ TEST_F(ApplicationInfoDesktop, KeyfileShowListEdgeCases)
 
     // Make sure we can parse it and just not blow up
     auto base = defaultKeyfile();
-    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(base, "/", {},
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), base, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 
     // Put in both, make sure we reject
     auto everything = defaultKeyfile();
     g_key_file_set_string(everything.get(), DESKTOP, "OnlyShowIn", ("Gnome;" + test_desktop_env + ";KDE;").c_str());
     g_key_file_set_string(everything.get(), DESKTOP, "NotShowIn", ("Gnome;" + test_desktop_env + ";").c_str());
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(everything, "/", {},
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), everything, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
 
     // Reject us
     auto notlist = defaultKeyfile();
     g_key_file_set_string(notlist.get(), DESKTOP, "NotShowIn", ("Gnome;Foo;" + test_desktop_env + ";KDE;").c_str());
-    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(notlist, "/", {},
+    EXPECT_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), notlist, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr),
                  std::runtime_error);
 
     // Only Show us
     g_key_file_set_string(onlyshowin.get(), DESKTOP, "OnlyShowIn", (test_desktop_env + ";Gnome;").c_str());
-    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(onlyshowin, "/", {},
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), onlyshowin, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 
     // Make sure we can still go with nothing set
     auto notset = defaultKeyfile();
-    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(notset, "/", {},
+    EXPECT_NO_THROW(ubuntu::app_launch::app_info::Desktop(simpleAppID(), notset, "/", {},
                                                           ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr));
 }
 
@@ -244,116 +253,121 @@ TEST_F(ApplicationInfoDesktop, Orientations)
 
     auto keyfile = defaultKeyfile();
 
-    EXPECT_EQ(defaultOrientations, ubuntu::app_launch::app_info::Desktop(
-                                       keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                                       .supportedOrientations());
+    EXPECT_EQ(defaultOrientations,
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
+                  .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "this should not parse");
-    EXPECT_EQ(defaultOrientations, ubuntu::app_launch::app_info::Desktop(
-                                       keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                                       .supportedOrientations());
+    EXPECT_EQ(defaultOrientations,
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
+                  .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "this;should;not;parse;");
-    EXPECT_EQ(defaultOrientations, ubuntu::app_launch::app_info::Desktop(
-                                       keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                                       .supportedOrientations());
+    EXPECT_EQ(defaultOrientations,
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
+                  .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "portrait;");
     EXPECT_EQ((ubuntu::app_launch::Application::Info::
                Orientations{portrait : true, landscape : false, invertedPortrait : false, invertedLandscape : false}),
-              ubuntu::app_launch::app_info::Desktop(keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE,
-                                                    nullptr)
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                   .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "landscape;portrait;");
     EXPECT_EQ((ubuntu::app_launch::Application::Info::
                Orientations{portrait : true, landscape : true, invertedPortrait : false, invertedLandscape : false}),
-              ubuntu::app_launch::app_info::Desktop(keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE,
-                                                    nullptr)
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                   .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations",
                           "landscape  ;  portrait;    invertedPortrait");
     EXPECT_EQ((ubuntu::app_launch::Application::Info::
                Orientations{portrait : true, landscape : true, invertedPortrait : true, invertedLandscape : false}),
-              ubuntu::app_launch::app_info::Desktop(keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE,
-                                                    nullptr)
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                   .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "portrait;landscape;");
     EXPECT_EQ((ubuntu::app_launch::Application::Info::
                Orientations{portrait : true, landscape : true, invertedPortrait : false, invertedLandscape : false}),
-              ubuntu::app_launch::app_info::Desktop(keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE,
-                                                    nullptr)
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                   .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations",
                           "portrait;landscape;invertedportrait;invertedlandscape;");
     EXPECT_EQ((ubuntu::app_launch::Application::Info::
                Orientations{portrait : true, landscape : true, invertedPortrait : true, invertedLandscape : true}),
-              ubuntu::app_launch::app_info::Desktop(keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE,
-                                                    nullptr)
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                   .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "PORTRAIT;");
     EXPECT_EQ((ubuntu::app_launch::Application::Info::
                Orientations{portrait : true, landscape : false, invertedPortrait : false, invertedLandscape : false}),
-              ubuntu::app_launch::app_info::Desktop(keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE,
-                                                    nullptr)
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                   .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations",
                           "pOrTraIt;lANDscApE;inVErtEDpORtrAit;iNVErtEDLAnDsCapE;");
     EXPECT_EQ((ubuntu::app_launch::Application::Info::
                Orientations{portrait : true, landscape : true, invertedPortrait : true, invertedLandscape : true}),
-              ubuntu::app_launch::app_info::Desktop(keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE,
-                                                    nullptr)
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                   .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "primary;");
     EXPECT_EQ((ubuntu::app_launch::Application::Info::
                Orientations{portrait : false, landscape : false, invertedPortrait : false, invertedLandscape : false}),
-              ubuntu::app_launch::app_info::Desktop(keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE,
-                                                    nullptr)
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                   .supportedOrientations());
 
     g_key_file_set_string(keyfile.get(), DESKTOP, "X-Ubuntu-Supported-Orientations", "foobar;primary;");
-    EXPECT_EQ(defaultOrientations, ubuntu::app_launch::app_info::Desktop(
-                                       keyfile, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                                       .supportedOrientations());
+    EXPECT_EQ(defaultOrientations,
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
+                  .supportedOrientations());
 }
 
 TEST_F(ApplicationInfoDesktop, XMirCases)
 {
     auto xmirunset = defaultKeyfile();
-    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(xmirunset, "/", {},
+    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirunset, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                      .xMirEnable()
                      .value());
-    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(xmirunset, "/", {},
+    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirunset, "/", {},
                                                       ubuntu::app_launch::app_info::DesktopFlags::XMIR_DEFAULT, nullptr)
                     .xMirEnable()
                     .value());
 
     auto xmirtrue = defaultKeyfile();
     g_key_file_set_boolean(xmirtrue.get(), DESKTOP, "X-Ubuntu-XMir-Enable", TRUE);
-    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(xmirtrue, "/", {},
+    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirtrue, "/", {},
                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                     .xMirEnable()
                     .value());
-    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(xmirtrue, "/", {},
+    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirtrue, "/", {},
                                                       ubuntu::app_launch::app_info::DesktopFlags::XMIR_DEFAULT, nullptr)
                     .xMirEnable()
                     .value());
 
     auto xmirfalse = defaultKeyfile();
     g_key_file_set_boolean(xmirfalse.get(), DESKTOP, "X-Ubuntu-XMir-Enable", FALSE);
-    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(xmirfalse, "/", {},
+    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirfalse, "/", {},
                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
                      .xMirEnable()
                      .value());
-    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(
-                     xmirfalse, "/", {}, ubuntu::app_launch::app_info::DesktopFlags::XMIR_DEFAULT, nullptr)
+    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirfalse, "/", {},
+                                                       ubuntu::app_launch::app_info::DesktopFlags::XMIR_DEFAULT,
+                                                       nullptr)
                      .xMirEnable()
                      .value());
 }
