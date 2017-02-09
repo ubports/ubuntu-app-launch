@@ -94,6 +94,8 @@ Depends: ${misc:Depends},
          libmirclient-dev (>= 0.5),
          libproperties-cpp-dev,
          libubuntu-app-launch4 (= ${binary:Version}),
+Breaks: libubuntu-app-launch2-dev
+Replaces: libubuntu-app-launch2-dev
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
 Description: library for sending requests to the ubuntu app launch
