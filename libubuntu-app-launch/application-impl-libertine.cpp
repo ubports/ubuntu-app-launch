@@ -66,7 +66,7 @@ Libertine::Libertine(const AppID::Package& container,
         throw std::runtime_error{"Unable to find a keyfile for application '" + appname.value() + "' in container '" +
                                  container.value() + "'"};
 
-    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, _container_path,
+    appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, _container_path,
                                                    app_info::DesktopFlags::XMIR_DEFAULT, _registry);
 
     g_debug("Application Libertine object for container '%s' app '%s'", container.value().c_str(),

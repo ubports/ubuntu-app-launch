@@ -259,7 +259,8 @@ std::set<std::string> stringlistFromKeyfileSet(const std::shared_ptr<GKeyFile>& 
     return retval;
 }
 
-Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
+Desktop::Desktop(const AppID& appid,
+                 const std::shared_ptr<GKeyFile>& keyfile,
                  const std::string& basePath,
                  const std::string& rootDir,
                  std::bitset<2> flags,
@@ -328,7 +329,7 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
         return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "X-Screenshot");
     }())
     , _keywords(stringlistFromKeyfile<Application::Info::Keywords>(keyfile, "Keywords"))
-    , _popularity(Application::Info::Popularity::from_raw(0))
+    , _popularity(Registry::Impl::getZgWatcher(registry)->lookupAppPopularity(appid))
     , _splashInfo(
           {stringFromKeyfile<Application::Info::Splash::Title>(keyfile, "X-Ubuntu-Splash-Title"),
            fileFromKeyfile<Application::Info::Splash::Image>(keyfile, basePath, rootDir, "X-Ubuntu-Splash-Image"),

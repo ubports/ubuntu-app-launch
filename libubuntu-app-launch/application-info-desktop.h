@@ -41,7 +41,8 @@ static const std::bitset<2> XMIR_DEFAULT{"10"};
 class Desktop : public Application::Info
 {
 public:
-    Desktop(const std::shared_ptr<GKeyFile>& keyfile,
+    Desktop(const AppID& appid,
+            const std::shared_ptr<GKeyFile>& keyfile,
             const std::string& basePath,
             const std::string& rootDir,
             std::bitset<2> flags,

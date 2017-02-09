@@ -31,6 +31,12 @@ Zietgeist::Zietgeist(const std::shared_ptr<Registry>& registry)
 {
 }
 
+/** Gets the popularity for a given Application ID */
+Application::Info::Popularity Zietgeist::lookupAppPopularity(const AppID& appid)
+{
+    return Application::Info::Popularity::from_raw(0);
+}
+
 }  // namespace info_watcher
 }  // namespace app_launch
 }  // namespace ubuntu
