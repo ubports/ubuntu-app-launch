@@ -124,6 +124,7 @@ private:
     /** List of info watchers along with a signal handle to our connection to their update signal */
     std::list<std::pair<std::shared_ptr<info_watcher::Base>, core::ScopedConnection>> infoWatchers_;
 
+protected:
     /** ZG Info Watcher */
     std::shared_ptr<info_watcher::Zietgeist> zgWatcher_;
     /** Init checker for ZG Watcher */
