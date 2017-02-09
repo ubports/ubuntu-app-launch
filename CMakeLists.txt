@@ -79,9 +79,6 @@ include_directories(${ZEITGEIST_INCLUDE_DIRS})
 pkg_check_modules(CLICK REQUIRED click-0.4>=0.4.18)
 include_directories(${CLICK_INCLUDE_DIRS})
 
-pkg_check_modules(LIBUPSTART REQUIRED libupstart)
-include_directories(${LIBUPSTART_INCLUDE_DIRS})
-
 pkg_check_modules(DBUS REQUIRED dbus-1)
 include_directories(${DBUS_INCLUDE_DIRS})
 
@@ -241,7 +238,6 @@ install(TARGETS snappy-xmir-envvars RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BI
 configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/ubuntu-app-launch-desktop.click-hook" @ONLY)
 
 add_subdirectory(libubuntu-app-launch)
-add_subdirectory(upstart-jobs)
 add_subdirectory(tools)
 add_subdirectory(ubuntu-app-test)
 
