@@ -162,7 +162,7 @@ core::Signal<const std::shared_ptr<Application>&,
 
 core::Signal<const std::shared_ptr<Application>&>& Registry::appInfoUpdated(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->appInfoUpdated();
+    return reg->impl->appInfoUpdated(reg);
 }
 
 }  // namespace app_launch

@@ -97,7 +97,7 @@ public:
         return reg->impl->zgWatcher_;
     }
 
-    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated();
+    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
 
 private:
     Registry* _registry; /**< The Registry that we're spawned from */
@@ -119,6 +119,10 @@ private:
 
     /** Signal for application info changing */
     core::Signal<const std::shared_ptr<Application>&> sig_appInfoUpdated;
+    /** Flag to see if we've initialized the info watcher list */
+    std::once_flag flag_appInfoUpdated;
+    /** List of info watchers along with a signal handle to our connection to their update signal */
+    std::list<std::pair<std::shared_ptr<info_watcher::Base>, core::ScopedConnection>> infoWatchers_;
 
     /** ZG Info Watcher */
     std::shared_ptr<info_watcher::Zietgeist> zgWatcher_;

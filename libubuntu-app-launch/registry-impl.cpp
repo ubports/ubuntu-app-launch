@@ -19,6 +19,7 @@
 
 #include "registry-impl.h"
 #include "application-icon-finder.h"
+#include "application-impl-base.h"
 #include <regex>
 #include <upstart.h>
 
@@ -305,8 +306,19 @@ bool Registry::Impl::isWatchingAppStarting()
     return watchingAppStarting_;
 }
 
-core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated()
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated(const std::shared_ptr<Registry>& reg)
 {
+    std::call_once(flag_appInfoUpdated, [this, reg] {
+        auto apps = app_impls::Base::createInfoWatchers(reg);
+        apps.push_back(Registry::Impl::getZgWatcher(reg));
+
+        for (const auto& app : apps)
+        {
+            infoWatchers_.emplace_back(
+                std::make_pair(app, app->infoChanged().connect(
+                                        [this](const std::shared_ptr<Application>& app) { sig_appInfoUpdated(app); })));
+        }
+    });
     return sig_appInfoUpdated;
 }
 
