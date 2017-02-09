@@ -25,7 +25,6 @@
 #include "application-impl-base.h"
 #include "jobs-base.h"
 #include "jobs-systemd.h"
-#include "jobs-upstart.h"
 #include "registry-impl.h"
 
 namespace ubuntu
