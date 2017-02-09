@@ -83,6 +83,8 @@ public:
 
     virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) override;
 
+    static std::shared_ptr<info_watcher::Base> createInfoWatcher(const std::shared_ptr<Registry>& reg);
+
 private:
     AppID::Package _container;
     AppID::AppName _appname;

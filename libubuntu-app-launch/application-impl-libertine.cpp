@@ -337,6 +337,11 @@ std::shared_ptr<Application::Instance> Libertine::findInstance(const std::string
     return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
 }
 
+std::shared_ptr<info_watcher::Base> Libertine::createInfoWatcher(const std::shared_ptr<Registry>& reg)
+{
+    return {};
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

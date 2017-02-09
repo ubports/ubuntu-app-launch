@@ -370,6 +370,11 @@ std::shared_ptr<Application::Instance> Click::findInstance(const std::string& in
     return _registry->impl->jobs->existing(appId(), "application-click", instanceid, std::vector<Application::URL>{});
 }
 
+std::shared_ptr<info_watcher::Base> Click::createInfoWatcher(const std::shared_ptr<Registry>& reg)
+{
+    return {};
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

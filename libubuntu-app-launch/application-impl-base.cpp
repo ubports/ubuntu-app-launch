@@ -24,6 +24,10 @@
 #include <numeric>
 
 #include "application-impl-base.h"
+#include "application-impl-click.h"
+#include "application-impl-legacy.h"
+#include "application-impl-libertine.h"
+#include "application-impl-snap.h"
 #include "helpers.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
@@ -119,6 +123,39 @@ std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop)
     {
         return std::to_string(g_get_real_time());
     }
+}
+
+/* Put all the logic into a function so that we can deal have a simple
+   function to deal with each subtype */
+template <typename T>
+void watcher_append_list(const std::shared_ptr<Registry>& reg, std::list<std::shared_ptr<info_watcher::Base>>& list)
+{
+    auto watcher = T::createInfoWatcher(reg);
+
+    if (watcher)
+    {
+        list.push_back(watcher);
+    }
+}
+
+/* This little template makes it so that we can take a list, but
+   then break it down to calls to the base function. */
+template <typename T, typename T2, typename... TArgs>
+void watcher_append_list(const std::shared_ptr<Registry>& reg, std::list<std::shared_ptr<info_watcher::Base>>& list)
+{
+    watcher_append_list<T>(reg, list);
+    watcher_append_list<T2, TArgs...>(reg, list);
+}
+
+/** Builds an info watcher from each subclass and returns the list of
+    them to the registry */
+std::list<std::shared_ptr<info_watcher::Base>> Base::createInfoWatchers(const std::shared_ptr<Registry>& reg)
+{
+    std::list<std::shared_ptr<info_watcher::Base>> retval;
+
+    watcher_append_list<app_impls::Click, app_impls::Legacy, app_impls::Libertine, app_impls::Snap>(reg, retval);
+
+    return retval;
 }
 
 }  // namespace app_impls

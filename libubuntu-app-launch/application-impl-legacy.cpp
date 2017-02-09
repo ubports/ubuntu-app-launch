@@ -394,6 +394,11 @@ std::shared_ptr<Application::Instance> Legacy::findInstance(const std::string& i
     return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
 }
 
+std::shared_ptr<info_watcher::Base> Legacy::createInfoWatcher(const std::shared_ptr<Registry>& reg)
+{
+    return {};
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

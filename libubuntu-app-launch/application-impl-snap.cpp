@@ -519,6 +519,11 @@ std::shared_ptr<Application::Instance> Snap::findInstance(const std::string& ins
     return _registry->impl->jobs->existing(appId(), "application-snap", instanceid, std::vector<Application::URL>{});
 }
 
+std::shared_ptr<info_watcher::Base> Snap::createInfoWatcher(const std::shared_ptr<Registry>& reg)
+{
+    return {};
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu
