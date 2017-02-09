@@ -115,45 +115,6 @@ add_test (NAME application-icon-finder-test COMMAND application-icon-finder-test
 
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-# Failure Test
-
-add_definitions ( -DAPP_FAILED_TOOL="${CMAKE_BINARY_DIR}/application-failed" )
-
-add_executable (failure-test
-	failure-test.cc)
-target_link_libraries (failure-test gtest_main ${GTEST_MAIN_LIBRARIES} ubuntu-launcher)
-add_test (failure-test failure-test)
-
-# ZG Test
-
-add_definitions ( -DZG_EVENT_TOOL="${CMAKE_BINARY_DIR}/zg-report-app" )
-
-add_executable (zg-test
-	zg-test.cc)
-target_link_libraries (zg-test gtest_main ${GTEST_MAIN_LIBRARIES} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
-add_test (zg-test zg-test)
-
-# Exec Line Exec Test
-
-configure_file("exec-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh" @ONLY) 
-add_test (exec-test "${CMAKE_CURRENT_BINARY_DIR}/exec-test.sh")
-
-# Exec Utils
-
-add_executable (exec-util-test
-	exec-util-test.cc)
-target_link_libraries (exec-util-test gtest_main ubuntu-launcher ${GTEST_MAIN_LIBRARIES} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
-add_test (exec-util-test exec-util-test)
-
-# CGroup Reap Test
-
-add_definitions ( -DCG_REAP_TOOL="${CMAKE_BINARY_DIR}/cgroup-reap-all" )
-
-add_executable (cgroup-reap-test
-	cgroup-reap-test.cc)
-target_link_libraries (cgroup-reap-test gtest_main ${GTEST_MAIN_LIBRARIES} ${DBUSTEST_LIBRARIES} ${GIO2_LIBRARIES})
-add_test (cgroup-reap-test cgroup-reap-test)
-
 # Desktop Hook Test
 
 configure_file ("click-desktop-hook-db/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-desktop-hook-db/test.conf" @ONLY)
