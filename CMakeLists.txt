@@ -127,44 +127,6 @@ target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARI
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# exec-line-exec
-####################
-
-add_lttng_gen_tp(NAME exec-line-exec-trace)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-add_executable(exec-line-exec exec-line-exec.c "${CMAKE_CURRENT_BINARY_DIR}/exec-line-exec-trace.c")
-set_target_properties(exec-line-exec PROPERTIES OUTPUT_NAME "exec-line-exec")
-target_link_libraries(exec-line-exec helpers ${LTTNG_LIBRARIES})
-install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# zg-report-app
-####################
-
-add_executable(zg-report-app zg-report-app.c)
-set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
-target_link_libraries(zg-report-app ubuntu-launcher ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
-install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# application-job
-####################
-
-add_executable(application-job application-job.c)
-set_target_properties(application-job PROPERTIES OUTPUT_NAME "application-job")
-target_link_libraries(application-job ubuntu-launcher)
-install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# application-failed
-####################
-
-add_executable(application-failed application-failed.c)
-set_target_properties(application-failed PROPERTIES OUTPUT_NAME "application-failed")
-target_link_libraries(application-failed ${GIO2_LIBRARIES})
-install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
 # xmir-helper
 ####################
 
@@ -180,15 +142,6 @@ add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
 set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
 target_link_libraries(untrusted-helper-type-end ubuntu-launcher)
 install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# cgroup-reap-all
-####################
-
-add_executable(cgroup-reap-all cgroup-reap-all.c)
-set_target_properties(cgroup-reap-all PROPERTIES OUTPUT_NAME "cgroup-reap-all")
-target_link_libraries(cgroup-reap-all helpers)
-install(TARGETS cgroup-reap-all RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # oom-adjust-setuid-helper
@@ -261,7 +214,6 @@ ENABLE_COVERAGE_REPORT(
   TESTS
   	application-icon-finder-test
 	application-info-desktop-test
-	cgroup-reap-test
 	exec-util-test
 	failure-test
 	helper-test
