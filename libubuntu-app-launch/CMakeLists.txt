@@ -58,8 +58,6 @@ jobs-base.h
 jobs-base.cpp
 jobs-systemd.h
 jobs-systemd.cpp
-jobs-upstart.h
-jobs-upstart.cpp
 )
 
 set(LAUNCHER_SOURCES

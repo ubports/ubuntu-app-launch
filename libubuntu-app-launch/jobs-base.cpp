@@ -61,22 +61,12 @@ Base::~Base()
     dohandle(handle_appResumed);
 }
 
+/** Should determine which jobs backend to use, but we only have
+    one right now. */
 std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
 {
-    /* Checking to see if we have a user bus, that is only started
-       by systemd so we're in good shape if we have one. We're using
-       the path instead of the RUNTIME variable because we want to work
-       around the case of being relocated by the snappy environment */
-    if (g_file_test(SystemD::userBusPath().c_str(), G_FILE_TEST_EXISTS))
-    {
-        g_debug("Building a systemd jobs manager");
-        return std::make_shared<jobs::manager::SystemD>(registry);
-    }
-    else
-    {
-        g_debug("Building an Upstart jobs manager");
-        return std::make_shared<jobs::manager::Upstart>(registry);
-    }
+    g_debug("Building a systemd jobs manager");
+    return std::make_shared<jobs::manager::SystemD>(registry);
 }
 
 const std::set<std::string>& Base::getAllJobs() const
