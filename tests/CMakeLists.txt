@@ -97,7 +97,7 @@ add_test (NAME list-apps COMMAND ${CMAKE_CURRENT_BINARY_DIR}/list-apps)
 add_executable (application-info-desktop-test
   application-info-desktop.cpp
 )
-target_link_libraries (application-info-desktop-test gtest_main ${GTEST_MAIN_LIBRARIES} launcher-static)
+target_link_libraries (application-info-desktop-test gtest_main ${GMOCK_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
 
 add_test (NAME application-info-desktop-test COMMAND application-info-desktop-test)
 

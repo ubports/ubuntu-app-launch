@@ -19,8 +19,11 @@
 
 #include "application-info-desktop.h"
 
+#include "registry-mock.h"
+
 #include <cstdlib>
 #include <gtest/gtest.h>
+#include <libdbustest/dbus-test.h>
 
 namespace
 {
@@ -41,6 +44,8 @@ protected:
 
     virtual void TearDown()
     {
+        registry_.reset();
+        service_.reset();
     }
 
     std::shared_ptr<GKeyFile> defaultKeyfile()
@@ -61,6 +66,30 @@ protected:
     }
 
     const std::string test_desktop_env;
+
+    std::shared_ptr<RegistryMock> registry_;
+    std::shared_ptr<DbusTestService> service_;
+
+    std::shared_ptr<ubuntu::app_launch::Registry> registry()
+    {
+        if (!registry_)
+        {
+            /* Give us our own dbus */
+            service_ = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
+                                                        [](DbusTestService* service) { g_clear_object(&service); });
+            dbus_test_service_start_tasks(service_.get());
+
+            registry_ = std::make_shared<RegistryMock>();
+        }
+        return registry_;
+    }
+
+    std::shared_ptr<zgWatcherMock> zgWatcher()
+    {
+        auto reg = registry();
+
+        return std::dynamic_pointer_cast<zgWatcherMock>(reg->impl->getZgWatcher(reg));
+    }
 };
 
 TEST_F(ApplicationInfoDesktop, DefaultState)
@@ -72,6 +101,7 @@ TEST_F(ApplicationInfoDesktop, DefaultState)
     EXPECT_EQ("", appinfo.description().value());
     EXPECT_EQ("/foo.png", appinfo.iconPath().value());
     EXPECT_EQ("", appinfo.defaultDepartment().value());
+    EXPECT_EQ(0u, appinfo.popularity().value());
 
     EXPECT_EQ("", appinfo.splash().title.value());
     EXPECT_EQ("", appinfo.splash().image.value());
@@ -370,6 +400,18 @@ TEST_F(ApplicationInfoDesktop, XMirCases)
                                                        nullptr)
                      .xMirEnable()
                      .value());
+}
+
+TEST_F(ApplicationInfoDesktop, Popularity)
+{
+    EXPECT_CALL(*zgWatcher(), lookupAppPopularity(simpleAppID()))
+        .WillOnce(testing::Return(ubuntu::app_launch::Application::Info::Popularity::from_raw(5u)));
+
+    auto keyfile = defaultKeyfile();
+    EXPECT_EQ(5u, ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, registry())
+                      .popularity()
+                      .value());
 }
 
 }  // anonymous namespace
