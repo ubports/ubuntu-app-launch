@@ -19,6 +19,8 @@
 
 #include "info-watcher-zg.h"
 
+#include <glib.h>
+
 namespace ubuntu
 {
 namespace app_launch
@@ -29,6 +31,7 @@ namespace info_watcher
 Zietgeist::Zietgeist(const std::shared_ptr<Registry>& registry)
     : Base(registry)
 {
+    g_debug("Created a ZG Watcher");
 }
 
 /** Gets the popularity for a given Application ID */

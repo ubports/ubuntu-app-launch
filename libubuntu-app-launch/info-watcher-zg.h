@@ -39,7 +39,7 @@ public:
     Zietgeist(const std::shared_ptr<Registry>& registry);
     virtual ~Zietgeist() = default;
 
-    Application::Info::Popularity lookupAppPopularity(const AppID& appid);
+    virtual Application::Info::Popularity lookupAppPopularity(const AppID& appid);
 };
 
 }  // namespace info_watcher
