@@ -75,6 +75,14 @@ target_link_libraries (jobs-systemd ${GMOCK_LIBRARIES} launcher-static ${DBUSTES
 
 add_test(NAME jobs-systemd COMMAND jobs-systemd)
 
+# Info Watcher ZG
+
+add_executable (info-watcher-zg
+	info-watcher-zg.cpp)
+target_link_libraries (info-watcher-zg ${GMOCK_LIBRARIES} launcher-static ${DBUSTEST_LIBRARIES})
+
+add_test(NAME info-watcher-zg COMMAND info-watcher-zg)
+
 # Snapd Info Test
 
 if(CURL_FOUND)
@@ -179,6 +187,7 @@ add_custom_target(format-tests
 	libual-cpp-test.cc
 	list-apps.cpp
 	eventually-fixture.h
+	info-watcher-zg.cpp
 	jobs-base-test.cpp
 	jobs-systemd.cpp
 	registry-mock.h
