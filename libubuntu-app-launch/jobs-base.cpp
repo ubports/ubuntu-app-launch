@@ -525,7 +525,6 @@ void Base::focus()
     else
     {
         g_debug("Emmitted 'UnityFocusRequest' to DBus");
-        pidListToDbus(registry_, appId_, instance_, pids(), "ApplicationFocused");
     }
 }
 
