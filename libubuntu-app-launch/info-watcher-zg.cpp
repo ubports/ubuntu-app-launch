@@ -28,14 +28,14 @@ namespace app_launch
 namespace info_watcher
 {
 
-Zietgeist::Zietgeist(const std::shared_ptr<Registry>& registry)
+Zeitgeist::Zeitgeist(const std::shared_ptr<Registry>& registry)
     : Base(registry)
 {
     g_debug("Created a ZG Watcher");
 }
 
 /** Gets the popularity for a given Application ID */
-Application::Info::Popularity Zietgeist::lookupAppPopularity(const AppID& appid)
+Application::Info::Popularity Zeitgeist::lookupAppPopularity(const AppID& appid)
 {
     return Application::Info::Popularity::from_raw(0);
 }

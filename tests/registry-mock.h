@@ -25,11 +25,11 @@
 
 #include <gmock/gmock.h>
 
-class zgWatcherMock : public ubuntu::app_launch::info_watcher::Zietgeist
+class zgWatcherMock : public ubuntu::app_launch::info_watcher::Zeitgeist
 {
 public:
     zgWatcherMock()
-        : ubuntu::app_launch::info_watcher::Zietgeist({})
+        : ubuntu::app_launch::info_watcher::Zeitgeist({})
     {
     }
 

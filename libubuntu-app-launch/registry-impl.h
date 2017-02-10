@@ -90,10 +90,10 @@ public:
         return oomHelper_;
     }
 
-    static std::shared_ptr<info_watcher::Zietgeist> getZgWatcher(const std::shared_ptr<Registry>& reg)
+    static std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher(const std::shared_ptr<Registry>& reg)
     {
         std::call_once(reg->impl->zgWatcherOnce_,
-                       [reg] { reg->impl->zgWatcher_ = std::make_shared<info_watcher::Zietgeist>(reg); });
+                       [reg] { reg->impl->zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(reg); });
         return reg->impl->zgWatcher_;
     }
 
@@ -126,7 +126,7 @@ private:
 
 protected:
     /** ZG Info Watcher */
-    std::shared_ptr<info_watcher::Zietgeist> zgWatcher_;
+    std::shared_ptr<info_watcher::Zeitgeist> zgWatcher_;
     /** Init checker for ZG Watcher */
     std::once_flag zgWatcherOnce_;
 };

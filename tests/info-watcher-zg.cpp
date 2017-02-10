@@ -49,7 +49,7 @@ protected:
 
 TEST_F(InfoWatcherZg, InitTest)
 {
-    auto watcher = std::make_shared<ubuntu::app_launch::info_watcher::Zietgeist>(registry);
+    auto watcher = std::make_shared<ubuntu::app_launch::info_watcher::Zeitgeist>(registry);
 
     watcher.reset();
 }

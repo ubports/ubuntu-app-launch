@@ -33,11 +33,11 @@ namespace app_launch
 namespace info_watcher
 {
 
-class Zietgeist : public Base
+class Zeitgeist : public Base
 {
 public:
-    Zietgeist(const std::shared_ptr<Registry>& registry);
-    virtual ~Zietgeist() = default;
+    Zeitgeist(const std::shared_ptr<Registry>& registry);
+    virtual ~Zeitgeist() = default;
 
     virtual Application::Info::Popularity lookupAppPopularity(const AppID& appid);
 };

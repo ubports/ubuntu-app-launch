@@ -214,7 +214,7 @@ std::string Registry::Impl::getClickDir(const std::string& package)
     });
 }
 
-/** Send an event to Zietgeist using the registry thread so that
+/** Send an event to Zeitgeist using the registry thread so that
         the callback comes back in the right place. */
 void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
 {
