@@ -47,8 +47,12 @@ public:
     RegistryImplMock(ubuntu::app_launch::Registry* reg)
         : ubuntu::app_launch::Registry::Impl(reg)
     {
-        zgWatcher_ = std::make_shared<zgWatcherMock>();
+        auto zgWatcher = std::make_shared<zgWatcherMock>();
+        zgWatcher_ = zgWatcher;
         std::call_once(zgWatcherOnce_, [] {});
+
+        ON_CALL(*zgWatcher, lookupAppPopularity(testing::_))
+            .WillByDefault(testing::Return(ubuntu::app_launch::Application::Info::Popularity::from_raw(1u)));
 
         g_debug("Registry Mock Implementation Created");
     }
