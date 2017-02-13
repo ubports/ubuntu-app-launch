@@ -181,6 +181,7 @@ add_custom_target(format-tests
 	eventually-fixture.h
 	jobs-base-test.cpp
 	jobs-systemd.cpp
+	libertine-service.h
 	registry-mock.h
 	snapd-info-test.cpp
 	snapd-mock.h
