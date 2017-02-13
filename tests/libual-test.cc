@@ -30,6 +30,7 @@
 #include "registry.h"
 #include "ubuntu-app-launch.h"
 
+#include "libertine-service.h"
 #include "eventually-fixture.h"
 #include "mir-mock.h"
 
@@ -39,6 +40,7 @@ class LibUAL : public EventuallyFixture
 		DbusTestService * service = NULL;
 		DbusTestDbusMock * mock = NULL;
 		DbusTestDbusMock * cgmock = NULL;
+		std::shared_ptr<LibertineService> libertine;
 		GDBusConnection * bus = NULL;
 		std::string last_focus_appid;
 		std::string last_resume_appid;
@@ -280,6 +282,11 @@ class LibUAL : public EventuallyFixture
 			/* Put it together */
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock));
+
+			/* Add in Libertine */
+			libertine = std::make_shared<LibertineService>();
+			dbus_test_service_add_task(service, *libertine);
+
 			dbus_test_service_start_tasks(service);
 
 			bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
@@ -299,6 +306,7 @@ class LibUAL : public EventuallyFixture
 
 			ubuntu::app_launch::Registry::clearDefault();
 
+			libertine.reset();
 			g_clear_object(&mock);
 			g_clear_object(&cgmock);
 			g_clear_object(&service);

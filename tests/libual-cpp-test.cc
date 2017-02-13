@@ -36,6 +36,7 @@
 #include "ubuntu-app-launch.h"
 
 #include "eventually-fixture.h"
+#include "libertine-service.h"
 #include "mir-mock.h"
 #include "spew-master.h"
 
@@ -51,6 +52,7 @@ protected:
     DbusTestService* service = NULL;
     DbusTestDbusMock* mock = NULL;
     DbusTestDbusMock* cgmock = NULL;
+    std::shared_ptr<LibertineService> libertine;
     GDBusConnection* bus = NULL;
     guint resume_timeout = 0;
     std::shared_ptr<ubuntu::app_launch::Registry> registry;
@@ -308,6 +310,11 @@ protected:
         /* Put it together */
         dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
         dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock));
+
+        /* Add in Libertine */
+        libertine = std::make_shared<LibertineService>();
+        dbus_test_service_add_task(service, *libertine);
+
         dbus_test_service_start_tasks(service);
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
@@ -335,6 +342,7 @@ protected:
         //
         // ubuntu::app_launch::Registry::clearDefault();
 
+        libertine.reset();
         g_clear_object(&mock);
         g_clear_object(&cgmock);
         g_clear_object(&service);
