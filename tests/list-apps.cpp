@@ -23,6 +23,7 @@
 #include <numeric>
 
 #include "eventually-fixture.h"
+#include "libertine-service.h"
 
 #include "application-impl-click.h"
 #include "application-impl-legacy.h"
@@ -39,8 +40,9 @@
 class ListApps : public EventuallyFixture
 {
 protected:
-    GTestDBus* testbus = nullptr;
+    DbusTestService* service = nullptr;
     GDBusConnection* bus = nullptr;
+    std::shared_ptr<LibertineService> libertine;
 
     virtual void SetUp()
     {
@@ -67,8 +69,12 @@ protected:
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
 #endif
 
-        testbus = g_test_dbus_new(G_TEST_DBUS_NONE);
-        g_test_dbus_up(testbus);
+        service = dbus_test_service_new(nullptr);
+
+        libertine = std::make_shared<LibertineService>();
+        dbus_test_service_add_task(service, *libertine);
+
+        dbus_test_service_start_tasks(service);
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
@@ -81,11 +87,10 @@ protected:
         g_unlink(SNAPD_LIST_APPS_SOCKET);
 #endif
 
+        libertine.reset();
+        g_clear_object(&service);
+
         g_object_unref(bus);
-
-        g_test_dbus_down(testbus);
-        g_clear_object(&testbus);
-
         ASSERT_EVENTUALLY_EQ(nullptr, bus);
     }
 

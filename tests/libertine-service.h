@@ -27,7 +27,7 @@ private:
     DbusTestProcess* process = nullptr;
 
 public:
-    SystemdMock()
+    LibertineService()
     {
         process = dbus_test_process_new("/usr/bin/libertined");
         dbus_test_process_append_param(process, "--debug");
@@ -35,10 +35,10 @@ public:
         dbus_test_task_set_bus(DBUS_TEST_TASK(process), DBUS_TEST_SERVICE_BUS_SESSION);
         dbus_test_task_set_name(DBUS_TEST_TASK(process), "libertine");
         dbus_test_task_set_return(DBUS_TEST_TASK(process), DBUS_TEST_TASK_RETURN_IGNORE);
-        dbus_test_task_wait_finished(DBUS_TEST_TASK(process), FALSE);
+        dbus_test_task_set_wait_finished(DBUS_TEST_TASK(process), FALSE);
     }
 
-    ~SystemdMock()
+    ~LibertineService()
     {
         g_debug("Destroying the Libertined Task");
         g_clear_object(&process);
