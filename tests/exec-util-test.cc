@@ -27,12 +27,14 @@
 #include <libubuntu-app-launch/registry.h>
 
 #include "eventually-fixture.h"
+#include "libertine-service.h"
 
 class ExecUtil : public EventuallyFixture
 {
 	protected:
 		DbusTestService * service = NULL;
 		DbusTestDbusMock * mock = NULL;
+		std::shared_ptr<LibertineService> libertine;
 		GDBusConnection * bus = NULL;
 		std::string laststarted;
 
@@ -75,6 +77,10 @@ class ExecUtil : public EventuallyFixture
 				NULL);
 
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
+
+			libertine = std::make_shared<LibertineService>();
+			dbus_test_service_add_task(service, *libertine);
+
 			dbus_test_service_start_tasks(service);
 
 			bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
@@ -89,6 +95,7 @@ class ExecUtil : public EventuallyFixture
 			ubuntu_app_launch_observer_delete_app_starting(starting_cb, this);
 			ubuntu::app_launch::Registry::clearDefault();
 
+			libertine.reset();
 			g_clear_object(&mock);
 			g_clear_object(&service);
 
