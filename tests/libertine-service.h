@@ -25,6 +25,7 @@ class LibertineService
 {
 private:
     DbusTestProcess* process = nullptr;
+    DbusTestTask* wait = nullptr;
 
 public:
     LibertineService()
@@ -36,12 +37,21 @@ public:
         dbus_test_task_set_name(DBUS_TEST_TASK(process), "libertine");
         dbus_test_task_set_return(DBUS_TEST_TASK(process), DBUS_TEST_TASK_RETURN_IGNORE);
         dbus_test_task_set_wait_finished(DBUS_TEST_TASK(process), FALSE);
+
+        wait = dbus_test_task_new();
+        dbus_test_task_set_wait_for(wait, "com.canonical.libertine.Service");
     }
 
     ~LibertineService()
     {
         g_debug("Destroying the Libertined Task");
         g_clear_object(&process);
+        g_clear_object(&wait);
+    }
+
+    DbusTestTask* waitTask()
+    {
+        return wait;
     }
 
     operator std::shared_ptr<DbusTestTask>()
