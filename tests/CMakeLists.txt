@@ -41,13 +41,12 @@ add_definitions ( -DSNAP_BASEDIR="${CMAKE_CURRENT_SOURCE_DIR}/snap-basedir" )
 add_executable (libual-test
 	libual-test.cc
 	mir-mock.cpp)
-target_link_libraries (libual-test gtest_main ${GTEST_MAIN_LIBRARIES} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+target_link_libraries (libual-test gtest_main ${GTEST_MAIN_LIBRARIES} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
 
 add_executable (libual-cpp-test
 	libual-cpp-test.cc
-	${CMAKE_SOURCE_DIR}/libubuntu-app-launch/glib-thread.cpp
 	mir-mock.cpp)
-target_link_libraries (libual-cpp-test gtest_main ${GTEST_MAIN_LIBRARIES} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} ubuntu-launcher)
+target_link_libraries (libual-cpp-test gtest_main ${GTEST_MAIN_LIBRARIES} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
 
 add_executable (data-spew
 	data-spew.c)
@@ -135,7 +134,6 @@ add_test (NAME snappy-xmir-test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/snappy-xmir-
 
 add_custom_target(format-tests
 	COMMAND clang-format -i -style=file
-	failure-test.cc
 	application-info-desktop.cpp
 	libual-cpp-test.cc
 	list-apps.cpp
@@ -148,4 +146,5 @@ add_custom_target(format-tests
 	spew-master.h
 	systemd-mock.h
 	zg-test.cc
+	zg-mock.h
 )
