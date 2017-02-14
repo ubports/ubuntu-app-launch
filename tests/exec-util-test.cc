@@ -80,6 +80,7 @@ class ExecUtil : public EventuallyFixture
 
 			libertine = std::make_shared<LibertineService>();
 			dbus_test_service_add_task(service, *libertine);
+			dbus_test_service_add_task(service, libertine->waitTask());
 
 			dbus_test_service_start_tasks(service);
 
