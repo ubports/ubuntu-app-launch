@@ -35,9 +35,11 @@ namespace app_impls
  ************************/
 
 /** All the interfaces that we run XMir for by default */
-const std::set<std::string> XMIR_INTERFACES{"unity7", "x11"};
-/** All the interfaces that we tell Unity support lifecycle */
-const std::set<std::string> LIFECYCLE_INTERFACES{"unity8"};
+const std::set<std::string> X11_INTERFACES{"unity7", "x11"};
+/** The interface to indicate direct Mir support */
+const std::string MIR_INTERFACE{"mir"};
+/** The interface to indicate Ubuntu lifecycle support */
+const std::string LIFECYCLE_INTERFACE{"unity8"};
 /** Snappy has more restrictive appnames than everyone else */
 const std::regex appnameRegex{"^[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$"};
 
@@ -50,15 +52,13 @@ const std::regex appnameRegex{"^[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$"};
     fields to the desktop spec that come from Snappy interfaces. */
 class SnapInfo : public app_info::Desktop
 {
-    /** The core interface for this snap */
-    std::string interface_;
     /** AppID of snap */
     AppID appId_;
 
 public:
     SnapInfo(const AppID& appid,
              const std::shared_ptr<Registry>& registry,
-             const std::string& interface,
+             const Snap::InterfaceInfo &interfaceInfo,
              const std::string& snapDir)
         : Desktop(
               [appid, snapDir]() -> std::shared_ptr<GKeyFile> {
@@ -111,37 +111,10 @@ public:
               snapDir,
               app_info::DesktopFlags::NONE,
               registry)
-        , interface_(interface)
         , appId_(appid)
     {
-    }
-
-    /** Return the xMirEnable value based on whether the interface is
-        in the list of interfaces using XMir */
-    XMirEnable xMirEnable() override
-    {
-        if (XMIR_INTERFACES.find(interface_) != XMIR_INTERFACES.end())
-        {
-            return XMirEnable::from_raw(true);
-        }
-        else
-        {
-            return XMirEnable::from_raw(false);
-        }
-    }
-
-    /** Return the xMirEnable value based on whether the interface is
-        in the list of interfaces supporting the lifecycle */
-    UbuntuLifecycle supportsUbuntuLifecycle() override
-    {
-        if (LIFECYCLE_INTERFACES.find(interface_) != LIFECYCLE_INTERFACES.end())
-        {
-            return UbuntuLifecycle::from_raw(true);
-        }
-        else
-        {
-            return UbuntuLifecycle::from_raw(false);
-        }
+        _xMirEnable = std::get<0>(interfaceInfo);
+        _ubuntuLifecycle = std::get<1>(interfaceInfo);
     }
 
     /** Figures out the exec line for a snappy command. We're not using
@@ -205,12 +178,11 @@ public:
 
     \param appid Application ID of the snap
     \param registry Registry to use for persistent connections
-    \param interface Primary interface that we found this snap for
+    \param interfaceInfo Metadata gleaned from the snap's interfaces
 */
-Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface)
+Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const InterfaceInfo &interfaceInfo)
     : Base(registry)
     , appid_(appid)
-    , interface_(interface)
 {
     pkgInfo_ = registry->impl->snapdInfo.pkgInfo(appid.package);
     if (!pkgInfo_)
@@ -223,19 +195,19 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
         throw std::runtime_error("AppID does not match installed package for: " + std::string(appid));
     }
 
-    info_ = std::make_shared<SnapInfo>(appid_, _registry, interface_, pkgInfo_->directory);
+    info_ = std::make_shared<SnapInfo>(appid_, _registry, interfaceInfo, pkgInfo_->directory);
 
     g_debug("Application Snap object for AppID '%s'", std::string(appid).c_str());
 }
 
-/** Uses the findInterface() function to find the interface if we don't
+/** Uses the findInterfaceInfo() function to find the interface if we don't
     have one.
 
     \param appid Application ID of the snap
     \param registry Registry to use for persistent connections
 */
 Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
-    : Snap(appid, registry, findInterface(appid, registry))
+    : Snap(appid, registry, findInterfaceInfo(appid, registry))
 {
 }
 
@@ -257,12 +229,27 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
 {
     std::set<std::shared_ptr<Application>, appcompare> apps;
 
-    auto addAppsForInterface = [&](const std::string& interface) {
+    auto lifecycleApps = registry->impl->snapdInfo.appsForInterface(LIFECYCLE_INTERFACE);
+
+    auto lifecycleForApp = [&](const AppID &appID) {
+        auto iterator = lifecycleApps.find(appID);
+        if (iterator == lifecycleApps.end())
+        {
+            return Application::Info::UbuntuLifecycle::from_raw(false);
+        }
+        else
+        {
+            return Application::Info::UbuntuLifecycle::from_raw(true);
+        }
+    };
+
+    auto addAppsForInterface = [&](const std::string& interface, app_info::Desktop::XMirEnable xMirEnable) {
         for (const auto& id : registry->impl->snapdInfo.appsForInterface(interface))
         {
+            auto interfaceInfo = std::make_tuple(xMirEnable, lifecycleForApp(id));
             try
             {
-                auto app = std::make_shared<Snap>(id, registry, interface);
+                auto app = std::make_shared<Snap>(id, registry, interfaceInfo);
                 apps.emplace(app);
             }
             catch (std::runtime_error& e)
@@ -272,15 +259,12 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
         }
     };
 
-    for (const auto& interface : LIFECYCLE_INTERFACES)
-    {
-        addAppsForInterface(interface);
-    }
+    addAppsForInterface(MIR_INTERFACE, app_info::Desktop::XMirEnable::from_raw(false));
 
     /* If an app has both, this will get rejected */
-    for (const auto& interface : XMIR_INTERFACES)
+    for (const auto& interface : X11_INTERFACES)
     {
-        addAppsForInterface(interface);
+        addAppsForInterface(interface, app_info::Desktop::XMirEnable::from_raw(true));
     }
 
     return std::list<std::shared_ptr<Application>>(apps.begin(), apps.end());
@@ -292,33 +276,41 @@ AppID Snap::appId()
     return appid_;
 }
 
-/** Asks Snapd for the interfaces to determine which one the application
+/** Asks Snapd for the interfaces to determine which ones the application
     can support.
 
     \param appid Application ID of the snap
     \param registry Registry to use for persistent connections
 */
-std::string Snap::findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry)
+Snap::InterfaceInfo Snap::findInterfaceInfo(const AppID& appid, const std::shared_ptr<Registry>& registry)
 {
     auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
+    auto xMirEnable = app_info::Desktop::XMirEnable::from_raw(false);
+    auto ubuntuLifecycle = Application::Info::UbuntuLifecycle::from_raw(false);
 
-    for (const auto& interface : LIFECYCLE_INTERFACES)
+    if (ifaceset.find(LIFECYCLE_INTERFACE) != ifaceset.end())
     {
-        if (ifaceset.find(interface) != ifaceset.end())
+        ubuntuLifecycle = Application::Info::UbuntuLifecycle::from_raw(true);
+    }
+
+    if (ifaceset.find(MIR_INTERFACE) == ifaceset.end())
+    {
+        for (const auto& interface : X11_INTERFACES)
         {
-            return interface;
+            if (ifaceset.find(interface) != ifaceset.end())
+            {
+                xMirEnable = app_info::Desktop::XMirEnable::from_raw(true);
+                break;
+            }
+        }
+
+        if (!xMirEnable.value())
+        {
+            throw std::runtime_error("Graphical interface not found for: " + std::string(appid));
         }
     }
 
-    for (const auto& interface : XMIR_INTERFACES)
-    {
-        if (ifaceset.find(interface) != ifaceset.end())
-        {
-            return interface;
-        }
-    }
-
-    throw std::runtime_error("Interface not found for: " + std::string(appid));
+    return std::make_tuple(xMirEnable, ubuntuLifecycle);
 }
 
 /** Checks a PkgInfo structure to ensure that it matches the AppID */

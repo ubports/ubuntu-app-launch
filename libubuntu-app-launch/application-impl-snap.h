@@ -34,7 +34,7 @@ namespace app_impls
     system as Snaps. This class connects to snapd to get information
     on the interfaces of the installed snaps and sees if any of them
     are applicable to the user session. Currently that means if the
-    command has the unity8, unity7 or x11 interface.
+    command has the mir, unity8, unity7 or x11 interfaces.
 
     For Application IDs snaps use a very similar scheme to Click
     packages. The package field is the name of the snap package, typically
@@ -48,8 +48,10 @@ namespace app_impls
 class Snap : public Base
 {
 public:
+    typedef std::tuple<app_info::Desktop::XMirEnable, Application::Info::UbuntuLifecycle> InterfaceInfo;
+
     Snap(const AppID& appid, const std::shared_ptr<Registry>& registry);
-    Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const std::string& interface);
+    Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const InterfaceInfo &interfaceInfo);
 
     static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
 
@@ -77,11 +79,6 @@ public:
 
     virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) override;
 
-    const std::string& getInterface() const
-    {
-        return interface_;
-    }
-
 private:
     /** AppID of the Snap. Should be the name of the snap package.
         The name of the command. And then the revision. */
@@ -89,14 +86,11 @@ private:
     /** The app's displayed information. Should be from a desktop
         file that is put in ${SNAP_DIR}/meta/gui/${command}.desktop */
     std::shared_ptr<app_info::Desktop> info_;
-    /** Which interface we thing we're coming from. Depends on how
-        we handle setting up the environment for the command. */
-    std::string interface_;
     /** Information that we get from Snapd on the package */
     std::shared_ptr<snapd::Info::PkgInfo> pkgInfo_;
 
     std::list<std::pair<std::string, std::string>> launchEnv();
-    static std::string findInterface(const AppID& appid, const std::shared_ptr<Registry>& registry);
+    static InterfaceInfo findInterfaceInfo(const AppID& appid, const std::shared_ptr<Registry>& registry);
     static bool checkPkgInfo(const std::shared_ptr<snapd::Info::PkgInfo>& pkginfo, const AppID& appid);
 };
 
