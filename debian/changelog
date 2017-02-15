@@ -1,8 +1,17 @@
-ubuntu-app-launch (0.10-0ubuntu1) UNRELEASED; urgency=medium
+ubuntu-app-launch (0.10+17.04.20170215.1-0ubuntu1) zesty; urgency=medium
 
+  [ Ken VanDine ]
   * New upstream version
+  * Adds Application::Instance::focus and
+    Application::findInstance(pid_t) API
 
- -- Ken VanDine <ken.vandine@canonical.com>  Wed, 08 Feb 2017 12:46:18 -0500
+  [ Ted Gould ]
+  * Remove unused log functions
+  * Add missing virtual destructors
+  * Provide a popularity info item and a signal for info updating
+  * Run the libertine-service in tests for new libertine >= 1.6
+
+ -- Ken VanDine <ken.vandine@canonical.com>  Wed, 15 Feb 2017 15:10:49 +0000
 
 ubuntu-app-launch (0.9+17.04.20170206-0ubuntu1) zesty; urgency=medium
 
