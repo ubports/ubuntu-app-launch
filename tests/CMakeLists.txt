@@ -97,7 +97,7 @@ endif()
 
 add_executable (list-apps
 	list-apps.cpp)
-target_link_libraries (list-apps gtest_main ${GTEST_MAIN_LIBRARIES} launcher-static)
+target_link_libraries (list-apps gtest_main ${GTEST_MAIN_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
 add_test (NAME list-apps COMMAND ${CMAKE_CURRENT_BINARY_DIR}/list-apps)
 
 # Application Info Desktop
@@ -190,6 +190,7 @@ add_custom_target(format-tests
 	info-watcher-zg.cpp
 	jobs-base-test.cpp
 	jobs-systemd.cpp
+	libertine-service.h
 	registry-mock.h
 	snapd-info-test.cpp
 	snapd-mock.h
