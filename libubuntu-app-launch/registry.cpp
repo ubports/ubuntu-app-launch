@@ -160,5 +160,10 @@ core::Signal<const std::shared_ptr<Application>&,
     return reg->impl->jobs->appResumed();
 }
 
+core::Signal<const std::shared_ptr<Application>&>& Registry::appInfoUpdated(const std::shared_ptr<Registry>& reg)
+{
+    return reg->impl->appInfoUpdated(reg);
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

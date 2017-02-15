@@ -173,8 +173,8 @@ std::shared_ptr<Application::Info> Click::info()
 {
     if (!_info)
     {
-        _info =
-            std::make_shared<app_info::Desktop>(_keyfile, _clickDir, _clickDir, app_info::DesktopFlags::NONE, nullptr);
+        _info = std::make_shared<app_info::Desktop>(appId(), _keyfile, _clickDir, _clickDir,
+                                                    app_info::DesktopFlags::NONE, nullptr);
     }
 
     return _info;
@@ -368,6 +368,11 @@ std::shared_ptr<Application::Instance> Click::launchTest(const std::vector<Appli
 std::shared_ptr<Application::Instance> Click::findInstance(const std::string& instanceid)
 {
     return _registry->impl->jobs->existing(appId(), "application-click", instanceid, std::vector<Application::URL>{});
+}
+
+std::shared_ptr<info_watcher::Base> Click::createInfoWatcher(const std::shared_ptr<Registry>& reg)
+{
+    return {};
 }
 
 }  // namespace app_impls

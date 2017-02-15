@@ -60,57 +60,58 @@ public:
              const std::shared_ptr<Registry>& registry,
              const std::string& interface,
              const std::string& snapDir)
-        : Desktop(
-              [appid, snapDir]() -> std::shared_ptr<GKeyFile> {
-                  /* This is a function to get the keyfile out of the snap using
-                     the paths that snappy places things inside the dir. */
-                  std::string path = snapDir + "/meta/gui/" + appid.appname.value() + ".desktop";
-                  std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), g_key_file_free);
-                  GError* error = nullptr;
-                  g_key_file_load_from_file(keyfile.get(), path.c_str(), G_KEY_FILE_NONE, &error);
-                  if (error != nullptr)
-                  {
-                      auto perror = std::shared_ptr<GError>(error, g_error_free);
-                      throw std::runtime_error("Unable to find keyfile for '" + std::string(appid) + "' at '" + path +
-                                               "' because: " + perror.get()->message);
-                  }
-
-                  /* For bad reasons the Icon values in snaps have gotten to be a
-                     bit crazy. We're going to try to un-fu-bar a few common patterns
-                     here, but eh, we're just encouraging bad behavior */
-                  auto iconvalue = g_key_file_get_string(keyfile.get(), "Desktop Entry", "Icon", nullptr);
-                  if (iconvalue != nullptr)
-                  {
-                      const gchar* prefix{nullptr};
-                      if (g_str_has_prefix(iconvalue, "${SNAP}/"))
+        : Desktop(appid,
+                  [appid, snapDir]() -> std::shared_ptr<GKeyFile> {
+                      /* This is a function to get the keyfile out of the snap using
+                         the paths that snappy places things inside the dir. */
+                      std::string path = snapDir + "/meta/gui/" + appid.appname.value() + ".desktop";
+                      std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), g_key_file_free);
+                      GError* error = nullptr;
+                      g_key_file_load_from_file(keyfile.get(), path.c_str(), G_KEY_FILE_NONE, &error);
+                      if (error != nullptr)
                       {
-                          /* There isn't environment parsing in desktop file values :-( */
-                          prefix = "${SNAP}/";
+                          auto perror = std::shared_ptr<GError>(error, g_error_free);
+                          throw std::runtime_error("Unable to find keyfile for '" + std::string(appid) + "' at '" +
+                                                   path + "' because: " + perror.get()->message);
                       }
 
-                      auto currentdir = std::string{"/snap/"} + appid.package.value() + "/current/";
-                      if (g_str_has_prefix(iconvalue, currentdir.c_str()))
+                      /* For bad reasons the Icon values in snaps have gotten to be a
+                         bit crazy. We're going to try to un-fu-bar a few common patterns
+                         here, but eh, we're just encouraging bad behavior */
+                      auto iconvalue = g_key_file_get_string(keyfile.get(), "Desktop Entry", "Icon", nullptr);
+                      if (iconvalue != nullptr)
                       {
-                          /* What? Why would we encode the snap path from root in a package
-                             format that is supposed to be relocatable? */
-                          prefix = currentdir.c_str();
+                          const gchar* prefix{nullptr};
+                          if (g_str_has_prefix(iconvalue, "${SNAP}/"))
+                          {
+                              /* There isn't environment parsing in desktop file values :-( */
+                              prefix = "${SNAP}/";
+                          }
+
+                          auto currentdir = std::string{"/snap/"} + appid.package.value() + "/current/";
+                          if (g_str_has_prefix(iconvalue, currentdir.c_str()))
+                          {
+                              /* What? Why would we encode the snap path from root in a package
+                                 format that is supposed to be relocatable? */
+                              prefix = currentdir.c_str();
+                          }
+
+                          if (prefix != nullptr)
+                          {
+                              g_key_file_set_string(keyfile.get(), "Desktop Entry", "Icon",
+                                                    iconvalue + strlen(prefix) - 1);
+                              /* -1 to leave trailing slash */
+                          }
+
+                          g_free(iconvalue);
                       }
 
-                      if (prefix != nullptr)
-                      {
-                          g_key_file_set_string(keyfile.get(), "Desktop Entry", "Icon", iconvalue + strlen(prefix) - 1);
-                          /* -1 to leave trailing slash */
-                      }
-
-                      g_free(iconvalue);
-                  }
-
-                  return keyfile;
-              }(),
-              snapDir,
-              snapDir,
-              app_info::DesktopFlags::NONE,
-              registry)
+                      return keyfile;
+                  }(),
+                  snapDir,
+                  snapDir,
+                  app_info::DesktopFlags::NONE,
+                  registry)
         , interface_(interface)
         , appId_(appid)
     {
@@ -517,6 +518,11 @@ std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Applic
 std::shared_ptr<Application::Instance> Snap::findInstance(const std::string& instanceid)
 {
     return _registry->impl->jobs->existing(appId(), "application-snap", instanceid, std::vector<Application::URL>{});
+}
+
+std::shared_ptr<info_watcher::Base> Snap::createInfoWatcher(const std::shared_ptr<Registry>& reg)
+{
+    return {};
 }
 
 }  // namespace app_impls

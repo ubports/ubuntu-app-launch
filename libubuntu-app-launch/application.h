@@ -90,6 +90,8 @@ public:
         struct DefaultDepartmentTag;
         /** \private */
         struct KeywordsTag;
+        /** \private */
+        struct PopularityTag;
 
         /** \private */
         typedef TypeTagger<NameTag, std::string> Name;
@@ -101,6 +103,8 @@ public:
         typedef TypeTagger<DefaultDepartmentTag, std::string> DefaultDepartment;
         /** \private */
         typedef TypeTagger<KeywordsTag, std::vector<std::string>> Keywords;
+        /** \private */
+        typedef TypeTagger<PopularityTag, unsigned int> Popularity;
 
         virtual ~Info() = default;
 
@@ -116,6 +120,8 @@ public:
         virtual const IconPath& screenshotPath() = 0;
         /** List of keywords for the application */
         virtual const Keywords& keywords() = 0;
+        /** Get the relative popularity of the application, 0 is not popular */
+        virtual const Popularity& popularity() = 0;
 
         /** Information to be shown on the app splash screen */
         struct Splash
