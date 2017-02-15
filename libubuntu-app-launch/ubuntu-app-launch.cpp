@@ -633,73 +633,6 @@ ubuntu_app_launch_observer_delete_app_resumed (UbuntuAppLaunchAppPausedResumedOb
 	return observer_delete<UbuntuAppLaunchAppPausedResumedObserver>(observer, user_data, appResumedObservers);
 }
 
-typedef void (*per_instance_func_t) (GDBusConnection * con, GVariant * prop_dict, gpointer user_data);
-
-static void
-foreach_job_instance (GDBusConnection * con, const gchar * jobname, per_instance_func_t func, gpointer user_data)
-{
-	const gchar * job_path = get_jobpath(con, jobname);
-	if (job_path == NULL)
-		return;
-
-	GError * error = NULL;
-	GVariant * instance_tuple = g_dbus_connection_call_sync(con,
-		DBUS_SERVICE_UPSTART,
-		job_path,
-		DBUS_INTERFACE_UPSTART_JOB,
-		"GetAllInstances",
-		NULL,
-		G_VARIANT_TYPE("(ao)"),
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout: default */
-		NULL, /* cancellable */
-		&error);
-
-	if (error != NULL) {
-		g_warning("Unable to get instances of job '%s': %s", jobname, error->message);
-		g_error_free(error);
-		return;
-	}
-
-	GVariant * instance_list = g_variant_get_child_value(instance_tuple, 0);
-	g_variant_unref(instance_tuple);
-
-	GVariantIter instance_iter;
-	g_variant_iter_init(&instance_iter, instance_list);
-	const gchar * instance_path = NULL;
-
-	while (g_variant_iter_loop(&instance_iter, "&o", &instance_path)) {
-		GVariant * props_tuple = g_dbus_connection_call_sync(con,
-			DBUS_SERVICE_UPSTART,
-			instance_path,
-			"org.freedesktop.DBus.Properties",
-			"GetAll",
-			g_variant_new("(s)", DBUS_INTERFACE_UPSTART_INSTANCE),
-			G_VARIANT_TYPE("(a{sv})"),
-			G_DBUS_CALL_FLAGS_NONE,
-			-1, /* timeout: default */
-			NULL, /* cancellable */
-			&error);
-
-		if (error != NULL) {
-			g_warning("Unable to name of instance '%s': %s", instance_path, error->message);
-			g_error_free(error);
-			error = NULL;
-			continue;
-		}
-
-		GVariant * props_dict = g_variant_get_child_value(props_tuple, 0);
-
-		func(con, props_dict, user_data);
-
-		g_variant_unref(props_dict);
-		g_variant_unref(props_tuple);
-
-	}
-
-	g_variant_unref(instance_list);
-}
-
 gchar **
 ubuntu_app_launch_list_running_apps (void)
 {
@@ -1260,126 +1193,58 @@ ubuntu_app_launch_stop_multiple_helper (const gchar * type, const gchar * appid,
 	return stop_helper_core(type, appid, instanceid);
 }
 
-
-typedef struct {
-	gchar * type_prefix; /* Type with the colon sperator */
-	size_t type_len;     /* Length in characters of the prefix */
-	GArray * retappids;  /* Array of appids to return */
-} helpers_helper_t;
-
-/* Look at each instance and see if it matches this type, if so
-   add the appid portion to the array of appids */
-static void
-list_helpers_helper (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
-{
-	helpers_helper_t * data = (helpers_helper_t *)user_data;
-
-	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
-	if (namev == NULL) {
-		return;
-	}
-
-	const gchar * name = g_variant_get_string(namev, NULL);
-	if (g_str_has_prefix(name, data->type_prefix)) {
-		/* Skip the type name */
-		name += data->type_len;
-
-		/* Skip a possible instance ID */
-		name = g_strstr_len(name, -1, ":");
-		name++;
-
-		/* Now copy the app id */
-		gchar * appid = g_strdup(name);
-		g_array_append_val(data->retappids, appid);
-	}
-
-	g_variant_unref(namev);
-
-	return;
-}
-
 gchar **
 ubuntu_app_launch_list_helpers (const gchar * type)
 {
 	g_return_val_if_fail(type != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto helpers = registry->runningHelpers(ubuntu::app_launch::Helper::Type::from_raw(type));
 
-	helpers_helper_t helpers_helper_data = {
-		g_strdup_printf("%s:", type),
-		strlen(type) + 1, /* 1 for the colon */
-		g_array_new(TRUE, TRUE, sizeof(gchar *))
-	};
+		auto array = g_array_new(TRUE, TRUE, sizeof(gchar *));
 
-	foreach_job_instance(con, "untrusted-helper", list_helpers_helper, &helpers_helper_data);
+		for (const auto &helper : helpers) {
+			gchar * appid = g_strdup(std::string(helper->appId()).c_str());
+			g_array_append_val(array, appid);
+		}
 
-	g_object_unref(con);
-	g_free(helpers_helper_data.type_prefix);
-
-	return (gchar **)g_array_free(helpers_helper_data.retappids, FALSE);
-}
-
-typedef struct {
-	gchar * type_prefix; /* Type with the colon sperator */
-	size_t type_len;     /* Length in characters of the prefix */
-	GArray * retappids;  /* Array of appids to return */
-	gchar * appid_suffix; /* The appid for the end */
-} helper_instances_t;
-
-/* Look at each instance and see if it matches this type and appid.
-   If so, add the instance ID to the array of instance IDs */
-static void
-list_helper_instances (GDBusConnection * con, GVariant * props_dict, gpointer user_data)
-{
-	helper_instances_t * data = (helper_instances_t *)user_data;
-
-	GVariant * namev = g_variant_lookup_value(props_dict, "name", G_VARIANT_TYPE_STRING);
-	if (namev == NULL) {
-		return;
+		return (gchar **)g_array_free(array, FALSE);
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to get helpers for type '%s': %s", type, e.what());
+		return NULL;
 	}
-
-	const gchar * name = g_variant_get_string(namev, NULL);
-	gchar * suffix_loc = NULL;
-	if (g_str_has_prefix(name, data->type_prefix) &&
-			(suffix_loc = g_strrstr(name, data->appid_suffix)) != NULL) {
-		/* Skip the type name */
-		name += data->type_len;
-
-		/* Now copy the instance id */
-		gchar * instanceid = g_strndup(name, suffix_loc - name);
-		g_array_append_val(data->retappids, instanceid);
-	}
-
-	g_variant_unref(namev);
-
-	return;
 }
 
 gchar **
 ubuntu_app_launch_list_helper_instances (const gchar * type, const gchar * appid)
 {
-	g_return_val_if_fail(type != NULL, FALSE);
-	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
+	g_return_val_if_fail(type != NULL, NULL);
+	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, NULL);
+	g_return_val_if_fail(appid != NULL, NULL);
 
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
-	helper_instances_t helper_instances_data = {
-		g_strdup_printf("%s:", type),
-		strlen(type) + 1, /* 1 for the colon */
-		g_array_new(TRUE, TRUE, sizeof(gchar *)),
-		g_strdup_printf(":%s", appid)
-	};
+		auto insts = helper->instances();
 
-	foreach_job_instance(con, "untrusted-helper", list_helper_instances, &helper_instances_data);
+		auto array = g_array_new(TRUE, TRUE, sizeof(gchar *));
 
-	g_object_unref(con);
-	g_free(helper_instances_data.type_prefix);
-	g_free(helper_instances_data.appid_suffix);
+		for (const auto &inst : insts) {
+			/* TODO: Copy IDS */
+			if (inst->isRunning()) {
+				g_debug("Running");
+			}
+		}
 
-	return (gchar **)g_array_free(helper_instances_data.retappids, FALSE);
+		return (gchar **)g_array_free(array, FALSE);
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to get helper instances for '%s' of type '%s': %s", appid, type, e.what());
+		return NULL;
+	}
 }
 
 /* The data we keep for each observer */
