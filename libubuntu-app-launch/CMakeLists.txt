@@ -51,7 +51,6 @@ application-info-desktop.h
 application-info-desktop.cpp
 application-icon-finder.h
 application-icon-finder.cpp
-helper-impl-click.cpp
 glib-thread.h
 glib-thread.cpp
 jobs-base.h

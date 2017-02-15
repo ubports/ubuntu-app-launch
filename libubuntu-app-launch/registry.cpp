@@ -31,8 +31,6 @@
 #include "application-impl-snap.h"
 #endif
 
-#include "helper-impl-click.h"
-
 namespace ubuntu
 {
 namespace app_launch
@@ -75,7 +73,8 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
 {
     std::list<std::shared_ptr<Helper>> list;
 
-    list.splice(list.begin(), helper_impls::Click::running(type, connection));
+    // TODO: Fix this 
+    // list.splice(list.begin(), helper_impls::Click::running(type, connection));
 
     return list;
 }
