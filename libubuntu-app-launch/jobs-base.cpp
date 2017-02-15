@@ -79,7 +79,7 @@ std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
     }
 }
 
-const std::set<std::string>& Base::getAllJobs() const
+const std::list<std::string>& Base::getAllJobs() const
 {
     return allJobs_;
 }
@@ -424,6 +424,36 @@ void Base::clearManager()
 {
     g_debug("Clearing the manager");
     manager_.reset();
+}
+
+/** Get application objects for all of the applications based
+    on the appids associated with the application jobs */
+std::list<std::shared_ptr<Application>> Base::runningApps()
+{
+    auto registry = registry_.lock();
+
+    if (!registry)
+    {
+        g_warning("Unable to list apps without a registry");
+        return {};
+    }
+
+    auto appids = runningAppIds(allJobs_);
+
+    std::list<std::shared_ptr<Application>> apps;
+    for (const auto& appid : appids)
+    {
+        auto id = AppID::find(registry, appid);
+        if (id.empty())
+        {
+            g_debug("Unable to handle AppID: %s", appid.c_str());
+            continue;
+        }
+
+        apps.emplace_back(Application::create(id, registry));
+    }
+
+    return apps;
 }
 
 }  // namespace manager

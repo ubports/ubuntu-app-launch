@@ -869,7 +869,7 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
     return instances;
 }
 
-std::list<std::shared_ptr<Application>> SystemD::runningApps()
+std::list<std::string> SystemD::runningAppIds(const std::list<std::string>& allJobs)
 {
     auto registry = registry_.lock();
 
@@ -879,14 +879,13 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
         return {};
     }
 
-    auto allJobs = getAllJobs();
     std::set<std::string> appids;
 
     for (const auto& unit : unitPaths)
     {
         const SystemD::UnitInfo& unitinfo = unit.first;
 
-        if (allJobs.find(unitinfo.job) == allJobs.end())
+        if (std::find(allJobs.begin(), allJobs.end(), unitinfo.job) == allJobs.end())
         {
             continue;
         }
@@ -894,20 +893,7 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
         appids.insert(unitinfo.appid);
     }
 
-    std::list<std::shared_ptr<Application>> apps;
-    for (const auto& appid : appids)
-    {
-        auto id = AppID::find(registry, appid);
-        if (id.empty())
-        {
-            g_debug("Unable to handle AppID: %s", appid.c_str());
-            continue;
-        }
-
-        apps.emplace_back(Application::create(id, registry));
-    }
-
-    return apps;
+    return {appids.begin(), appids.end()};
 }
 
 std::string SystemD::userBusPath()

@@ -1148,29 +1148,35 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
         });
 }
 
-std::list<std::shared_ptr<Application>> Upstart::runningApps()
+std::list<std::string> Upstart::runningAppIds(const std::list<std::string>& jobs)
 {
     std::list<std::string> instances;
 
-    /* Get all the legacy instances */
-    instances.splice(instances.begin(), upstartInstancesForJob("application-legacy"));
-    /* Get all the snap instances */
-    instances.splice(instances.begin(), upstartInstancesForJob("application-snap"));
+    for (const auto& job : jobs)
+    {
+        auto jobinst = upstartInstancesForJob(job);
 
-    /* Remove the instance ID */
-    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string& instancename) -> std::string {
-        static const std::regex instanceregex("^(.*)-[0-9]*$");
-        std::smatch match;
-        if (std::regex_match(instancename, match, instanceregex))
+        if (job != "application-click")
         {
-            return match[1].str();
+            /* Remove the instance ID */
+            std::transform(jobinst.begin(), jobinst.end(), jobinst.begin(),
+                           [](std::string& instancename) -> std::string {
+                               static const std::regex instanceregex("^(.*)-[0-9]*$");
+                               std::smatch match;
+                               if (std::regex_match(instancename, match, instanceregex))
+                               {
+                                   return match[1].str();
+                               }
+                               else
+                               {
+                                   g_warning("Unable to match instance name: %s", instancename.c_str());
+                                   return {};
+                               }
+                           });
         }
-        else
-        {
-            g_warning("Unable to match instance name: %s", instancename.c_str());
-            return {};
-        }
-    });
+
+        instances.splice(instances.begin(), jobinst);
+    }
 
     /* Deduplicate Set */
     std::set<std::string> instanceset;
@@ -1180,29 +1186,13 @@ std::list<std::shared_ptr<Application>> Upstart::runningApps()
             instanceset.insert(instance);
     }
 
-    /* Add in the click instances */
-    for (auto instance : upstartInstancesForJob("application-click"))
-    {
-        instanceset.insert(instance);
-    }
-
     g_debug("Overall there are %d instances: %s", int(instanceset.size()),
             std::accumulate(instanceset.begin(), instanceset.end(), std::string{}, [](const std::string& instr,
                                                                                       std::string instance) {
                 return instr.empty() ? instance : instr + ", " + instance;
             }).c_str());
 
-    /* Convert to Applications */
-    auto registry = registry_.lock();
-    std::list<std::shared_ptr<Application>> apps;
-    for (auto instance : instanceset)
-    {
-        auto appid = AppID::find(registry, instance);
-        auto app = Application::create(appid, registry);
-        apps.push_back(app);
-    }
-
-    return apps;
+    return {instanceset.begin(), instanceset.end()};
 }
 
 }  // namespace manager

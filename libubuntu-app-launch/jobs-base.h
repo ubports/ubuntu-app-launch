@@ -111,11 +111,12 @@ public:
                                                             const std::string& instance,
                                                             const std::vector<Application::URL>& urls) = 0;
 
-    virtual std::list<std::shared_ptr<Application>> runningApps() = 0;
+    virtual std::list<std::shared_ptr<Application>> runningApps();
+    virtual std::list<std::string> runningAppIds(const std::list<std::string>& jobs) = 0;
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
 
-    const std::set<std::string>& getAllJobs() const;
+    const std::list<std::string>& getAllJobs() const;
 
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
 
@@ -146,7 +147,7 @@ protected:
     std::weak_ptr<Registry> registry_;
 
     /** A set of all the job names */
-    std::set<std::string> allJobs_;
+    std::list<std::string> allJobs_;
 
     /** The DBus connection we're connecting to */
     std::shared_ptr<GDBusConnection> dbus_;

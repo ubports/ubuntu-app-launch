@@ -53,7 +53,7 @@ public:
                                                             const std::string& instance,
                                                             const std::vector<Application::URL>& urls) override;
 
-    virtual std::list<std::shared_ptr<Application>> runningApps() override;
+    virtual std::list<std::string> runningAppIds(const std::list<std::string>& jobs) override;
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
 

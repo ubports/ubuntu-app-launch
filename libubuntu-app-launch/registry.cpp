@@ -73,7 +73,7 @@ std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, s
 {
     std::list<std::shared_ptr<Helper>> list;
 
-    // TODO: Fix this 
+    // TODO: Fix this
     // list.splice(list.begin(), helper_impls::Click::running(type, connection));
 
     return list;
