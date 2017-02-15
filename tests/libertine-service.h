@@ -30,6 +30,8 @@ private:
 public:
     LibertineService()
     {
+        g_setenv("LIBERTINE_DEBUG", "2", TRUE);
+
         process = dbus_test_process_new("/usr/bin/libertined");
         dbus_test_process_append_param(process, "--debug");
 
