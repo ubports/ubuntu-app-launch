@@ -69,14 +69,14 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
     return list;
 }
 
-std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, std::shared_ptr<Registry> connection)
+std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, std::shared_ptr<Registry> registry)
 {
-    std::list<std::shared_ptr<Helper>> list;
+    if (!registry->impl->jobs)
+    {
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
+    }
 
-    // TODO: Fix this
-    // list.splice(list.begin(), helper_impls::Click::running(type, connection));
-
-    return list;
+    return registry->impl->jobs->runningHelpers(type);
 }
 
 /* Quick little helper to bundle up standard code */

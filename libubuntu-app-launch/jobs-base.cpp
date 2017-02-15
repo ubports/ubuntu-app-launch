@@ -456,6 +456,36 @@ std::list<std::shared_ptr<Application>> Base::runningApps()
     return apps;
 }
 
+/** Get application objects for all of the applications based
+    on the appids associated with the application jobs */
+std::list<std::shared_ptr<Helper>> Base::runningHelpers(const Helper::Type& type)
+{
+    auto registry = registry_.lock();
+
+    if (!registry)
+    {
+        g_warning("Unable to list helpers without a registry");
+        return {};
+    }
+
+    auto appids = runningAppIds({type.value()});
+
+    std::list<std::shared_ptr<Helper>> helpers;
+    for (const auto& appid : appids)
+    {
+        auto id = AppID::parse(appid);
+        if (id.empty())
+        {
+            g_debug("Unable to handle AppID: %s", appid.c_str());
+            continue;
+        }
+
+        helpers.emplace_back(Helper::create(type, id, registry));
+    }
+
+    return helpers;
+}
+
 }  // namespace manager
 
 namespace instance

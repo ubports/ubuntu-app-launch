@@ -112,6 +112,8 @@ public:
                                                             const std::vector<Application::URL>& urls) = 0;
 
     virtual std::list<std::shared_ptr<Application>> runningApps();
+    virtual std::list<std::shared_ptr<Helper>> runningHelpers(const Helper::Type& type);
+
     virtual std::list<std::string> runningAppIds(const std::list<std::string>& jobs) = 0;
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
