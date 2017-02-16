@@ -42,13 +42,6 @@ extern "C" {
 #include "registry-impl.h"
 #include <algorithm>
 
-static void free_helper (gpointer value);
-int kill (pid_t pid, int signal) noexcept;
-static gchar * escape_dbus_string (const gchar * input);
-
-G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path)
-G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd)
-
 /* Make a typed string vector out of a GStrv */
 template <typename T>
 static std::vector<T> uriVector (const gchar * const * uris)
@@ -60,69 +53,6 @@ static std::vector<T> uriVector (const gchar * const * uris)
 	}
 
 	return urivect;
-}
-
-/* Function to take the urls and escape them so that they can be
-   parsed on the other side correctly. */
-static gchar *
-app_uris_string (const gchar * const * uris)
-{
-	guint i = 0;
-	GArray * array = g_array_new(TRUE, TRUE, sizeof(gchar *));
-	g_array_set_clear_func(array, free_helper);
-
-	for (i = 0; i < g_strv_length((gchar**)uris); i++) {
-		gchar * escaped = g_shell_quote(uris[i]);
-		g_array_append_val(array, escaped);
-	}
-
-	gchar * urisjoin = g_strjoinv(" ", (gchar**)array->data);
-	g_array_unref(array);
-
-	return urisjoin;
-}
-
-/* Get the path of the job from Upstart, if we've got it already, we'll just
-   use the cache of the value */
-static const gchar *
-get_jobpath (GDBusConnection * con, const gchar * jobname)
-{
-	gchar * cachepath = g_strdup_printf("ubuntu-app-lauch-job-path-cache-%s", jobname);
-	gpointer cachedata = g_object_get_data(G_OBJECT(con), cachepath);
-
-	if (cachedata != NULL) {
-		g_free(cachepath);
-		return (const gchar*)cachedata;
-	}
-
-	GError * error = NULL;
-	GVariant * job_path_variant = g_dbus_connection_call_sync(con,
-		DBUS_SERVICE_UPSTART,
-		DBUS_PATH_UPSTART,
-		DBUS_INTERFACE_UPSTART,
-		"GetJobByName",
-		g_variant_new("(s)", jobname),
-		G_VARIANT_TYPE("(o)"),
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout: default */
-		NULL, /* cancellable */
-		&error);
-
-	if (error != NULL) {	
-		g_warning("Unable to find job '%s': %s", jobname, error->message);
-		g_error_free(error);
-		g_free(cachepath);
-		return NULL;
-	}
-
-	gchar * job_path = NULL;
-	g_variant_get(job_path_variant, "(o)", &job_path);
-	g_variant_unref(job_path_variant);
-
-	g_object_set_data_full(G_OBJECT(con), cachepath, job_path, g_free);
-	g_free(cachepath);
-
-	return job_path;
 }
 
 gboolean
@@ -169,13 +99,6 @@ ubuntu_app_launch_start_application_test (const gchar * appid, const gchar * con
 		g_warning("Unable to start app '%s': %s", appid, e.what());
 		return FALSE;
 	}
-}
-
-static void
-free_helper (gpointer value)
-{
-	gchar ** strp = (gchar **)value;
-	g_free(*strp);
 }
 
 gboolean
@@ -775,79 +698,6 @@ ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const
 	return g_strdup(std::string(appid).c_str());
 }
 
-/* Print an error if we couldn't start it */
-static void
-start_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
-{
-	GError * error = NULL;
-	GVariant * result = NULL;
-
-	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
-	if (result != NULL)
-		g_variant_unref(result);
-
-	if (error != NULL) {
-		g_warning("Unable to start helper: %s", error->message);
-		g_error_free(error);
-	}
-}
-
-/* Implements sending the "start" command to Upstart for the
-   untrusted helper job with the various configuration options
-   to define the instance.  In the end there's only one job with
-   an array of instances. */
-static gboolean
-start_helper_core (const gchar * type, const gchar * appid, const gchar * const * uris, const gchar * instance, const gchar * mirsocketpath)
-{
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
-
-	const gchar * jobpath = get_jobpath(con, "untrusted-helper");
-
-	/* Build up our environment */
-	GVariantBuilder builder;
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("HELPER_TYPE=%s", type)));
-
-	if (uris != NULL) {
-		gchar * urisjoin = app_uris_string(uris);
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_URIS=%s", urisjoin)));
-		g_free(urisjoin);
-	}
-
-	if (instance != NULL) {
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instance)));
-	}
-
-	if (mirsocketpath != NULL) {
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("UBUNTU_APP_LAUNCH_DEMANGLE_PATH=%s", mirsocketpath)));
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("UBUNTU_APP_LAUNCH_DEMANGLE_NAME=%s", g_dbus_connection_get_unique_name(con))));
-	}
-
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-	
-	/* Call the job start function */
-	g_dbus_connection_call(con,
-	                       DBUS_SERVICE_UPSTART,
-	                       jobpath,
-	                       DBUS_INTERFACE_UPSTART_JOB,
-	                       "Start",
-	                       g_variant_builder_end(&builder),
-	                       NULL,
-	                       G_DBUS_CALL_FLAGS_NONE,
-	                       -1,
-	                       NULL, /* cancellable */
-	                       start_helper_callback,
-	                       NULL);
-
-	g_object_unref(con);
-
-	return TRUE;
-}
-
 gboolean
 ubuntu_app_launch_start_helper (const gchar * type, const gchar * appid, const gchar * const * uris)
 {
@@ -855,7 +705,27 @@ ubuntu_app_launch_start_helper (const gchar * type, const gchar * appid, const g
 	g_return_val_if_fail(appid != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
 
-	return start_helper_core(type, appid, uris, NULL, NULL);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
+
+		if (!helper->instances().empty()) {
+			throw std::runtime_error{"Instance already exits"};
+		}
+
+		auto uriv = uriVector<ubuntu::app_launch::Helper::URL>(uris);
+		auto inst = helper->launch(uriv);
+
+		if (!inst) {
+			throw std::runtime_error{"Empty instance"};
+		}
+
+		return true;
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to launch helper of type '%s' id '%s': %s", type, appid, e.what());
+		return false;
+	}
 }
 
 gchar *
@@ -865,228 +735,23 @@ ubuntu_app_launch_start_multiple_helper (const gchar * type, const gchar * appid
 	g_return_val_if_fail(appid != NULL, NULL);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, NULL);
 
-	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
-	if (start_helper_core(type, appid, uris, instanceid, NULL)) {
-		return instanceid;
-	}
+		auto uriv = uriVector<ubuntu::app_launch::Helper::URL>(uris);
+		auto inst = helper->launch(uriv);
 
-	g_free(instanceid);
-	return NULL;
-}
-
-/* Transfer from Mir's data structure to ours */
-static void
-get_mir_session_fd_helper (MirPromptSession * session, size_t count, int const * fdin, void * user_data)
-{
-	auto promise = static_cast<std::promise<int> *>(user_data);
-
-	if (count != 1) {
-		g_warning("Mir trusted session returned %d FDs instead of one", (int)count);
-		promise->set_value(0);
-		return;
-	}
-
-	promise->set_value(fdin[0]);
-}
-
-/* Setup to get the FD from Mir, blocking */
-static int
-get_mir_session_fd (MirPromptSession * session)
-{
-	std::promise<int> promise;
-
-	mir_prompt_session_new_fds_for_prompt_providers(session,
-		1,
-		get_mir_session_fd_helper,
-		&promise);
-
-	return promise.get_future().get();
-}
-
-static GList * open_proxies = NULL;
-
-static gint
-remove_socket_path_find (gconstpointer a, gconstpointer b) 
-{
-	GObject * obj = (GObject *)a;
-	const gchar * path = (const gchar *)b;
-
-	gchar * objpath = (gchar *)g_object_get_qdata(obj, proxy_path_quark());
-	
-	return g_strcmp0(objpath, path);
-}
-
-/* Cleans up if we need to early */
-static gboolean
-remove_socket_path (const gchar * path)
-{
-	GList * thisproxy = g_list_find_custom(open_proxies, path, remove_socket_path_find);
-	if (thisproxy == NULL)
-		return FALSE;
-
-	g_debug("Removing Mir Socket Proxy: %s", path);
-
-	GObject * obj = G_OBJECT(thisproxy->data);
-	open_proxies = g_list_delete_link(open_proxies, thisproxy);
-
-	/* Remove ourselves from DBus if we weren't already */
-	g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(obj));
-
-	/* If we still have FD, close it */
-	int mirfd = GPOINTER_TO_INT(g_object_get_qdata(obj, mir_fd_quark()));
-	if (mirfd != 0) {
-		close(mirfd);
-
-		/* This is actually an error, we should expect not to find
-		   this here to do anything with it. */
-		const gchar * props[3] = {
-			"UbuntuAppLaunchProxyDbusPath",
-			NULL,
-			NULL
-		};
-		props[1] = path;
-		whoopsie_report_recoverable_problem("ubuntu-app-launch-mir-fd-proxy", 0, TRUE, props);
-	}
-
-	g_object_unref(obj);
-
-	return TRUE;
-}
-
-/* Small timeout function that shouldn't, in most cases, ever do anything.
-   But we need it here to ensure we don't leave things on the bus */
-static gboolean
-proxy_timeout (gpointer user_data)
-{
-	const gchar * path = (const gchar *)user_data;
-	remove_socket_path(path);
-	return G_SOURCE_REMOVE;
-}
-
-/* Removes the whole list of proxies if they are there */
-static void
-proxy_cleanup_list (void)
-{
-	while (open_proxies) {
-		GObject * obj = G_OBJECT(open_proxies->data);
-		gchar * path = (gchar *)g_object_get_qdata(obj, proxy_path_quark());
-		remove_socket_path(path);
-	}
-}
-
-static gboolean
-proxy_mir_socket (GObject * obj, GDBusMethodInvocation * invocation, gpointer user_data)
-{
-	g_debug("Called to give Mir socket");
-	int fd = GPOINTER_TO_INT(user_data);
-
-	if (fd == 0) {
-		g_critical("No FDs to give!");
-		return FALSE;
-	}
-
-	/* Index into fds */
-	GVariant* handle = g_variant_new_handle(0);
-	GVariant* tuple = g_variant_new_tuple(&handle, 1);
-
-	GError* error = NULL;
-	GUnixFDList* list = g_unix_fd_list_new();
-	g_unix_fd_list_append(list, fd, &error);
-
-	if (error == NULL) {   
-		g_dbus_method_invocation_return_value_with_unix_fd_list(invocation, tuple, list);
-	} else {
-		g_variant_ref_sink(tuple);
-		g_variant_unref(tuple);
-	}
-
-	g_object_unref(list);
-
-	if (error != NULL) {   
-		g_critical("Unable to pass FD %d: %s", fd, error->message);
-		g_error_free(error);
-		return FALSE;
-	}   
-
-	g_object_set_qdata(obj, mir_fd_quark(), GINT_TO_POINTER(0));
-
-	return TRUE;
-}
-
-/* Sets up the DBus proxy to send to the demangler */
-static gchar *
-build_proxy_socket_path (const gchar * appid, int mirfd)
-{
-	static gboolean final_cleanup = FALSE;
-	if (!final_cleanup) {
-		std::atexit(proxy_cleanup_list);
-		final_cleanup = TRUE;
-	}
-
-	GError * error = NULL;
-	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-	if (error != NULL) {
-		g_warning("Unable to get session bus: %s", error->message);
-		g_error_free(error);
-		return NULL;
-	}
-
-	/* Export an Object on DBus */
-	proxySocketDemangler * skel = proxy_socket_demangler_skeleton_new();
-	g_signal_connect(G_OBJECT(skel), "handle-get-mir-socket", G_CALLBACK(proxy_mir_socket), GINT_TO_POINTER(mirfd));
-
-	gchar * encoded_appid = escape_dbus_string(appid);
-	gchar * socket_name = NULL;
-	/* Loop until we fine an object path that isn't taken (probably only once) */
-	while (socket_name == NULL) {
-		gchar* tryname = g_strdup_printf("/com/canonical/UbuntuAppLaunch/%s/%X", encoded_appid, g_random_int());
-		g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skel),
-			session,
-			tryname,
-			&error);
-
-		if (error == NULL) {
-			socket_name = tryname;
-			g_debug("Exporting Mir socket on path: %s", socket_name);
-		} else {
-			/* Always print the error, but if the object path is in use let's
-			   not exit the loop. Let's just try again. */
-			bool exitnow = (error->domain != G_DBUS_ERROR || error->code != G_DBUS_ERROR_OBJECT_PATH_IN_USE);
-			g_critical("Unable to export trusted session object: %s", error->message);
-
-			g_clear_error(&error);
-			g_free(tryname);
-
-			if (exitnow) {
-				break;
-			}
+		if (!inst) {
+			throw std::runtime_error{"Empty instance"};
 		}
+
+		return g_strdup(std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::BaseInstance>(inst)->getInstanceId().c_str());
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to launch helper of type '%s' id '%s': %s", type, appid, e.what());
+		return nullptr;
 	}
-	g_free(encoded_appid);
-
-	/* If we didn't get a socket name, we should just exit. And
-	   make sure to clean up the socket. */
-	if (socket_name == NULL) {   
-		g_object_unref(skel);
-		g_object_unref(session);
-		g_critical("Unable to export object to any name");
-		return NULL;
-	}
-
-	g_object_set_qdata_full(G_OBJECT(skel), proxy_path_quark(), g_strdup(socket_name), g_free);
-	g_object_set_qdata(G_OBJECT(skel), mir_fd_quark(), GINT_TO_POINTER(mirfd));
-	open_proxies = g_list_prepend(open_proxies, skel);
-
-	g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
-	                           2,
-	                           proxy_timeout,
-	                           g_strdup(socket_name),
-	                           g_free);
-
-	g_object_unref(session);
-
-	return socket_name;
 }
 
 gchar *
@@ -1097,27 +762,23 @@ ubuntu_app_launch_start_session_helper (const gchar * type, MirPromptSession * s
 	g_return_val_if_fail(appid != NULL, NULL);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, NULL);
 
-	int mirfd = get_mir_session_fd(session);
-	if (mirfd == 0)
-		return NULL;
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
-	gchar * socket_path = build_proxy_socket_path(appid, mirfd);
-	if (socket_path == NULL) {
-		close(mirfd);
-		return NULL;
+		auto uriv = uriVector<ubuntu::app_launch::Helper::URL>(uris);
+		auto inst = helper->launch(session, uriv);
+
+		if (!inst) {
+			throw std::runtime_error{"Empty instance"};
+		}
+
+		return g_strdup(std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::BaseInstance>(inst)->getInstanceId().c_str());
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to launch helper of type '%s' id '%s': %s", type, appid, e.what());
+		return nullptr;
 	}
-
-	gchar * instanceid = g_strdup_printf("%" G_GUINT64_FORMAT, g_get_real_time());
-
-	if (start_helper_core(type, appid, uris, instanceid, socket_path)) {
-		return instanceid;
-	}
-
-	remove_socket_path(socket_path);
-	g_free(socket_path);
-	close(mirfd);
-	g_free(instanceid);
-	return NULL;
 }
 
 gboolean
@@ -1479,30 +1140,5 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directo
 	g_object_unref(bus);
 
 	return TRUE;
-}
-
-
-/* ensure that all characters are valid in the dbus output string */
-static gchar *
-escape_dbus_string (const gchar * input)
-{
-	static const gchar *xdigits = "0123456789abcdef";
-	GString *escaped;
-	gchar c;
-
-	g_return_val_if_fail (input != NULL, NULL);
-
-	escaped = g_string_new (NULL);
-	while ((c = *input++)) {
-		if (g_ascii_isalnum (c)) {
-			g_string_append_c (escaped, c);
-		} else {
-			g_string_append_c (escaped, '_');
-			g_string_append_c (escaped, xdigits[c >> 4]);
-			g_string_append_c (escaped, xdigits[c & 0xf]);
-		}
-	}
-
-	return g_string_free (escaped, FALSE);
 }
 
