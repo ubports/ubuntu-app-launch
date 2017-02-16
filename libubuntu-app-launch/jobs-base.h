@@ -50,6 +50,10 @@ public:
     void pause() override;
     void resume() override;
 
+    const std::string& getInstanceId() {
+	    return instance_;
+    }
+
     /* OOM Functions */
     void setOomAdjustment(const oom::Score score) override;
     const oom::Score getOomAdjustment() override;
