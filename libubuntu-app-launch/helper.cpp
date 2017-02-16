@@ -115,11 +115,49 @@ std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
         _appid, _type.value(), std::string{}, appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
 }
 
+class MirFDProxy
+{
+public:
+    MirPromptSession* session_;
+    std::weak_ptr<Registry> registry_;
+
+    MirFDProxy(MirPromptSession* session, const std::shared_ptr<Registry>& reg)
+        : session_(session)
+        , registry_(reg)
+    {
+    }
+
+    ~MirFDProxy()
+    {
+    }
+
+    std::string getPath()
+    {
+        return "path";
+    }
+
+    std::string getName()
+    {
+        return "name";
+    }
+};
+
 std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::vector<Helper::URL> urls)
 {
-    std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [this]() {
-        return std::list<std::pair<std::string, std::string>>{};
+    auto proxy = std::make_shared<MirFDProxy>(session, _registry);
+
+    std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [proxy]() {
+        std::list<std::pair<std::string, std::string>> envs;
+
+        envs.emplace_back(std::make_pair("UBUNTU_APP_LAUNCH_DEMANGLE_PATH", proxy->getPath()));
+        envs.emplace_back(std::make_pair("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", proxy->getName()));
+
+        return envs;
     };
+
+    /* This will maintain a reference to the proxy for two
+       seconds. And then it'll be dropped. */
+    _registry->impl->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); });
 
     /* TODO */
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
