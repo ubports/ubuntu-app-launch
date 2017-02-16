@@ -123,7 +123,6 @@ std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
 class MirFDProxy
 {
 public:
-    std::weak_ptr<Registry> registry_;
     int mirfd;
     std::shared_ptr<proxySocketDemangler> skel;
     guint handle;
@@ -131,7 +130,7 @@ public:
     std::string name;
 
     MirFDProxy(MirPromptSession* session, const AppID& appid, const std::shared_ptr<Registry>& reg)
-        : registry_(reg)
+        : name(g_dbus_connection_get_unique_name(reg->impl->_dbus.get()))
     {
         /* Get the Mir FD */
         std::promise<int> promise;
@@ -159,35 +158,47 @@ public:
         }
 
         /* Setup the DBus interface */
-        skel = std::shared_ptr<proxySocketDemangler>(proxy_socket_demangler_skeleton_new(),
-                                                     [](proxySocketDemangler* skel) { g_clear_object(&skel); });
-        handle = g_signal_connect(G_OBJECT(skel.get()), "handle-get-mir-socket", G_CALLBACK(staticProxyCb), this);
+        std::tie(skel, handle, path) =
+            reg->impl->thread.executeOnThread<std::tuple<std::shared_ptr<proxySocketDemangler>, guint, std::string>>(
+                [this, appid, reg]() {
+                    auto skel = std::shared_ptr<proxySocketDemangler>(
+                        proxy_socket_demangler_skeleton_new(),
+                        [](proxySocketDemangler* skel) { g_clear_object(&skel); });
+                    auto handle = g_signal_connect(G_OBJECT(skel.get()), "handle-get-mir-socket",
+                                                   G_CALLBACK(staticProxyCb), this);
 
-        /* Find a path to export on */
-        auto dbusAppid = dbusSafe(std::string{appid});
-        while (path.empty())
-        {
-            GError* error = nullptr;
-            std::string tryname = "/com/canonical/UbuntuAppLaunch/" + dbusAppid + "/" + std::to_string(rand());
+                    /* Find a path to export on */
+                    auto dbusAppid = dbusSafe(std::string{appid});
+                    std::string path;
 
-            g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skel.get()), reg->impl->_dbus.get(),
-                                             tryname.c_str(), &error);
+                    while (path.empty())
+                    {
+                        GError* error = nullptr;
+                        std::string tryname =
+                            "/com/canonical/UbuntuAppLaunch/" + dbusAppid + "/" + std::to_string(rand());
 
-            if (error == nullptr)
-            {
-                path = tryname;
-            }
-            else
-            {
-                if (!g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_OBJECT_PATH_IN_USE))
-                {
-                    std::string message = "Unable to export Mir trusted proxy: " + std::string{error->message};
-                    g_clear_error(&error);
-                    throw std::runtime_error{message};
-                }
-                g_clear_error(&error);
-            }
-        }
+                        g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skel.get()), reg->impl->_dbus.get(),
+                                                         tryname.c_str(), &error);
+
+                        if (error == nullptr)
+                        {
+                            path = tryname;
+                        }
+                        else
+                        {
+                            if (!g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_OBJECT_PATH_IN_USE))
+                            {
+                                std::string message =
+                                    "Unable to export Mir trusted proxy: " + std::string{error->message};
+                                g_clear_error(&error);
+                                throw std::runtime_error{message};
+                            }
+                            g_clear_error(&error);
+                        }
+                    }
+
+                    return std::make_tuple(skel, handle, path);
+                });
     }
 
     ~MirFDProxy()
@@ -263,7 +274,7 @@ public:
 
     std::string getName()
     {
-        return "name";
+        return name;
     }
 };
 
