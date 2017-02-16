@@ -62,7 +62,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
         rootDir = rootenv;
     }
 
-    appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, rootDir,
+    appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, rootDir,
                                                    app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
 
     if (!_keyfile)
@@ -392,6 +392,11 @@ std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Appl
 std::shared_ptr<Application::Instance> Legacy::findInstance(const std::string& instanceid)
 {
     return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
+}
+
+std::shared_ptr<info_watcher::Base> Legacy::createInfoWatcher(const std::shared_ptr<Registry>& reg)
+{
+    return {};
 }
 
 }  // namespace app_impls
