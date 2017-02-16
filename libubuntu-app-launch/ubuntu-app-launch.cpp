@@ -37,6 +37,7 @@ extern "C" {
 /* C++ Interface */
 #include "application.h"
 #include "appid.h"
+#include "helper-impl.h"
 #include "registry.h"
 #include "registry-impl.h"
 #include <algorithm>
@@ -1110,68 +1111,6 @@ ubuntu_app_launch_start_session_helper (const gchar * type, MirPromptSession * s
 	return NULL;
 }
 
-/* Print an error if we couldn't stop it */
-static void
-stop_helper_callback (GObject * obj, GAsyncResult * res, gpointer user_data)
-{
-	GError * error = NULL;
-	GVariant * result = NULL;
-
-	result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
-	if (result != NULL)
-		g_variant_unref(result);
-
-	if (error != NULL) {
-		g_warning("Unable to stop helper: %s", error->message);
-		g_error_free(error);
-	}
-}
-
-/* Implements the basis of sending the stop message to Upstart for
-   an instance of the untrusted-helper job.  That also can have an
-   instance in that we allow for random instance ids to be used for
-   helpers that are not unique */
-static gboolean
-stop_helper_core (const gchar * type, const gchar * appid, const gchar * instanceid)
-{
-	GDBusConnection * con = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_return_val_if_fail(con != NULL, FALSE);
-
-	const gchar * jobpath = get_jobpath(con, "untrusted-helper");
-
-	/* Build up our environment */
-	GVariantBuilder builder;
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("APP_ID=%s", appid)));
-	g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("HELPER_TYPE=%s", type)));
-
-	if (instanceid != NULL) {
-		g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf("INSTANCE_ID=%s", instanceid)));
-	}
-
-	g_variant_builder_close(&builder);
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-	
-	/* Call the job start function */
-	g_dbus_connection_call(con,
-	                       DBUS_SERVICE_UPSTART,
-	                       jobpath,
-	                       DBUS_INTERFACE_UPSTART_JOB,
-	                       "Stop",
-	                       g_variant_builder_end(&builder),
-	                       NULL,
-	                       G_DBUS_CALL_FLAGS_NONE,
-	                       -1,
-	                       NULL, /* cancellable */
-	                       stop_helper_callback,
-	                       NULL);
-
-	g_object_unref(con);
-
-	return TRUE;
-}
-
 gboolean
 ubuntu_app_launch_stop_helper (const gchar * type, const gchar * appid)
 {
@@ -1179,7 +1118,26 @@ ubuntu_app_launch_stop_helper (const gchar * type, const gchar * appid)
 	g_return_val_if_fail(appid != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
 
-	return stop_helper_core(type, appid, NULL);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
+
+		auto insts = helper->instances();
+		if (insts.empty()) {
+			throw std::runtime_error{"No instances"};
+		}
+		if (insts.size() > 1u) {
+			throw std::runtime_error{"Expecting single instance but has multiple instances"};
+		}
+
+		(*insts.begin())->stop();
+
+		return TRUE;
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to stop helper of type '%s' id '%s': %s", type, appid, e.what());
+		return FALSE;
+	}
 }
 
 gboolean
@@ -1190,7 +1148,23 @@ ubuntu_app_launch_stop_multiple_helper (const gchar * type, const gchar * appid,
 	g_return_val_if_fail(instanceid != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(type, -1, ":") == NULL, FALSE);
 
-	return stop_helper_core(type, appid, instanceid);
+	try {
+		auto registry = ubuntu::app_launch::Registry::getDefault();
+		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
+
+		auto inst = std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::Base>(helper)->existingInstance(instanceid);
+		if (!inst) {
+			throw std::runtime_error{"No instances"};
+		}
+
+		inst->stop();
+
+		return TRUE;
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to stop helper of type '%s' id '%s' instance '%s': %s", type, appid, instanceid, e.what());
+		return FALSE;
+	}
 }
 
 gchar **
