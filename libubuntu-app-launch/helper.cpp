@@ -88,6 +88,14 @@ std::vector<std::shared_ptr<Helper::Instance>> Base::instances()
     return wrapped;
 }
 
+/** Find an instance that we already know the ID of */
+std::shared_ptr<Helper::Instance> Base::existingInstance(const std::string& instanceid)
+{
+    auto appinst = _registry->impl->jobs->existing(_appid, _type.value(), instanceid, {});
+
+    return std::make_shared<BaseInstance>(appinst);
+}
+
 std::vector<Application::URL> appURL(const std::vector<Helper::URL>& in)
 {
     std::vector<Application::URL> out;

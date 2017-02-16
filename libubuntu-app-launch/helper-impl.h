@@ -65,6 +65,8 @@ public:
     std::shared_ptr<Helper::Instance> launch(std::vector<Helper::URL> urls = {}) override;
     std::shared_ptr<Helper::Instance> launch(MirPromptSession* session, std::vector<Helper::URL> urls = {}) override;
 
+    std::shared_ptr<Helper::Instance> existingInstance(const std::string& instanceid);
+
 private:
     Helper::Type _type;
     AppID _appid;
