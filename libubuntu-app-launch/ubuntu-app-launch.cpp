@@ -49,6 +49,19 @@ static gchar * escape_dbus_string (const gchar * input);
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path)
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd)
 
+/* Make a typed string vector out of a GStrv */
+template <typename T>
+static std::vector<T> uriVector (const gchar * const * uris)
+{
+	std::vector<T> urivect;
+
+	for (auto i = 0; uris != nullptr && uris[i] != nullptr; i++) {
+		urivect.emplace_back(T::from_raw(uris[i]));
+	}
+
+	return urivect;
+}
+
 /* Function to take the urls and escape them so that they can be
    parsed on the other side correctly. */
 static gchar *
@@ -120,11 +133,9 @@ ubuntu_app_launch_start_application (const gchar * appid, const gchar * const * 
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-		std::vector<ubuntu::app_launch::Application::URL> urivect;
-		for (auto i = 0; uris != nullptr && uris[i] != nullptr; i++)
-			urivect.emplace_back(ubuntu::app_launch::Application::URL::from_raw(uris[i]));
+		auto uriv = uriVector<ubuntu::app_launch::Application::URL>(uris);
 
-		auto instance = app->launch(urivect);
+		auto instance = app->launch(uriv);
 
 		if (instance) {
 			return TRUE;
@@ -145,11 +156,9 @@ ubuntu_app_launch_start_application_test (const gchar * appid, const gchar * con
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 
-		std::vector<ubuntu::app_launch::Application::URL> urivect;
-		for (auto i = 0; uris != nullptr && uris[i] != nullptr; i++)
-			urivect.emplace_back(ubuntu::app_launch::Application::URL::from_raw(uris[i]));
+		auto uriv = uriVector<ubuntu::app_launch::Application::URL>(uris);
 
-		auto instance = app->launchTest(urivect);
+		auto instance = app->launchTest(uriv);
 
 		if (instance) {
 			return TRUE;
