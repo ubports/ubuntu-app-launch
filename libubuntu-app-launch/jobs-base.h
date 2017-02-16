@@ -50,8 +50,9 @@ public:
     void pause() override;
     void resume() override;
 
-    const std::string& getInstanceId() {
-	    return instance_;
+    const std::string& getInstanceId()
+    {
+        return instance_;
     }
 
     /* OOM Functions */

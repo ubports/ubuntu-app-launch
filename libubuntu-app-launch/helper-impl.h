@@ -17,6 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include <list>
 
 #include "helper.h"
@@ -43,6 +45,11 @@ public:
 
     bool isRunning() override;
     void stop() override;
+
+    const std::string& getInstanceId()
+    {
+        return impl->getInstanceId();
+    }
 };
 
 class Base : public Helper
