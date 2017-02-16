@@ -36,6 +36,7 @@ type-tagger.h
 set(LAUNCHER_CPP_SOURCES
 application.cpp
 helper.cpp
+helper-impl.h
 registry.cpp
 registry-impl.h
 registry-impl.cpp

@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <list>
 
-#include "helper.h"
+#include "helper-impl.h"
 #include "registry-impl.h"
 
 #include "ubuntu-app-launch.h"
@@ -32,61 +32,45 @@ namespace app_launch
 namespace helper_impls
 {
 
-/** We really should have put a relationship between Helper::Instance
-and Application::Instance in the API. But to work around that today
-we're just handling it here because the helper interface is a subset
-of what the Application::Instance class provides */
-class BaseInstance : public Helper::Instance
+/**********************
+ * Instance
+ **********************/
+
+BaseInstance::BaseInstance(const std::shared_ptr<jobs::instance::Base>& inst)
+    : impl{inst}
 {
-public:
-    std::shared_ptr<jobs::instance::Base> impl;
+}
 
-    BaseInstance(const std::shared_ptr<jobs::instance::Base>& inst)
-        : impl{inst}
-    {
-    }
-    BaseInstance(const std::shared_ptr<Application::Instance>& inst)
-        : impl{std::dynamic_pointer_cast<jobs::instance::Base>(inst)}
-    {
-    }
-
-    bool isRunning() override
-    {
-        return impl->isRunning();
-    }
-
-    void stop() override
-    {
-        impl->stop();
-    }
-};
-
-class Base : public Helper
+BaseInstance::BaseInstance(const std::shared_ptr<Application::Instance>& inst)
+    : impl{std::dynamic_pointer_cast<jobs::instance::Base>(inst)}
 {
-public:
-    Base(const Helper::Type& type, const AppID& appid, const std::shared_ptr<Registry>& registry)
-        : _type(type)
-        , _appid(appid)
-        , _registry(registry)
-    {
-    }
+}
 
-    AppID appId() override
-    {
-        return _appid;
-    }
+bool BaseInstance::isRunning()
+{
+    return impl->isRunning();
+}
 
-    bool hasInstances() override;
-    std::vector<std::shared_ptr<Helper::Instance>> instances() override;
+void BaseInstance::stop()
+{
+    impl->stop();
+}
 
-    std::shared_ptr<Helper::Instance> launch(std::vector<Helper::URL> urls = {}) override;
-    std::shared_ptr<Helper::Instance> launch(MirPromptSession* session, std::vector<Helper::URL> urls = {}) override;
+/**********************
+ * Helper Class
+ **********************/
 
-private:
-    Helper::Type _type;
-    AppID _appid;
-    std::shared_ptr<Registry> _registry;
-};
+Base::Base(const Helper::Type& type, const AppID& appid, const std::shared_ptr<Registry>& registry)
+    : _type(type)
+    , _appid(appid)
+    , _registry(registry)
+{
+}
+
+AppID Base::appId()
+{
+    return _appid;
+}
 
 bool Base::hasInstances()
 {
