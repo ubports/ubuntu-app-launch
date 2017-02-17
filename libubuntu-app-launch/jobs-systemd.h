@@ -57,14 +57,10 @@ public:
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
 
-    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStarted() override;
-    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStopped() override;
-    virtual core::Signal<const std::shared_ptr<Application>&,
-                         const std::shared_ptr<Application::Instance>&,
-                         Registry::FailureType>&
-        appFailed() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStarted() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStopped() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>& jobFailed()
+        override;
 
     static std::string userBusPath();
 
@@ -75,6 +71,10 @@ public:
 private:
     std::string cgroup_root_;
     std::shared_ptr<GDBusConnection> userbus_;
+
+    core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStarted;
+    core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStopped;
+    core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType> sig_jobFailed;
 
     guint handle_unitNew{0};     /**< GDBus signal watcher handle for the unit new signal */
     guint handle_unitRemoved{0}; /**< GDBus signal watcher handle for the unit removed signal */
@@ -116,9 +116,6 @@ private:
 
     UnitInfo unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus);
     void unitRemoved(const std::string& name, const std::string& path);
-    void emitSignal(
-        core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& sig,
-        UnitInfo& info);
 
     static std::string findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
     static void removeEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);

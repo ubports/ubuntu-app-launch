@@ -23,6 +23,7 @@
 #include <numeric>
 
 #include "application-impl-base.h"
+#include "helper-impl.h"
 #include "jobs-base.h"
 #include "jobs-systemd.h"
 #include "jobs-upstart.h"
@@ -82,6 +83,74 @@ std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
 const std::list<std::string>& Base::getAllJobs() const
 {
     return allJobs_;
+}
+
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Base::appStarted()
+{
+    std::call_once(flag_appStarted, [this]() {
+        jobStarted().connect([this](const std::string& job, const std::string& appid, const std::string& instanceid) {
+            if (std::find(allJobs_.begin(), allJobs_.end(), job) == allJobs_.end())
+            {
+                return;
+            }
+
+            auto reg = registry_.lock();
+
+            auto appId = AppID::find(reg, appid);
+            auto app = Application::create(appId, reg);
+            auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
+
+            sig_appStarted(app, inst);
+        });
+    });
+
+    return sig_appStarted;
+}
+
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Base::appStopped()
+{
+    std::call_once(flag_appStopped, [this]() {
+        jobStopped().connect([this](const std::string& job, const std::string& appid, const std::string& instanceid) {
+            if (std::find(allJobs_.begin(), allJobs_.end(), job) == allJobs_.end())
+            {
+                return;
+            }
+
+            auto reg = registry_.lock();
+
+            auto appId = AppID::find(reg, appid);
+            auto app = Application::create(appId, reg);
+            auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
+
+            sig_appStopped(app, inst);
+        });
+    });
+
+    return sig_appStopped;
+}
+
+core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
+    Base::appFailed()
+{
+    std::call_once(flag_appFailed, [this]() {
+        jobFailed().connect([this](const std::string& job, const std::string& appid, const std::string& instanceid,
+                                   Registry::FailureType reason) {
+            if (std::find(allJobs_.begin(), allJobs_.end(), job) == allJobs_.end())
+            {
+                return;
+            }
+
+            auto reg = registry_.lock();
+
+            auto appId = AppID::find(reg, appid);
+            auto app = Application::create(appId, reg);
+            auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
+
+            sig_appFailed(app, inst, reason);
+        });
+    });
+
+    return sig_appFailed;
 }
 
 /** Structure to track the data needed for upstart events. This cleans
@@ -227,6 +296,127 @@ core::Signal<const std::shared_ptr<Application>&,
     });
 
     return sig_appResumed;
+}
+
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Base::helperStarted(
+    Helper::Type type)
+{
+    try
+    {
+        return *sig_helpersStarted.at(type.value());
+    }
+    catch (std::out_of_range& e)
+    {
+        jobStarted().connect(
+            [this, type](const std::string& job, const std::string& appid, const std::string& instanceid) {
+                if (job != type.value())
+                {
+                    return;
+                }
+
+                try
+                {
+                    auto reg = registry_.lock();
+
+                    auto appId = ubuntu::app_launch::AppID::parse(appid);
+                    auto helper = Helper::create(type, appId, reg);
+                    auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
+
+                    (*sig_helpersStarted.at(type.value()))(helper, inst);
+                }
+                catch (...)
+                {
+                    g_warning("Unable to emit signal for helper type: %s", type.value().c_str());
+                }
+            });
+
+        sig_helpersStarted.emplace(
+            type.value(),
+            std::make_shared<core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>>());
+    }
+
+    return *sig_helpersStarted.at(type.value());
+}
+
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Base::helperStopped(
+    Helper::Type type)
+{
+    try
+    {
+        return *sig_helpersStopped.at(type.value());
+    }
+    catch (std::out_of_range& e)
+    {
+        jobStopped().connect(
+            [this, type](const std::string& job, const std::string& appid, const std::string& instanceid) {
+                if (job != type.value())
+                {
+                    return;
+                }
+
+                try
+                {
+                    auto reg = registry_.lock();
+
+                    auto appId = ubuntu::app_launch::AppID::parse(appid);
+                    auto helper = Helper::create(type, appId, reg);
+                    auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
+
+                    (*sig_helpersStopped.at(type.value()))(helper, inst);
+                }
+                catch (...)
+                {
+                    g_warning("Unable to emit signal for helper type: %s", type.value().c_str());
+                }
+            });
+
+        sig_helpersStopped.emplace(
+            type.value(),
+            std::make_shared<core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>>());
+    }
+
+    return *sig_helpersStopped.at(type.value());
+}
+
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
+    Base::helperFailed(Helper::Type type)
+{
+    try
+    {
+        return *sig_helpersFailed.at(type.value());
+    }
+    catch (std::out_of_range& e)
+    {
+        jobFailed().connect([this, type](const std::string& job, const std::string& appid,
+                                         const std::string& instanceid, Registry::FailureType reason) {
+            if (job != type.value())
+            {
+                return;
+            }
+
+            try
+            {
+                auto reg = registry_.lock();
+
+                auto appId = ubuntu::app_launch::AppID::parse(appid);
+                auto helper = Helper::create(type, appId, reg);
+                auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
+
+                (*sig_helpersFailed.at(type.value()))(helper, inst, reason);
+            }
+            catch (...)
+            {
+                g_warning("Unable to emit signal for helper type: %s", type.value().c_str());
+            }
+        });
+
+        sig_helpersFailed.emplace(
+            type.value(),
+            std::make_shared<core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&,
+                                          Registry::FailureType>>());
+    }
+
+    return *sig_helpersFailed.at(type.value());
 }
 
 /** Take the GVariant of parameters and turn them into an application and

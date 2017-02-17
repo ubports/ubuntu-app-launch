@@ -159,5 +159,26 @@ core::Signal<const std::shared_ptr<Application>&,
     return reg->impl->jobs->appResumed();
 }
 
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStarted(
+    Helper::Type type, const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->helperStarted(type);
+}
+
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStopped(
+    Helper::Type type, const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->helperStopped(type);
+}
+
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
+    helperFailed(Helper::Type type, const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->helperFailed(type);
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -55,14 +55,10 @@ public:
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
 
     /* Signals to apps */
-    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStarted() override;
-    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStopped() override;
-    virtual core::Signal<const std::shared_ptr<Application>&,
-                         const std::shared_ptr<Application::Instance>&,
-                         Registry::FailureType>&
-        appFailed() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStarted() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStopped() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>& jobFailed()
+        override;
 
     std::vector<pid_t> pidsFromCgroup(const std::string& jobpath);
 
@@ -78,21 +74,24 @@ private:
         that it requires a DBus call. Worth keeping a cache of. */
     std::map<std::string, std::string> upstartJobPathCache_;
 
-    guint handle_appStarted{0}; /**< GDBus signal watcher handle for app started signal */
-    guint handle_appStopped{0}; /**< GDBus signal watcher handle for app stopped signal */
-    guint handle_appFailed{0};  /**< GDBus signal watcher handle for app failed signal */
+    core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStarted;
+    core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStopped;
+    core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType> sig_jobFailed;
 
-    std::once_flag flag_appStarted; /**< Variable to track to see if signal handlers are installed for application
+    guint handle_jobStarted{0}; /**< GDBus signal watcher handle for app started signal */
+    guint handle_jobStopped{0}; /**< GDBus signal watcher handle for app stopped signal */
+    guint handle_jobFailed{0};  /**< GDBus signal watcher handle for app failed signal */
+
+    std::once_flag flag_jobStarted; /**< Variable to track to see if signal handlers are installed for application
                                        started */
-    std::once_flag flag_appStopped; /**< Variable to track to see if signal handlers are installed for application
+    std::once_flag flag_jobStopped; /**< Variable to track to see if signal handlers are installed for application
                                        stopped */
     std::once_flag
-        flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
+        flag_jobFailed; /**< Variable to track to see if signal handlers are installed for application failed */
 
-    void upstartEventEmitted(
-        core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& signal,
-        std::shared_ptr<GVariant> params,
-        const std::shared_ptr<Registry>& reg);
+    void upstartEventEmitted(core::Signal<const std::string&, const std::string&, const std::string&>& signal,
+                             std::shared_ptr<GVariant> params,
+                             const std::shared_ptr<Registry>& reg);
 };
 
 }  // namespace manager

@@ -24,6 +24,7 @@
 
 #include <core/signal.h>
 #include <gio/gio.h>
+#include <map>
 #include <set>
 
 namespace ubuntu
@@ -129,13 +130,13 @@ public:
 
     /* Signals to apps */
     virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStarted() = 0;
+        appStarted();
     virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStopped() = 0;
+        appStopped();
     virtual core::Signal<const std::shared_ptr<Application>&,
                          const std::shared_ptr<Application::Instance>&,
                          Registry::FailureType>&
-        appFailed() = 0;
+        appFailed();
     virtual core::Signal<const std::shared_ptr<Application>&,
                          const std::shared_ptr<Application::Instance>&,
                          const std::vector<pid_t>&>&
@@ -144,6 +145,19 @@ public:
                          const std::shared_ptr<Application::Instance>&,
                          const std::vector<pid_t>&>&
         appResumed();
+    /* Signals to helpers */
+    virtual core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStarted(
+        Helper::Type type);
+    virtual core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStopped(
+        Helper::Type type);
+    virtual core::
+        Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
+        helperFailed(Helper::Type type);
+    /* Job signals from implementations */
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStarted() = 0;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStopped() = 0;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>&
+        jobFailed() = 0;
 
     /* App manager */
     virtual void setManager(std::shared_ptr<Registry::Manager> manager);
@@ -162,6 +176,7 @@ protected:
     /** Application manager instance */
     std::shared_ptr<Registry::Manager> manager_;
 
+private:
     /** Signal object for applications started */
     core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&> sig_appStarted;
     /** Signal object for applications stopped */
@@ -182,7 +197,18 @@ protected:
                  const std::vector<pid_t>&>
         sig_appResumed;
 
-private:
+    std::map<std::string,
+             std::shared_ptr<core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>>>
+        sig_helpersStarted;
+    std::map<std::string,
+             std::shared_ptr<core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>>>
+        sig_helpersStopped;
+    std::map<std::string,
+             std::shared_ptr<core::Signal<const std::shared_ptr<Helper>&,
+                                          const std::shared_ptr<Helper::Instance>&,
+                                          Registry::FailureType>>>
+        sig_helpersFailed;
+
     guint handle_managerSignalFocus{0};    /**< GDBus signal watcher handle for app focused signal */
     guint handle_managerSignalResume{0};   /**< GDBus signal watcher handle for app resumed signal */
     guint handle_managerSignalStarting{0}; /**< GDBus signal watcher handle for app starting signal */
@@ -191,6 +217,12 @@ private:
 
     std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
                                            signals of focused, resumed and starting */
+    std::once_flag flag_appStarted;     /**< Variable to track to see if signal handlers are installed for application
+                                           started */
+    std::once_flag flag_appStopped;     /**< Variable to track to see if signal handlers are installed for application
+                                           stopped */
+    std::once_flag
+        flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
     std::once_flag
         flag_appPaused; /**< Variable to track to see if signal handlers are installed for application paused */
     std::once_flag flag_appResumed; /**< Variable to track to see if signal handlers are installed for application
