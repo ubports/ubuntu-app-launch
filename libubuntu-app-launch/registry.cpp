@@ -159,14 +159,14 @@ core::Signal<const std::shared_ptr<Application>&,
     return reg->impl->jobs->appResumed();
 }
 
-core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStarted(
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Registry::helperStarted(
     Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);
     return reg->impl->jobs->helperStarted(type);
 }
 
-core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStopped(
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Registry::helperStopped(
     Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);
@@ -174,7 +174,7 @@ core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Insta
 }
 
 core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
-    helperFailed(Helper::Type type, const std::shared_ptr<Registry>& reg)
+    Registry::helperFailed(Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
     setJobs(reg);
     return reg->impl->jobs->helperFailed(type);

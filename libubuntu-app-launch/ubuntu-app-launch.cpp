@@ -165,46 +165,6 @@ ubuntu_app_launch_application_log_path (const gchar * appid)
 	}
 }
 
-static GDBusConnection *
-gdbus_upstart_ref (void) {
-	static GDBusConnection * gdbus_upstart = NULL;
-
-	if (gdbus_upstart != NULL) {
-		return G_DBUS_CONNECTION(g_object_ref(gdbus_upstart));
-	}
-
-	GError * error = NULL;
-	gdbus_upstart = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-
-	if (error != NULL) {
-		g_warning("Unable to connect to Upstart bus: %s", error->message);
-		g_error_free(error);
-		return NULL;
-	}
-
-	g_object_add_weak_pointer(G_OBJECT(gdbus_upstart), (void **)(&gdbus_upstart));
-
-	return gdbus_upstart;
-}
-
-/* The data we keep for each observer */
-typedef struct _observer_t observer_t;
-struct _observer_t {
-	GDBusConnection * conn;
-	guint sighandle;
-	UbuntuAppLaunchAppObserver func;
-	gpointer user_data;
-};
-
-/* The data we keep for each failed observer */
-typedef struct _failed_observer_t failed_observer_t;
-struct _failed_observer_t {
-	GDBusConnection * conn;
-	guint sighandle;
-	UbuntuAppLaunchAppFailedObserver func;
-	gpointer user_data;
-};
-
 /* Function to take a work function and have it execute on a given
    GMainContext */
 static void executeOnContext (const std::shared_ptr<GMainContext>& context, std::function<void()> work)
@@ -891,136 +851,49 @@ ubuntu_app_launch_list_helper_instances (const gchar * type, const gchar * appid
 	}
 }
 
-/* The data we keep for each observer */
-typedef struct _helper_observer_t helper_observer_t;
-struct _helper_observer_t {
-	GDBusConnection * conn;
-	guint sighandle;
-	gchar * type;
-	UbuntuAppLaunchHelperObserver func;
-	gpointer user_data;
-};
-
-/* The lists of helper observers */
-static GList * helper_started_obs = NULL;
-static GList * helper_stopped_obs = NULL;
-
-static void
-helper_observer_cb (GDBusConnection * conn, const gchar * sender, const gchar * object, const gchar * interface, const gchar * signal, GVariant * params, gpointer user_data)
-{
-	helper_observer_t * observer = (helper_observer_t *)user_data;
-
-	gchar * env = NULL;
-	GVariant * envs = g_variant_get_child_value(params, 1);
-	GVariantIter iter;
-	g_variant_iter_init(&iter, envs);
-
-	gboolean job_found = FALSE;
-	gchar * instance = NULL;
-
-	while (g_variant_iter_loop(&iter, "s", &env)) {
-		if (g_strcmp0(env, "JOB=untrusted-helper") == 0) {
-			job_found = TRUE;
-		} else if (g_str_has_prefix(env, "INSTANCE=")) {
-			instance = g_strdup(env + strlen("INSTANCE="));
-		}
-	}
-
-	g_variant_unref(envs);
-
-	if (instance != NULL && !g_str_has_prefix(instance, observer->type)) {
-		g_free(instance);
-		instance = NULL;
-	}
-
-	gchar * appid = NULL;
-	gchar * instanceid = NULL;
-	gchar * type = NULL;
-
-	if (instance != NULL) {
-		gchar ** split = g_strsplit(instance, ":", 3);
-		type = split[0];
-		instanceid = split[1];
-		appid = split[2];
-		g_free(split);
-	}
-	g_free(instance);
-
-	if (instanceid != NULL && instanceid[0] == '\0') {
-		g_free(instanceid);
-		instanceid = NULL;
-	}
-
-	if (job_found && appid != NULL) {
-		observer->func(appid, instanceid, type, observer->user_data);
-	}
-
-	g_free(appid);
-	g_free(instanceid);
-	g_free(type);
-}
-
-/* Creates the observer structure and registers for the signal with
-   GDBus so that we can get a callback */
+/** A handy helper function that is based of a function to get
+    a signal and put it into a map. */
+template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Helper>&, const std::shared_ptr<ubuntu::app_launch::Helper::Instance>&>& (*getSignal)(ubuntu::app_launch::Helper::Type type, const std::shared_ptr<ubuntu::app_launch::Registry>&)>
 static gboolean
-add_helper_generic (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data, const gchar * signal, GList ** list)
+helper_add (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data, std::map<std::tuple<UbuntuAppLaunchHelperObserver, std::string, gpointer>, core::ScopedConnection> &observers)
 {
-	GDBusConnection * conn = gdbus_upstart_ref();
+	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+	auto type = ubuntu::app_launch::Helper::Type::from_raw(helper_type);
 
-	if (conn == NULL) {
-		return FALSE;
-	}
-
-	helper_observer_t * observert = g_new0(helper_observer_t, 1);
-
-	observert->conn = conn;
-	observert->func = observer;
-	observert->user_data = user_data;
-	observert->type = g_strdup_printf("%s:", helper_type);
-
-	*list = g_list_prepend(*list, observert);
-
-	observert->sighandle = g_dbus_connection_signal_subscribe(conn,
-		NULL, /* sender */
-		DBUS_INTERFACE_UPSTART, /* interface */
-		"EventEmitted", /* signal */
-		DBUS_PATH_UPSTART, /* path */
-		signal, /* arg0 */
-		G_DBUS_SIGNAL_FLAGS_NONE,
-		helper_observer_cb,
-		observert,
-		NULL); /* user data destroy */
+	observers.emplace(std::make_pair(
+		std::make_tuple(observer, type.value(), user_data),
+		core::ScopedConnection(
+			getSignal(type, ubuntu::app_launch::Registry::getDefault())
+				.connect([type, context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Helper> app, std::shared_ptr<ubuntu::app_launch::Helper::Instance> instance) {
+					std::string appid = app->appId();
+					std::string instanceid; /* TODO */
+					executeOnContext(context, [appid, instanceid, type, observer, user_data]() {
+						observer(appid.c_str(), instanceid.c_str(), type.value().c_str(), user_data);
+					});
+			})
+		)
+		));
 
 	return TRUE;
 }
 
 static gboolean
-delete_helper_generic (UbuntuAppLaunchHelperObserver observer, const gchar * type, gpointer user_data, GList ** list)
+helper_delete (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data, std::map<std::tuple<UbuntuAppLaunchHelperObserver, std::string, gpointer>, core::ScopedConnection> &observers)
 {
-	helper_observer_t * observert = NULL;
-	GList * look;
+	auto type = ubuntu::app_launch::Helper::Type::from_raw(helper_type);
+	auto iter = observers.find(std::make_tuple(observer, type.value(), user_data));
 
-	for (look = *list; look != NULL; look = g_list_next(look)) {
-		observert = (helper_observer_t *)look->data;
-
-		if (observert->func == observer && observert->user_data == user_data && g_str_has_prefix(observert->type, type)) {
-			break;
-		}
-	}
-
-	if (look == NULL) {
+	if (iter == observers.end()) {
 		return FALSE;
 	}
 
-	g_dbus_connection_signal_unsubscribe(observert->conn, observert->sighandle);
-	g_object_unref(observert->conn);
-
-	g_free(observert->type);
-	g_free(observert);
-	*list = g_list_delete_link(*list, look);
-
+	observers.erase(iter);
 	return TRUE;
 }
+
+/** Map of all the observers listening for helper started */
+static std::map<std::tuple<UbuntuAppLaunchHelperObserver, std::string, gpointer>, core::ScopedConnection> helperStartedObservers;
+static std::map<std::tuple<UbuntuAppLaunchHelperObserver, std::string, gpointer>, core::ScopedConnection> helperStoppedObservers;
 
 gboolean
 ubuntu_app_launch_observer_add_helper_started (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data)
@@ -1029,7 +902,7 @@ ubuntu_app_launch_observer_add_helper_started (UbuntuAppLaunchHelperObserver obs
 	g_return_val_if_fail(helper_type != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
 
-	return add_helper_generic(observer, helper_type, user_data, "started", &helper_started_obs);
+return helper_add<&ubuntu::app_launch::Registry::helperStarted>(observer, helper_type, user_data, helperStartedObservers);
 }
 
 gboolean
@@ -1039,7 +912,7 @@ ubuntu_app_launch_observer_add_helper_stop (UbuntuAppLaunchHelperObserver observ
 	g_return_val_if_fail(helper_type != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
 
-	return add_helper_generic(observer, helper_type, user_data, "stopped", &helper_stopped_obs);
+	return helper_add<&ubuntu::app_launch::Registry::helperStopped>(observer, helper_type, user_data, helperStoppedObservers);
 }
 
 gboolean
@@ -1049,7 +922,7 @@ ubuntu_app_launch_observer_delete_helper_started (UbuntuAppLaunchHelperObserver 
 	g_return_val_if_fail(helper_type != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
 
-	return delete_helper_generic(observer, helper_type, user_data, &helper_started_obs);
+	return helper_delete(observer, helper_type, user_data, helperStartedObservers);
 }
 
 gboolean
@@ -1059,7 +932,7 @@ ubuntu_app_launch_observer_delete_helper_stop (UbuntuAppLaunchHelperObserver obs
 	g_return_val_if_fail(helper_type != NULL, FALSE);
 	g_return_val_if_fail(g_strstr_len(helper_type, -1, ":") == NULL, FALSE);
 
-	return delete_helper_generic(observer, helper_type, user_data, &helper_stopped_obs);
+	return helper_delete(observer, helper_type, user_data, helperStoppedObservers);
 }
 
 /* Sets an environment variable in Upstart */
