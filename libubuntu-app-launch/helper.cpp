@@ -101,6 +101,11 @@ std::shared_ptr<Helper::Instance> Base::existingInstance(const std::string& inst
     return std::make_shared<BaseInstance>(appinst);
 }
 
+std::string genInstanceId()
+{
+    return std::to_string(g_get_real_time());
+}
+
 std::vector<Application::URL> appURL(const std::vector<Helper::URL>& in)
 {
     std::vector<Application::URL> out;
@@ -115,9 +120,8 @@ std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
         return std::list<std::pair<std::string, std::string>>{};
     };
 
-    /* TODO: Gen ID */
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
-        _appid, _type.value(), std::string{}, appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
+        _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
 }
 
 class MirFDProxy
@@ -304,9 +308,8 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
        seconds. And then it'll be dropped. */
     _registry->impl->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); });
 
-    /* TODO: Gen ID */
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
-        _appid, _type.value(), std::string{}, appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
+        _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
 }
 
 }  // namespace helper_impl
