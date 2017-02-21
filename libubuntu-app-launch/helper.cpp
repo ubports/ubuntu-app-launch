@@ -115,7 +115,7 @@ std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
         return std::list<std::pair<std::string, std::string>>{};
     };
 
-    /* TODO */
+    /* TODO: Gen ID */
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
         _appid, _type.value(), std::string{}, appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
 }
@@ -304,7 +304,7 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
        seconds. And then it'll be dropped. */
     _registry->impl->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); });
 
-    /* TODO */
+    /* TODO: Gen ID */
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
         _appid, _type.value(), std::string{}, appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
 }
@@ -319,6 +319,10 @@ std::shared_ptr<Helper> Helper::create(Type type, AppID appid, std::shared_ptr<R
 {
     /* Only one type today */
     return std::make_shared<helper_impls::Base>(type, appid, registry);
+}
+
+void Helper::setExec(std::vector<std::string> exec)
+{
 }
 
 }  // namespace app_launch

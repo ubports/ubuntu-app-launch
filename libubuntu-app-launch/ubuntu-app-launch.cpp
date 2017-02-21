@@ -937,83 +937,33 @@ ubuntu_app_launch_observer_delete_helper_stop (UbuntuAppLaunchHelperObserver obs
 	return helper_delete(observer, helper_type, user_data, helperStoppedObservers);
 }
 
-/* Sets an environment variable in Upstart */
-static void
-set_var (GDBusConnection * bus, const gchar * job_name, const gchar * instance_name, const gchar * envvar)
-{
-	GVariantBuilder builder; /* Target: (assb) */
-	g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-
-	/* Setup the job properties */
-	g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-	g_variant_builder_add_value(&builder, g_variant_new_string(job_name));
-	if (instance_name != NULL)
-		g_variant_builder_add_value(&builder, g_variant_new_string(instance_name));
-	g_variant_builder_close(&builder);
-
-	g_variant_builder_add_value(&builder, g_variant_new_string(envvar));
-
-	/* Do we want to replace?  Yes, we do! */
-	g_variant_builder_add_value(&builder, g_variant_new_boolean(TRUE));
-
-	g_dbus_connection_call(bus,
-		"com.ubuntu.Upstart",
-		"/com/ubuntu/Upstart",
-		"com.ubuntu.Upstart0_6",
-		"SetEnv",
-		g_variant_builder_end(&builder),
-		NULL, /* reply */
-		G_DBUS_CALL_FLAGS_NONE,
-		-1, /* timeout */
-		NULL, /* cancellable */
-		NULL, NULL); /* callback */
-}
-
 gboolean
 ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directory)
 {
 	g_return_val_if_fail(execline != NULL, FALSE);
 	g_return_val_if_fail(execline[0] != '\0', FALSE);
 
-	/* Check to see if we can get the job environment */
-	const gchar * job_name = g_getenv("UPSTART_JOB");
-	const gchar * instance_name = g_getenv("UPSTART_INSTANCE");
-	const gchar * demangler = g_getenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
-	g_return_val_if_fail(job_name != NULL, FALSE);
-
-	GError * error = NULL;
-	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
-
-	if (error != NULL) {
-		g_warning("Unable to get session bus: %s", error->message);
+	GError * error{nullptr};
+	gchar ** splitexec{nullptr};
+	if (!g_shell_parse_argv(execline, nullptr, &splitexec, &error) || error != nullptr) {
+		g_warning("Unable to parse exec line '%s': %s", execline, error->message);
 		g_error_free(error);
 		return FALSE;
 	}
 
-	/* The exec value */
-	gchar * envstr = NULL;
-	if (demangler) {
-		const gchar * demangler_path = g_getenv("UBUNTU_APP_LAUNCH_DEMANGLER");
-		if (demangler_path == nullptr) {
-			demangler_path = DEMANGLER_PATH;
-		}
-		envstr = g_strdup_printf("APP_EXEC=%s %s", demangler_path, execline);
-	} else {
-		envstr = g_strdup_printf("APP_EXEC=%s", execline);
+	std::vector<std::string> execvect;
+	for (auto i = 0; splitexec[i] != nullptr; i++) {
+		execvect.emplace_back(std::string{splitexec[i]});
 	}
 
-	set_var(bus, job_name, instance_name, envstr);
-	g_free(envstr);
+	g_strfreev(splitexec);
 
-	/* The directory value */
-	if (directory != NULL) {
-		gchar * direnv = g_strdup_printf("APP_DIR=%s", directory);
-		set_var(bus, job_name, instance_name, direnv);
-		g_free(direnv);
+	try {
+		ubuntu::app_launch::Helper::setExec(execvect);
+		return TRUE;
+	} catch (std::runtime_error &e) {
+		g_warning("Unable to set exec line '%s': %s", execline, e.what());
+		return FALSE;
 	}
-
-	g_object_unref(bus);
-
-	return TRUE;
 }
 

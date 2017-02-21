@@ -126,6 +126,12 @@ public:
         \param urls List of URLs to passed to the untrusted helper
     */
     virtual std::shared_ptr<Instance> launch(MirPromptSession* session, std::vector<URL> urls = {}) = 0;
+    /** Set the exec from a helper utility. This function should only
+        be used inside a helper exec util.
+
+        \param exec The exec line to use for the helper with the AppID given
+    */
+    static void setExec(std::vector<std::string> exec);
 };
 
 }  // namespace app_launch
