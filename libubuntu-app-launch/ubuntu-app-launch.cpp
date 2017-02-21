@@ -838,10 +838,9 @@ ubuntu_app_launch_list_helper_instances (const gchar * type, const gchar * appid
 		auto array = g_array_new(TRUE, TRUE, sizeof(gchar *));
 
 		for (const auto &inst : insts) {
-			/* TODO: Copy IDS */
-			if (inst->isRunning()) {
-				g_debug("Running");
-			}
+			auto internalinst = std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::BaseInstance>(inst);
+			auto cstr = g_strdup(internalinst->getInstanceId().c_str());
+			g_array_append_val(array, cstr);
 		}
 
 		return (gchar **)g_array_free(array, FALSE);
@@ -865,8 +864,11 @@ helper_add (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, g
 		core::ScopedConnection(
 			getSignal(type, ubuntu::app_launch::Registry::getDefault())
 				.connect([type, context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Helper> app, std::shared_ptr<ubuntu::app_launch::Helper::Instance> instance) {
+					auto internalinst = std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::BaseInstance>(instance);
+
 					std::string appid = app->appId();
-					std::string instanceid; /* TODO */
+					std::string instanceid = internalinst->getInstanceId();
+
 					executeOnContext(context, [appid, instanceid, type, observer, user_data]() {
 						observer(appid.c_str(), instanceid.c_str(), type.value().c_str(), user_data);
 					});
