@@ -29,7 +29,7 @@ extern "C" {
 #include <libwhoopsie/recoverable-problem.h>
 
 #include "ubuntu-app-launch-trace.h"
-#include "helpers.h"
+#include "utils.h"
 #include "ual-tracepoint.h"
 #include "proxy-socket-demangler.h"
 }

@@ -23,7 +23,7 @@
 #include <gio/gio.h>
 
 extern "C" {
-#include "../helpers.h"
+#include "utils.h"
 }
 
 class HelperTest : public ::testing::Test

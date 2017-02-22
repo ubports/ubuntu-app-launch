@@ -108,13 +108,6 @@ add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 add_definitions( -DSNAPPY_XMIR="${CMAKE_INSTALL_FULL_BINDIR}/snappy-xmir" )
 
 ####################
-# Helpers
-####################
-
-add_library(helpers STATIC helpers.c helpers-shared.c)
-target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
-
-####################
 # oom-adjust-setuid-helper
 ####################
 

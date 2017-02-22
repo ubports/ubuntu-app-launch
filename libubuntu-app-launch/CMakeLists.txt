@@ -67,6 +67,8 @@ ubuntu-app-launch.cpp
 second-exec-core.c
 ubuntu-app-launch-trace.c
 app-info.c
+utils.c
+utils-shared.c
 )
 
 add_custom_target(format
@@ -93,7 +95,6 @@ target_link_libraries(launcher-static
 	${LIBERTINE_LIBRARIES}
 	${CURL_LIBRARIES}
 	-lpthread
-	helpers
 	-Wl,--no-undefined
 )
 
@@ -120,7 +121,6 @@ target_link_libraries(ubuntu-launcher
 	${LIBERTINE_LIBRARIES}
 	${CURL_LIBRARIES}
 	-lpthread
-	helpers
 	-Wl,--no-undefined
 )
 

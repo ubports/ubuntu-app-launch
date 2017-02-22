@@ -21,7 +21,7 @@
 #include <nih/alloc.h>
 #include <libnih-dbus.h>
 #include "libubuntu-app-launch/ubuntu-app-launch.h"
-#include "helpers.h"
+#include "utils.h"
 #include "second-exec-core.h"
 #include "ubuntu-app-launch-trace.h"
 #include "ual-tracepoint.h"

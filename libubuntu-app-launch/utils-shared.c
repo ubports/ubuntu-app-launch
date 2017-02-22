@@ -17,7 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
-#include "helpers.h"
+#include "utils.h"
 #include <gio/gio.h>
 #include <cgmanager/cgmanager.h>
 
