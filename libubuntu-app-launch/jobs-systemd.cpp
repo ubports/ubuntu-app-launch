@@ -239,7 +239,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                 try
                 {
                     auto info = pthis->unitNew(unitname, unitpath, pthis->userbus_);
-                    pthis->emitSignal(pthis->sig_appStarted, info);
+                    pthis->sig_jobStarted(info.job, info.appid, info.inst);
                 }
                 catch (std::runtime_error& e)
                 {
@@ -869,7 +869,7 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
     return instances;
 }
 
-std::list<std::shared_ptr<Application>> SystemD::runningApps()
+std::list<std::string> SystemD::runningAppIds(const std::list<std::string>& allJobs)
 {
     auto registry = registry_.lock();
 
@@ -879,14 +879,13 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
         return {};
     }
 
-    auto allJobs = getAllJobs();
     std::set<std::string> appids;
 
     for (const auto& unit : unitPaths)
     {
         const SystemD::UnitInfo& unitinfo = unit.first;
 
-        if (allJobs.find(unitinfo.job) == allJobs.end())
+        if (std::find(allJobs.begin(), allJobs.end(), unitinfo.job) == allJobs.end())
         {
             continue;
         }
@@ -894,20 +893,7 @@ std::list<std::shared_ptr<Application>> SystemD::runningApps()
         appids.insert(unitinfo.appid);
     }
 
-    std::list<std::shared_ptr<Application>> apps;
-    for (const auto& appid : appids)
-    {
-        auto id = AppID::find(registry, appid);
-        if (id.empty())
-        {
-            g_debug("Unable to handle AppID: %s", appid.c_str());
-            continue;
-        }
-
-        apps.emplace_back(Application::create(id, registry));
-    }
-
-    return apps;
+    return {appids.begin(), appids.end()};
 }
 
 std::string SystemD::userBusPath()
@@ -1038,26 +1024,8 @@ void SystemD::unitRemoved(const std::string& name, const std::string& path)
     if (it != unitPaths.end())
     {
         unitPaths.erase(it);
-        emitSignal(sig_appStopped, info);
+        sig_jobStopped(info.job, info.appid, info.inst);
     }
-}
-
-void SystemD::emitSignal(
-    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& sig,
-    UnitInfo& info)
-{
-    auto reg = registry_.lock();
-    if (!reg)
-    {
-        g_warning("Unable to emit systemd signal, invalid registry");
-        return;
-    }
-
-    auto appid = AppID::find(reg, info.appid);
-    auto app = Application::create(appid, reg);
-    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(info.inst);
-
-    sig(app, inst);
 }
 
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
@@ -1252,18 +1220,18 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
     });
 }
 
-core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& SystemD::appStarted()
+core::Signal<const std::string&, const std::string&, const std::string&>& SystemD::jobStarted()
 {
     /* For systemd we're automatically listening to the UnitNew signal
        and emitting on the object */
-    return sig_appStarted;
+    return sig_jobStarted;
 }
 
-core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& SystemD::appStopped()
+core::Signal<const std::string&, const std::string&, const std::string&>& SystemD::jobStopped()
 {
     /* For systemd we're automatically listening to the UnitRemoved signal
        and emitting on the object */
-    return sig_appStopped;
+    return sig_jobStopped;
 }
 
 struct FailedData
@@ -1271,8 +1239,7 @@ struct FailedData
     std::weak_ptr<Registry> registry;
 };
 
-core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
-    SystemD::appFailed()
+core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>& SystemD::jobFailed()
 {
     std::call_once(flag_appFailed, [this]() {
         auto reg = registry_.lock();
@@ -1352,11 +1319,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                         reason = Registry::FailureType::START_FAILURE;
                     }
 
-                    auto appid = AppID::find(reg, unitinfo.appid);
-                    auto app = Application::create(appid, reg);
-                    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(unitinfo.inst);
-
-                    manager->sig_appFailed(app, inst, reason);
+                    manager->sig_jobFailed(unitinfo.job, unitinfo.appid, unitinfo.inst, reason);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
@@ -1368,7 +1331,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
         });
     });
 
-    return sig_appFailed;
+    return sig_jobFailed;
 }
 
 /** Requests that systemd reset a unit that has been marked as

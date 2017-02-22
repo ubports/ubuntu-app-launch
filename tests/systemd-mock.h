@@ -551,4 +551,9 @@ public:
             throw std::runtime_error{"Mock disfunctional"};
         }
     }
+
+    std::function<DbusTestTaskState()> stateFunc()
+    {
+        return [this] { return dbus_test_task_get_state(DBUS_TEST_TASK(mock)); };
+    }
 };
