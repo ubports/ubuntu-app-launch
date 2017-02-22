@@ -244,6 +244,7 @@ add_subdirectory(libubuntu-app-launch)
 add_subdirectory(upstart-jobs)
 add_subdirectory(tools)
 add_subdirectory(ubuntu-app-test)
+add_subdirectory(utils)
 
 # testing & coverage
 if (${enable_tests})
