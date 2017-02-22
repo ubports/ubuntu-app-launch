@@ -107,14 +107,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 add_definitions( -DSNAPPY_XMIR="${CMAKE_INSTALL_FULL_BINDIR}/snappy-xmir" )
 
-####################
-# oom-adjust-setuid-helper
-####################
-
-add_executable(oom-adjust-setuid-helper oom-adjust-setuid-helper.c)
-set_target_properties(oom-adjust-setuid-helper PROPERTIES OUTPUT_NAME "oom-adjust-setuid-helper")
-install(TARGETS oom-adjust-setuid-helper RUNTIME DESTINATION "${pkglibexecdir}")
-
 add_subdirectory(libubuntu-app-launch)
 add_subdirectory(tools)
 add_subdirectory(ubuntu-app-test)
