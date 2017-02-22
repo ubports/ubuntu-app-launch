@@ -127,62 +127,12 @@ target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARI
 install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
-# xmir-helper
-####################
-
-add_executable(xmir-helper xmir-helper.c)
-set_target_properties(xmir-helper PROPERTIES OUTPUT_NAME "xmir-helper")
-install(TARGETS xmir-helper RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# untrusted-helper-type-end
-####################
-
-add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
-set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
-target_link_libraries(untrusted-helper-type-end ubuntu-launcher)
-install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
 # oom-adjust-setuid-helper
 ####################
 
 add_executable(oom-adjust-setuid-helper oom-adjust-setuid-helper.c)
 set_target_properties(oom-adjust-setuid-helper PROPERTIES OUTPUT_NAME "oom-adjust-setuid-helper")
 install(TARGETS oom-adjust-setuid-helper RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# socket-demangler
-####################
-
-add_executable(socket-demangler-helper socket-demangler.c)
-set_target_properties(socket-demangler-helper PROPERTIES OUTPUT_NAME "socket-demangler")
-target_link_libraries(socket-demangler-helper ${GIO2_LIBRARIES})
-install(TARGETS socket-demangler-helper RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# snappy-xmir
-####################
-
-####################
-# NOTE: This only can link to libraries that are in
-# the base UBUNTU CORE image. Which is basically libc
-# and not much else. Don't add libs.
-####################
-
-add_executable(snappy-xmir snappy-xmir.c)
-set_target_properties(snappy-xmir PROPERTIES OUTPUT_NAME "snappy-xmir")
-install(TARGETS snappy-xmir RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# snappy-xmir-envvars
-####################
-
-add_executable(snappy-xmir-envvars snappy-xmir-envvars.c)
-set_target_properties(snappy-xmir-envvars PROPERTIES OUTPUT_NAME "snappy-xmir-envvars")
-# No libs, otherwise we have to worry about how to handle finding them
-install(TARGETS snappy-xmir-envvars RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
 
 ####################
 # ubuntu-app-launch-desktop.click-hook
@@ -193,6 +143,7 @@ configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE
 add_subdirectory(libubuntu-app-launch)
 add_subdirectory(tools)
 add_subdirectory(ubuntu-app-test)
+add_subdirectory(utils)
 
 # testing & coverage
 if (${enable_tests})

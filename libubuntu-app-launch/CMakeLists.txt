@@ -36,6 +36,7 @@ type-tagger.h
 set(LAUNCHER_CPP_SOURCES
 application.cpp
 helper.cpp
+helper-impl.h
 registry.cpp
 registry-impl.h
 registry-impl.cpp
@@ -51,7 +52,6 @@ application-info-desktop.h
 application-info-desktop.cpp
 application-icon-finder.h
 application-icon-finder.cpp
-helper-impl-click.cpp
 glib-thread.h
 glib-thread.cpp
 jobs-base.h
