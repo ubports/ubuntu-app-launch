@@ -100,6 +100,11 @@ public:
 
     core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
 
+    std::list<std::shared_ptr<app_store::Base>> appStores()
+    {
+        return _appStores;
+    }
+
 private:
     Registry* _registry; /**< The Registry that we're spawned from */
 
