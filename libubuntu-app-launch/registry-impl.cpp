@@ -19,6 +19,7 @@
 
 #include "registry-impl.h"
 #include "application-icon-finder.h"
+#include "application-impl-base.h"
 #include <regex>
 #include <upstart.h>
 
@@ -213,7 +214,7 @@ std::string Registry::Impl::getClickDir(const std::string& package)
     });
 }
 
-/** Send an event to Zietgeist using the registry thread so that
+/** Send an event to Zeitgeist using the registry thread so that
         the callback comes back in the right place. */
 void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
 {
@@ -303,6 +304,24 @@ void Registry::Impl::watchingAppStarting(bool rWatching)
 bool Registry::Impl::isWatchingAppStarting()
 {
     return watchingAppStarting_;
+}
+
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated(const std::shared_ptr<Registry>& reg)
+{
+    std::call_once(flag_appInfoUpdated, [this, reg] {
+        g_debug("App Info Updated Signal Initialized");
+
+        auto apps = app_impls::Base::createInfoWatchers(reg);
+        apps.push_back(Registry::Impl::getZgWatcher(reg));
+
+        for (const auto& app : apps)
+        {
+            infoWatchers_.emplace_back(
+                std::make_pair(app, app->infoChanged().connect(
+                                        [this](const std::shared_ptr<Application>& app) { sig_appInfoUpdated(app); })));
+        }
+    });
+    return sig_appInfoUpdated;
 }
 
 }  // namespace app_launch

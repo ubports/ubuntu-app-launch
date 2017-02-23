@@ -747,6 +747,37 @@ void Base::resume()
     pidListToDbus(registry_, appId_, instance_, pids, "ApplicationResumed");
 }
 
+/** Focuses this application by sending SIGCONT to all the PIDs in the
+    cgroup and tells the Shell to focus the application. */
+void Base::focus()
+{
+    g_debug("Focusing application: %s", std::string(appId_).c_str());
+
+    GError* error = nullptr;
+    GVariantBuilder params;
+    g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
+    g_variant_builder_add_value(&params, g_variant_new_string(std::string(appId_).c_str()));
+    g_variant_builder_add_value(&params, g_variant_new_string(instance_.c_str()));
+    g_dbus_connection_emit_signal(registry_->impl->_dbus.get(),    /* bus */
+                                  nullptr,                         /* destination */
+                                  "/",                             /* path */
+                                  "com.canonical.UbuntuAppLaunch", /* interface */
+                                  "UnityFocusRequest",             /* signal */
+                                  g_variant_builder_end(&params),  /* params */
+                                  &error);                         /* error */
+
+    if (error != nullptr)
+    {
+        g_warning("Unable to emit signal 'UnityFocusRequest' for appid '%s': '%s'", std::string(appId_).c_str(),
+                  error->message);
+        g_error_free(error);
+    }
+    else
+    {
+        g_debug("Emmitted 'UnityFocusRequest' to DBus");
+    }
+}
+
 /** Go through the list of PIDs calling a function and handling
     the issue with getting PIDs being a racey condition.
 
