@@ -77,6 +77,8 @@ public:
 
     virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) override;
 
+    static std::shared_ptr<info_watcher::Base> createInfoWatcher(const std::shared_ptr<Registry>& reg);
+
     const std::string& getInterface() const
     {
         return interface_;
