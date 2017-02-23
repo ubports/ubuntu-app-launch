@@ -18,6 +18,7 @@
  */
 
 #include "appid.h"
+#include "application-impl-base.h"
 #include "info-watcher.h"
 #include "registry.h"
 
@@ -31,8 +32,8 @@ namespace app_store
 class Base : public info_watcher::Base
 {
 public:
-    AppStore();
-    virtual ~AppStore();
+    Base();
+    virtual ~Base();
 
     /* Discover tools */
     virtual bool verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry) = 0;
@@ -49,6 +50,9 @@ public:
 
     /* Application Creation */
     virtual std::shared_ptr<app_impls::Base> create(const AppID& appid, const std::shared_ptr<Registry>& registry) = 0;
+
+    /* Static get all */
+    static std::list<std::shared_ptr<Base>> allAppStores();
 };
 
 }  // namespace app_store

@@ -43,6 +43,7 @@ Registry::Impl::Impl(Registry* registry)
              })
     , _registry{registry}
     , _iconFinders()
+    , _appStores(app_store::Base::allAppStores())
 {
     auto cancel = thread.getCancellable();
     _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {

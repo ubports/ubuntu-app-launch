@@ -36,6 +36,7 @@ type-tagger.h
 set(LAUNCHER_CPP_SOURCES
 application.cpp
 app-store-base.h
+app-store-base.cpp
 helper.cpp
 registry.cpp
 registry-impl.h
