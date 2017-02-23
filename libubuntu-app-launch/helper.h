@@ -62,11 +62,9 @@ class Registry;
 */
 class Helper
 {
-    /*
-    protected:
-        Helper() = default;
-        virtual ~Helper() = default;
-           TODO: Next ABI break */
+protected:
+    Helper() = default;
+    virtual ~Helper() = default;
 
 public:
     /** \private */
@@ -93,11 +91,9 @@ public:
     /** Running instance of a a Helper */
     class Instance
     {
-        /*
-            protected:
-                Instance() = default;
-                virtual ~Instance() = default;
-                   TODO: Next ABI break */
+    protected:
+        Instance() = default;
+        virtual ~Instance() = default;
 
     public:
         /** Check to see if this instance is running */

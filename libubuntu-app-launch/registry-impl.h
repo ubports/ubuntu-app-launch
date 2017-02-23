@@ -18,6 +18,7 @@
  */
 
 #include "glib-thread.h"
+#include "info-watcher-zg.h"
 #include "jobs-base.h"
 #include "registry.h"
 #include "snapd-info.h"
@@ -82,6 +83,15 @@ public:
         return oomHelper_;
     }
 
+    static std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher(const std::shared_ptr<Registry>& reg)
+    {
+        std::call_once(reg->impl->zgWatcherOnce_,
+                       [reg] { reg->impl->zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(reg); });
+        return reg->impl->zgWatcher_;
+    }
+
+    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
+
 private:
     Registry* _registry; /**< The Registry that we're spawned from */
 
@@ -94,6 +104,19 @@ private:
 
     /** Path to the OOM Helper */
     std::string oomHelper_;
+
+    /** Signal for application info changing */
+    core::Signal<const std::shared_ptr<Application>&> sig_appInfoUpdated;
+    /** Flag to see if we've initialized the info watcher list */
+    std::once_flag flag_appInfoUpdated;
+    /** List of info watchers along with a signal handle to our connection to their update signal */
+    std::list<std::pair<std::shared_ptr<info_watcher::Base>, core::ScopedConnection>> infoWatchers_;
+
+protected:
+    /** ZG Info Watcher */
+    std::shared_ptr<info_watcher::Zeitgeist> zgWatcher_;
+    /** Init checker for ZG Watcher */
+    std::once_flag zgWatcherOnce_;
 };
 
 }  // namespace app_launch

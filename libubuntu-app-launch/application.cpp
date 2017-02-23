@@ -25,6 +25,7 @@ extern "C" {
 #include "application-impl-libertine.h"
 #include "application-impl-snap.h"
 #include "application.h"
+#include "info-watcher.h"
 #include "jobs-base.h"
 #include "registry-impl.h"
 #include "registry.h"

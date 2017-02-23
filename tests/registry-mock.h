@@ -19,10 +19,27 @@
 
 #pragma once
 
+#include "info-watcher-zg.h"
 #include "registry-impl.h"
 #include "registry.h"
 
 #include <gmock/gmock.h>
+
+class zgWatcherMock : public ubuntu::app_launch::info_watcher::Zeitgeist
+{
+public:
+    zgWatcherMock()
+        : ubuntu::app_launch::info_watcher::Zeitgeist({})
+    {
+    }
+
+    virtual ~zgWatcherMock()
+    {
+    }
+
+    MOCK_METHOD1(lookupAppPopularity,
+                 ubuntu::app_launch::Application::Info::Popularity(const ubuntu::app_launch::AppID&));
+};
 
 class RegistryImplMock : public ubuntu::app_launch::Registry::Impl
 {
@@ -30,6 +47,13 @@ public:
     RegistryImplMock(ubuntu::app_launch::Registry* reg)
         : ubuntu::app_launch::Registry::Impl(reg)
     {
+        auto zgWatcher = std::make_shared<zgWatcherMock>();
+        zgWatcher_ = zgWatcher;
+        std::call_once(zgWatcherOnce_, [] {});
+
+        ON_CALL(*zgWatcher, lookupAppPopularity(testing::_))
+            .WillByDefault(testing::Return(ubuntu::app_launch::Application::Info::Popularity::from_raw(1u)));
+
         g_debug("Registry Mock Implementation Created");
     }
 

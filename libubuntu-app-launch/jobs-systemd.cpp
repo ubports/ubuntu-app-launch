@@ -61,7 +61,6 @@ public:
 
     /* Query lifecycle */
     pid_t primaryPid() override;
-    std::string logPath() override;
     std::vector<pid_t> pids() override;
 
     /* Manage lifecycle */
@@ -83,13 +82,6 @@ pid_t SystemD::primaryPid()
 {
     auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
     return manager->unitPrimaryPid(appId_, job_, instance_);
-}
-
-std::string SystemD::logPath()
-{
-    /* NOTE: We can never get this for systemd */
-    g_warning("Log paths aren't available for systemd");
-    return {};
 }
 
 std::vector<pid_t> SystemD::pids()

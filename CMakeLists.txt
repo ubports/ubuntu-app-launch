@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 2.8.9)
 # Version Info
 ##########################
 
-set(API_VERSION 2)
-set(ABI_VERSION 3)
+set(API_VERSION 3)
+set(ABI_VERSION 4)
 
 ##########################
 # Options

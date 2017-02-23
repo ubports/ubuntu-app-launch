@@ -37,6 +37,7 @@
 #include "ubuntu-app-launch.h"
 
 #include "eventually-fixture.h"
+#include "libertine-service.h"
 #include "mir-mock.h"
 #include "spew-master.h"
 #include "systemd-mock.h"
@@ -53,9 +54,12 @@
 class LibUAL : public EventuallyFixture
 {
 protected:
-    DbusTestService* service = nullptr;
-    GDBusConnection* bus = nullptr;
+    DbusTestService* service = NULL;
+    DbusTestDbusMock* mock = NULL;
+    DbusTestDbusMock* cgmock = NULL;
+    std::shared_ptr<LibertineService> libertine;
     std::shared_ptr<SystemdMock> systemd;
+    GDBusConnection* bus = NULL;
     guint resume_timeout = 0;
     std::shared_ptr<ubuntu::app_launch::Registry> registry;
 
@@ -181,6 +185,12 @@ protected:
 
         /* Put it together */
         dbus_test_service_add_task(service, *systemd);
+
+        /* Add in Libertine */
+        libertine = std::make_shared<LibertineService>();
+        dbus_test_service_add_task(service, *libertine);
+        dbus_test_service_add_task(service, libertine->waitTask());
+
         dbus_test_service_start_tasks(service);
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
@@ -209,6 +219,7 @@ protected:
         // ubuntu::app_launch::Registry::clearDefault();
 
         systemd.reset();
+        libertine.reset();
         g_clear_object(&service);
 
         g_object_unref(bus);
@@ -335,32 +346,76 @@ TEST_F(LibUAL, ApplicationIconSnap)
 }
 #endif
 
-/* NOTE: The fact that there is 'libertine-data' in these strings is because
-   we're using one CACHE_HOME for this test suite and the libertine functions
-   need to pull things from there, where these are only comparisons. It's just
-   what value is in the environment variable */
-TEST_F(LibUAL, ApplicationLog)
+TEST_F(LibUAL, ApplicationPid)
 {
+    /* Check bad params */
     auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
-    EXPECT_EQ(
-        std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log"),
-        app->instances()[0]->logPath());
-
-    appid = ubuntu::app_launch::AppID::find(registry, "single");
-    app = ubuntu::app_launch::Application::create(appid, registry);
-
     ASSERT_LT(0, int(app->instances().size()));
 
-    EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
-              app->instances()[0]->logPath());
+    /* Look at PIDs from cgmanager */
+    EXPECT_FALSE(app->instances()[0]->hasPid(1));
+    EXPECT_TRUE(app->instances()[0]->hasPid(100));
+    EXPECT_TRUE(app->instances()[0]->hasPid(200));
+    EXPECT_TRUE(app->instances()[0]->hasPid(300));
 
-    appid = ubuntu::app_launch::AppID::find(registry, "multiple");
-    app = ubuntu::app_launch::Application::create(appid, registry);
+    /* Check primary pid, which comes from Upstart */
+    EXPECT_TRUE(app->instances()[0]->isRunning());
+    EXPECT_EQ(getpid(), app->instances()[0]->primaryPid());
 
-    EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log"),
-              app->instances()[0]->logPath());
+    auto multiappid = ubuntu::app_launch::AppID::find(registry, "multiple");
+    auto multiapp = ubuntu::app_launch::Application::create(multiappid, registry);
+    auto instances = multiapp->instances();
+    ASSERT_LT(0, int(instances.size()));
+    EXPECT_EQ(5678, instances[0]->primaryPid());
+
+    /* Look at the full PID list from CG Manager */
+    DbusTestDbusMockObject* cgobject = dbus_test_dbus_mock_get_object(cgmock, "/org/linuxcontainers/cgmanager",
+                                                                      "org.linuxcontainers.cgmanager0_0", NULL);
+    const DbusTestDbusMockCall* calls = NULL;
+    guint len = 0;
+
+    /* Click in the set */
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+    EXPECT_TRUE(app->instances()[0]->hasPid(100));
+    calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
+    ASSERT_EQ(1u, len);
+    EXPECT_STREQ("GetTasksRecursive", calls->name);
+    EXPECT_TRUE(g_variant_equal(
+        calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
+    /* Click out of the set */
+    EXPECT_FALSE(app->instances()[0]->hasPid(101));
+    calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
+    ASSERT_EQ(1u, len);
+    EXPECT_STREQ("GetTasksRecursive", calls->name);
+    EXPECT_TRUE(g_variant_equal(
+        calls->params, g_variant_new("(ss)", "freezer", "upstart/application-click-com.test.good_application_1.2.3")));
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
+    /* Legacy Single Instance */
+    auto singleappid = ubuntu::app_launch::AppID::find(registry, "single");
+    auto singleapp = ubuntu::app_launch::Application::create(singleappid, registry);
+
+    ASSERT_LT(0, int(singleapp->instances().size()));
+    EXPECT_TRUE(singleapp->instances()[0]->hasPid(100));
+
+    calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
+    ASSERT_EQ(1u, len);
+    EXPECT_STREQ("GetTasksRecursive", calls->name);
+    EXPECT_TRUE(g_variant_equal(calls->params, g_variant_new("(ss)", "freezer", "upstart/application-legacy-single-")));
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
+
+    /* Legacy Multi Instance */
+    EXPECT_TRUE(multiapp->instances()[0]->hasPid(100));
+    calls = dbus_test_dbus_mock_object_get_method_calls(cgmock, cgobject, "GetTasksRecursive", &len, NULL);
+    ASSERT_EQ(1u, len);
+    EXPECT_STREQ("GetTasksRecursive", calls->name);
+    EXPECT_TRUE(g_variant_equal(calls->params,
+                                g_variant_new("(ss)", "freezer", "upstart/application-legacy-multiple-2342345")));
+    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(cgmock, cgobject, NULL));
 }
 
 TEST_F(LibUAL, ApplicationId)
