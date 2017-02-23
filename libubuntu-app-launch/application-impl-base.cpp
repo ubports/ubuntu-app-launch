@@ -24,10 +24,6 @@
 #include <numeric>
 
 #include "application-impl-base.h"
-#include "application-impl-click.h"
-#include "application-impl-legacy.h"
-#include "application-impl-libertine.h"
-#include "application-impl-snap.h"
 #include "helpers.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"

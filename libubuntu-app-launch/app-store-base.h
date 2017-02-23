@@ -48,6 +48,9 @@ public:
                                        const std::shared_ptr<Registry>& registry) = 0;
     virtual bool hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry) = 0;
 
+    /* Possible apps */
+    virtual std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry) = 0;
+
     /* Application Creation */
     virtual std::shared_ptr<app_impls::Base> create(const AppID& appid, const std::shared_ptr<Registry>& registry) = 0;
 
