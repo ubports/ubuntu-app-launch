@@ -49,6 +49,7 @@ public:
     bool hasPid(pid_t pid) override;
     void pause() override;
     void resume() override;
+    void focus() override;
 
     /* OOM Functions */
     void setOomAdjustment(const oom::Score score) override;

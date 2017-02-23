@@ -158,6 +158,18 @@ std::string Base::getInstance(const std::shared_ptr<app_info::Desktop>& desktop)
     }
 }
 
+std::shared_ptr<Application::Instance> Base::findInstance(const pid_t& pid)
+{
+    for (auto instance : instances())
+    {
+        if (instance->hasPid(pid))
+        {
+            return instance;
+        }
+    }
+    return nullptr;
+}
+
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu

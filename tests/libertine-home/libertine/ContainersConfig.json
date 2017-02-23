@@ -9,7 +9,7 @@
             ],
             "multiarch": "disabled",
             "name": "Container Name",
-            "type": "lxc"
+            "type": "mock"
         }
     ],
     "defaultContainer": "container-name"

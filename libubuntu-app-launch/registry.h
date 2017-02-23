@@ -197,8 +197,7 @@ public:
 
     protected:
         Manager() = default;
-        /* virtual ~Manager() = default;
-           TODO: Next ABI break */
+        virtual ~Manager() = default;
     };
 
     /** Set the manager of applications, which gives permissions for them to
