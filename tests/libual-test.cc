@@ -30,6 +30,7 @@
 #include "registry.h"
 #include "ubuntu-app-launch.h"
 
+#include "libertine-service.h"
 #include "eventually-fixture.h"
 #include "mir-mock.h"
 
@@ -39,6 +40,7 @@ class LibUAL : public EventuallyFixture
 		DbusTestService * service = NULL;
 		DbusTestDbusMock * mock = NULL;
 		DbusTestDbusMock * cgmock = NULL;
+		std::shared_ptr<LibertineService> libertine;
 		GDBusConnection * bus = NULL;
 		std::string last_focus_appid;
 		std::string last_resume_appid;
@@ -280,6 +282,12 @@ class LibUAL : public EventuallyFixture
 			/* Put it together */
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
 			dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock));
+
+			/* Add in Libertine */
+			libertine = std::make_shared<LibertineService>();
+			dbus_test_service_add_task(service, *libertine);
+			dbus_test_service_add_task(service, libertine->waitTask());
+
 			dbus_test_service_start_tasks(service);
 
 			bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
@@ -299,6 +307,7 @@ class LibUAL : public EventuallyFixture
 
 			ubuntu::app_launch::Registry::clearDefault();
 
+			libertine.reset();
 			g_clear_object(&mock);
 			g_clear_object(&cgmock);
 			g_clear_object(&service);
@@ -448,25 +457,6 @@ TEST_F(LibUAL, StopApplication)
 
 	ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 
-}
-
-/* NOTE: The fact that there is 'libertine-data' in these strings is because
-   we're using one CACHE_HOME for this test suite and the libertine functions
-   need to pull things from there, where these are only comparisons. It's just
-   what value is in the environment variable */
-TEST_F(LibUAL, ApplicationLog)
-{
-	gchar * click_log = ubuntu_app_launch_application_log_path("com.test.good_application_1.2.3");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log", click_log);
-	g_free(click_log);
-
-	gchar * legacy_single = ubuntu_app_launch_application_log_path("single");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log", legacy_single);
-	g_free(legacy_single);
-
-	gchar * legacy_multiple = ubuntu_app_launch_application_log_path("multiple");
-	EXPECT_STREQ(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log", legacy_multiple);
-	g_free(legacy_multiple);
 }
 
 TEST_F(LibUAL, ApplicationPid)

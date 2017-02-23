@@ -52,6 +52,10 @@ application-info-desktop.h
 application-info-desktop.cpp
 application-icon-finder.h
 application-icon-finder.cpp
+info-watcher.h
+info-watcher.cpp
+info-watcher-zg.h
+info-watcher-zg.cpp
 glib-thread.h
 glib-thread.cpp
 jobs-base.h
@@ -170,20 +174,20 @@ include(UseGObjectIntrospection)
 
 set(INTROSPECTION_GIRS)
 set(_introspection_files ${LAUNCHER_HEADERS})
-set(UbuntuAppLaunch_2_gir "ubuntu-app-launch")
-set(UbuntuAppLaunch_2_gir_INCLUDES GObject-2.0)
+set(UbuntuAppLaunch_3_gir "ubuntu-app-launch")
+set(UbuntuAppLaunch_3_gir_INCLUDES GObject-2.0)
 
 gir_get_cflags(_cflags)
 list_prefix(MIR_C_INCLUDES MIR_INCLUDE_DIRS "-I")
-set(UbuntuAppLaunch_2_gir_CFLAGS ${c_flags} ${MIR_C_INCLUDES})
-set(UbuntuAppLaunch_2_gir_LIBS ubuntu-app-launch)
+set(UbuntuAppLaunch_3_gir_CFLAGS ${c_flags} ${MIR_C_INCLUDES})
+set(UbuntuAppLaunch_3_gir_LIBS ubuntu-app-launch)
 
 list_make_absolute(_abs_introspection_files _introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
-set(UbuntuAppLaunch_2_gir_FILES ${_abs_introspection_files})
-set(UbuntuAppLaunch_2_gir_SCANNERFLAGS --c-include "ubuntu-app-launch.h")
-set(UbuntuAppLaunch_2_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
+set(UbuntuAppLaunch_3_gir_FILES ${_abs_introspection_files})
+set(UbuntuAppLaunch_3_gir_SCANNERFLAGS --c-include "ubuntu-app-launch.h")
+set(UbuntuAppLaunch_3_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
 
-list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-2.gir)
+list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-3.gir)
 gir_add_introspections(INTROSPECTION_GIRS)
 
 add_subdirectory(abi-check)

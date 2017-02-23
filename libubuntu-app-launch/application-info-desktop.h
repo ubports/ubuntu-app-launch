@@ -41,7 +41,8 @@ static const std::bitset<2> XMIR_DEFAULT{"10"};
 class Desktop : public Application::Info
 {
 public:
-    Desktop(const std::shared_ptr<GKeyFile>& keyfile,
+    Desktop(const AppID& appid,
+            const std::shared_ptr<GKeyFile>& keyfile,
             const std::string& basePath,
             const std::string& rootDir,
             std::bitset<2> flags,
@@ -70,6 +71,10 @@ public:
     const Application::Info::Keywords& keywords() override
     {
         return _keywords;
+    }
+    const Application::Info::Popularity& popularity() override
+    {
+        return _popularity;
     }
 
     Application::Info::Splash splash() override
@@ -124,6 +129,7 @@ protected:
     Application::Info::DefaultDepartment _defaultDepartment;
     Application::Info::IconPath _screenshotPath;
     Application::Info::Keywords _keywords;
+    Application::Info::Popularity _popularity;
 
     Application::Info::Splash _splashInfo;
     Application::Info::Orientations _supportedOrientations;

@@ -74,6 +74,14 @@ target_link_libraries (jobs-systemd ${GMOCK_LIBRARIES} launcher-static ${DBUSTES
 
 add_test(NAME jobs-systemd COMMAND jobs-systemd)
 
+# Info Watcher ZG
+
+add_executable (info-watcher-zg
+	info-watcher-zg.cpp)
+target_link_libraries (info-watcher-zg ${GMOCK_LIBRARIES} launcher-static ${DBUSTEST_LIBRARIES})
+
+add_test(NAME info-watcher-zg COMMAND info-watcher-zg)
+
 # Snapd Info Test
 
 if(CURL_FOUND)
@@ -88,7 +96,7 @@ endif()
 
 add_executable (list-apps
 	list-apps.cpp)
-target_link_libraries (list-apps gtest_main ${GTEST_MAIN_LIBRARIES} launcher-static)
+target_link_libraries (list-apps gtest_main ${GTEST_MAIN_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
 add_test (NAME list-apps COMMAND ${CMAKE_CURRENT_BINARY_DIR}/list-apps)
 
 # Application Info Desktop
@@ -96,7 +104,7 @@ add_test (NAME list-apps COMMAND ${CMAKE_CURRENT_BINARY_DIR}/list-apps)
 add_executable (application-info-desktop-test
   application-info-desktop.cpp
 )
-target_link_libraries (application-info-desktop-test gtest_main ${GTEST_MAIN_LIBRARIES} launcher-static)
+target_link_libraries (application-info-desktop-test gtest_main ${GMOCK_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
 
 add_test (NAME application-info-desktop-test COMMAND application-info-desktop-test)
 
@@ -138,8 +146,10 @@ add_custom_target(format-tests
 	libual-cpp-test.cc
 	list-apps.cpp
 	eventually-fixture.h
+	info-watcher-zg.cpp
 	jobs-base-test.cpp
 	jobs-systemd.cpp
+	libertine-service.h
 	registry-mock.h
 	snapd-info-test.cpp
 	snapd-mock.h

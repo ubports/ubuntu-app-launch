@@ -151,20 +151,6 @@ ubuntu_app_launch_resume_application (const gchar * appid)
 	}
 }
 
-gchar *
-ubuntu_app_launch_application_log_path (const gchar * appid)
-{
-	try {
-		auto registry = ubuntu::app_launch::Registry::getDefault();
-		auto appId = ubuntu::app_launch::AppID::find(appid);
-		auto app = ubuntu::app_launch::Application::create(appId, registry);
-		auto log = app->instances()[0]->logPath();
-		return g_strdup(log.c_str());
-	} catch (...) {
-		return nullptr;
-	}
-}
-
 /* Function to take a work function and have it execute on a given
    GMainContext */
 static void executeOnContext (const std::shared_ptr<GMainContext>& context, std::function<void()> work)

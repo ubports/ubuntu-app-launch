@@ -28,6 +28,7 @@ extern "C" {
 #include "application-impl-snap.h"
 #endif
 #include "application.h"
+#include "info-watcher.h"
 #include "jobs-base.h"
 #include "registry-impl.h"
 #include "registry.h"

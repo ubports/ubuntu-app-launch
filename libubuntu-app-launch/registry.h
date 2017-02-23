@@ -127,6 +127,16 @@ public:
                         const std::vector<pid_t>&>&
         appResumed(const std::shared_ptr<Registry>& reg = getDefault());
 
+    /** Get the signal object that is signaled when an application's info
+        has been updated.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(
+        const std::shared_ptr<Registry>& reg = getDefault());
+
     /** The Application Manager, almost always if you're not Unity8, don't
         use this API. Testing is a special case. Subclass this interface and
         implement these functions.
@@ -187,8 +197,7 @@ public:
 
     protected:
         Manager() = default;
-        /* virtual ~Manager() = default;
-           TODO: Next ABI break */
+        virtual ~Manager() = default;
     };
 
     /** Set the manager of applications, which gives permissions for them to

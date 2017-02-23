@@ -50,6 +50,7 @@ public:
     bool hasPid(pid_t pid) override;
     void pause() override;
     void resume() override;
+    void focus() override;
 
     const std::string& getInstanceId()
     {
