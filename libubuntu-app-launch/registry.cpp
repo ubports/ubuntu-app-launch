@@ -24,13 +24,6 @@
 #include "registry-impl.h"
 #include "registry.h"
 
-#include "application-impl-click.h"
-#include "application-impl-legacy.h"
-#include "application-impl-libertine.h"
-#ifdef ENABLE_SNAPPY
-#include "application-impl-snap.h"
-#endif
-
 namespace ubuntu
 {
 namespace app_launch
@@ -59,12 +52,10 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
 {
     std::list<std::shared_ptr<Application>> list;
 
-    list.splice(list.begin(), app_impls::Click::list(connection));
-    list.splice(list.begin(), app_impls::Legacy::list(connection));
-    list.splice(list.begin(), app_impls::Libertine::list(connection));
-#ifdef ENABLE_SNAPPY
-    list.splice(list.begin(), app_impls::Snap::list(connection));
-#endif
+    for (const auto& appStore : connection->impl->appStores())
+    {
+        list.splice(list.begin(), appStore->list(connection));
+    }
 
     return list;
 }
