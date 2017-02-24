@@ -19,10 +19,7 @@
 
 #pragma once
 
-#include "appid.h"
-#include "application-impl-base.h"
-#include "info-watcher.h"
-#include "registry.h"
+#include "app-store-base.h"
 
 namespace ubuntu
 {
@@ -31,33 +28,31 @@ namespace app_launch
 namespace app_store
 {
 
-class Base : public info_watcher::Base
+class Snap : public Base
 {
 public:
-    Base();
-    virtual ~Base();
+    Snap();
+    virtual ~Snap();
 
     /* Discover tools */
-    virtual bool verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry) = 0;
+    virtual bool verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry) override;
     virtual bool verifyAppname(const AppID::Package& package,
                                const AppID::AppName& appname,
-                               const std::shared_ptr<Registry>& registry) = 0;
+                               const std::shared_ptr<Registry>& registry) override;
     virtual AppID::AppName findAppname(const AppID::Package& package,
                                        AppID::ApplicationWildcard card,
-                                       const std::shared_ptr<Registry>& registry) = 0;
+                                       const std::shared_ptr<Registry>& registry) override;
     virtual AppID::Version findVersion(const AppID::Package& package,
                                        const AppID::AppName& appname,
-                                       const std::shared_ptr<Registry>& registry) = 0;
-    virtual bool hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry) = 0;
+                                       const std::shared_ptr<Registry>& registry) override;
+    virtual bool hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry) override;
 
     /* Possible apps */
-    virtual std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry) = 0;
+    virtual std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry) override;
 
     /* Application Creation */
-    virtual std::shared_ptr<app_impls::Base> create(const AppID& appid, const std::shared_ptr<Registry>& registry) = 0;
-
-    /* Static get all */
-    static std::list<std::shared_ptr<Base>> allAppStores();
+    virtual std::shared_ptr<app_impls::Base> create(const AppID& appid,
+                                                    const std::shared_ptr<Registry>& registry) override;
 };
 
 }  // namespace app_store
