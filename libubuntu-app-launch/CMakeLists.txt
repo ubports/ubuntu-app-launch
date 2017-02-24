@@ -37,6 +37,8 @@ set(LAUNCHER_CPP_SOURCES
 application.cpp
 app-store-base.h
 app-store-base.cpp
+app-store-click.h
+app-store-click.cpp
 helper.cpp
 registry.cpp
 registry-impl.h
