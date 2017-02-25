@@ -21,9 +21,6 @@ extern "C" {
 #include "ubuntu-app-launch.h"
 }
 
-#include "application-impl-legacy.h"
-#include "application-impl-libertine.h"
-#include "application-impl-snap.h"
 #include "application.h"
 #include "info-watcher.h"
 #include "jobs-base.h"
@@ -56,22 +53,15 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
     }
 
-    if (app_impls::Snap::hasAppId(appid, registry))
+    for (const auto& appStore : registry->impl->appStores())
     {
-        return std::make_shared<app_impls::Snap>(appid, registry);
+        if (appStore->hasAppId(appid, registry))
+        {
+            return appStore->create(appid, registry);
+        }
     }
-    else if (app_impls::Libertine::hasAppId(appid, registry))
-    {
-        return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
-    }
-    else if (app_impls::Legacy::hasAppId(appid, registry))
-    {
-        return std::make_shared<app_impls::Legacy>(appid.appname, registry);
-    }
-    else
-    {
-        throw std::runtime_error("Invalid app ID: " + std::string(appid));
-    }
+
+    throw std::runtime_error("Invalid app ID: " + std::string(appid));
 }
 
 AppID::AppID()
@@ -186,37 +176,6 @@ bool AppID::empty() const
     return package.value().empty() && appname.value().empty() && version.value().empty();
 }
 
-/** Basically we're making our own VTable of static functions. Static
-    functions don't go in the normal VTables, so we can't use our class
-    inheritance here to help. So we're just packing these puppies into
-    a data structure and iterating over it. */
-struct DiscoverTools
-{
-    std::function<bool(const AppID::Package& package, const std::shared_ptr<Registry>& registry)> verifyPackage;
-    std::function<bool(
-        const AppID::Package& package, const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)>
-        verifyAppname;
-    std::function<AppID::AppName(
-        const AppID::Package& package, AppID::ApplicationWildcard card, const std::shared_ptr<Registry>& registry)>
-        findAppname;
-    std::function<AppID::Version(
-        const AppID::Package& package, const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)>
-        findVersion;
-    std::function<bool(const AppID& appid, const std::shared_ptr<Registry>& registry)> hasAppId;
-};
-
-/** The tools in order that they should be used */
-static const std::vector<DiscoverTools> discoverTools{
-    /* Snap */
-    {app_impls::Snap::verifyPackage, app_impls::Snap::verifyAppname, app_impls::Snap::findAppname,
-     app_impls::Snap::findVersion, app_impls::Snap::hasAppId},
-    /* Libertine */
-    {app_impls::Libertine::verifyPackage, app_impls::Libertine::verifyAppname, app_impls::Libertine::findAppname,
-     app_impls::Libertine::findVersion, app_impls::Libertine::hasAppId},
-    /* Legacy */
-    {app_impls::Legacy::verifyPackage, app_impls::Legacy::verifyAppname, app_impls::Legacy::findAppname,
-     app_impls::Legacy::findVersion, app_impls::Legacy::hasAppId}};
-
 AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                       const std::string& package,
                       const std::string& appname,
@@ -224,31 +183,31 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 {
     auto pkg = AppID::Package::from_raw(package);
 
-    for (const auto& tools : discoverTools)
+    for (const auto& appStore : registry->impl->appStores())
     {
         /* Figure out which type we have */
         try
         {
-            if (tools.verifyPackage(pkg, registry))
+            if (appStore->verifyPackage(pkg, registry))
             {
                 auto app = AppID::AppName::from_raw({});
 
                 if (appname.empty() || appname == "first-listed-app")
                 {
-                    app = tools.findAppname(pkg, ApplicationWildcard::FIRST_LISTED, registry);
+                    app = appStore->findAppname(pkg, ApplicationWildcard::FIRST_LISTED, registry);
                 }
                 else if (appname == "last-listed-app")
                 {
-                    app = tools.findAppname(pkg, ApplicationWildcard::LAST_LISTED, registry);
+                    app = appStore->findAppname(pkg, ApplicationWildcard::LAST_LISTED, registry);
                 }
                 else if (appname == "only-listed-app")
                 {
-                    app = tools.findAppname(pkg, ApplicationWildcard::ONLY_LISTED, registry);
+                    app = appStore->findAppname(pkg, ApplicationWildcard::ONLY_LISTED, registry);
                 }
                 else
                 {
                     app = AppID::AppName::from_raw(appname);
-                    if (!tools.verifyAppname(pkg, app, registry))
+                    if (!appStore->verifyAppname(pkg, app, registry))
                     {
                         throw std::runtime_error("App name passed in is not valid for this package type");
                     }
@@ -257,12 +216,12 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                 auto ver = AppID::Version::from_raw({});
                 if (version.empty() || version == "current-user-version")
                 {
-                    ver = tools.findVersion(pkg, app, registry);
+                    ver = appStore->findVersion(pkg, app, registry);
                 }
                 else
                 {
                     ver = AppID::Version::from_raw(version);
-                    if (!tools.hasAppId({pkg, app, ver}, registry))
+                    if (!appStore->hasAppId({pkg, app, ver}, registry))
                     {
                         throw std::runtime_error("Invalid version passed for this package type");
                     }
@@ -287,14 +246,14 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 {
     auto pkg = AppID::Package::from_raw(package);
 
-    for (const auto& tools : discoverTools)
+    for (const auto& appStore : registry->impl->appStores())
     {
         try
         {
-            if (tools.verifyPackage(pkg, registry))
+            if (appStore->verifyPackage(pkg, registry))
             {
-                auto app = tools.findAppname(pkg, appwildcard, registry);
-                auto ver = tools.findVersion(pkg, app, registry);
+                auto app = appStore->findAppname(pkg, appwildcard, registry);
+                auto ver = appStore->findVersion(pkg, app, registry);
                 return AppID{pkg, app, ver};
             }
         }
@@ -316,13 +275,13 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
     auto pkg = AppID::Package::from_raw(package);
     auto app = AppID::AppName::from_raw(appname);
 
-    for (const auto& tools : discoverTools)
+    for (const auto& appStore : registry->impl->appStores())
     {
         try
         {
-            if (tools.verifyPackage(pkg, registry) && tools.verifyAppname(pkg, app, registry))
+            if (appStore->verifyPackage(pkg, registry) && appStore->verifyAppname(pkg, app, registry))
             {
-                auto ver = tools.findVersion(pkg, app, registry);
+                auto ver = appStore->findVersion(pkg, app, registry);
                 return AppID{pkg, app, ver};
             }
         }

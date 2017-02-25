@@ -25,8 +25,9 @@
 #include "eventually-fixture.h"
 #include "libertine-service.h"
 
-#include "application-impl-legacy.h"
-#include "application-impl-libertine.h"
+#include "app-store-legacy.h"
+#include "app-store-libertine.h"
+#include "app-store-snap.h"
 #include "application-impl-snap.h"
 #include "application.h"
 #include "registry.h"
@@ -138,7 +139,8 @@ protected:
 TEST_F(ListApps, ListLegacy)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
-    auto apps = ubuntu::app_launch::app_impls::Legacy::list(registry);
+    ubuntu::app_launch::app_store::Legacy store;
+    auto apps = store.list(registry);
 
     printApps(apps);
 
@@ -152,7 +154,8 @@ TEST_F(ListApps, ListLegacy)
 TEST_F(ListApps, ListLibertine)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
-    auto apps = ubuntu::app_launch::app_impls::Libertine::list(registry);
+    ubuntu::app_launch::app_store::Libertine store;
+    auto apps = store.list(registry);
 
     printApps(apps);
 
@@ -192,7 +195,8 @@ TEST_F(ListApps, ListSnap)
                     interfaces, x11Package, x11Package, x11Package}};                  /* x11 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
-    auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
+    ubuntu::app_launch::app_store::Snap store;
+    auto apps = store.list(registry);
 
     printApps(apps);
 

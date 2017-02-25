@@ -35,6 +35,14 @@ type-tagger.h
 
 set(LAUNCHER_CPP_SOURCES
 application.cpp
+app-store-base.h
+app-store-base.cpp
+app-store-legacy.h
+app-store-legacy.cpp
+app-store-libertine.h
+app-store-libertine.cpp
+app-store-snap.h
+app-store-snap.cpp
 helper.cpp
 helper-impl.h
 registry.cpp
