@@ -52,8 +52,6 @@ public:
     Click(const AppID& appid, const std::shared_ptr<Registry>& registry);
     Click(const AppID& appid, const std::shared_ptr<JsonObject>& manifest, const std::shared_ptr<Registry>& registry);
 
-    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
-
     AppID appId() override;
 
     std::shared_ptr<Info> info() override;
@@ -63,22 +61,7 @@ public:
     std::shared_ptr<Instance> launch(const std::vector<Application::URL>& urls = {}) override;
     std::shared_ptr<Instance> launchTest(const std::vector<Application::URL>& urls = {}) override;
 
-    static bool hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry);
-
-    static bool verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry);
-    static bool verifyAppname(const AppID::Package& package,
-                              const AppID::AppName& appname,
-                              const std::shared_ptr<Registry>& registry);
-    static AppID::AppName findAppname(const AppID::Package& package,
-                                      AppID::ApplicationWildcard card,
-                                      const std::shared_ptr<Registry>& registry);
-    static AppID::Version findVersion(const AppID::Package& package,
-                                      const AppID::AppName& appname,
-                                      const std::shared_ptr<Registry>& registry);
-
     virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) override;
-
-    static std::shared_ptr<info_watcher::Base> createInfoWatcher(const std::shared_ptr<Registry>& reg);
 
 private:
     AppID _appid;

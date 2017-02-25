@@ -50,8 +50,6 @@ public:
     virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) = 0;
     std::shared_ptr<Application::Instance> findInstance(const pid_t& pid);
 
-    static std::list<std::shared_ptr<info_watcher::Base>> createInfoWatchers(const std::shared_ptr<Registry>& reg);
-
 protected:
     /** Pointer to the registry so we can ask it for things */
     std::shared_ptr<Registry> _registry;
