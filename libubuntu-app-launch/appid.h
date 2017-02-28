@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016 Canonical Ltd.
+ * Copyright © 2016-2017 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -82,6 +82,16 @@ struct AppID
         anyting other than debug messages. */
     operator std::string() const;
 
+    /** Turn the structure into a string suitable for use in DBus paths.
+        Turn this back into an AppID with parseDBusID(). This is otherwise not
+        a valid AppID string. */
+    std::string dbusID() const;
+
+    /** Turn the structure into a string without any revision information.
+        This is suitable for writing the AppID to disk. Turn this back into
+        an AppID with find(). This is otherwise not a valid AppID string. */
+    std::string persistentID() const;
+
     /** Empty constructor for an AppID. Makes coding with them easier, but generally
         there is nothing useful about an empty AppID. */
     AppID();
@@ -98,6 +108,13 @@ struct AppID
     */
     AppID(Package pkg, AppName app, Version ver);
 
+    /** Parse a string from DBus and turn it into an AppID. This assumes that
+        the string was originally produced by dbusID(), the result is otherwise
+        undefined.
+
+        \param dbusid String from a DBus path
+    */
+    static AppID parseDBusID(const std::string& dbusid);
     /** Parse a string and turn it into an AppID. This assumes that the string is
         in the form: $(package)_$(app)_$(version) and will return an empty AppID
         if not.
@@ -106,7 +123,7 @@ struct AppID
     */
     static AppID parse(const std::string& appid);
     /** Find is a more tollerant version of parse(), it handles legacy applications,
-        short AppIDs ($package_$app) and other forms of that are in common usage.
+        persistent IDs and other forms of that are in common usage.
         It can be used, but is slower than parse() if you've got well formed data
         already.
 
@@ -117,7 +134,7 @@ struct AppID
     */
     static AppID find(const std::string& sappid);
     /** Find is a more tollerant version of parse(), it handles legacy applications,
-        short AppIDs ($package_$app) and other forms of that are in common usage.
+        persistent IDs and other forms of that are in common usage.
         It can be used, but is slower than parse() if you've got well formed data
         already.
 

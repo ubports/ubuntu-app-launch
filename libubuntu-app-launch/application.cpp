@@ -34,6 +34,7 @@ extern "C" {
 #include "registry.h"
 
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <regex>
 
@@ -170,6 +171,67 @@ AppID::operator std::string() const
     }
 
     return package.value() + "_" + appname.value() + "_" + version.value();
+}
+
+std::string AppID::persistentID() const
+{
+    if (package.value().empty())
+    {
+        if (appname.value().empty())
+        {
+            return {};
+        }
+        else
+        {
+            return appname.value();
+        }
+    }
+
+    return package.value() + "_" + appname.value();
+}
+
+std::string AppID::dbusID() const
+{
+    std::string bytes = operator std::string();
+    std::string encoded;
+
+    for (size_t i = 0; i < bytes.size(); ++i) {
+        char chr = bytes[i];
+
+        if ((chr >= 'a' && chr <= 'z') ||
+            (chr >= 'A' && chr <= 'Z') ||
+            (chr >= '0' && chr <= '9'&& i != 0)) {
+            encoded += chr;
+        } else {
+            std::ostringstream hex;
+            hex << std::setw(2) << std::setfill('0') << std::hex << std::uppercase;
+            hex << int(chr);
+            encoded += '_' + hex.str();
+        }
+    }
+
+    return encoded;
+}
+
+AppID AppID::parseDBusID(const std::string& dbusid)
+{
+    std::string decoded;
+
+    for (size_t i = 0; i < dbusid.size(); ++i) {
+        char chr = dbusid[i];
+
+        if (chr == '_' && i + 2 < dbusid.size()) {
+            int result;
+            std::istringstream hex(dbusid.substr(i + 1, 2));
+            hex >> std::hex >> result;
+            decoded += (char)result;
+            i += 2;
+        } else {
+            decoded += chr;
+        }
+    }
+
+    return parse(decoded);
 }
 
 bool operator==(const AppID& a, const AppID& b)
