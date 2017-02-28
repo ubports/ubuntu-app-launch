@@ -40,13 +40,12 @@ Base::~Base()
 
 std::list<std::shared_ptr<Base>> Base::allAppStores()
 {
-    return
-    {
-            std::make_shared<Legacy>() /* Legacy */
-            ,
-            std::make_shared<Libertine>() /* Libertine */
-            ,
-            std::make_shared<Snap>() /* Snappy */
+    return {
+        std::make_shared<Legacy>() /* Legacy */
+        ,
+        std::make_shared<Libertine>() /* Libertine */
+        ,
+        std::make_shared<Snap>() /* Snappy */
     };
 }
 

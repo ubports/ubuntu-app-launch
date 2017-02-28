@@ -145,14 +145,6 @@ protected:
 
     virtual void SetUp()
     {
-        /* Click DB test mode */
-        g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
-        g_setenv("TEST_CLICK_USER", "test-user", TRUE);
-
-        gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", NULL);
-        g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
-        g_free(linkfarmpath);
-
         g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
@@ -413,9 +405,6 @@ TEST_F(LibUAL, ApplicationPid)
 
 TEST_F(LibUAL, ApplicationId)
 {
-    g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
-    g_setenv("TEST_CLICK_USER", "test-user", TRUE);
-
     /* Test with current-user-version, should return the version in the manifest */
     EXPECT_EQ("com.test.good_application_1.2.3",
               (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.good", "application"));
@@ -1292,9 +1281,6 @@ TEST_F(LibUAL, SetExec)
 
 TEST_F(LibUAL, AppInfo)
 {
-    g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
-    g_setenv("TEST_CLICK_USER", "test-user", TRUE);
-
     /* Correct values from a click */
     auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.4");
     auto app = ubuntu::app_launch::Application::create(appid, registry);

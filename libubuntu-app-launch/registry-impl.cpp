@@ -29,6 +29,11 @@ namespace app_launch
 {
 
 Registry::Impl::Impl(Registry* registry)
+    : Impl(registry, app_store::Base::allAppStores())
+{
+}
+
+Registry::Impl::Impl(Registry* registry, std::list<std::shared_ptr<app_store::Base>> appStores)
     : thread([]() {},
              [this]() {
                  zgLog_.reset();
@@ -40,7 +45,7 @@ Registry::Impl::Impl(Registry* registry)
              })
     , _registry{registry}
     , _iconFinders()
-    , _appStores(app_store::Base::allAppStores())
+    , _appStores(appStores)
 {
     auto cancel = thread.getCancellable();
     _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {

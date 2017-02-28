@@ -46,6 +46,8 @@ class Registry::Impl
 {
 public:
     Impl(Registry* registry);
+    Impl(Registry* registry, std::list<std::shared_ptr<app_store::Base>> appStores);
+
     virtual ~Impl()
     {
         thread.quit();

@@ -19,9 +19,9 @@
 
 #include "jobs-systemd.h"
 #include "application-impl-base.h"
-#include "utils.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
+#include "utils.h"
 
 extern "C" {
 #include "ubuntu-app-launch-trace.h"
@@ -899,8 +899,7 @@ std::string SystemD::userBusPath()
 }
 
 /* TODO: Application job names */
-const std::regex unitNaming{
-    "^ubuntu\\-app\\-launch\\-(application\\-(?:legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
+const std::regex unitNaming{"^ubuntu\\-app\\-launch\\-(application\\-(?:legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
 
 SystemD::UnitInfo SystemD::parseUnit(const std::string& unit) const
 {

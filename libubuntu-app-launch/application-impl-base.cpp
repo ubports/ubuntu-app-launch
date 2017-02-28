@@ -24,9 +24,9 @@
 #include <numeric>
 
 #include "application-impl-base.h"
-#include "utils.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
+#include "utils.h"
 
 extern "C" {
 #include "ubuntu-app-launch-trace.h"
