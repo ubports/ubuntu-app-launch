@@ -43,11 +43,9 @@
 #include "systemd-mock.h"
 #include "zg-mock.h"
 
-#ifdef ENABLE_SNAPPY
 #include "snapd-mock.h"
 
 #define LOCAL_SNAPD_TEST_SOCKET (SNAPD_TEST_SOCKET "-libual-cpp-test")
-#endif
 
 #define CGROUP_DIR (CMAKE_BINARY_DIR "/systemd-cgroups")
 
@@ -159,12 +157,11 @@ protected:
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
-#ifdef ENABLE_SNAPPY
         g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", LOCAL_SNAPD_TEST_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
         g_unlink(LOCAL_SNAPD_TEST_SOCKET);
-#endif
+
         g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_PATH", "/this/should/not/exist", TRUE);
         /* Setting the cgroup temp directory */
         g_setenv("UBUNTU_APP_LAUNCH_SYSTEMD_CGROUP_ROOT", CGROUP_DIR, TRUE);
@@ -226,9 +223,7 @@ protected:
 
         ASSERT_EVENTUALLY_EQ(nullptr, bus);
 
-#ifdef ENABLE_SNAPPY
         g_unlink(LOCAL_SNAPD_TEST_SOCKET);
-#endif
     }
 
     static std::string find_env(std::set<std::string>& envs, std::string var)
@@ -274,7 +269,6 @@ protected:
         [&task] { return dbus_test_task_get_state(DBUS_TEST_TASK(task)); } \
     }
 
-#ifdef ENABLE_SNAPPY
 /* Snapd mock data */
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
@@ -344,7 +338,6 @@ TEST_F(LibUAL, ApplicationIconSnap)
     expected = snapRoot + "/unity8-package/x123/no-xmir.png";
     EXPECT_EQ(expected, app->info()->iconPath().value());
 }
-#endif
 
 TEST_F(LibUAL, ApplicationPid)
 {
@@ -485,18 +478,12 @@ TEST_F(LibUAL, AppIdParse)
 
 TEST_F(LibUAL, ApplicationList)
 {
-#ifdef ENABLE_SNAPPY
     SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};
     registry = std::make_shared<ubuntu::app_launch::Registry>();
-#endif
 
     auto apps = ubuntu::app_launch::Registry::runningApps(registry);
 
-#ifdef ENABLE_SNAPPY
     ASSERT_EQ(4, int(apps.size()));
-#else
-    ASSERT_EQ(3, int(apps.size()));
-#endif
 
     apps.sort([](const std::shared_ptr<ubuntu::app_launch::Application>& a,
                  const std::shared_ptr<ubuntu::app_launch::Application>& b) {
@@ -507,9 +494,7 @@ TEST_F(LibUAL, ApplicationList)
     });
 
     EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.front()->appId());
-#ifdef ENABLE_SNAPPY
     EXPECT_EQ("unity8-package_foo_x123", (std::string)apps.back()->appId());
-#endif
 }
 
 TEST_F(LibUAL, StartingResponses)
