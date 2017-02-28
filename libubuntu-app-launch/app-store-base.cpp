@@ -20,10 +20,7 @@
 #include "app-store-base.h"
 #include "app-store-legacy.h"
 #include "app-store-libertine.h"
-
-#if ENABLE_SNAPPY
 #include "app-store-snap.h"
-#endif
 
 namespace ubuntu
 {
@@ -48,10 +45,8 @@ std::list<std::shared_ptr<Base>> Base::allAppStores()
             std::make_shared<Legacy>() /* Legacy */
             ,
             std::make_shared<Libertine>() /* Libertine */
-#if ENABLE_SNAPPY
             ,
             std::make_shared<Snap>() /* Snappy */
-#endif
     };
 }
 
