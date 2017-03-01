@@ -511,9 +511,7 @@ TEST_F(LibUAL, ApplicationIdLibertine)
 TEST_F(LibUAL, AppIdParse)
 {
     EXPECT_FALSE(ubuntu::app_launch::AppID::parse("com.ubuntu.test_test_123").empty());
-    EXPECT_FALSE(ubuntu::app_launch::AppID::find(registry, "inkscape").empty());
     EXPECT_FALSE(ubuntu::app_launch::AppID::parse("chatter.robert-ancell_chatter_2").empty());
-    EXPECT_FALSE(ubuntu::app_launch::AppID::find(registry, "chatter.robert-ancell_chatter").empty());
 
     auto id = ubuntu::app_launch::AppID::parse("com.ubuntu.test_test_123");
 
@@ -532,7 +530,7 @@ TEST_F(LibUAL, ApplicationList)
 
     auto apps = ubuntu::app_launch::Registry::runningApps(registry);
 
-    ASSERT_EQ(4, int(apps.size()));
+    ASSERT_EQ(3, int(apps.size()));
 
     apps.sort([](const std::shared_ptr<ubuntu::app_launch::Application>& a,
                  const std::shared_ptr<ubuntu::app_launch::Application>& b) {
@@ -542,7 +540,7 @@ TEST_F(LibUAL, ApplicationList)
         return sa < sb;
     });
 
-    EXPECT_EQ("com.test.good_application_1.2.3", (std::string)apps.front()->appId());
+    EXPECT_EQ("multiple", (std::string)apps.front()->appId());
     EXPECT_EQ("unity8-package_foo_x123", (std::string)apps.back()->appId());
 }
 
