@@ -1067,6 +1067,11 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 		final_cleanup = TRUE;
 	}
 
+	auto appId = ubuntu::app_launch::AppID::parse(appid);
+	if (appId.empty()) {
+		return NULL;
+	}
+
 	GError * error = NULL;
 	GDBusConnection * session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
 	if (error != NULL) {
@@ -1079,11 +1084,11 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 	proxySocketDemangler * skel = proxy_socket_demangler_skeleton_new();
 	g_signal_connect(G_OBJECT(skel), "handle-get-mir-socket", G_CALLBACK(proxy_mir_socket), GINT_TO_POINTER(mirfd));
 
-	gchar * encoded_appid = escape_dbus_string(appid);
+	std::string encoded_appid = appId.dbusID();
 	gchar * socket_name = NULL;
 	/* Loop until we fine an object path that isn't taken (probably only once) */
 	while (socket_name == NULL) {
-		gchar* tryname = g_strdup_printf("/com/canonical/UbuntuAppLaunch/%s/%X", encoded_appid, g_random_int());
+		gchar* tryname = g_strdup_printf("/com/canonical/UbuntuAppLaunch/%s/%X", encoded_appid.c_str(), g_random_int());
 		g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skel),
 			session,
 			tryname,
@@ -1106,7 +1111,6 @@ build_proxy_socket_path (const gchar * appid, int mirfd)
 			}
 		}
 	}
-	g_free(encoded_appid);
 
 	/* If we didn't get a socket name, we should just exit. And
 	   make sure to clean up the socket. */
@@ -1618,29 +1622,3 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directo
 
 	return TRUE;
 }
-
-
-/* ensure that all characters are valid in the dbus output string */
-static gchar *
-escape_dbus_string (const gchar * input)
-{
-	static const gchar *xdigits = "0123456789abcdef";
-	GString *escaped;
-	gchar c;
-
-	g_return_val_if_fail (input != NULL, NULL);
-
-	escaped = g_string_new (NULL);
-	while ((c = *input++)) {
-		if (g_ascii_isalnum (c)) {
-			g_string_append_c (escaped, c);
-		} else {
-			g_string_append_c (escaped, '_');
-			g_string_append_c (escaped, xdigits[c >> 4]);
-			g_string_append_c (escaped, xdigits[c & 0xf]);
-		}
-	}
-
-	return g_string_free (escaped, FALSE);
-}
-

@@ -204,7 +204,7 @@ std::string AppID::dbusID() const
             encoded += chr;
         } else {
             std::ostringstream hex;
-            hex << std::setw(2) << std::setfill('0') << std::hex << std::uppercase;
+            hex << std::setw(2) << std::setfill('0') << std::hex;
             hex << int(chr);
             encoded += '_' + hex.str();
         }
