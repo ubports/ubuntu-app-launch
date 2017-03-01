@@ -98,6 +98,7 @@ protected:
                              const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                              std::function<void(bool)> reply) override
         {
+            g_debug("Manager Mock: Starting Request: %s", std::string(app->appId()).c_str());
             thread.timeout(startingTimeout, [this, app, instance, reply]() {
                 lastStartedApp = app->appId();
                 reply(startingResponse);
@@ -108,6 +109,7 @@ protected:
                           const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                           std::function<void(bool)> reply) override
         {
+            g_debug("Manager Mock: Focus Request: %s", std::string(app->appId()).c_str());
             thread.timeout(focusTimeout, [this, app, instance, reply]() {
                 lastFocusedApp = app->appId();
                 reply(focusResponse);
@@ -118,6 +120,7 @@ protected:
                            const std::shared_ptr<ubuntu::app_launch::Application::Instance>& instance,
                            std::function<void(bool)> reply) override
         {
+            g_debug("Manager Mock: Resume Request: %s", std::string(app->appId()).c_str());
             thread.timeout(resumeTimeout, [this, app, instance, reply]() {
                 lastResumedApp = app->appId();
                 reply(resumeResponse);
@@ -590,14 +593,12 @@ TEST_F(LibUAL, StartingResponses)
 
 TEST_F(LibUAL, AppIdTest)
 {
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "single");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
     app->launch();
 
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastFocusedApp);
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastResumedApp);
+    EXPECT_EVENTUALLY_EQ(appid, this->manager->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(appid, this->manager->lastResumedApp);
 }
 
 GDBusMessage* filter_func_good(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)

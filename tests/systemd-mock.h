@@ -134,10 +134,21 @@ public:
             &error);
         throwError(error);
 
-        dbus_test_dbus_mock_object_add_method(mock, managerobj, "StartTransientUnit",
-                                              G_VARIANT_TYPE("(ssa(sv)a(sa(sv)))"),
-                                              G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
-                                              "ret = '/'", &error);
+        dbus_test_dbus_mock_object_add_method(
+            mock, managerobj, "StartTransientUnit", G_VARIANT_TYPE("(ssa(sv)a(sa(sv)))"),
+            G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
+            std::accumulate(instances.begin(), instances.end(), std::string{"ret = '/'\n"},
+                            [](const std::string accum, const Instance& inst) {
+                                std::string retval = accum;
+
+                                retval += "if args[0] == '" + instanceName(inst) + "':\n";
+                                retval += "\traise dbus.exceptions.DBusException('Already running app" +
+                                          instanceName(inst) + "', name='org.freedesktop.systemd1.UnitExists')\n";
+
+                                return retval;
+                            })
+                .c_str(),
+            &error);
         throwError(error);
 
         dbus_test_dbus_mock_object_add_method(mock, managerobj, "ResetFailedUnit", G_VARIANT_TYPE_STRING,
