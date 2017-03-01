@@ -568,17 +568,17 @@ TEST_F(LibUAL, StartingResponses)
 
     /* Emit a signal */
     g_dbus_connection_emit_signal(
-        session, NULL,                                                            /* destination */
-        "/",                                                                      /* path */
-        "com.canonical.UbuntuAppLaunch",                                          /* interface */
-        "UnityStartingBroadcast",                                                 /* signal */
-        g_variant_new("(ss)", "com.test.good_application_1.2.3", "goodinstance"), /* params, the same */
+        session, NULL,                                                    /* destination */
+        "/",                                                              /* path */
+        "com.canonical.UbuntuAppLaunch",                                  /* interface */
+        "UnityStartingBroadcast",                                         /* signal */
+        g_variant_new("(ss)", "container-name_test_0.0", "goodinstance"), /* params, the same */
         NULL);
 
     /* Make sure we run our observer */
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw("com.test.good"),
-                                                   ubuntu::app_launch::AppID::AppName::from_raw("application"),
-                                                   ubuntu::app_launch::AppID::Version::from_raw("1.2.3")),
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw("container-name"),
+                                                   ubuntu::app_launch::AppID::AppName::from_raw("test"),
+                                                   ubuntu::app_launch::AppID::Version::from_raw("0.0")),
                          manager->lastStartedApp);
 
     /* Make sure we return */
