@@ -38,7 +38,7 @@ target_link_libraries (libual-test gtest_main ${GTEST_MAIN_LIBRARIES} ${LIBUPSTA
 add_executable (libual-cpp-test
 	libual-cpp-test.cc
 	mir-mock.cpp)
-target_link_libraries (libual-cpp-test gtest_main ${GTEST_MAIN_LIBRARIES} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
+target_link_libraries (libual-cpp-test gtest_main ${GMOCK_LIBRARIES} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
 
 add_executable (data-spew
 	data-spew.c)
