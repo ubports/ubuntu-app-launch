@@ -601,109 +601,49 @@ TEST_F(LibUAL, AppIdTest)
     EXPECT_EVENTUALLY_EQ(appid, this->manager->lastResumedApp);
 }
 
-GDBusMessage* filter_func_good(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
-{
-    if (!incomming)
-    {
-        return message;
-    }
-
-    if (g_strcmp0(g_dbus_message_get_path(message), (gchar*)user_data) == 0)
-    {
-        GDBusMessage* reply = g_dbus_message_new_method_reply(message);
-        g_dbus_connection_send_message(conn, reply, G_DBUS_SEND_MESSAGE_FLAGS_NONE, NULL, NULL);
-        g_object_unref(message);
-        return NULL;
-    }
-
-    return message;
-}
-
 TEST_F(LibUAL, UrlSendTest)
 {
-    GDBusConnection* session = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-    guint filter = g_dbus_connection_add_filter(session, filter_func_good,
-                                                (gpointer) "/com_2etest_2egood_5fapplication_5f1_2e2_2e3", NULL);
-
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "foo");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
     std::vector<ubuntu::app_launch::Application::URL> uris = {
         ubuntu::app_launch::Application::URL::from_raw("http://www.test.com")};
 
     app->launch(uris);
 
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastFocusedApp);
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastResumedApp);
-
-    g_dbus_connection_remove_filter(session, filter);
-
-    /* Send multiple resume responses to ensure we unsubscribe */
-    /* Multiple to increase our chance of hitting a bad free in the middle,
-       fun with async! */
-    int i;
-    for (i = 0; i < 5; i++)
-    {
-        g_dbus_connection_emit_signal(
-            session, NULL,                                                            /* destination */
-            "/",                                                                      /* path */
-            "com.canonical.UbuntuAppLaunch",                                          /* interface */
-            "UnityResumeResponse",                                                    /* signal */
-            g_variant_new("(ss)", "com.test.good_application_1.2.3", "goodinstance"), /* params, the same */
-            NULL);
-
-        pause(50); /* Ensure all the events come through */
-    }
-
-    g_object_unref(session);
-}
-
-TEST_F(LibUAL, UrlSendNoObjectTest)
-{
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
-    auto app = ubuntu::app_launch::Application::create(appid, registry);
-    std::vector<ubuntu::app_launch::Application::URL> uris = {
-        ubuntu::app_launch::Application::URL::from_raw("http://www.test.com")};
-
-    app->launch(uris);
-
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastFocusedApp);
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastResumedApp);
+    std::list<SystemdMock::TransientUnit> calls;
+    ASSERT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int(void)>([&]() {
+                                  calls = systemd->unitCalls();
+                                  return calls.size();
+                              }));
+    EXPECT_EQ("http://www.test.com", *calls.begin()->execline.rbegin());
 }
 
 TEST_F(LibUAL, UnityTimeoutTest)
 {
     this->resume_timeout = 100;
 
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "single");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
     app->launch();
 
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastResumedApp);
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(appid, this->manager->lastResumedApp);
+    EXPECT_EVENTUALLY_EQ(appid, this->manager->lastFocusedApp);
 }
 
 TEST_F(LibUAL, UnityTimeoutUriTest)
 {
     this->resume_timeout = 200;
 
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "single");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
     std::vector<ubuntu::app_launch::Application::URL> uris = {
         ubuntu::app_launch::Application::URL::from_raw("http://www.test.com")};
 
     app->launch(uris);
 
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastFocusedApp);
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastResumedApp);
+    EXPECT_EVENTUALLY_EQ(appid, this->manager->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(appid, this->manager->lastResumedApp);
 }
 
 GDBusMessage* filter_respawn(GDBusConnection* conn, GDBusMessage* message, gboolean incomming, gpointer user_data)
@@ -724,7 +664,7 @@ TEST_F(LibUAL, UnityLostTest)
 
     guint start = g_get_monotonic_time();
 
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "single");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
     std::vector<ubuntu::app_launch::Application::URL> uris = {
         ubuntu::app_launch::Application::URL::from_raw("http://www.test.com")};
@@ -736,10 +676,8 @@ TEST_F(LibUAL, UnityLostTest)
     g_debug("Start call time: %d ms", (end - start) / 1000);
     EXPECT_LT(end - start, guint(2000 * 1000));
 
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastFocusedApp);
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3"),
-                         this->manager->lastResumedApp);
+    EXPECT_EVENTUALLY_EQ(appid, this->manager->lastFocusedApp);
+    EXPECT_EVENTUALLY_EQ(appid, this->manager->lastResumedApp);
 
     g_dbus_connection_remove_filter(session, filter);
     g_object_unref(session);
