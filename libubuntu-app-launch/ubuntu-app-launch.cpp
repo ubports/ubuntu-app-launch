@@ -43,7 +43,6 @@ extern "C" {
 
 static void free_helper (gpointer value);
 int kill (pid_t pid, int signal) noexcept;
-static gchar * escape_dbus_string (const gchar * input);
 
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_PROXY_PATH, proxy_path)
 G_DEFINE_QUARK(UBUNTU_APP_LAUNCH_MIR_FD, mir_fd)
