@@ -100,9 +100,9 @@ public:
         return _appStores;
     }
 
-    void setAppStores (std::list<std::shared_ptr<app_store::Base>> &newlist)
+    void setAppStores(std::list<std::shared_ptr<app_store::Base>>& newlist)
     {
-	    _appStores = newlist;
+        _appStores = newlist;
     }
 
 private:

@@ -582,6 +582,8 @@ std::shared_ptr<Application::Instance> SystemD::launch(
     if (appId.empty())
         return {};
 
+    bool isApplication = std::find(allJobs_.begin(), allJobs_.end(), job) != allJobs_.end();
+
     auto registry = registry_.lock();
     return registry->impl->thread.executeOnThread<std::shared_ptr<instance::SystemD>>(
         [&]() -> std::shared_ptr<instance::SystemD> {
@@ -597,10 +599,15 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 timeout = 0;
             }
 
-            auto handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
-            if (handshake == nullptr)
+            handshake_t* handshake{nullptr};
+
+            if (isApplication)
             {
-                g_warning("Unable to setup starting handshake");
+                handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
+                if (handshake == nullptr)
+                {
+                    g_warning("Unable to setup starting handshake");
+                }
             }
 
             /* Figure out the unit name for the job */
