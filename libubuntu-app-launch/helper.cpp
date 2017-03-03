@@ -109,8 +109,12 @@ std::string genInstanceId()
 std::vector<Application::URL> appURL(const std::vector<Helper::URL>& in)
 {
     std::vector<Application::URL> out;
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [](Helper::URL url) { return Application::URL::from_raw(url.value()); });
+
+    for (const auto& hurl : in)
+    {
+        out.push_back(Application::URL::from_raw(hurl.value()));
+    }
+
     return out;
 }
 
