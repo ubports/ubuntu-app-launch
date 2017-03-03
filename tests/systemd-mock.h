@@ -236,7 +236,7 @@ public:
 
     static std::string instanceName(const Instance& inst)
     {
-        return std::string{"ubuntu-app-launch-"} + inst.job + "-" + inst.appid + "-" + inst.instanceid + ".service";
+        return std::string{"ubuntu-app-launch--"} + inst.job + "--" + inst.appid + "--" + inst.instanceid + ".service";
     }
 
     operator std::shared_ptr<DbusTestTask>()
