@@ -798,7 +798,7 @@ TEST_F(LibUAL, StartHelper)
     EXPECT_EQ(SystemdMock::instanceName(
                   {"untrusted-type",
                    "com.test.multiple_first_1.2.3",
-                   std::dynamic_pointer_cast<ubuntu::app_launch::jobs::instance::Base>(inst2)->getInstanceId(),
+                   std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::BaseInstance>(inst2)->getInstanceId(),
                    0,
                    {}}),
               helperStart2.begin()->name);
@@ -819,7 +819,7 @@ TEST_F(LibUAL, StartHelper)
     EXPECT_EQ(SystemdMock::instanceName(
                   {"untrusted-type",
                    "com.test.multiple_first_1.2.3",
-                   std::dynamic_pointer_cast<ubuntu::app_launch::jobs::instance::Base>(inst3)->getInstanceId(),
+                   std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::BaseInstance>(inst3)->getInstanceId(),
                    0,
                    {}}),
               helperStart3.begin()->name);
