@@ -66,6 +66,54 @@ public:
                      const ubuntu::app_launch::AppID&, const std::shared_ptr<ubuntu::app_launch::Registry>&));
 };
 
+class MockApp : public ubuntu::app_launch::app_impls::Base
+{
+public:
+    ubuntu::app_launch::AppID appid_;
+
+    MockApp(const ubuntu::app_launch::AppID& appid, const std::shared_ptr<ubuntu::app_launch::Registry>& reg)
+        : ubuntu::app_launch::app_impls::Base(reg)
+        , appid_(appid)
+    {
+    }
+    ~MockApp()
+    {
+    }
+
+    ubuntu::app_launch::AppID appId() override
+    {
+        return appid_;
+    }
+
+    MOCK_METHOD1(findInstance, std::shared_ptr<ubuntu::app_launch::Application::Instance>(const std::string&));
+    MOCK_METHOD1(findInstance, std::shared_ptr<ubuntu::app_launch::Application::Instance>(const pid_t&));
+    MOCK_METHOD0(info, std::shared_ptr<ubuntu::app_launch::Application::Info>());
+    MOCK_METHOD0(hasInstances, bool());
+    MOCK_METHOD0(instances, std::vector<std::shared_ptr<ubuntu::app_launch::Application::Instance>>());
+    MOCK_METHOD1(launch,
+                 std::shared_ptr<ubuntu::app_launch::Application::Instance>(
+                     const std::vector<ubuntu::app_launch::Application::URL>&));
+    MOCK_METHOD1(launchTest,
+                 std::shared_ptr<ubuntu::app_launch::Application::Instance>(
+                     const std::vector<ubuntu::app_launch::Application::URL>&));
+};
+
+class MockInst : public ubuntu::app_launch::jobs::instance::Base
+{
+public:
+    MockInst(const ubuntu::app_launch::AppID& appId,
+             const std::string& job,
+             const std::string& instance,
+             const std::vector<ubuntu::app_launch::Application::URL>& urls,
+             const std::shared_ptr<ubuntu::app_launch::Registry>& registry)
+        : ubuntu::app_launch::jobs::instance::Base(appId, job, instance, urls, registry){};
+    ~MockInst(){};
+
+    MOCK_METHOD0(pids, std::vector<pid_t>());
+    MOCK_METHOD0(primaryPid, pid_t());
+    MOCK_METHOD0(stop, void());
+};
+
 class zgWatcherMock : public ubuntu::app_launch::info_watcher::Zeitgeist
 {
 public:
