@@ -31,6 +31,7 @@
 
 #include "application.h"
 #include "glib-thread.h"
+#include "helper-impl.h"
 #include "helper.h"
 #include "jobs-base.h"
 #include "registry.h"
@@ -259,15 +260,8 @@ protected:
 
     void storeForApp(const ubuntu::app_launch::AppID& appid, const std::string& jobtype, const std::string& instanceid)
     {
-        auto store = std::make_shared<MockStore>();
+        auto store = storeForHelper(appid);
 
-        ON_CALL(*store, verifyPackage(appid.package, testing::_)).WillByDefault(testing::Return(true));
-        ON_CALL(*store, verifyAppname(appid.package, appid.appname, testing::_)).WillByDefault(testing::Return(true));
-        ON_CALL(*store, findAppname(appid.package, testing::_, testing::_))
-            .WillByDefault(testing::Return(appid.appname));
-        ON_CALL(*store, findVersion(appid.package, appid.appname, testing::_))
-            .WillByDefault(testing::Return(appid.version));
-        ON_CALL(*store, hasAppId(appid, testing::_)).WillByDefault(testing::Return(true));
         ON_CALL(*store, list(testing::_))
             .WillByDefault(testing::Return(std::list<std::shared_ptr<ubuntu::app_launch::Application>>{}));
 
@@ -291,6 +285,26 @@ protected:
         std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> list;
         list.push_back(store);
         registry->impl->setAppStores(list);
+    }
+
+    std::shared_ptr<MockStore> storeForHelper(const ubuntu::app_launch::AppID& appid)
+    {
+        /* Setup a store for looking up the AppID */
+        auto store = std::make_shared<MockStore>();
+
+        ON_CALL(*store, verifyPackage(appid.package, testing::_)).WillByDefault(testing::Return(true));
+        ON_CALL(*store, verifyAppname(appid.package, appid.appname, testing::_)).WillByDefault(testing::Return(true));
+        ON_CALL(*store, findAppname(appid.package, testing::_, testing::_))
+            .WillByDefault(testing::Return(appid.appname));
+        ON_CALL(*store, findVersion(appid.package, appid.appname, testing::_))
+            .WillByDefault(testing::Return(appid.version));
+        ON_CALL(*store, hasAppId(appid, testing::_)).WillByDefault(testing::Return(true));
+
+        std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> list;
+        list.push_back(store);
+        registry->impl->setAppStores(list);
+
+        return store;
     }
 };
 
@@ -755,7 +769,7 @@ TEST_F(LibUAL, StartHelper)
     auto appid = ubuntu::app_launch::AppID::parse("com.test.multiple_first_1.2.3");
     auto untrusted = ubuntu::app_launch::Helper::Type::from_raw("untrusted-type");
 
-    storeForApp(appid, untrusted.value(), "12345");
+    storeForHelper(appid);
 
     /* Basic make sure we can send the event */
     auto helper = ubuntu::app_launch::Helper::create(untrusted, appid, registry);
@@ -765,7 +779,12 @@ TEST_F(LibUAL, StartHelper)
     auto helperStart = systemd->unitCalls();
 
     ASSERT_EQ(1u, helperStart.size());
-    EXPECT_EQ(SystemdMock::instanceName({"untrusted-type", "com.test.multiple_first_1.2.3", "12345", 0, {}}),
+    EXPECT_EQ(SystemdMock::instanceName(
+                  {"untrusted-type",
+                   "com.test.multiple_first_1.2.3",
+                   std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::BaseInstance>(inst)->getInstanceId(),
+                   0,
+                   {}}),
               helperStart.begin()->name);
 
     systemd->managerClear();
