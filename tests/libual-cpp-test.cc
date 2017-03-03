@@ -862,7 +862,7 @@ TEST_F(LibUAL, HelperList)
 
     EXPECT_EQ(0, int(notlist.size()));
 
-    auto goodhelper = ubuntu::app_launch::Helper::Type::from_raw("untrusted-type");
+    auto goodhelper = ubuntu::app_launch::Helper::Type::from_raw("untrusted-helper");
     auto goodlist = ubuntu::app_launch::Registry::runningHelpers(goodhelper, registry);
 
     ASSERT_EQ(2, int(goodlist.size()));
@@ -888,49 +888,48 @@ TEST_F(LibUAL, HelperList)
     EXPECT_TRUE(goodlist.back()->instances()[0]->isRunning());
 }
 
-typedef struct
-{
-    int count;
-    const gchar* appid;
-    const gchar* type;
-    const gchar* instance;
-} helper_observer_data_t;
-
-static void helper_observer_cb(const gchar* appid, const gchar* instance, const gchar* type, gpointer user_data)
-{
-    helper_observer_data_t* data = (helper_observer_data_t*)user_data;
-
-    if (g_strcmp0(data->appid, appid) == 0 && g_strcmp0(data->type, type) == 0 &&
-        g_strcmp0(data->instance, instance) == 0)
-    {
-        data->count++;
-    }
-}
-
 TEST_F(LibUAL, StartStopHelperObserver)
 {
-    helper_observer_data_t start_data = {
-        .count = 0, .appid = "com.foo_foo_1.2.3", .type = "my-type-is-scorpio", .instance = nullptr};
-    helper_observer_data_t stop_data = {
-        .count = 0, .appid = "com.bar_bar_44.32", .type = "my-type-is-libra", .instance = "1234"};
+    auto type = ubuntu::app_launch::Helper::Type::from_raw("my-type-is-scorpio");
+    auto appid = ubuntu::app_launch::AppID::parse("com.foo_foo_1.2.3");
 
-    ASSERT_TRUE(ubuntu_app_launch_observer_add_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
-    ASSERT_TRUE(ubuntu_app_launch_observer_add_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
+    storeForHelper(appid);
+
+    int start_count = 0;
+    int stop_count = 0;
+
+    ubuntu::app_launch::Registry::helperStarted(type, registry)
+        .connect([&](const std::shared_ptr<ubuntu::app_launch::Helper>& helper,
+                     const std::shared_ptr<ubuntu::app_launch::Helper::Instance>& inst) {
+            if (helper->appId() != appid)
+            {
+                return;
+            }
+
+            start_count++;
+        });
+    ubuntu::app_launch::Registry::helperStopped(type, registry)
+        .connect([&](const std::shared_ptr<ubuntu::app_launch::Helper>& helper,
+                     const std::shared_ptr<ubuntu::app_launch::Helper::Instance>& inst) {
+            if (helper->appId() != appid)
+            {
+                return;
+            }
+
+            stop_count++;
+        });
 
     /* Basic start */
-    systemd->managerEmitNew(SystemdMock::instanceName({"my-type-is-scorpio", "com.foo_foo_1.2.3", "", 0, {}}), "/");
+    systemd->managerEmitNew(SystemdMock::instanceName({"my-type-is-scorpio", "com.foo_foo_1.2.3", "1234", 0, {}}),
+                            "/foo");
 
-    EXPECT_EVENTUALLY_EQ(1, start_data.count);
+    EXPECT_EVENTUALLY_EQ(1, start_count);
 
     /* Basic stop */
-    systemd->managerEmitRemoved(SystemdMock::instanceName({"my-type-is-scorpio", "com.foo_foo_1.2.3", "", 0, {}}), "/");
+    systemd->managerEmitRemoved(SystemdMock::instanceName({"my-type-is-scorpio", "com.foo_foo_1.2.3", "1234", 0, {}}),
+                                "/foo");
 
-    EXPECT_EVENTUALLY_EQ(1, stop_data.count);
-
-    /* Remove */
-    ASSERT_TRUE(
-        ubuntu_app_launch_observer_delete_helper_started(helper_observer_cb, "my-type-is-scorpio", &start_data));
-    ASSERT_TRUE(ubuntu_app_launch_observer_delete_helper_stop(helper_observer_cb, "my-type-is-libra", &stop_data));
+    EXPECT_EVENTUALLY_EQ(1, stop_count);
 }
 
 // DISABLED: Skipping these tests to not block on bug #1584849
