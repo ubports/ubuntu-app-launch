@@ -114,6 +114,53 @@ public:
     MOCK_METHOD0(stop, void());
 };
 
+class MockJobsManager : public ubuntu::app_launch::jobs::manager::Base
+{
+public:
+    MockJobsManager(const std::shared_ptr<ubuntu::app_launch::Registry>& reg)
+        : ubuntu::app_launch::jobs::manager::Base(reg)
+    {
+    }
+    ~MockJobsManager()
+    {
+    }
+
+    MOCK_METHOD6(launch,
+                 std::shared_ptr<ubuntu::app_launch::Application::Instance>(
+                     const ubuntu::app_launch::AppID&,
+                     const std::string&,
+                     const std::string&,
+                     const std::vector<ubuntu::app_launch::Application::URL>&,
+                     ubuntu::app_launch::jobs::manager::launchMode,
+                     std::function<std::list<std::pair<std::string, std::string>>(void)>&));
+
+    MOCK_METHOD4(existing,
+                 std::shared_ptr<ubuntu::app_launch::Application::Instance>(
+                     const ubuntu::app_launch::AppID&,
+                     const std::string&,
+                     const std::string&,
+                     const std::vector<ubuntu::app_launch::Application::URL>&));
+
+    MOCK_METHOD0(runningApps, std::list<std::shared_ptr<ubuntu::app_launch::Application>>());
+    MOCK_METHOD1(runningHelpers,
+                 std::list<std::shared_ptr<ubuntu::app_launch::Helper>>(const ubuntu::app_launch::Helper::Type&));
+
+    MOCK_METHOD1(runningAppIds, std::list<std::string>(const std::list<std::string>&));
+
+    MOCK_METHOD2(instances,
+                 std::vector<std::shared_ptr<ubuntu::app_launch::jobs::instance::Base>>(
+                     const ubuntu::app_launch::AppID& appID, const std::string& job));
+
+    /* Job signals from implementations */
+    MOCK_METHOD0(jobStarted, core::Signal<const std::string&, const std::string&, const std::string&>&());
+    MOCK_METHOD0(jobStopped, core::Signal<const std::string&, const std::string&, const std::string&>&());
+    MOCK_METHOD0(jobFailed,
+                 core::Signal<const std::string&,
+                              const std::string&,
+                              const std::string&,
+                              ubuntu::app_launch::Registry::FailureType>&());
+};
+
 class zgWatcherMock : public ubuntu::app_launch::info_watcher::Zeitgeist
 {
 public:
