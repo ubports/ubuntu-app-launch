@@ -85,7 +85,7 @@ bool Base::hasInstances()
 std::vector<std::shared_ptr<Helper::Instance>> Base::instances()
 {
     auto insts = _registry->impl->jobs->instances(_appid, _type.value());
-    std::vector<std::shared_ptr<Helper::Instance>> wrapped;
+    std::vector<std::shared_ptr<Helper::Instance>> wrapped{insts.size()};
 
     std::transform(insts.begin(), insts.end(), wrapped.begin(),
                    [](std::shared_ptr<jobs::instance::Base>& inst) { return std::make_shared<BaseInstance>(inst); });

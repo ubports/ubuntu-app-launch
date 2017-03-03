@@ -172,8 +172,8 @@ protected:
                 {"application-snap", "unity8-package_foo_x123", {}, getpid(), {100, 200, 300}},
                 {"application-legacy", "multiple", "2342345", 5678, {100, 200, 300}},
                 {"application-legacy", "single", {}, 5678, {100, 200, 300}},
-                {"helper", "com.foo_bar_43.23.12", {}, 1, {100, 200, 300}},
-                {"helper", "com.bar_foo_8432.13.1", "24034582324132", 1, {100, 200, 300}}},
+                {"untrusted-helper", "com.foo_bar_43.23.12", {}, 1, {100, 200, 300}},
+                {"untrusted-helper", "com.bar_foo_8432.13.1", "24034582324132", 1, {100, 200, 300}}},
             CGROUP_DIR);
 
         /* Put it together */
@@ -832,7 +832,7 @@ TEST_F(LibUAL, StartHelper)
 TEST_F(LibUAL, StopHelper)
 {
     /* Multi helper */
-    auto untrusted = ubuntu::app_launch::Helper::Type::from_raw("untrusted-type");
+    auto untrusted = ubuntu::app_launch::Helper::Type::from_raw("untrusted-helper");
 
     auto appid = ubuntu::app_launch::AppID::parse("com.bar_foo_8432.13.1");
     auto helper = ubuntu::app_launch::Helper::create(untrusted, appid, registry);
@@ -849,7 +849,7 @@ TEST_F(LibUAL, StopHelper)
 
     ASSERT_EQ(1u, calls.size());
 
-    EXPECT_EQ(SystemdMock::instanceName({"untrusted-type", "com.bar_foo_8432.13.1", "24034582324132", 0, {}}),
+    EXPECT_EQ(SystemdMock::instanceName({"untrusted-helper", "com.bar_foo_8432.13.1", "24034582324132", 0, {}}),
               *calls.begin());
 
     return;
