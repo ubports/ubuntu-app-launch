@@ -87,12 +87,12 @@ public:
         }
     }
 
-    GPid pid()
+    GPid pid() const
     {
         return pid_;
     }
 
-    gsize dataCnt()
+    gsize dataCnt() const
     {
         g_debug("Data Count for %d: %d", pid_, int(datacnt_));
         return datacnt_;

@@ -1031,6 +1031,7 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 
 TEST_F(LibUAL, MultiPause)
 {
+    auto appid = ubuntu::app_launch::AppID::find(registry, "single");
     g_setenv("UBUNTU_APP_LAUNCH_OOM_PROC_PATH", CMAKE_BINARY_DIR "/libual-proc", 1);
 
     /* Setup A TON OF spew */
@@ -1042,16 +1043,28 @@ TEST_F(LibUAL, MultiPause)
     /* New Systemd Mock */
     dbus_test_service_remove_task(service, *systemd);
     systemd.reset();
-    std::vector<pid_t> spewpids;
-    std::transform(spews.begin(), spews.end(), spewpids.begin(), [](SpewMaster& spew) { return spew.pid(); });
+
+    std::vector<pid_t> spewpids{int(spews.size())};
+    for (const auto& spew : spews)
+    {
+        spewpids.push_back(spew.pid());
+    }
     auto systemd2 = std::make_shared<SystemdMock>(
-        std::list<SystemdMock::Instance>{
-            {"application-click", "com.test.good_application_1.2.3", {}, spews.begin()->pid(), spewpids}},
+        std::list<SystemdMock::Instance>{{"application-legacy", "single", {}, spews.begin()->pid(), spewpids}},
         CGROUP_DIR);
+
+    /* Add mocks */
+    dbus_test_service_add_task(service, *systemd2);
+    dbus_test_service_add_task(service, *zgmock);
+    dbus_test_task_run(*systemd2);
+    dbus_test_task_run(*zgmock);
 
     /* Give things a chance to start */
     EXPECT_EVENTUALLY_FUNC_EQ(DBUS_TEST_TASK_STATE_RUNNING, systemd2->stateFunc());
     EXPECT_EVENTUALLY_FUNC_EQ(DBUS_TEST_TASK_STATE_RUNNING, zgmock->stateFunc());
+
+    /* Resetup the registry with the new systemd */
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     /* Setup signal handling */
     guint paused_count = 0;
@@ -1077,10 +1090,10 @@ TEST_F(LibUAL, MultiPause)
     });
 
     /* Get our app object */
-    auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
-    ASSERT_EQ(1, int(app->instances().size()));
+    ASSERT_NE(nullptr, app);
+    ASSERT_EQ(1u, app->instances().size());
 
     auto instance = app->instances()[0];
 

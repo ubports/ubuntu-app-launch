@@ -30,11 +30,11 @@ private:
 public:
     ZeitgeistMock()
     {
-        DbusTestDbusMock* zgmock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
+        zgmock = dbus_test_dbus_mock_new("org.gnome.zeitgeist.Engine");
         dbus_test_task_set_name(DBUS_TEST_TASK(zgmock), "Zeitgeist");
 
-        DbusTestDbusMockObject* zgobj = dbus_test_dbus_mock_get_object(zgmock, "/org/gnome/zeitgeist/log/activity",
-                                                                       "org.gnome.zeitgeist.Log", NULL);
+        zgobj = dbus_test_dbus_mock_get_object(zgmock, "/org/gnome/zeitgeist/log/activity", "org.gnome.zeitgeist.Log",
+                                               NULL);
 
         dbus_test_dbus_mock_object_add_method(zgmock, zgobj, "InsertEvents", G_VARIANT_TYPE("a(asaasay)"),
                                               G_VARIANT_TYPE("au"), "ret = [ 0 ]", NULL);
