@@ -1342,13 +1342,6 @@ TEST_F(LibUAL, SetExec)
 
 TEST_F(LibUAL, AppInfo)
 {
-    /* Correct values from a click */
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.4");
-    auto app = ubuntu::app_launch::Application::create(appid, registry);
-
-    EXPECT_TRUE((bool)app->info());
-    EXPECT_EQ("Application", app->info()->name().value());
-
     /* Correct values from a legacy */
     auto barid = ubuntu::app_launch::AppID::find(registry, "bar");
     EXPECT_THROW(ubuntu::app_launch::Application::create(barid, registry), std::runtime_error);
