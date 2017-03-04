@@ -137,6 +137,7 @@ public:
     guint handle;
     std::string path;
     std::string name;
+    guint timeout{0};
 
     MirFDProxy(MirPromptSession* session, const AppID& appid, const std::shared_ptr<Registry>& reg)
         : reg_(reg)
@@ -227,6 +228,11 @@ public:
         g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(skel.get()));
     }
 
+    void setTimeout(guint timeoutin)
+    {
+        timeout = timeoutin;
+    }
+
     static std::string dbusSafe(const std::string& in)
     {
         std::string out = in;
@@ -270,6 +276,13 @@ public:
         }
 
         mirfd = 0;
+
+        /* Remove the timeout on the mainloop */
+        auto reg = reg_;
+        auto timeoutlocal = timeout;
+
+        reg->impl->thread.executeOnThread([reg, timeoutlocal]() { reg->impl->thread.removeSource(timeoutlocal); });
+
         return true;
     }
 
@@ -315,7 +328,8 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
 
     /* This will maintain a reference to the proxy for two
        seconds. And then it'll be dropped. */
-    _registry->impl->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); });
+    proxy->setTimeout(
+        _registry->impl->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); }));
 
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
         _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
