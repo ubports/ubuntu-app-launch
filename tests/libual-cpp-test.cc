@@ -171,7 +171,7 @@ protected:
             std::list<SystemdMock::Instance>{
                 {"application-snap", "unity8-package_foo_x123", {}, getpid(), {100, 200, 300}},
                 {"application-legacy", "multiple", "2342345", 5678, {100, 200, 300}},
-                {"application-legacy", "single", {}, 5678, {100, 200, 300}},
+                {"application-legacy", "single", {}, getpid(), {getpid()}},
                 {"untrusted-helper", "com.foo_bar_43.23.12", {}, 1, {100, 200, 300}},
                 {"untrusted-helper", "com.bar_foo_8432.13.1", "24034582324132", 1, {100, 200, 300}}},
             CGROUP_DIR);
@@ -1162,10 +1162,10 @@ TEST_F(LibUAL, OOMSet)
     ASSERT_TRUE(g_file_set_contents(oomadjfile, "0", -1, NULL));
 
     /* Get our app object */
-    auto appid = ubuntu::app_launch::AppID::find(registry, "com.test.good_application_1.2.3");
+    auto appid = ubuntu::app_launch::AppID::find(registry, "single");
     auto app = ubuntu::app_launch::Application::create(appid, registry);
 
-    ASSERT_EQ(1, int(app->instances().size()));
+    ASSERT_EQ(1u, app->instances().size());
 
     auto instance = app->instances()[0];
 
