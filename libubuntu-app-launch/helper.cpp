@@ -121,7 +121,7 @@ std::vector<Application::URL> appURL(const std::vector<Helper::URL>& in)
 std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
 {
     std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [this]() {
-        return std::list<std::pair<std::string, std::string>>{};
+        return std::list<std::pair<std::string, std::string>>{{"HELPER_TYPE", _type.value()}};
     };
 
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
@@ -131,6 +131,7 @@ std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
 class MirFDProxy
 {
 public:
+    std::shared_ptr<Registry> reg_;
     int mirfd;
     std::shared_ptr<proxySocketDemangler> skel;
     guint handle;
@@ -138,7 +139,8 @@ public:
     std::string name;
 
     MirFDProxy(MirPromptSession* session, const AppID& appid, const std::shared_ptr<Registry>& reg)
-        : name(g_dbus_connection_get_unique_name(reg->impl->_dbus.get()))
+        : reg_(reg)
+        , name(g_dbus_connection_get_unique_name(reg->impl->_dbus.get()))
     {
         /* Get the Mir FD */
         std::promise<int> promise;
@@ -211,6 +213,7 @@ public:
 
     ~MirFDProxy()
     {
+        g_debug("Mir Prompt Proxy shutdown");
         if (mirfd != 0)
         {
             close(mirfd);
@@ -299,8 +302,10 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
         return {};
     }
 
-    std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [proxy]() {
+    std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [this, proxy]() {
         std::list<std::pair<std::string, std::string>> envs;
+
+        envs.emplace_back(std::make_pair("HELPER_TYPE", _type.value()));
 
         envs.emplace_back(std::make_pair("UBUNTU_APP_LAUNCH_DEMANGLE_PATH", proxy->getPath()));
         envs.emplace_back(std::make_pair("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", proxy->getName()));
