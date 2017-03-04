@@ -420,7 +420,7 @@ TEST_F(LibUAL, ApplicationPid)
     auto singleapp = ubuntu::app_launch::Application::create(singleappid, registry);
 
     ASSERT_LT(0, int(singleapp->instances().size()));
-    EXPECT_TRUE(singleapp->instances()[0]->hasPid(100));
+    EXPECT_TRUE(singleapp->instances()[0]->hasPid(getpid()));
 }
 
 TEST_F(LibUAL, ApplicationId)
