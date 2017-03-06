@@ -378,7 +378,7 @@ TEST_F(HelperTest, DesktopToExec)
 	ASSERT_TRUE(g_key_file_load_from_file(keyfile, CMAKE_SOURCE_DIR "/applications/foo.desktop", G_KEY_FILE_NONE, NULL));
 	exec = desktop_to_exec(keyfile, "");
 	ASSERT_TRUE(exec != NULL);
-	ASSERT_STREQ(exec, "foo");
+	ASSERT_STREQ(exec, "foo %u");
 	g_free(exec);
 	g_key_file_free(keyfile);
 
