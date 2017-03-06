@@ -64,7 +64,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
 
     appinfo_ = std::make_shared<app_info::Desktop>(
         appId(), _keyfile, _basedir, rootDir,
-        app_info::DesktopFlags::ALLOW_NO_DISPLAY & app_info::DesktopFlags::XMIR_DEFAULT, _registry);
+        app_info::DesktopFlags::ALLOW_NO_DISPLAY | app_info::DesktopFlags::XMIR_DEFAULT, _registry);
 
     if (!_keyfile)
     {
