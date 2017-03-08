@@ -362,7 +362,7 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
 {
     std::list<IconFinder::ThemeSubdirectory> iconPaths;
 
-    for (auto const& theme_dir: ICON_THEME_DIRS)
+    for (const auto& theme_dir : ICON_THEME_DIRS)
     {
         auto dir = g_build_filename(basePath.c_str(), theme_dir, nullptr);
         auto icons = iconsFromThemePath(dir);
