@@ -36,6 +36,7 @@ extern "C" {
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <locale>
 #include <regex>
 
 namespace ubuntu
@@ -198,9 +199,8 @@ std::string AppID::dbusID() const
     for (size_t i = 0; i < bytes.size(); ++i) {
         char chr = bytes[i];
 
-        if ((chr >= 'a' && chr <= 'z') ||
-            (chr >= 'A' && chr <= 'Z') ||
-            (chr >= '0' && chr <= '9'&& i != 0)) {
+        if (std::isalpha(chr, std::locale::classic()) ||
+            std::isdigit(chr, std::locale::classic())) {
             encoded += chr;
         } else {
             std::ostringstream hex;
