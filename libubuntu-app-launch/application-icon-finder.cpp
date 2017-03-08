@@ -27,7 +27,7 @@ namespace app_launch
 namespace
 {
 constexpr auto ICONS_DIR = "/icons";
-constexpr auto ICON_THEME_DIRS = {"/icons/hicolor", "/icons/Humanity", "/icons/Humanity", "/icons/Adwaita"};
+constexpr auto ICON_THEME_DIRS = {"/icons/hicolor", "/icons/Humanity", "/icons/gnome", "/icons/Adwaita"};
 constexpr auto THEME_INDEX_FILE = "index.theme";
 constexpr auto SIZE_PROPERTY = "Size";
 constexpr auto MAXSIZE_PROPERTY = "MaxSize";
