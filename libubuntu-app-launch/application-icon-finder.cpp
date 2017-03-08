@@ -27,7 +27,7 @@ namespace app_launch
 namespace
 {
 constexpr auto ICONS_DIR = "/icons";
-constexpr auto ICON_THEME_DIRS = {"/icons/hicolor", "/icons/Humanity", "/icons/gnome", "/icons/Adwaita"};
+constexpr auto ICON_THEMES = {"suru", "Humanity", "Adwaita", "gnome", "hicolor"};
 constexpr auto THEME_INDEX_FILE = "index.theme";
 constexpr auto SIZE_PROPERTY = "Size";
 constexpr auto MAXSIZE_PROPERTY = "MaxSize";
@@ -362,9 +362,9 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
 {
     std::list<IconFinder::ThemeSubdirectory> iconPaths;
 
-    for (const auto& theme_dir : ICON_THEME_DIRS)
+    for (const auto& theme : ICON_THEMES)
     {
-        auto dir = g_build_filename(basePath.c_str(), theme_dir, nullptr);
+        auto dir = g_build_filename(basePath.c_str(), ICONS_DIR, theme, nullptr);
         auto icons = iconsFromThemePath(dir);
         iconPaths.splice(iconPaths.end(), icons);
         g_free(dir);
