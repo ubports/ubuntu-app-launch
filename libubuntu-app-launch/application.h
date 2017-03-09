@@ -221,10 +221,6 @@ public:
         virtual bool isRunning() = 0;
 
         /* Instance Info */
-        /** Path to the log file for stdout/stderr for this instance of the
-            application. */
-        virtual std::string logPath() = 0;
-
         /* PIDs */
         /** Get the primary PID for this Application::Instance, this will return
             zero when it is not running. The primary PID is the PID keeping the
@@ -257,6 +253,8 @@ public:
         /** Stop, or send SIGTERM, to the PIDs in this Application::Instance, if
             the PIDs do not respond to the SIGTERM they will be SIGKILL'd */
         virtual void stop() = 0;
+        /** Signal the shell to focus the Application::Instance */
+        virtual void focus() = 0;
     };
 
     /** A quick check to see if this application has any running instances */
@@ -275,6 +273,12 @@ public:
         \param urls A list of URLs to pass to the application command line
     */
     virtual std::shared_ptr<Instance> launchTest(const std::vector<URL>& urls = {}) = 0;
+
+    /** Get a a pointer to the running instances of this application based on the pid
+
+        \param pid The pid to find the instance of
+    */
+    virtual std::shared_ptr<Instance> findInstance(const pid_t& pid) = 0;
 };
 
 }  // namespace app_launch

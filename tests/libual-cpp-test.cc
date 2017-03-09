@@ -36,6 +36,7 @@
 #include "ubuntu-app-launch.h"
 
 #include "eventually-fixture.h"
+#include "libertine-service.h"
 #include "mir-mock.h"
 #include "spew-master.h"
 
@@ -51,6 +52,7 @@ protected:
     DbusTestService* service = NULL;
     DbusTestDbusMock* mock = NULL;
     DbusTestDbusMock* cgmock = NULL;
+    std::shared_ptr<LibertineService> libertine;
     GDBusConnection* bus = NULL;
     guint resume_timeout = 0;
     std::shared_ptr<ubuntu::app_launch::Registry> registry;
@@ -308,6 +310,12 @@ protected:
         /* Put it together */
         dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
         dbus_test_service_add_task(service, DBUS_TEST_TASK(cgmock));
+
+        /* Add in Libertine */
+        libertine = std::make_shared<LibertineService>();
+        dbus_test_service_add_task(service, *libertine);
+        dbus_test_service_add_task(service, libertine->waitTask());
+
         dbus_test_service_start_tasks(service);
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
@@ -335,6 +343,7 @@ protected:
         //
         // ubuntu::app_launch::Registry::clearDefault();
 
+        libertine.reset();
         g_clear_object(&mock);
         g_clear_object(&cgmock);
         g_clear_object(&service);
@@ -693,34 +702,6 @@ TEST_F(LibUAL, StopSnapApplication)
     ASSERT_EQ(dbus_test_dbus_mock_object_check_method_call(mock, obj, "Stop", NULL, NULL), 1);
 }
 #endif
-
-/* NOTE: The fact that there is 'libertine-data' in these strings is because
-   we're using one CACHE_HOME for this test suite and the libertine functions
-   need to pull things from there, where these are only comparisons. It's just
-   what value is in the environment variable */
-TEST_F(LibUAL, ApplicationLog)
-{
-    auto appid = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
-    auto app = ubuntu::app_launch::Application::create(appid, registry);
-
-    EXPECT_EQ(
-        std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-click-com.test.good_application_1.2.3.log"),
-        app->instances()[0]->logPath());
-
-    appid = ubuntu::app_launch::AppID::find(registry, "single");
-    app = ubuntu::app_launch::Application::create(appid, registry);
-
-    ASSERT_LT(0, int(app->instances().size()));
-
-    EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-single-.log"),
-              app->instances()[0]->logPath());
-
-    appid = ubuntu::app_launch::AppID::find(registry, "multiple");
-    app = ubuntu::app_launch::Application::create(appid, registry);
-
-    EXPECT_EQ(std::string(CMAKE_SOURCE_DIR "/libertine-data/upstart/application-legacy-multiple-2342345.log"),
-              app->instances()[0]->logPath());
-}
 
 TEST_F(LibUAL, ApplicationPid)
 {
