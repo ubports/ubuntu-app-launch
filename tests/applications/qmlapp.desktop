@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Qml App
+Type=Application
+Exec=qmlapp
+NoDisplay=false
+Hidden=false
+Terminal=false
+Icon=/snap/unity8-package/current/qmlapp.png

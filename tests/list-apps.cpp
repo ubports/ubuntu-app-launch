@@ -211,6 +211,7 @@ static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
         SnapdMock::snapdOkay(SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "bar"}},
+                                                        {"mir", "unity8-package", {"qmlapp"}},
                                                         {"unity7", "unity8-package", {"foo"}},
                                                         {"unity7", "unity7-package", {"single", "multiple"}},
                                                         {"x11", "x11-package", {"multiple", "hidden"}}
@@ -219,7 +220,7 @@ static std::pair<std::string, std::string> interfaces{
 static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar"})))};
+        SnapdMock::packageJson("unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "bar", "qmlapp"})))};
 static std::pair<std::string, std::string> u7Package{
     "GET /v2/snaps/unity7-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
@@ -232,9 +233,10 @@ static std::pair<std::string, std::string> x11Package{
 TEST_F(ListApps, ListSnap)
 {
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u8Package, u8Package, u8Package,                       /* unity8 check */
+                   {interfaces, u8Package, /* unity8 check */
+                    interfaces, u8Package, u8Package, /* mir check */
                     interfaces, u8Package, u7Package, u7Package, u7Package, u8Package, /* unity7 check */
-                    interfaces, x11Package, x11Package, x11Package}};                  /* x11 check */
+                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     auto apps = ubuntu::app_launch::app_impls::Snap::list(registry);
@@ -243,8 +245,9 @@ TEST_F(ListApps, ListSnap)
 
     mock.result();
 
-    EXPECT_EQ(4, int(apps.size()));
+    EXPECT_EQ(5, int(apps.size()));
     EXPECT_TRUE(findApp(apps, "unity8-package_foo_x123"));
+    EXPECT_TRUE(findApp(apps, "unity8-package_qmlapp_x123"));
     EXPECT_TRUE(findApp(apps, "unity7-package_single_x123"));
     EXPECT_TRUE(findApp(apps, "unity7-package_multiple_x123"));
     EXPECT_TRUE(findApp(apps, "x11-package_multiple_x123"));
@@ -253,18 +256,21 @@ TEST_F(ListApps, ListSnap)
     EXPECT_FALSE(findApp(apps, "unity7-package_scope_x123"));
     EXPECT_FALSE(findApp(apps, "x11-package_hidden_x123"));
 
-    EXPECT_EQ("unity8",
-              std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "unity8-package_foo_x123"))
-                  ->getInterface());
-    EXPECT_EQ("unity7",
-              std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "unity7-package_single_x123"))
-                  ->getInterface());
-    EXPECT_EQ("unity7", std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(
-                            getApp(apps, "unity7-package_multiple_x123"))
-                            ->getInterface());
-    EXPECT_EQ("x11",
-              std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "x11-package_multiple_x123"))
-                  ->getInterface());
+    EXPECT_TRUE(getApp(apps, "unity8-package_foo_x123")->info()
+                    ->supportsUbuntuLifecycle());
+    EXPECT_FALSE(getApp(apps, "unity7-package_single_x123")->info()
+                    ->supportsUbuntuLifecycle());
+    EXPECT_FALSE(getApp(apps, "unity7-package_multiple_x123")->info()
+                    ->supportsUbuntuLifecycle());
+
+    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(getApp(apps, "x11-package_multiple_x123")->info())
+                    ->xMirEnable());
+    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(getApp(apps, "unity7-package_single_x123")->info())
+                    ->xMirEnable());
+    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(getApp(apps, "unity8-package_foo_x123")->info())
+                    ->xMirEnable());
+    EXPECT_FALSE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(getApp(apps, "unity8-package_qmlapp_x123")->info())
+                    ->xMirEnable());
 }
 #endif
 
@@ -272,9 +278,10 @@ TEST_F(ListApps, ListAll)
 {
 #ifdef ENABLE_SNAPPY
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u8Package, u8Package, u8Package,                       /* unity8 check */
+                   {interfaces, u8Package, /* unity8 check */
+                    interfaces, u8Package, u8Package, /* mir check */
                     interfaces, u8Package, u7Package, u7Package, u7Package, u8Package, /* unity7 check */
-                    interfaces, x11Package, x11Package, x11Package}};                  /* x11 check */
+                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
 #endif
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
@@ -284,7 +291,7 @@ TEST_F(ListApps, ListAll)
     printApps(apps);
 
 #ifdef ENABLE_SNAPPY
-    EXPECT_EQ(19, int(apps.size()));
+    EXPECT_EQ(20, int(apps.size()));
 #else
     EXPECT_EQ(15, int(apps.size()));
 #endif
