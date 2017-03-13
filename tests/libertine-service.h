@@ -42,6 +42,7 @@ public:
 
         wait = dbus_test_task_new();
         dbus_test_task_set_wait_for(wait, "com.canonical.libertine.Service");
+        dbus_test_task_set_name(wait, "lib-wait");
     }
 
     ~LibertineService()
