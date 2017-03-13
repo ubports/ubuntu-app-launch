@@ -200,7 +200,7 @@ std::string AppID::dbusID() const
         char chr = bytes[i];
 
         if (std::isalpha(chr, std::locale::classic()) ||
-            std::isdigit(chr, std::locale::classic())) {
+            (std::isdigit(chr, std::locale::classic()) && i != 0)) {
             encoded += chr;
         } else {
             std::ostringstream hex;
