@@ -19,7 +19,6 @@
 
 extern "C" {
 #include "ubuntu-app-launch.h"
-#include <upstart.h>
 #include <gio/gio.h>
 #include <gio/gunixfdlist.h>
 #include <string.h>

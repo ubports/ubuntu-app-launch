@@ -19,7 +19,6 @@
 
 #include <json-glib/json-glib.h>
 #include <click.h>
-#include <upstart.h>
 #include "helpers.h"
 
 /* Take an app ID and validate it and then break it up
