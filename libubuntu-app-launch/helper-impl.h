@@ -71,6 +71,8 @@ private:
     Helper::Type _type;
     AppID _appid;
     std::shared_ptr<Registry> _registry;
+
+    std::list<std::pair<std::string, std::string>> defaultEnv();
 };
 
 }  // namespace helper_impl

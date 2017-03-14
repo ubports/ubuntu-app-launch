@@ -114,11 +114,15 @@ std::vector<Application::URL> appURL(const std::vector<Helper::URL>& in)
     return out;
 }
 
+std::list<std::pair<std::string, std::string>> Base::defaultEnv()
+{
+    return std::list<std::pair<std::string, std::string>>{};
+}
+
 std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
 {
-    std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [this]() {
-        return std::list<std::pair<std::string, std::string>>{};
-    };
+    auto defaultenv = defaultEnv();
+    std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [defaultenv]() { return defaultenv; };
 
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
         _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
@@ -291,12 +295,13 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
     }
     catch (std::runtime_error& e)
     {
-        g_warning("Error launching helper: %s", e.what());
+        g_warning("Error setting up Mir FD Proxy: %s", e.what());
         return {};
     }
 
-    std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [proxy]() {
-        std::list<std::pair<std::string, std::string>> envs;
+    auto defaultenvs = defaultEnv();
+    std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [defaultenvs, proxy]() {
+        auto envs = defaultenvs;
 
         envs.emplace_back(std::make_pair("UBUNTU_APP_LAUNCH_DEMANGLE_PATH", proxy->getPath()));
         envs.emplace_back(std::make_pair("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", proxy->getName()));
