@@ -390,8 +390,49 @@ std::shared_ptr<Helper> Helper::create(Type type, AppID appid, std::shared_ptr<R
     return std::make_shared<helper_impls::Base>(type, appid, registry);
 }
 
+/* Hardcore socket stuff */
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+
 void Helper::setExec(std::vector<std::string> exec)
 {
+    auto cenv = getenv("UBUNTU_APP_LAUNCH_HELPER_EXECTOOL_SETEXEC_SOCKET");
+    if (cenv == nullptr)
+    {
+        throw std::runtime_error{"Unable to find a socket to write exec information to."};
+    }
+
+    int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (socketfd <= 0)
+    {
+        throw std::runtime_error{"Unable to create socket to systemd-helper-helper"};
+    }
+
+    struct sockaddr_un socketaddr = {0};
+    socketaddr.sun_family = AF_UNIX;
+    strncpy(socketaddr.sun_path, cenv, sizeof(socketaddr.sun_path) - 1);
+    socketaddr.sun_path[0] = 0;
+
+    if (connect(socketfd, (const struct sockaddr*)&socketaddr, sizeof(struct sockaddr_un)) < 0)
+    {
+        throw std::runtime_error{"Unable to connecto to socket of systemd-helper-helper"};
+    }
+
+    for (const auto& item : exec)
+    {
+        auto citem = item.c_str();
+        int writesize = write(socketfd, citem, strlen(citem) + 1);
+
+        if (writesize <= 0)
+        {
+            close(socketfd);
+            throw std::runtime_error{"Error writing to systemd-helper-helper socket"};
+        }
+    }
+
+    /* Close the socket */
+    close(socketfd);
 }
 
 }  // namespace app_launch
