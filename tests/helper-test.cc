@@ -78,7 +78,7 @@ TEST_F(HelperTest, DesktopExecParse)
 	g_array_free(output, TRUE);
 
 	/* Little u with a single URL */
-	output = desktop_exec_parse("foo %u", "http://ubuntu.com");
+	output = desktop_exec_parse("foo %U", "http://ubuntu.com");
 	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
@@ -378,7 +378,7 @@ TEST_F(HelperTest, DesktopToExec)
 	ASSERT_TRUE(g_key_file_load_from_file(keyfile, CMAKE_SOURCE_DIR "/applications/foo.desktop", G_KEY_FILE_NONE, NULL));
 	exec = desktop_to_exec(keyfile, "");
 	ASSERT_TRUE(exec != NULL);
-	ASSERT_STREQ(exec, "foo %u");
+	ASSERT_STREQ(exec, "foo %U");
 	g_free(exec);
 	g_key_file_free(keyfile);
 
