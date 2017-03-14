@@ -403,8 +403,22 @@ void Helper::setExec(std::vector<std::string> exec)
         throw std::runtime_error{"Unable to find a socket to write exec information to."};
     }
 
-    int socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (socketfd <= 0)
+    class SmartSocket
+    {
+    public:
+        int fd;
+        SmartSocket()
+            : fd(socket(AF_UNIX, SOCK_STREAM, 0))
+        {
+        }
+        ~SmartSocket()
+        {
+            close(fd);
+        }
+    };
+
+    SmartSocket sock;
+    if (sock.fd <= 0)
     {
         throw std::runtime_error{"Unable to create socket to systemd-helper-helper"};
     }
@@ -414,7 +428,7 @@ void Helper::setExec(std::vector<std::string> exec)
     strncpy(socketaddr.sun_path, cenv, sizeof(socketaddr.sun_path) - 1);
     socketaddr.sun_path[0] = 0;
 
-    if (connect(socketfd, (const struct sockaddr*)&socketaddr, sizeof(struct sockaddr_un)) < 0)
+    if (connect(sock.fd, (const struct sockaddr*)&socketaddr, sizeof(struct sockaddr_un)) < 0)
     {
         throw std::runtime_error{"Unable to connecto to socket of systemd-helper-helper"};
     }
@@ -422,17 +436,13 @@ void Helper::setExec(std::vector<std::string> exec)
     for (const auto& item : exec)
     {
         auto citem = item.c_str();
-        int writesize = write(socketfd, citem, strlen(citem) + 1);
+        int writesize = write(sock.fd, citem, strlen(citem) + 1);
 
         if (writesize <= 0)
         {
-            close(socketfd);
             throw std::runtime_error{"Error writing to systemd-helper-helper socket"};
         }
     }
-
-    /* Close the socket */
-    close(socketfd);
 }
 
 }  // namespace app_launch
