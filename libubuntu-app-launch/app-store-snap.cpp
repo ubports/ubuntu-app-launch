@@ -128,9 +128,10 @@ AppID::AppName Snap::findAppname(const AppID::Package& package,
                                  const std::shared_ptr<Registry>& registry)
 {
     auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+
     if (!pkgInfo)
     {
-        return AppID::AppName::from_raw({});
+        throw std::runtime_error("Packge '" + package.value() + "' doesn't have valid info.");
     }
 
     if (pkgInfo->appnames.empty())

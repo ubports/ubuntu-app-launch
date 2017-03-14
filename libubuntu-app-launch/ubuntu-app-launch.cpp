@@ -641,6 +641,7 @@ ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const
 
 	auto appid = ubuntu::app_launch::AppID::discover(package, appname, version);
 	if (appid.empty()) {
+		g_debug("Triplet lookup for '%s' '%s' '%s' returned empty", pkg, app, ver);
 		return nullptr;
 	}
 
