@@ -73,6 +73,7 @@ Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          ubuntu-app-launch (= ${binary:Version}),
+         libertine-tools,
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
 Description: library for sending requests to the ubuntu app launch
