@@ -150,7 +150,16 @@ main (int argc, char * argv[])
 	char * apparray[PARAMS_COUNT] = {0};
 	int currentparam = 0;
 
-	for (currentparam = 0; currentparam + 2 < argc && currentparam < PARAMS_COUNT; currentparam++) {
+	if (getenv("UBUNTU_APP_LAUNCH_DEMANGLE_PATH") != NULL &&
+			getenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME") != NULL) {
+		apparray[currentparam] = getenv("UBUNTU_APP_LAUNCH_DEMANGLER");
+		if (apparray[currentparam] == NULL) {
+			apparray[0] = DEMANGLER_PATH;
+		}
+		currentparam++;
+	}
+
+	for (; currentparam + 2 < argc && currentparam < PARAMS_COUNT; currentparam++) {
 		apparray[currentparam] = argv[currentparam + 2];
 	}
 
