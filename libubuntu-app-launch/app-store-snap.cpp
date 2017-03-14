@@ -107,6 +107,12 @@ bool Snap::verifyAppname(const AppID::Package& package,
     }
 
     auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+
+    if (!pkgInfo)
+    {
+        return false;
+    }
+
     return pkgInfo->appnames.find(appname) != pkgInfo->appnames.end();
 }
 
@@ -122,6 +128,10 @@ AppID::AppName Snap::findAppname(const AppID::Package& package,
                                  const std::shared_ptr<Registry>& registry)
 {
     auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+    if (!pkgInfo)
+    {
+        return AppID::AppName::from_raw({});
+    }
 
     if (pkgInfo->appnames.empty())
     {
@@ -157,7 +167,14 @@ AppID::Version Snap::findVersion(const AppID::Package& package,
                                  const std::shared_ptr<Registry>& registry)
 {
     auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
-    return AppID::Version::from_raw(pkgInfo->revision);
+    if (pkgInfo)
+    {
+        return AppID::Version::from_raw(pkgInfo->revision);
+    }
+    else
+    {
+        return AppID::Version::from_raw({});
+    }
 }
 
 /** Operator to compare apps for our sets */
