@@ -85,6 +85,13 @@ get_params (char * readbuf, char ** exectool)
 	pid_t childpid;
 	if ((childpid = fork()) == 0) {
 		/* Exec tool start here */
+
+		/* NOTE: We might need a different environment when the
+		 * exec tool is existing in the unity8-session snap, but
+		 * we'll need to get integration hooks setup and start
+		 * playing with them to see what makes sense there. Probably
+		 * something like legacy-exec in the unity8-session snap. */
+
 		/* GOAL: ${argv[2]} */
 		setenv("UBUNTU_APP_LAUNCH_HELPER_EXECTOOL_SETEXEC_SOCKET", socketname, 1);
 
