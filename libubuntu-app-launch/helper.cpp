@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <list>
+#include <numeric>
 
 #include "helper-impl.h"
 #include "registry-impl.h"
@@ -114,9 +115,69 @@ std::vector<Application::URL> appURL(const std::vector<Helper::URL>& in)
     return out;
 }
 
+/** Sets up the executable environment variable based on the appid and
+ *  the type of helper. We look for the exec-tool, but if we can't find
+ *  it we're cool with that and we just execute the helper. If we do find
+ *  an exec-tool we'll use that to fill in the parameters. For legacy appid's
+ *  we'll allow the exec-tool to set everything. */
 std::list<std::pair<std::string, std::string>> Base::defaultEnv()
 {
-    return std::list<std::pair<std::string, std::string>>{};
+    std::list<std::pair<std::string, std::string>> envs{};
+    auto csnapenv = getenv("SNAP");
+    std::string helperpath;
+    if (csnapenv != nullptr)
+    {
+        helperpath = std::string{csnapenv} + "/" HELPER_EXEC_TOOL_DIR "/" + _type.value() + "/exec-tool";
+    }
+    else
+    {
+        helperpath = HELPER_EXEC_TOOL_DIR "/" + _type.value() + "/exec-tool";
+    }
+
+    std::list<std::string> exec;
+    /* We have an exec tool that'll give us params */
+    if (g_file_test(helperpath.c_str(), G_FILE_TEST_IS_EXECUTABLE))
+    {
+        exec.push_back("helper-helper"); /* TODO */
+        exec.push_back(helperpath);
+    }
+    else
+    {
+        if (_appid.package.value().empty())
+        {
+            throw std::runtime_error{
+                "Executing a helper that isn't package, but doesn't have an exec-tool. We can't do that. Sorry. Bad "
+                "things will happen."};
+        }
+    }
+
+    /* This is kinda hard coded for snaps right now, we don't have
+     * another posibility today other than really custom stuff. But
+     * if we do, we'll need to abstract this. */
+    /* Insert package executable */
+    if (!_appid.package.value().empty())
+    {
+        std::string snapdir{"/snap/bin/"};
+
+        if (_appid.package.value() == _appid.appname.value())
+        {
+            exec.push_back(snapdir + _appid.package.value());
+        }
+        else
+        {
+            exec.push_back(snapdir + _appid.package.value() + "." + _appid.appname.value());
+        }
+    }
+
+    exec.push_back("%U");
+
+    envs.emplace_back(
+        std::make_pair("APP_EXEC", std::accumulate(exec.begin(), exec.end(), std::string{},
+                                                   [](const std::string& accum, const std::string& addon) {
+                                                       return accum.empty() ? addon : accum + " " + addon;
+                                                   })));
+
+    return envs;
 }
 
 std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
