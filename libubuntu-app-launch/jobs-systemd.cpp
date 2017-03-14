@@ -1344,6 +1344,11 @@ void SystemD::resetUnit(const UnitInfo& info) const
     auto cancel = registry->impl->thread.getCancellable();
 
     registry->impl->thread.executeOnThread([bus, unitname, cancel] {
+        if (g_cancellable_is_cancelled(cancel.get()))
+        {
+            return;
+        }
+
         g_dbus_connection_call(bus.get(),                       /* user bus */
                                SYSTEMD_DBUS_ADDRESS,            /* bus name */
                                SYSTEMD_DBUS_PATH_MANAGER,       /* path */
