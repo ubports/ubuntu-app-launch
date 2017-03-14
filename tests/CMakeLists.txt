@@ -130,6 +130,7 @@ add_custom_target(format-tests
 	COMMAND clang-format -i -style=file
 	application-info-desktop.cpp
 	libual-cpp-test.cc
+	libual-test.cc
 	list-apps.cpp
 	eventually-fixture.h
 	info-watcher-zg.cpp
