@@ -1,3 +1,25 @@
+ubuntu-app-launch (0.10+17.04.20170310-0ubuntu1) zesty; urgency=medium
+
+  [ Ken VanDine ]
+  * Removed click related manual tests and correct-job-type tests which
+    no longer seems to apply
+
+  [ Larry Price ]
+  * Add all icon directories to search paths regardless of context. (LP:
+    #1669913)
+
+  [ Michael Terry ]
+  * Use the "mir" interface (not the "unity8" interface) to decide if an
+    app supports Mir or not.
+
+ -- Rodney Dawes <rodney.dawes@canonical.com>  Fri, 10 Mar 2017 15:17:03 +0000
+
+ubuntu-app-launch (0.10+17.04.20170307.1-0ubuntu1) zesty; urgency=medium
+
+  * XMir by default for Legacy apps (LP: #1668429)
+
+ -- Ted Gould <ted@gould.cx>  Tue, 07 Mar 2017 19:07:32 +0000
+
 ubuntu-app-launch (0.10+17.04.20170215.1-0ubuntu1) zesty; urgency=medium
 
   [ Ken VanDine ]
