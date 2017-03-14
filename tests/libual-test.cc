@@ -751,10 +751,10 @@ TEST_F(LibUAL, HelperInstanceList)
 
     g_strfreev(blanktype);
 
-    gchar **goodtype = ubuntu_app_launch_list_helper_instances("untrusted-type", "com.bar_foo_8432.13.1");
+    gchar **goodtype = ubuntu_app_launch_list_helper_instances("untrusted-helper", "com.bar_foo_8432.13.1");
 
-    EXPECT_NE(nullptr, goodtype);
-    EXPECT_EQ(1u, g_strv_length(goodtype));
+    ASSERT_NE(nullptr, goodtype);
+    ASSERT_EQ(1u, g_strv_length(goodtype));
     EXPECT_STREQ("24034582324132", goodtype[0]);
 
     g_strfreev(goodtype);
