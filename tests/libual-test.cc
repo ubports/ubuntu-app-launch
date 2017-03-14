@@ -686,7 +686,7 @@ TEST_F(LibUAL, StartHelper)
 TEST_F(LibUAL, StopHelper)
 {
     /* Basic helper */
-    ASSERT_TRUE(ubuntu_app_launch_stop_helper("untrusted-type", "com.test.good_application_1.2.3"));
+    ASSERT_TRUE(ubuntu_app_launch_stop_helper("untrusted-helper", "com.foo_bar_43.23.12"));
 
     std::list<std::string> calls;
     ASSERT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int(void)>([&]() {
@@ -694,21 +694,21 @@ TEST_F(LibUAL, StopHelper)
                                   return calls.size();
                               }));
 
-    EXPECT_EQ(SystemdMock::instanceName({"untrusted-type", "com.test.good_application_1.2.3", {}, 0, {}}),
+    EXPECT_EQ(SystemdMock::instanceName({"untrusted-helper", "com.foo_bar_43.23.12", {}, 0, {}}),
               *calls.begin());
 
     systemd->managerClear();
 
     /* Multi helper */
     ASSERT_TRUE(
-        ubuntu_app_launch_stop_multiple_helper("untrusted-type", "com.test.good_application_1.2.3", "instance-me"));
+        ubuntu_app_launch_stop_multiple_helper("untrusted-helper", "com.bar_foo_8432.13.1", "24034582324132"));
 
     ASSERT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int(void)>([&]() {
                                   calls = systemd->stopCalls();
                                   return calls.size();
                               }));
 
-    EXPECT_EQ(SystemdMock::instanceName({"untrusted-type", "com.test.good_application_1.2.3", "instance-me", 0, {}}),
+    EXPECT_EQ(SystemdMock::instanceName({"untrusted-helper", "com.bar_foo_8432.13.1", "24034582324132", 0, {}}),
               *calls.begin());
 
     return;
