@@ -21,7 +21,6 @@
 #include "application-icon-finder.h"
 #include "application-impl-base.h"
 #include <regex>
-#include <upstart.h>
 
 namespace ubuntu
 {

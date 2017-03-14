@@ -18,7 +18,6 @@
  */
 
 #include <json-glib/json-glib.h>
-#include <upstart.h>
 #include "utils.h"
 
 /* Take an app ID and validate it and then break it up
