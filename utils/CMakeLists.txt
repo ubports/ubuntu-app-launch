@@ -12,7 +12,7 @@
 add_definitions ( -DDEMANGLER_PATH="${pkglibexecdir}/socket-demangler" )
 add_executable(systemd-helper-helper systemd-helper-helper.c)
 set_target_properties(systemd-helper-helper PROPERTIES OUTPUT_NAME "systemd-helper-helper")
-install(TARGETS systemd-helper-helper RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
+install(TARGETS systemd-helper-helper RUNTIME DESTINATION "${pkglibexecdir}")
 
 ####################
 # socket-demangler
