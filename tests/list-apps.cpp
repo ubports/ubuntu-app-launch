@@ -248,5 +248,5 @@ TEST_F(ListApps, ListAll)
 
     printApps(apps);
 
-    EXPECT_EQ(8, int(apps.size()));
+    EXPECT_EQ(9, int(apps.size()));
 }
