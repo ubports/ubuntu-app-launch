@@ -83,13 +83,20 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                 return;
             }
 
-            auto reg = registry_.lock();
+            try
+            {
+                auto reg = registry_.lock();
 
-            auto appId = AppID::find(reg, appid);
-            auto app = Application::create(appId, reg);
-            auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
+                auto appId = AppID::find(reg, appid);
+                auto app = Application::create(appId, reg);
+                auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
-            sig_appStarted(app, inst);
+                sig_appStarted(app, inst);
+            }
+            catch (std::runtime_error& e)
+            {
+                g_warning("Error in appStarted signal from job: %s", e.what());
+            }
         });
     });
 
@@ -105,13 +112,20 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                 return;
             }
 
-            auto reg = registry_.lock();
+            try
+            {
+                auto reg = registry_.lock();
 
-            auto appId = AppID::find(reg, appid);
-            auto app = Application::create(appId, reg);
-            auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
+                auto appId = AppID::find(reg, appid);
+                auto app = Application::create(appId, reg);
+                auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
-            sig_appStopped(app, inst);
+                sig_appStopped(app, inst);
+            }
+            catch (std::runtime_error& e)
+            {
+                g_warning("Error in appStopped signal from job: %s", e.what());
+            }
         });
     });
 
@@ -129,13 +143,20 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                 return;
             }
 
-            auto reg = registry_.lock();
+            try
+            {
+                auto reg = registry_.lock();
 
-            auto appId = AppID::find(reg, appid);
-            auto app = Application::create(appId, reg);
-            auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
+                auto appId = AppID::find(reg, appid);
+                auto app = Application::create(appId, reg);
+                auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
-            sig_appFailed(app, inst, reason);
+                sig_appFailed(app, inst, reason);
+            }
+            catch (std::runtime_error& e)
+            {
+                g_warning("Error in appFailed signal from job: %s", e.what());
+            }
         });
     });
 
@@ -484,16 +505,23 @@ guint Base::managerSignalHelper(const std::shared_ptr<Registry>& reg,
                 return;
             }
 
-            auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-            auto conn = std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
-                                                         [](GDBusConnection* con) { g_clear_object(&con); });
-            std::string sender = csender;
-            std::shared_ptr<Application> app;
-            std::shared_ptr<Application::Instance> instance;
+            try
+            {
+                auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                auto conn = std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
+                                                             [](GDBusConnection* con) { g_clear_object(&con); });
+                std::string sender = csender;
+                std::shared_ptr<Application> app;
+                std::shared_ptr<Application::Instance> instance;
 
-            std::tie(app, instance) = managerParams(vparams, reg);
+                std::tie(app, instance) = managerParams(vparams, reg);
 
-            data->func(reg, app, instance, conn, sender, vparams);
+                data->func(reg, app, instance, conn, sender, vparams);
+            }
+            catch (std::runtime_error& e)
+            {
+                g_warning("Unable to call signal handler for manager signal: %s", e.what());
+            }
         },
         focusdata,
         [](gpointer user_data) {

@@ -218,9 +218,10 @@ TEST_F(ListApps, ListSnap)
     EXPECT_EQ("unity7",
               std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "unity7-package_single_x123"))
                   ->getInterface());
-    EXPECT_EQ("unity7", std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(
-                            getApp(apps, "unity7-package_multiple_x123"))
-                            ->getInterface());
+    EXPECT_EQ(
+        "unity7",
+        std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "unity7-package_multiple_x123"))
+            ->getInterface());
     EXPECT_EQ("x11",
               std::dynamic_pointer_cast<ubuntu::app_launch::app_impls::Snap>(getApp(apps, "x11-package_multiple_x123"))
                   ->getInterface());

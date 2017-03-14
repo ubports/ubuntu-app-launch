@@ -78,7 +78,6 @@ set(LAUNCHER_SOURCES
 ubuntu-app-launch.cpp
 second-exec-core.c
 ubuntu-app-launch-trace.c
-app-info.c
 utils.c
 utils-shared.c
 )

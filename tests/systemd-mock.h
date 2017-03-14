@@ -174,18 +174,19 @@ public:
 
             g_mkdir_with_parents(dir, 0777);
 
-            g_file_set_contents(tasks, std::accumulate(instance.pids.begin(), instance.pids.end(), std::string{},
-                                                       [](const std::string& accum, pid_t pid) {
-                                                           if (accum.empty())
-                                                           {
-                                                               return std::to_string(pid);
-                                                           }
-                                                           else
-                                                           {
-                                                               return accum + "\n" + std::to_string(pid);
-                                                           }
-                                                       })
-                                           .c_str(),
+            g_file_set_contents(tasks,
+                                std::accumulate(instance.pids.begin(), instance.pids.end(), std::string{},
+                                                [](const std::string& accum, pid_t pid) {
+                                                    if (accum.empty())
+                                                    {
+                                                        return std::to_string(pid);
+                                                    }
+                                                    else
+                                                    {
+                                                        return accum + "\n" + std::to_string(pid);
+                                                    }
+                                                })
+                                    .c_str(),
                                 -1, &error);
             throwError(error);
 
@@ -538,7 +539,7 @@ public:
         }
     }
 
-    void managerEmitFailed(const Instance& inst)
+    void managerEmitFailed(const Instance& inst, const std::string& reason = "fail")
     {
         auto instobj =
             std::find_if(insts.begin(), insts.end(), [inst](const std::pair<Instance, DbusTestDbusMockObject*>& item) {
@@ -552,8 +553,8 @@ public:
         }
 
         GError* error = nullptr;
-        dbus_test_dbus_mock_object_update_property(mock, instobj->second, "Result", g_variant_new_string("fail"),
-                                                   &error);
+        dbus_test_dbus_mock_object_update_property(mock, instobj->second, "Result",
+                                                   g_variant_new_string(reason.c_str()), &error);
 
         if (error != nullptr)
         {

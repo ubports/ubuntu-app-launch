@@ -41,15 +41,14 @@
 #include "libertine-service.h"
 #include "mir-mock.h"
 #include "registry-mock.h"
+#include "snapd-mock.h"
 #include "spew-master.h"
 #include "systemd-mock.h"
 #include "zg-mock.h"
 
-#include "snapd-mock.h"
-
 #define LOCAL_SNAPD_TEST_SOCKET (SNAPD_TEST_SOCKET "-libual-cpp-test")
 
-#define CGROUP_DIR (CMAKE_BINARY_DIR "/systemd-cgroups")
+#define CGROUP_DIR (CMAKE_BINARY_DIR "/systemd-libual-cpp-cgroups")
 
 class LibUAL : public EventuallyFixture
 {
@@ -189,9 +188,6 @@ protected:
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
-
-        /* Make sure we pretend the CG manager is just on our bus */
-        g_setenv("UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS", "YES", TRUE);
 
         registry = std::make_shared<ubuntu::app_launch::Registry>();
 
@@ -583,7 +579,7 @@ TEST_F(LibUAL, ApplicationList)
 
     auto apps = ubuntu::app_launch::Registry::runningApps(registry);
 
-    ASSERT_EQ(3, int(apps.size()));
+    ASSERT_EQ(3u, apps.size());
 
     apps.sort([](const std::shared_ptr<ubuntu::app_launch::Application>& a,
                  const std::shared_ptr<ubuntu::app_launch::Application>& b) {
