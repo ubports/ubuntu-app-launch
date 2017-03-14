@@ -87,7 +87,7 @@ bool Legacy::verifyAppname(const AppID::Package& package,
     }
 
     auto desktop = std::string(appname) + ".desktop";
-    auto evaldir = [&desktop](const gchar* dir) -> bool {
+    auto evaldir = [&desktop](const gchar* dir) {
         char* fulldir = g_build_filename(dir, "applications", desktop.c_str(), nullptr);
         gboolean found = g_file_test(fulldir, G_FILE_TEST_EXISTS);
         g_free(fulldir);
