@@ -43,6 +43,7 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          click-apparmor,
+         dbus-user-session,
          xmir [amd64 armhf i386],
          zeitgeist-core,
 Replaces: upstart-app-launch
@@ -71,6 +72,7 @@ Section: libs
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
+         ubuntu-app-launch (= ${binary:Version}),
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
 Description: library for sending requests to the ubuntu app launch
