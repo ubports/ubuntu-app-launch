@@ -292,31 +292,27 @@ TEST_F(LibUAL, ApplicationPid)
 
 TEST_F(LibUAL, ApplicationId)
 {
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET,
+                    {u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package, u8Package,
+                     u8Package, u8Package, u8Package, u8Package, u8Package}};
+    ubuntu::app_launch::Registry::clearDefault();
+
     /* Test with current-user-version, should return the version in the manifest */
-    EXPECT_STREQ("com.test.good_application_1.2.3",
-                 ubuntu_app_launch_triplet_to_app_id("com.test.good", "application", "current-user-version"));
+    EXPECT_STREQ("unity8-package_single_x123",
+                 ubuntu_app_launch_triplet_to_app_id("unity8-package", "single", "current-user-version"));
 
     /* Test with version specified, shouldn't even read the manifest */
-    EXPECT_STREQ("com.test.good_application_1.2.4",
-                 ubuntu_app_launch_triplet_to_app_id("com.test.good", "application", "1.2.4"));
+    EXPECT_STREQ("unity8-package_single_x123", ubuntu_app_launch_triplet_to_app_id("unity8-package", "single", "x123"));
 
     /* Test with out a version or app, should return the version in the manifest */
-    EXPECT_STREQ("com.test.good_application_1.2.3",
-                 ubuntu_app_launch_triplet_to_app_id("com.test.good", "first-listed-app", "current-user-version"));
+    EXPECT_STREQ("unity8-package_foo_x123",
+                 ubuntu_app_launch_triplet_to_app_id("unity8-package", "first-listed-app", "current-user-version"));
 
     /* Test with a version or but wildcard app, should return the version in the manifest */
-    EXPECT_STREQ("com.test.good_application_1.2.4",
-                 ubuntu_app_launch_triplet_to_app_id("com.test.good", "last-listed-app", "1.2.4"));
+    EXPECT_STREQ("unity8-package_xmir_x123",
+                 ubuntu_app_launch_triplet_to_app_id("unity8-package", "last-listed-app", "x123"));
 
-    /* Make sure we can select the app from a list correctly */
-    EXPECT_STREQ("com.test.multiple_first_1.2.3",
-                 ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "first-listed-app", NULL));
-    EXPECT_STREQ("com.test.multiple_first_1.2.3", ubuntu_app_launch_triplet_to_app_id("com.test.multiple", NULL, NULL));
-    EXPECT_STREQ("com.test.multiple_fifth_1.2.3",
-                 ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "last-listed-app", NULL));
-    EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.multiple", "only-listed-app", NULL));
-    EXPECT_STREQ("com.test.good_application_1.2.3",
-                 ubuntu_app_launch_triplet_to_app_id("com.test.good", "only-listed-app", NULL));
+    EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("unity8-package", "only-listed-app", NULL));
 
     /* A bunch that should be NULL */
     EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-hooks", NULL, NULL));
@@ -330,6 +326,8 @@ TEST_F(LibUAL, ApplicationId)
     EXPECT_STREQ("container-name_test_0.0", ubuntu_app_launch_triplet_to_app_id("container-name", "test", NULL));
     EXPECT_STREQ("container-name_user-app_0.0",
                  ubuntu_app_launch_triplet_to_app_id("container-name", "user-app", NULL));
+
+    snapd.result();
 }
 
 TEST_F(LibUAL, AppIdParse)
@@ -694,14 +692,12 @@ TEST_F(LibUAL, StopHelper)
                                   return calls.size();
                               }));
 
-    EXPECT_EQ(SystemdMock::instanceName({"untrusted-helper", "com.foo_bar_43.23.12", {}, 0, {}}),
-              *calls.begin());
+    EXPECT_EQ(SystemdMock::instanceName({"untrusted-helper", "com.foo_bar_43.23.12", {}, 0, {}}), *calls.begin());
 
     systemd->managerClear();
 
     /* Multi helper */
-    ASSERT_TRUE(
-        ubuntu_app_launch_stop_multiple_helper("untrusted-helper", "com.bar_foo_8432.13.1", "24034582324132"));
+    ASSERT_TRUE(ubuntu_app_launch_stop_multiple_helper("untrusted-helper", "com.bar_foo_8432.13.1", "24034582324132"));
 
     ASSERT_EVENTUALLY_FUNC_LT(0u, std::function<unsigned int(void)>([&]() {
                                   calls = systemd->stopCalls();
