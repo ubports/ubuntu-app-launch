@@ -35,9 +35,11 @@ namespace app_store
  ************************/
 
 /** All the interfaces that we run XMir for by default */
-const std::set<std::string> XMIR_INTERFACES{"unity7", "x11"};
-/** All the interfaces that we tell Unity support lifecycle */
-const std::set<std::string> LIFECYCLE_INTERFACES{"unity8"};
+const std::set<std::string> X11_INTERFACES{"unity7", "x11"};
+/** The interface to indicate direct Mir support */
+const std::string MIR_INTERFACE{"mir"};
+/** The interface to indicate Ubuntu lifecycle support */
+const std::string LIFECYCLE_INTERFACE{"unity8"};
 /** Snappy has more restrictive appnames than everyone else */
 const std::regex appnameRegex{"^[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$"};
 
@@ -196,12 +198,27 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
 {
     std::set<std::shared_ptr<Application>, appcompare> apps;
 
-    auto addAppsForInterface = [&](const std::string& interface) {
+    auto lifecycleApps = registry->impl->snapdInfo.appsForInterface(LIFECYCLE_INTERFACE);
+
+    auto lifecycleForApp = [&](const AppID& appID) {
+        auto iterator = lifecycleApps.find(appID);
+        if (iterator == lifecycleApps.end())
+        {
+            return Application::Info::UbuntuLifecycle::from_raw(false);
+        }
+        else
+        {
+            return Application::Info::UbuntuLifecycle::from_raw(true);
+        }
+    };
+
+    auto addAppsForInterface = [&](const std::string& interface, app_info::Desktop::XMirEnable xMirEnable) {
         for (const auto& id : registry->impl->snapdInfo.appsForInterface(interface))
         {
+            auto interfaceInfo = std::make_tuple(xMirEnable, lifecycleForApp(id));
             try
             {
-                auto app = std::make_shared<app_impls::Snap>(id, registry, interface);
+                auto app = std::make_shared<app_impls::Snap>(id, registry, interfaceInfo);
                 apps.emplace(app);
             }
             catch (std::runtime_error& e)
@@ -211,15 +228,12 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
         }
     };
 
-    for (const auto& interface : LIFECYCLE_INTERFACES)
-    {
-        addAppsForInterface(interface);
-    }
+    addAppsForInterface(MIR_INTERFACE, app_info::Desktop::XMirEnable::from_raw(false));
 
     /* If an app has both, this will get rejected */
-    for (const auto& interface : XMIR_INTERFACES)
+    for (const auto& interface : X11_INTERFACES)
     {
-        addAppsForInterface(interface);
+        addAppsForInterface(interface, app_info::Desktop::XMirEnable::from_raw(true));
     }
 
     return std::list<std::shared_ptr<Application>>(apps.begin(), apps.end());

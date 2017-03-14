@@ -314,11 +314,15 @@ protected:
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(
-        SnapdMock::interfacesJson({{"unity8", "unity8-package", {"foo", "single", "xmir", "noxmir"}}})))};
+        SnapdMock::interfacesJson({{"mir", "unity8-package", {"foo", "single", "xmir", "noxmir"}}})))};
 static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
         "unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single", "xmir", "noxmir"})))};
+static std::pair<std::string, std::string> helloPackage{
+    "GET /v2/snaps/hello HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
+    SnapdMock::httpJsonResponse(
+        SnapdMock::snapdOkay(SnapdMock::packageJson("hello", "active", "app", "1.0", "1", {"hello"})))};
 
 TEST_F(LibUAL, ApplicationIdSnap)
 {
@@ -378,6 +382,16 @@ TEST_F(LibUAL, ApplicationIconSnap)
     app = ubuntu::app_launch::Application::create(appid, registry);
     expected = snapRoot + "/unity8-package/x123/no-xmir.png";
     EXPECT_EQ(expected, app->info()->iconPath().value());
+}
+
+TEST_F(LibUAL, NoGraphicalSnapInterface)
+{
+    SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {helloPackage, interfaces, helloPackage}};
+    registry = std::make_shared<ubuntu::app_launch::Registry>();
+
+    auto appid = ubuntu::app_launch::AppID::parse("hello_hello_1");
+
+    EXPECT_THROW(ubuntu::app_launch::Application::create(appid, registry), std::runtime_error);
 }
 
 TEST_F(LibUAL, ApplicationPid)
