@@ -138,7 +138,20 @@ std::list<std::pair<std::string, std::string>> Base::defaultEnv()
     /* We have an exec tool that'll give us params */
     if (g_file_test(helperpath.c_str(), G_FILE_TEST_IS_EXECUTABLE))
     {
-        exec.push_back("helper-helper"); /* TODO */
+        const char* chelperenv = getenv("UBUNTU_APP_LAUNCH_HELPER_HELPER");
+        if (chelperenv == nullptr)
+        {
+            chelperenv = HELPER_HELPER_TOOL;
+        }
+
+        if (csnapenv != nullptr)
+        {
+            exec.push_back(std::string{csnapenv} + "/" + chelperenv);
+        }
+        else
+        {
+            exec.push_back(std::string{"/"} + chelperenv);
+        }
         exec.push_back(helperpath);
     }
     else

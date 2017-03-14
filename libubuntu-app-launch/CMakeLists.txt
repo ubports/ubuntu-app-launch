@@ -19,6 +19,8 @@ add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" -DDEM
 add_definitions ( -DLIBERTINE_LAUNCH="${CMAKE_INSTALL_FULL_BINDIR}/libertine-launch" )
 add_definitions ( -DG_LOG_DOMAIN="ubuntu-app-launch" )
 add_definitions ( -DUBUNTU_APP_LAUNCH_ARCH="${UBUNTU_APP_LAUNCH_ARCH}" )
+add_definitions ( -DHELPER_EXEC_TOOL_DIR="${pkglibexecdir}" )
+add_definitions ( -DHELPER_HELPER_TOOL="${pkglibexecdir}/systemd-helper-helper" )
 
 set(LAUNCHER_HEADERS
 ubuntu-app-launch.h
