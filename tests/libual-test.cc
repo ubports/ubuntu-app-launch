@@ -607,15 +607,22 @@ TEST_F(LibUAL, UnityLostTest)
 
 static void failed_observer(const gchar *appid, UbuntuAppLaunchAppFailed reason, gpointer user_data)
 {
+    g_debug("Failed observer called for: '%s' reason %d", appid, reason);
+
     if (reason == UBUNTU_APP_LAUNCH_APP_FAILED_CRASH)
     {
         std::string *last = static_cast<std::string *>(user_data);
         *last = appid;
     }
+    else
+    {
+        std::string *last = static_cast<std::string *>(user_data);
+        last->clear();
+    }
     return;
 }
 
-TEST_F(LibUAL, DISABLED_FailingObserver)
+TEST_F(LibUAL, FailingObserver)
 {
     std::string last_observer;
 
@@ -633,11 +640,16 @@ TEST_F(LibUAL, DISABLED_FailingObserver)
 
     last_observer.clear();
 
+    last_observer = "something random";
     systemd->managerEmitFailed(SystemdMock::Instance{"application-legacy", "multiple", "2342345", 0, {}}, "exit-code");
 
-    EXPECT_EVENTUALLY_EQ(true, last_observer.empty());
+    EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([&] { return last_observer.empty(); }));
 
     EXPECT_TRUE(ubuntu_app_launch_observer_delete_app_failed(failed_observer, &last_observer));
+
+    /* For some reason dbus-mock sends two property change signals,
+     * so this is 6 instead of 3 like you'd think it would be. */
+    EXPECT_EVENTUALLY_FUNC_EQ(6u, std::function<unsigned int()>([&] { return systemd->resetCalls().size(); }));
 }
 
 TEST_F(LibUAL, StartHelper)
