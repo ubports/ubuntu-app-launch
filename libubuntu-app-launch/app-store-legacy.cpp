@@ -99,7 +99,7 @@ bool Legacy::verifyAppname(const AppID::Package& package,
         return true;
     }
 
-    const char* const* data_dirs = g_get_system_data_dirs();
+    auto&& data_dirs = g_get_system_data_dirs();
     for (int i = 0; data_dirs[i] != nullptr; i++)
     {
         if (evaldir(data_dirs[i]))
