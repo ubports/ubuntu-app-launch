@@ -194,7 +194,7 @@ std::list<std::pair<std::string, std::string>> Base::defaultEnv()
                                                        return accum.empty() ? addon : accum + " " + addon;
                                                    })));
 
-        envs.emplace_back(std::make_pair("HELPER_TYPE", _type.value()));
+    envs.emplace_back(std::make_pair("HELPER_TYPE", _type.value()));
 
     return envs;
 }
