@@ -657,7 +657,14 @@ std::list<std::shared_ptr<Application>> Base::runningApps()
             continue;
         }
 
-        apps.emplace_back(Application::create(id, registry));
+        try
+        {
+            apps.emplace_back(Application::create(id, registry));
+        }
+        catch (std::runtime_error& e)
+        {
+            g_debug("Error adding appid '%s' to running apps list: %s", appid.c_str(), e.what());
+        }
     }
 
     return apps;
