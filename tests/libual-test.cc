@@ -723,10 +723,10 @@ TEST_F(LibUAL, HelperList)
 
     g_strfreev(blanktype);
 
-    gchar **goodtype = ubuntu_app_launch_list_helpers("untrusted-type");
+    gchar **goodtype = ubuntu_app_launch_list_helpers("untrusted-helper");
 
-    EXPECT_NE(nullptr, goodtype);
-    EXPECT_EQ(2u, g_strv_length(goodtype));
+    ASSERT_NE(nullptr, goodtype);
+    ASSERT_EQ(2u, g_strv_length(goodtype));
 
     if (g_strcmp0(goodtype[0], "com.foo_bar_43.23.12") == 0)
     {
