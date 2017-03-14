@@ -617,7 +617,7 @@ static void failed_observer(const gchar *appid, UbuntuAppLaunchAppFailed reason,
     return;
 }
 
-TEST_F(LibUAL, FailingObserver)
+TEST_F(LibUAL, DISABLED_FailingObserver)
 {
     std::string last_observer;
 
