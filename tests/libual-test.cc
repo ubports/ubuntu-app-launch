@@ -852,9 +852,9 @@ TEST_F(LibUAL, StartSessionHelper)
               calls.begin()->name);
 
     /* Check the environment */
-    auto nameenv = find_env(calls.begin()->environment, "UBUNTU_APP_LAUNCH_DEMANGE_NAME");
+    auto nameenv = find_env(calls.begin()->environment, "UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
     ASSERT_FALSE(nameenv.empty());
-    auto pathenv = find_env(calls.begin()->environment, "UBUNTU_APP_LAUNCH_DEMANGE_PATH");
+    auto pathenv = find_env(calls.begin()->environment, "UBUNTU_APP_LAUNCH_DEMANGLE_PATH");
     ASSERT_FALSE(pathenv.empty());
 
     /* Setup environment for call */
