@@ -85,6 +85,13 @@ get_params (char * readbuf, char ** exectool)
 	pid_t childpid;
 	if ((childpid = fork()) == 0) {
 		/* Exec tool start here */
+
+		/* NOTE: We might need a different environment when the
+		 * exec tool is existing in the unity8-session snap, but
+		 * we'll need to get integration hooks setup and start
+		 * playing with them to see what makes sense there. Probably
+		 * something like legacy-exec in the unity8-session snap. */
+
 		/* GOAL: ${argv[2]} */
 		setenv("UBUNTU_APP_LAUNCH_HELPER_EXECTOOL_SETEXEC_SOCKET", socketname, 1);
 
@@ -129,25 +136,23 @@ get_params (char * readbuf, char ** exectool)
 int
 main (int argc, char * argv[])
 {
-	if (argc > 2) {
-		fprintf(stderr, "%s: Usage: [app exec] <exec-tool to execute...>\n", argv[0]);
+	if (argc == 1) {
+		fprintf(stderr, "%s: Usage: <exec-tool to execute...> <app exec> <urls>\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	char * appexec = argv[1];
+	char * appexec = argv[2];
 
 	char readbuf[PARAMS_SIZE] = {0};
-	int amountread = 0;
-
-	if (argc > 2) {
-		/* Exec tool not required */
-		amountread = get_params(readbuf, &argv[2]);
-	}
+	int amountread = get_params(readbuf, &argv[1]);
 
 	int debug = (getenv("G_MESSAGES_DEBUG") != NULL);
 	char * apparray[PARAMS_COUNT] = {0};
-	apparray[0] = appexec;
-	int currentparam = 1;
+	int currentparam = 0;
+
+	for (currentparam = 0; currentparam + 2 < argc && currentparam < PARAMS_COUNT; currentparam++) {
+		apparray[currentparam] = argv[currentparam + 2];
+	}
 
 	if (debug) {
 		printf("Exec: %s", appexec);
