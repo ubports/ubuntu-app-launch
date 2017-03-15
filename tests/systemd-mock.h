@@ -252,6 +252,11 @@ public:
         return DBUS_TEST_TASK(mock);
     }
 
+    operator DbusTestProcess*()
+    {
+        return DBUS_TEST_PROCESS(mock);
+    }
+
     operator DbusTestDbusMock*()
     {
         return mock;

@@ -1052,6 +1052,8 @@ TEST_F(LibUAL, MultiPause)
 
     /* New Systemd Mock */
     dbus_test_service_remove_task(service, *systemd);
+    kill(dbus_test_process_get_pid(*systemd), SIGTERM);
+    EXPECT_EVENTUALLY_FUNC_EQ(DBUS_TEST_TASK_STATE_FINISHED, systemd->stateFunc());
     systemd.reset();
 
     std::vector<pid_t> spewpids{int(spews.size())};
