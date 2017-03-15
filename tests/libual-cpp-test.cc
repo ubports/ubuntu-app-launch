@@ -955,7 +955,10 @@ TEST_F(LibUAL, DISABLED_PauseResume)
 
     /* New Systemd Mock */
     dbus_test_service_remove_task(service, *systemd);
+    kill(dbus_test_process_get_pid(*systemd), SIGTERM);
+    EXPECT_EVENTUALLY_FUNC_EQ(DBUS_TEST_TASK_STATE_FINISHED, systemd->stateFunc());
     systemd.reset();
+
     auto systemd2 = std::make_shared<SystemdMock>(
         std::list<SystemdMock::Instance>{
             {"application-click", "com.test.good_application_1.2.3", {}, spew.pid(), {spew.pid()}}},
