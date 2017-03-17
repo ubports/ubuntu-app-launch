@@ -38,14 +38,18 @@
 #define ENVNAME_SIZE 64
 
 void
-sigchild_handler (int signal)
+sigchild_handler (int signal, siginfo_t * sigdata, void * data)
 {
-	fprintf(stderr, "Helper exec tool has closed unexpectedly\n");
-	exit(EXIT_FAILURE);
+	if (sigdata->si_status != 0) {
+		fprintf(stderr, "Helper exec tool has closed unexpectedly: %d\n", sigdata->si_status);
+		exit(EXIT_FAILURE);
+	}
 }
 
+struct sigaction sigchild_data = {0};
+
 struct sigaction sigchild_action = {
-	.sa_handler = sigchild_handler,
+	.sa_sigaction = sigchild_handler,
 	.sa_flags = SA_NOCLDWAIT
 };
 
@@ -77,7 +81,7 @@ get_params (char * readbuf, char ** exectool)
 	}
 
 	/* Fork and exec the exec-tool under it's confinement */
-	if (sigaction(SIGCHLD, &sigchild_action, NULL) != 0) {
+	if (sigaction(SIGCHLD, &sigchild_action, &sigchild_data) != 0) {
 		fprintf(stderr, "Unable to setup child signal handler\n");
 		exit(EXIT_FAILURE);
 	}
