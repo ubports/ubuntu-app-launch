@@ -754,8 +754,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             for (const auto& rmenv :
                  {"APP_XMIR_ENABLE", "APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
                   "INSTANCE_ID", "MIR_SERVER_PLATFORM_PATH", "MIR_SERVER_PROMPT_FILE", "MIR_SERVER_HOST_SOCKET",
-                  "UBUNTU_APP_LAUNCH_DEMANGLER", "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT",
-                  "UBUNTU_APP_LAUNCH_XMIR_HELPER"})
+                  "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT", "UBUNTU_APP_LAUNCH_XMIR_HELPER"})
             {
                 removeEnv(rmenv, env);
             }
