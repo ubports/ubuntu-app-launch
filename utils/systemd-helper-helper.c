@@ -19,6 +19,18 @@
 
 #define _POSIX_C_SOURCE 200212L
 
+/* TODO: Cannot figure out how to get the compiler to include
+ * these from bits/siginfo.h */
+enum
+{
+  CLD_EXITED = 1,
+  CLD_KILLED,
+  CLD_DUMPED,
+  CLD_TRAPPED,
+  CLD_STOPPED,
+  CLD_CONTINUED
+};
+
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -40,7 +52,21 @@
 void
 sigchild_handler (int signal, siginfo_t * sigdata, void * data)
 {
-	if (sigdata->si_status != 0) {
+	if (signal != SIGCHLD) {
+		return;
+	}
+
+	if (sigdata->si_code == CLD_KILLED) {
+		fprintf(stderr, "Helper exec tool killed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (sigdata->si_code == CLD_DUMPED) {
+		fprintf(stderr, "Helper exec tool dumped\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (sigdata->si_code == CLD_EXITED && sigdata->si_status != 0) {
 		fprintf(stderr, "Helper exec tool has closed unexpectedly: %d\n", sigdata->si_status);
 		exit(EXIT_FAILURE);
 	}
@@ -145,12 +171,16 @@ main (int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 
+	int debug = (getenv("G_MESSAGES_DEBUG") != NULL);
 	char * appexec = argv[2];
+
+	if (debug) {
+		printf("Getting parameters from exec-tool: %s", argv[1]);
+	}
 
 	char readbuf[PARAMS_SIZE] = {0};
 	int amountread = get_params(readbuf, &argv[1]);
 
-	int debug = (getenv("G_MESSAGES_DEBUG") != NULL);
 	char * apparray[PARAMS_COUNT] = {0};
 	int currentparam = 0;
 
@@ -179,7 +209,7 @@ main (int argc, char * argv[])
 			apparray[currentparam] = startvar;
 
 			if (debug) {
-				printf("%s", startvar);
+				printf("%s ", startvar);
 			}
 
 			startvar = startvar + strlen(startvar) + 1;
