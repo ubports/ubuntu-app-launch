@@ -175,7 +175,7 @@ main (int argc, char * argv[])
 	char * appexec = argv[2];
 
 	if (debug) {
-		printf("Getting parameters from exec-tool: %s", argv[1]);
+		printf("Getting parameters from exec-tool: %s\n", argv[1]);
 	}
 
 	char readbuf[PARAMS_SIZE] = {0};
@@ -188,17 +188,13 @@ main (int argc, char * argv[])
 			getenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME") != NULL) {
 		apparray[currentparam] = getenv("UBUNTU_APP_LAUNCH_DEMANGLER");
 		if (apparray[currentparam] == NULL) {
-			apparray[0] = DEMANGLER_PATH;
+			apparray[currentparam] = DEMANGLER_PATH;
 		}
 		currentparam++;
 	}
 
 	for (; currentparam + 2 < argc && currentparam < PARAMS_COUNT; currentparam++) {
 		apparray[currentparam] = argv[currentparam + 2];
-	}
-
-	if (debug) {
-		printf("Exec: %s", appexec);
 	}
 
 	/* Parse the environment into variables we can insert */
@@ -208,10 +204,6 @@ main (int argc, char * argv[])
 		do {
 			apparray[currentparam] = startvar;
 
-			if (debug) {
-				printf("%s ", startvar);
-			}
-
 			startvar = startvar + strlen(startvar) + 1;
 			currentparam++;
 		}
@@ -220,6 +212,11 @@ main (int argc, char * argv[])
 	}
 
 	if (debug) {
+		printf("Exec:");
+		int i;
+		for (i = 0; i < currentparam; i++) {
+			printf(" %s", apparray[currentparam]);
+		}
 		printf("\n");
 	}
 
