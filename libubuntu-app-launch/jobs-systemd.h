@@ -80,6 +80,8 @@ private:
     guint handle_unitRemoved{0}; /**< GDBus signal watcher handle for the unit removed signal */
     guint handle_appFailed{0};   /**< GDBus signal watcher handle for app failed signal */
 
+    bool noResetUnits_{false}; /**< Debug flag to avoid resetting the systemd units */
+
     std::once_flag
         flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
 

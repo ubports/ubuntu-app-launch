@@ -291,6 +291,11 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
         return bus;
     });
+
+    if (getenv("UBUNTU_APP_LAUNCH_SYSTEMD_NO_RESET") != nullptr)
+    {
+        noResetUnits_ = true;
+    }
 }
 
 SystemD::~SystemD()
@@ -1331,6 +1336,11 @@ core::Signal<const std::string&, const std::string&, const std::string&, Registr
     state. */
 void SystemD::resetUnit(const UnitInfo& info) const
 {
+    if (noResetUnits_)
+    {
+        return;
+    }
+
     auto registry = registry_.lock();
     auto unitname = unitName(info);
     auto bus = userbus_;
