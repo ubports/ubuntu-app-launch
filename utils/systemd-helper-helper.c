@@ -191,7 +191,7 @@ main (int argc, char * argv[])
 			apparray[currentparam] = DEMANGLER_PATH;
 		}
 		if (debug) {
-			printf("Using demangler: %s", apparray[currentparam]);
+			printf("Using demangler: %s\n", apparray[currentparam]);
 		}
 		currentparam++;
 	}
@@ -233,7 +233,7 @@ main (int argc, char * argv[])
 		printf("Exec:");
 		int i;
 		for (i = 0; i < currentparam; i++) {
-			printf(" %s", apparray[currentparam]);
+			printf(" %s", apparray[i]);
 		}
 		printf("\n");
 	}
