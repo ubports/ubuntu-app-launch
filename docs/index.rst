@@ -43,9 +43,6 @@ UBUNTU_APP_LAUNCH_LEGACY_ROOT
 UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH
   Path to the libertine launch utility for setting up libertine containers and XMir based legacy apps.
 
-UBUNTU_APP_LAUNCH_LINK_FARM
-  Path to the link farm that is created by Click of all the installed Click applications.
-
 UBUNTU_APP_LAUNCH_OOM_HELPER
   Path to the setuid helper that configures OOM values on application processes that we otherwise couldn't, mostly this is for Oxide.
 
@@ -110,16 +107,6 @@ Application Implementation Base
 -------------------------------
 
 .. doxygenclass:: ubuntu::app_launch::app_impls::Base
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Application Implementation Click
---------------------------------
-
-.. doxygenclass:: ubuntu::app_launch::app_impls::Click
    :project: libubuntu-app-launch
    :members:
    :protected-members:
