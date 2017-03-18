@@ -245,10 +245,10 @@ Application Storage Snap
    :private-members:
    :undoc-members:
 
-Helper Implementation Click
----------------------------
+Helper Implementation Base
+--------------------------
 
-.. doxygenclass:: ubuntu::app_launch::helper_impls::Click
+.. doxygenclass:: ubuntu::app_launch::helper_impls::Base
    :project: libubuntu-app-launch
    :members:
    :protected-members:
