@@ -186,6 +186,7 @@ std::list<std::pair<std::string, std::string>> Base::defaultEnv()
         }
     }
 
+    exec.push_back("--");
     exec.push_back("%U");
 
     envs.emplace_back(
@@ -223,6 +224,11 @@ public:
         : reg_(reg)
         , name(g_dbus_connection_get_unique_name(reg->impl->_dbus.get()))
     {
+        if (appid.empty())
+        {
+            throw std::runtime_error{"Invalid AppID"};
+        }
+
         /* Get the Mir FD */
         std::promise<int> promise;
         mir_prompt_session_new_fds_for_prompt_providers(

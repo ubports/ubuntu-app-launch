@@ -291,6 +291,11 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
         return bus;
     });
+
+    if (getenv("UBUNTU_APP_LAUNCH_SYSTEMD_NO_RESET") != nullptr)
+    {
+        noResetUnits_ = true;
+    }
 }
 
 SystemD::~SystemD()
@@ -761,8 +766,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             for (const auto& rmenv :
                  {"APP_XMIR_ENABLE", "APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
                   "INSTANCE_ID", "MIR_SERVER_PLATFORM_PATH", "MIR_SERVER_PROMPT_FILE", "MIR_SERVER_HOST_SOCKET",
-                  "UBUNTU_APP_LAUNCH_DEMANGLER", "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT",
-                  "UBUNTU_APP_LAUNCH_XMIR_HELPER"})
+                  "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT", "UBUNTU_APP_LAUNCH_XMIR_HELPER"})
             {
                 removeEnv(rmenv, env);
             }
@@ -1338,6 +1342,11 @@ core::Signal<const std::string&, const std::string&, const std::string&, Registr
     state. */
 void SystemD::resetUnit(const UnitInfo& info) const
 {
+    if (noResetUnits_)
+    {
+        return;
+    }
+
     auto registry = registry_.lock();
     auto unitname = unitName(info);
     auto bus = userbus_;
