@@ -182,6 +182,7 @@ std::list<std::pair<std::string, std::string>> Base::defaultEnv()
         }
     }
 
+    exec.push_back("--");
     exec.push_back("%U");
 
     envs.emplace_back(
