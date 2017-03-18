@@ -19,6 +19,18 @@
 
 #define _POSIX_C_SOURCE 200212L
 
+/* TODO: Cannot figure out how to get the compiler to include
+ * these from bits/siginfo.h */
+enum
+{
+  CLD_EXITED = 1,
+  CLD_KILLED,
+  CLD_DUMPED,
+  CLD_TRAPPED,
+  CLD_STOPPED,
+  CLD_CONTINUED
+};
+
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -38,14 +50,32 @@
 #define ENVNAME_SIZE 64
 
 void
-sigchild_handler (int signal)
+sigchild_handler (int signal, siginfo_t * sigdata, void * data)
 {
-	fprintf(stderr, "Helper exec tool has closed unexpectedly\n");
-	exit(EXIT_FAILURE);
+	if (signal != SIGCHLD) {
+		return;
+	}
+
+	if (sigdata->si_code == CLD_KILLED) {
+		fprintf(stderr, "Helper exec tool killed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (sigdata->si_code == CLD_DUMPED) {
+		fprintf(stderr, "Helper exec tool dumped\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (sigdata->si_code == CLD_EXITED && sigdata->si_status != 0) {
+		fprintf(stderr, "Helper exec tool has closed unexpectedly: %d\n", sigdata->si_status);
+		exit(EXIT_FAILURE);
+	}
 }
 
+struct sigaction sigchild_data = {0};
+
 struct sigaction sigchild_action = {
-	.sa_handler = sigchild_handler,
+	.sa_sigaction = sigchild_handler,
 	.sa_flags = SA_NOCLDWAIT
 };
 
@@ -77,7 +107,7 @@ get_params (char * readbuf, char ** exectool)
 	}
 
 	/* Fork and exec the exec-tool under it's confinement */
-	if (sigaction(SIGCHLD, &sigchild_action, NULL) != 0) {
+	if (sigaction(SIGCHLD, &sigchild_action, &sigchild_data) != 0) {
 		fprintf(stderr, "Unable to setup child signal handler\n");
 		exit(EXIT_FAILURE);
 	}
@@ -141,41 +171,48 @@ main (int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 
-	char * appexec = argv[2];
+	int debug = (getenv("G_MESSAGES_DEBUG") != NULL);
+
+	if (debug) {
+		printf("Getting parameters from exec-tool: %s\n", argv[1]);
+	}
 
 	char readbuf[PARAMS_SIZE] = {0};
 	int amountread = get_params(readbuf, &argv[1]);
 
-	int debug = (getenv("G_MESSAGES_DEBUG") != NULL);
 	char * apparray[PARAMS_COUNT] = {0};
 	int currentparam = 0;
+	int currentargc = 2;
 
 	if (getenv("UBUNTU_APP_LAUNCH_DEMANGLE_PATH") != NULL &&
 			getenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME") != NULL) {
 		apparray[currentparam] = getenv("UBUNTU_APP_LAUNCH_DEMANGLER");
 		if (apparray[currentparam] == NULL) {
-			apparray[0] = DEMANGLER_PATH;
+			apparray[currentparam] = DEMANGLER_PATH;
+		}
+		if (debug) {
+			printf("Using demangler: %s\n", apparray[currentparam]);
 		}
 		currentparam++;
 	}
 
-	for (; currentparam + 2 < argc && currentparam < PARAMS_COUNT; currentparam++) {
-		apparray[currentparam] = argv[currentparam + 2];
+	/* Copy in app exec */
+	for (; currentargc < argc && /* Don't overrun argv */
+			argv[currentargc][0] != '-' && argv[currentargc][1] != '-' && /* Cheap strcmp "--" */
+			currentparam < PARAMS_COUNT; /* Don't overrun our static array */
+			currentargc++, currentparam++) {
+		apparray[currentparam] = argv[currentargc];
 	}
+	currentargc++; /* Get past the '--' or push it further over the edge if nothing (no harm there) */
 
-	if (debug) {
-		printf("Exec: %s", appexec);
-	}
-
-	/* Parse the environment into variables we can insert */
+	/* Parse the scoket data into params we can insert */
 	if (amountread > 0) {
 		char * startvar = readbuf;
 
 		do {
-			apparray[currentparam] = startvar;
-
-			if (debug) {
-				printf("%s", startvar);
+			if (startvar[0] != '%' && !(startvar[1] == 'u' ||  startvar[1] == 'U')) {
+				/* Removing the %u and %U from legacy stuff */
+				apparray[currentparam] = startvar;
 			}
 
 			startvar = startvar + strlen(startvar) + 1;
@@ -185,12 +222,24 @@ main (int argc, char * argv[])
 
 	}
 
+	/* Copy in URLs */
+	for (; currentargc < argc && /* Don't overrun argv */
+			currentparam < PARAMS_COUNT; /* Don't overrun our static array */
+			currentargc++, currentparam++) {
+		apparray[currentparam] = argv[currentargc];
+	}
+
 	if (debug) {
+		printf("Exec:");
+		int i;
+		for (i = 0; i < currentparam; i++) {
+			printf(" %s", apparray[i]);
+		}
 		printf("\n");
 	}
 
 	fflush(stdout);
 
 	/* Exec the application with the new environment under its confinement */
-	return execv(appexec, apparray);
+	return execv(apparray[0], apparray);
 }

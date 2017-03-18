@@ -652,7 +652,7 @@ ubuntu_app_launch_start_helper (const gchar * type, const gchar * appid, const g
 
 	try {
 		auto registry = ubuntu::app_launch::Registry::getDefault();
-		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
 		if (!helper->instances().empty()) {
@@ -682,7 +682,7 @@ ubuntu_app_launch_start_multiple_helper (const gchar * type, const gchar * appid
 
 	try {
 		auto registry = ubuntu::app_launch::Registry::getDefault();
-		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
 		auto uriv = uriVector<ubuntu::app_launch::Helper::URL>(uris);
@@ -709,7 +709,7 @@ ubuntu_app_launch_start_session_helper (const gchar * type, MirPromptSession * s
 
 	try {
 		auto registry = ubuntu::app_launch::Registry::getDefault();
-		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
 		auto uriv = uriVector<ubuntu::app_launch::Helper::URL>(uris);
@@ -735,7 +735,7 @@ ubuntu_app_launch_stop_helper (const gchar * type, const gchar * appid)
 
 	try {
 		auto registry = ubuntu::app_launch::Registry::getDefault();
-		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
 		auto insts = helper->instances();
@@ -765,7 +765,7 @@ ubuntu_app_launch_stop_multiple_helper (const gchar * type, const gchar * appid,
 
 	try {
 		auto registry = ubuntu::app_launch::Registry::getDefault();
-		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
 		auto inst = std::dynamic_pointer_cast<ubuntu::app_launch::helper_impls::Base>(helper)->existingInstance(instanceid);
@@ -815,7 +815,7 @@ ubuntu_app_launch_list_helper_instances (const gchar * type, const gchar * appid
 
 	try {
 		auto registry = ubuntu::app_launch::Registry::getDefault();
-		auto appId = ubuntu::app_launch::AppID::parse(appid);
+		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto helper = ubuntu::app_launch::Helper::create(ubuntu::app_launch::Helper::Type::from_raw(type), appId, registry);
 
 		auto insts = helper->instances();
