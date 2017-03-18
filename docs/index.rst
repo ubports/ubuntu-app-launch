@@ -61,6 +61,15 @@ UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC
 UBUNTU_APP_LAUNCH_SNAPD_SOCKET
   Path to the snapd socket.
 
+UBUNTU_APP_LAUNCH_SYSTEMD_CGROUP_ROOT
+  Path to the root of the cgroups that we should look in for PIDs. Defaults to `/sys/fs/cgroup/systemd/`.
+
+UBUNTU_APP_LAUNCH_SYSTEMD_PATH
+  Path to the dbus bus that is used to talk to systemd. This allows us to talk to the user bus while Upstart is still setting up a session bus. Defaults to `/run/user/$uid/bus`.
+
+UBUNTU_APP_LAUNCH_SYSTEMD_NO_RESET
+  Don't reset the job after it fails. This makes it so it can't be run again, but leaves debugging information around for investigation.
+
 UBUNTU_APP_LAUNCH_XMIR_HELPER
   Tool that helps to start XMir and sets the DISPLAY variable for applications
 
