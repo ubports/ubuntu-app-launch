@@ -190,6 +190,9 @@ main (int argc, char * argv[])
 		if (apparray[currentparam] == NULL) {
 			apparray[currentparam] = DEMANGLER_PATH;
 		}
+		if (debug) {
+			printf("Using demangler: %s", apparray[currentparam]);
+		}
 		currentparam++;
 	}
 
