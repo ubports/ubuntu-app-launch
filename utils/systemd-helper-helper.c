@@ -210,7 +210,10 @@ main (int argc, char * argv[])
 		char * startvar = readbuf;
 
 		do {
-			apparray[currentparam] = startvar;
+			if (startvar[0] != '%' && !(startvar[1] == 'u' ||  startvar[1] == 'U')) {
+				/* Removing the %u and %U from legacy stuff */
+				apparray[currentparam] = startvar;
+			}
 
 			startvar = startvar + strlen(startvar) + 1;
 			currentparam++;
