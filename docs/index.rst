@@ -25,12 +25,6 @@ Environment Variables
 There are a few environment variables that can effect the behavior of UAL while
 it is running.
 
-UBUNTU_APP_LAUNCH_CG_MANAGER_NAME
-  The DBus name that CG Manager registers under if it is on the session bus.
-
-UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS
-  Tell UAL to look on the session bus for CG Manager.
-
 UBUNTU_APP_LAUNCH_DEMANGLER
   Path to the UAL demangler tool that will get the Mir FD for trusted prompt session.
 
