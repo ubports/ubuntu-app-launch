@@ -186,16 +186,6 @@ Application Storage Base
    :private-members:
    :undoc-members:
 
-Application Storage Click
--------------------------
-
-.. doxygenclass:: ubuntu::app_launch::app_store::Click
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
 Application Storage Legacy
 --------------------------
 
