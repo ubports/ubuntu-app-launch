@@ -172,7 +172,6 @@ main (int argc, char * argv[])
 	}
 
 	int debug = (getenv("G_MESSAGES_DEBUG") != NULL);
-	char * appexec = argv[2];
 
 	if (debug) {
 		printf("Getting parameters from exec-tool: %s\n", argv[1]);
@@ -183,6 +182,7 @@ main (int argc, char * argv[])
 
 	char * apparray[PARAMS_COUNT] = {0};
 	int currentparam = 0;
+	int currentargc = 2;
 
 	if (getenv("UBUNTU_APP_LAUNCH_DEMANGLE_PATH") != NULL &&
 			getenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME") != NULL) {
@@ -196,11 +196,16 @@ main (int argc, char * argv[])
 		currentparam++;
 	}
 
-	for (; currentparam + 2 < argc && currentparam < PARAMS_COUNT; currentparam++) {
-		apparray[currentparam] = argv[currentparam + 2];
+	/* Copy in app exec */
+	for (; currentargc < argc && /* Don't overrun argv */
+			argv[currentargc][0] != '-' && argv[currentargc][1] != '-' && /* Cheap strcmp "--" */
+			currentparam < PARAMS_COUNT; /* Don't overrun our static array */
+			currentargc++, currentparam++) {
+		apparray[currentparam] = argv[currentargc];
 	}
+	currentargc++; /* Get past the '--' or push it further over the edge if nothing (no harm there) */
 
-	/* Parse the environment into variables we can insert */
+	/* Parse the scoket data into params we can insert */
 	if (amountread > 0) {
 		char * startvar = readbuf;
 
@@ -212,6 +217,13 @@ main (int argc, char * argv[])
 		}
 		while (startvar < readbuf + amountread && currentparam < PARAMS_COUNT - 1);
 
+	}
+
+	/* Copy in URLs */
+	for (; currentargc < argc && /* Don't overrun argv */
+			currentparam < PARAMS_COUNT; /* Don't overrun our static array */
+			currentargc++, currentparam++) {
+		apparray[currentparam] = argv[currentargc];
 	}
 
 	if (debug) {
@@ -226,5 +238,5 @@ main (int argc, char * argv[])
 	fflush(stdout);
 
 	/* Exec the application with the new environment under its confinement */
-	return execv(appexec, apparray);
+	return execv(apparray[0], apparray);
 }
