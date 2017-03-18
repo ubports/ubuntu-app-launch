@@ -186,6 +186,56 @@ Application Icon Finder
    :private-members:
    :undoc-members:
 
+Application Storage Base
+------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_store::Base
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Storage Click
+-------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_store::Click
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Storage Legacy
+--------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_store::Legacy
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Storage Libertine
+-----------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_store::Libertine
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Storage Snap
+------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_store::Snap
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
 Helper Implementation Click
 ---------------------------
 
