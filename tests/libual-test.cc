@@ -988,7 +988,7 @@ TEST_F(LibUAL, SetExec)
     });
     socketreader.detach(); /* avoid thread cleanup code when we don't really care */
 
-    std::vector<std::string> execList{"Foo", "Bar", "Really really really long value", "Another value"};
+    std::vector<std::string> execList{"/usr/bin/foo", "Bar", "Really really really long value", "Another value"};
     ubuntu_app_launch_helper_set_exec(std::accumulate(execList.begin(), execList.end(), std::string{},
                                                       [](std::string accum, std::string val) {
                                                           std::string newval = val;
