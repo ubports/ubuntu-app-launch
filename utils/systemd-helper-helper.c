@@ -144,8 +144,10 @@ get_params (char * readbuf, char ** exectool)
 
 	siginfo_t waitiddata = {0};
 	if (waitid(P_PID, childpid, &waitiddata, WEXITED) != 0) {
-		perror("waitid on child failed");
-		exit(EXIT_FAILURE);
+		if (errno != ECHILD) {
+			perror("waitid on child failed");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* Use the same handler of errors */
