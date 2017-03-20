@@ -19,6 +19,7 @@
 
 #include "app-store-libertine.h"
 #include "application-impl-libertine.h"
+#include "string-util.h"
 
 #include "libertine.h"
 
@@ -68,7 +69,7 @@ bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& re
 */
 bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
 {
-    auto containers = std::shared_ptr<gchar*>(libertine_list_containers(), g_strfreev);
+    auto containers = unique_gcharv(libertine_list_containers());
 
     for (int i = 0; containers.get()[i] != nullptr; i++)
     {
@@ -93,7 +94,7 @@ bool Libertine::verifyAppname(const AppID::Package& package,
                               const AppID::AppName& appname,
                               const std::shared_ptr<Registry>& registry)
 {
-    auto apps = std::shared_ptr<gchar*>(libertine_list_apps_for_container(package.value().c_str()), g_strfreev);
+    auto apps = unique_gcharv(libertine_list_apps_for_container(package.value().c_str()));
 
     for (int i = 0; apps.get()[i] != nullptr; i++)
     {
@@ -138,12 +139,12 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
 {
     std::list<std::shared_ptr<Application>> applist;
 
-    auto containers = std::shared_ptr<gchar*>(libertine_list_containers(), g_strfreev);
+    auto containers = unique_gcharv(libertine_list_containers());
 
     for (int i = 0; containers.get()[i] != nullptr; i++)
     {
         auto container = containers.get()[i];
-        auto apps = std::shared_ptr<gchar*>(libertine_list_apps_for_container(container), g_strfreev);
+        auto apps = unique_gcharv(libertine_list_apps_for_container(container));
 
         for (int j = 0; apps.get()[j] != nullptr; j++)
         {

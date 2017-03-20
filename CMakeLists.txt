@@ -100,6 +100,9 @@ include_directories(${LIBERTINE_INCLUDE_DIRS})
 pkg_check_modules(CURL libcurl>=7.47)
 include_directories(${CURL_INCLUDE_DIRS})
 
+pkg_check_modules(UNITY_API REQUIRED libunity-api)
+include_directories(${UNITY_API_INCLUDE_DIRS})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")

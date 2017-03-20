@@ -21,6 +21,8 @@
 
 #include "application.h"
 #include "registry.h"
+#include "signal-unsubscriber.h"
+#include "string-util.h"
 
 #include <core/signal.h>
 #include <gio/gio.h>
@@ -84,7 +86,7 @@ protected:
     static void oomValueToPid(pid_t pid, const oom::Score oomvalue);
     static void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
     static std::string pidToOomPath(pid_t pid);
-    static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
+    static GCharVUPtr urlsToStrv(const std::vector<Application::URL>& urls);
 };
 
 }  // namespace instance
@@ -210,11 +212,11 @@ private:
                                           Registry::FailureType>>>
         sig_helpersFailed;
 
-    guint handle_managerSignalFocus{0};    /**< GDBus signal watcher handle for app focused signal */
-    guint handle_managerSignalResume{0};   /**< GDBus signal watcher handle for app resumed signal */
-    guint handle_managerSignalStarting{0}; /**< GDBus signal watcher handle for app starting signal */
-    guint handle_appPaused{0};             /**< GDBus signal watcher handle for app paused signal */
-    guint handle_appResumed{0};            /**< GDBus signal watcher handle for app resumed signal */
+    ManagedDBusSignalConnection handle_managerSignalFocus{DBusSignalUnsubscriber{}};    /**< GDBus signal watcher handle for app focused signal */
+    ManagedDBusSignalConnection handle_managerSignalResume{DBusSignalUnsubscriber{}};   /**< GDBus signal watcher handle for app resumed signal */
+    ManagedDBusSignalConnection handle_managerSignalStarting{DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app starting signal */
+    ManagedDBusSignalConnection handle_appPaused{DBusSignalUnsubscriber{}};             /**< GDBus signal watcher handle for app paused signal */
+    ManagedDBusSignalConnection handle_appResumed{DBusSignalUnsubscriber{}};            /**< GDBus signal watcher handle for app resumed signal */
 
     std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
                                            signals of focused, resumed and starting */

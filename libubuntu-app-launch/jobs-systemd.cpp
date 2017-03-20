@@ -21,6 +21,7 @@
 #include "application-impl-base.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
+#include "string-util.h"
 #include "utils.h"
 
 extern "C" {
@@ -34,6 +35,9 @@ extern "C" {
 #include <algorithm>
 #include <numeric>
 #include <regex>
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
 
 namespace ubuntu
 {
@@ -109,6 +113,9 @@ static const char* SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Service"
 
 SystemD::SystemD(std::shared_ptr<Registry> registry)
     : Base(registry)
+    , handle_unitNew(DBusSignalUnsubscriber{})
+    , handle_unitRemoved(DBusSignalUnsubscriber{})
+    , handle_appFailed(DBusSignalUnsubscriber{})
 {
     auto gcgroup_root = getenv("UBUNTU_APP_LAUNCH_SYSTEMD_CGROUP_ROOT");
     if (gcgroup_root == nullptr)
@@ -169,7 +176,7 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                cancel.get(),               /* cancellable */
                                [](GObject* obj, GAsyncResult* res, gpointer user_data) {
                                    GError* error{nullptr};
-                                   GVariant* callt = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+                                   unique_glib(g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error));
 
                                    if (error != nullptr)
                                    {
@@ -181,13 +188,12 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                        return;
                                    }
 
-                                   g_clear_pointer(&callt, g_variant_unref);
                                    g_debug("Subscribed to Systemd");
                                },
                                nullptr);
 
         /* Setup Unit add/remove signals */
-        handle_unitNew = g_dbus_connection_signal_subscribe(
+        handle_unitNew = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
             bus.get(),                  /* bus */
             nullptr,                    /* sender */
             SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
@@ -239,9 +245,10 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                 }
             },        /* callback */
             this,     /* user data */
-            nullptr); /* user data destroy */
+            nullptr), /* user data destroy */
+                bus);
 
-        handle_unitRemoved = g_dbus_connection_signal_subscribe(
+        handle_unitRemoved = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
             bus.get(),                  /* bus */
             nullptr,                    /* sender */
             SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
@@ -285,7 +292,8 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                 pthis->unitRemoved(unitname, unitpath);
             },        /* callback */
             this,     /* user data */
-            nullptr); /* user data destroy */
+            nullptr), /* user data destroy */
+                bus);
 
         getInitialUnits(bus, cancel);
 
@@ -300,24 +308,13 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
 
 SystemD::~SystemD()
 {
-    auto unsub = [&](guint& handle) {
-        if (handle != 0)
-        {
-            g_dbus_connection_signal_unsubscribe(userbus_.get(), handle);
-            handle = 0;
-        }
-    };
-
-    unsub(handle_unitNew);
-    unsub(handle_unitRemoved);
-    unsub(handle_appFailed);
 }
 
 void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const std::shared_ptr<GCancellable>& cancel)
 {
     GError* error = nullptr;
 
-    auto callt = g_dbus_connection_call_sync(bus.get(),                         /* user bus */
+    auto callt = unique_glib(g_dbus_connection_call_sync(bus.get(),             /* user bus */
                                              SYSTEMD_DBUS_ADDRESS,              /* bus name */
                                              SYSTEMD_DBUS_PATH_MANAGER,         /* path */
                                              SYSTEMD_DBUS_IFACE_MANAGER,        /* interface */
@@ -327,7 +324,7 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
                                              G_DBUS_CALL_FLAGS_NONE,            /* flags */
                                              -1,                                /* timeout */
                                              cancel.get(),                      /* cancellable */
-                                             &error);
+                                             &error));
 
     if (error != nullptr)
     {
@@ -339,8 +336,7 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
         return;
     }
 
-    GVariant* call = g_variant_get_child_value(callt, 0);
-    g_variant_unref(callt);
+    auto call = unique_glib(g_variant_get_child_value(callt.get(), 0));
 
     const gchar* id;
     const gchar* description;
@@ -352,8 +348,8 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
     guint32 jobId;
     const gchar* jobType;
     const gchar* jobPath;
-    auto iter = g_variant_iter_new(call);
-    while (g_variant_iter_loop(iter, "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState, &subState,
+    auto iter = unique_glib(g_variant_iter_new(call.get()));
+    while (g_variant_iter_loop(iter.get(), "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState, &subState,
                                &following, &path, &jobId, &jobType, &jobPath))
     {
         g_debug("List Units: %s", id);
@@ -366,9 +362,6 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
             g_debug("%s", e.what());
         }
     }
-
-    g_variant_iter_free(iter);
-    g_variant_unref(call);
 }
 
 std::string SystemD::findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env)
@@ -502,13 +495,10 @@ void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
     g_debug("Started Message Callback: %s", std::string(data->ptr->appId_).c_str());
 
     GError* error{nullptr};
-    GVariant* result{nullptr};
-
-    result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
 
     /* We don't care about the result but we need to make sure we don't
        have a leak. */
-    g_clear_pointer(&result, g_variant_unref);
+    unique_glib(g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error));
 
     if (error != nullptr)
     {
@@ -986,7 +976,7 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
         throw std::runtime_error{"Unable to get SystemD unit path for '" + name + "': Registry out of scope"};
     }
 
-    GVariant* call = g_dbus_connection_call_sync(bus.get(),                                /* user bus */
+    auto call = unique_glib(g_dbus_connection_call_sync(bus.get(),                         /* user bus */
                                                  SYSTEMD_DBUS_ADDRESS,                     /* bus name */
                                                  SYSTEMD_DBUS_PATH_MANAGER,                /* path */
                                                  SYSTEMD_DBUS_IFACE_MANAGER,               /* interface */
@@ -996,7 +986,7 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
                                                  G_DBUS_CALL_FLAGS_NONE,                   /* flags */
                                                  -1,                                       /* timeout */
                                                  reg->impl->thread.getCancellable().get(), /* cancellable */
-                                                 &error);
+                                                 &error));
 
     if (error != nullptr)
     {
@@ -1006,14 +996,12 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
     }
 
     /* Parse variant */
-    gchar* gpath = nullptr;
-    g_variant_get(call, "(o)", &gpath);
-    if (gpath != nullptr)
+    gchar* gpath{nullptr};
+    g_variant_get(call.get(), "(&o)", &gpath);
+    if (gpath)
     {
         data->unitpath = gpath;
     }
-
-    g_clear_pointer(&call, g_variant_unref);
 
     return info;
 }
@@ -1051,7 +1039,7 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
 
     return registry->impl->thread.executeOnThread<pid_t>([this, registry, unitname, unitpath]() {
         GError* error{nullptr};
-        GVariant* call =
+        auto call = unique_glib(
             g_dbus_connection_call_sync(userbus_.get(),                                               /* user bus */
                                         SYSTEMD_DBUS_ADDRESS,                                         /* bus name */
                                         unitpath.c_str(),                                             /* path */
@@ -1062,7 +1050,7 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
                                         G_DBUS_CALL_FLAGS_NONE,                                       /* flags */
                                         -1,                                                           /* timeout */
                                         registry->impl->thread.getCancellable().get(),                /* cancellable */
-                                        &error);
+                                        &error));
 
         if (error != nullptr)
         {
@@ -1073,13 +1061,15 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
         }
 
         /* Parse variant */
-        GVariant* vpid{nullptr};
-        g_variant_get(call, "(v)", &vpid);
-        g_clear_pointer(&call, g_variant_unref);
+        GVariantUPtr vpid{nullptr, GVariantDeleter{}};
+        {
+            GVariant* tmp{nullptr};
+            g_variant_get(call.get(), "(v)", &tmp);
+            vpid = unique_glib(tmp);
+        }
 
         pid_t pid;
-        pid = g_variant_get_uint32(vpid);
-        g_clear_pointer(&vpid, g_variant_unref);
+        pid = g_variant_get_uint32(vpid.get());
 
         return pid;
     });
@@ -1106,7 +1096,7 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
 
     auto cgrouppath = registry->impl->thread.executeOnThread<std::string>([this, registry, unitname, unitpath]() {
         GError* error{nullptr};
-        GVariant* call =
+        auto call = unique_glib(
             g_dbus_connection_call_sync(userbus_.get(),                    /* user bus */
                                         SYSTEMD_DBUS_ADDRESS,              /* bus name */
                                         unitpath.c_str(),                  /* path */
@@ -1117,7 +1107,7 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
                                         G_DBUS_CALL_FLAGS_NONE,                        /* flags */
                                         -1,                                            /* timeout */
                                         registry->impl->thread.getCancellable().get(), /* cancellable */
-                                        &error);
+                                        &error));
 
         if (error != nullptr)
         {
@@ -1128,9 +1118,12 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         }
 
         /* Parse variant */
-        GVariant* vstring = nullptr;
-        g_variant_get(call, "(v)", &vstring);
-        g_clear_pointer(&call, g_variant_unref);
+        GVariantUPtr vstring{nullptr, GVariantDeleter{}};
+        {
+            GVariant* tmp{nullptr};
+            g_variant_get(call.get(), "(v)", &tmp);
+            vstring = unique_glib(tmp);
+        }
 
         if (vstring == nullptr)
         {
@@ -1138,23 +1131,25 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         }
 
         std::string group;
-        auto ggroup = g_variant_get_string(vstring, nullptr);
+        auto ggroup = g_variant_get_string(vstring.get(), nullptr);
         if (ggroup != nullptr)
         {
             group = ggroup;
         }
-        g_variant_unref(vstring);
 
         return group;
     });
 
-    gchar* fullpath = g_build_filename(cgroup_root_.c_str(), cgrouppath.c_str(), "tasks", nullptr);
-    gchar* pidstr = nullptr;
+    auto fullpath = unique_gchar(g_build_filename(cgroup_root_.c_str(), cgrouppath.c_str(), "tasks", nullptr));
     GError* error = nullptr;
 
-    g_debug("Getting PIDs from %s", fullpath);
-    g_file_get_contents(fullpath, &pidstr, nullptr, &error);
-    g_free(fullpath);
+    g_debug("Getting PIDs from %s", fullpath.get());
+    GCharUPtr pidstr{nullptr, &g_free};
+    {
+        gchar* tmp = nullptr;
+        g_file_get_contents(fullpath.get(), &tmp, nullptr, &error);
+        pidstr = unique_gchar(tmp);
+    }
 
     if (error != nullptr)
     {
@@ -1163,13 +1158,12 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         return {};
     }
 
-    gchar** pidlines = g_strsplit(pidstr, "\n", -1);
-    g_free(pidstr);
+    auto pidlines = unique_gcharv(g_strsplit(pidstr.get(), "\n", -1));
     std::vector<pid_t> pids;
 
-    for (auto i = 0; pidlines[i] != nullptr; i++)
+    for (auto i = 0; pidlines.get()[i] != nullptr; i++)
     {
-        const gchar* pidline = pidlines[i];
+        const gchar* pidline = pidlines.get()[i];
         if (pidline[0] != '\n')
         {
             auto pid = std::atoi(pidline);
@@ -1179,8 +1173,6 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
             }
         }
     }
-
-    g_strfreev(pidlines);
 
     return pids;
 }
@@ -1192,7 +1184,7 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
 
     registry->impl->thread.executeOnThread<bool>([this, registry, unitname] {
         GError* error{nullptr};
-        GVariant* call = g_dbus_connection_call_sync(
+        unique_glib(g_dbus_connection_call_sync(
             userbus_.get(),             /* user bus */
             SYSTEMD_DBUS_ADDRESS,       /* bus name */
             SYSTEMD_DBUS_PATH_MANAGER,  /* path */
@@ -1206,7 +1198,7 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
             G_DBUS_CALL_FLAGS_NONE,      /* flags */
             -1,                          /* timeout */
             registry->impl->thread.getCancellable().get(), /* cancellable */
-            &error);
+            &error));
 
         if (error != nullptr)
         {
@@ -1215,8 +1207,6 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
             g_error_free(error);
             throw std::runtime_error(message);
         }
-
-        g_clear_pointer(&call, g_variant_unref);
 
         return true;
     });
@@ -1249,7 +1239,7 @@ core::Signal<const std::string&, const std::string&, const std::string&, Registr
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             auto data = new FailedData{reg};
 
-            handle_appFailed = g_dbus_connection_signal_subscribe(
+            handle_appFailed = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
                 userbus_.get(),                    /* bus */
                 SYSTEMD_DBUS_ADDRESS,              /* sender */
                 "org.freedesktop.DBus.Properties", /* interface */
@@ -1288,10 +1278,9 @@ core::Signal<const std::string&, const std::string&, const std::string&, Registr
                     }
 
                     /* Now see if it is a property we care about */
-                    auto vdict = g_variant_get_child_value(params, 1);
+                    auto vdict = unique_glib(g_variant_get_child_value(params, 1));
                     GVariantDict dict;
-                    g_variant_dict_init(&dict, vdict);
-                    g_clear_pointer(&vdict, g_variant_unref);
+                    g_variant_dict_init(&dict, vdict.get());
 
                     if (g_variant_dict_contains(&dict, "Result") == FALSE)
                     {
@@ -1327,7 +1316,8 @@ core::Signal<const std::string&, const std::string&, const std::string&, Registr
                 [](gpointer user_data) {
                     auto data = static_cast<FailedData*>(user_data);
                     delete data;
-                }); /* user data destroy */
+                }), /* user data destroy */
+                    userbus_);
 
             return true;
         });
@@ -1371,7 +1361,7 @@ void SystemD::resetUnit(const UnitInfo& info) const
                                cancel.get(),                    /* cancellable */
                                [](GObject* obj, GAsyncResult* res, gpointer user_data) {
                                    GError* error{nullptr};
-                                   GVariant* callt = g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error);
+                                   unique_glib(g_dbus_connection_call_finish(G_DBUS_CONNECTION(obj), res, &error));
 
                                    if (error != nullptr)
                                    {
@@ -1383,7 +1373,6 @@ void SystemD::resetUnit(const UnitInfo& info) const
                                        return;
                                    }
 
-                                   g_clear_pointer(&callt, g_variant_unref);
                                    g_debug("Reset Failed Unit");
                                },
                                nullptr);

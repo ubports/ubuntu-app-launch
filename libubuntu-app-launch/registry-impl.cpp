@@ -21,18 +21,23 @@
 #include "application-icon-finder.h"
 #include "application-impl-base.h"
 #include <regex>
+#include <unity/util/GlibMemory.h>
+#include <unity/util/GObjectMemory.h>
+#include <upstart.h>
+
+using namespace unity::util;
 
 namespace ubuntu
 {
 namespace app_launch
 {
 
-Registry::Impl::Impl(Registry* registry)
+Registry::Impl::Impl(Registry& registry)
     : Impl(registry, app_store::Base::allAppStores())
 {
 }
 
-Registry::Impl::Impl(Registry* registry, std::list<std::shared_ptr<app_store::Base>> appStores)
+Registry::Impl::Impl(Registry& registry, std::list<std::shared_ptr<app_store::Base>> appStores)
     : thread([]() {},
              [this]() {
                  zgLog_.reset();
@@ -47,10 +52,8 @@ Registry::Impl::Impl(Registry* registry, std::list<std::shared_ptr<app_store::Ba
     , _appStores(appStores)
 {
     auto cancel = thread.getCancellable();
-    _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
-        return std::shared_ptr<GDBusConnection>(g_bus_get_sync(G_BUS_TYPE_SESSION, cancel.get(), nullptr),
-                                                [](GDBusConnection* bus) { g_clear_object(&bus); });
-    });
+    _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>(
+        [cancel]() { return share_gobject(g_bus_get_sync(G_BUS_TYPE_SESSION, cancel.get(), nullptr)); });
 
     /* Determine where we're getting the helper from */
     auto goomHelper = g_getenv("UBUNTU_APP_LAUNCH_OOM_HELPER");
@@ -78,12 +81,11 @@ std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
 std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
 {
     std::string retval;
-    auto gstr = json_to_string(jsonnode.get(), TRUE);
+    auto gstr = unique_gchar(json_to_string(jsonnode.get(), TRUE));
 
-    if (gstr != nullptr)
+    if (gstr)
     {
-        retval = gstr;
-        g_free(gstr);
+        retval = gstr.get();
     }
 
     return retval;
@@ -109,45 +111,38 @@ void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
 
         if (!zgLog_)
         {
-            zgLog_ =
-                std::shared_ptr<ZeitgeistLog>(zeitgeist_log_new(), /* create a new log for us */
-                                              [](ZeitgeistLog* log) { g_clear_object(&log); }); /* Free as a GObject */
+            zgLog_ = share_gobject(zeitgeist_log_new()); /* create a new log for us */
         }
 
-        ZeitgeistEvent* event = zeitgeist_event_new();
-        zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
-        zeitgeist_event_set_interpretation(event, eventtype.c_str());
-        zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
+        auto event = unique_gobject(zeitgeist_event_new());
+        zeitgeist_event_set_actor(event.get(), "application://ubuntu-app-launch.desktop");
+        zeitgeist_event_set_interpretation(event.get(), eventtype.c_str());
+        zeitgeist_event_set_manifestation(event.get(), ZEITGEIST_ZG_USER_ACTIVITY);
 
-        ZeitgeistSubject* subject = zeitgeist_subject_new();
-        zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
-        zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
-        zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
-        zeitgeist_subject_set_uri(subject, uri.c_str());
+        auto subject = unique_gobject(zeitgeist_subject_new());
+        zeitgeist_subject_set_interpretation(subject.get(), ZEITGEIST_NFO_SOFTWARE);
+        zeitgeist_subject_set_manifestation(subject.get(), ZEITGEIST_NFO_SOFTWARE_ITEM);
+        zeitgeist_subject_set_mimetype(subject.get(), "application/x-desktop");
+        zeitgeist_subject_set_uri(subject.get(), uri.c_str());
 
-        zeitgeist_event_add_subject(event, subject);
+        zeitgeist_event_add_subject(event.get(), subject.get());
 
         zeitgeist_log_insert_event(zgLog_.get(), /* log */
-                                   event,        /* event */
+                                   event.get(),  /* event */
                                    nullptr,      /* cancellable */
                                    [](GObject* obj, GAsyncResult* res, gpointer user_data) {
                                        GError* error = nullptr;
-                                       GArray* result = nullptr;
 
-                                       result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
+                                       unique_glib(zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error));
 
                                        if (error != nullptr)
                                        {
                                            g_warning("Unable to submit Zeitgeist Event: %s", error->message);
                                            g_error_free(error);
                                        }
-
-                                       g_array_free(result, TRUE);
                                    },        /* callback */
                                    nullptr); /* userdata */
 
-        g_object_unref(event);
-        g_object_unref(subject);
     });
 }
 

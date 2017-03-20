@@ -20,8 +20,12 @@
 #include "application-impl-legacy.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
+#include "string-util.h"
 
 #include <regex>
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
 
 namespace ubuntu
 {
@@ -89,19 +93,17 @@ std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(co
     auto desktopName = name.value() + ".desktop";
     std::string desktopPath;
     auto keyfilecheck = [desktopName, &desktopPath](const std::string& dir) -> std::shared_ptr<GKeyFile> {
-        auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
-        if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
+        auto fullname = unique_gchar(g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr));
+        if (!g_file_test(fullname.get(), G_FILE_TEST_EXISTS))
         {
-            g_free(fullname);
             return {};
         }
-        desktopPath = fullname;
+        desktopPath = fullname.get();
 
-        auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), clear_keyfile);
+        auto keyfile = unique_glib(g_key_file_new());
 
         GError* error = nullptr;
-        g_key_file_load_from_file(keyfile.get(), fullname, G_KEY_FILE_NONE, &error);
-        g_free(fullname);
+        g_key_file_load_from_file(keyfile.get(), fullname.get(), G_KEY_FILE_NONE, &error);
 
         if (error != nullptr)
         {
@@ -186,17 +188,16 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     /* Honor the 'Path' key if it is in the desktop file */
     if (g_key_file_has_key(_keyfile.get(), "Desktop Entry", "Path", nullptr))
     {
-        gchar* path = g_key_file_get_string(_keyfile.get(), "Desktop Entry", "Path", nullptr);
-        retval.emplace_back(std::make_pair("APP_DIR", path));
-        g_free(path);
+        auto path = unique_gchar(g_key_file_get_string(_keyfile.get(), "Desktop Entry", "Path", nullptr));
+        retval.emplace_back(std::make_pair("APP_DIR", path.get()));
     }
 
     /* If they've asked for an Apparmor profile, let's use it! */
-    gchar* apparmor = g_key_file_get_string(_keyfile.get(), "Desktop Entry", "X-Ubuntu-AppArmor-Profile", nullptr);
-    if (apparmor != nullptr)
+    auto apparmor =
+        unique_gchar(g_key_file_get_string(_keyfile.get(), "Desktop Entry", "X-Ubuntu-AppArmor-Profile", nullptr));
+    if (apparmor)
     {
-        retval.emplace_back(std::make_pair("APP_EXEC_POLICY", apparmor));
-        g_free(apparmor);
+        retval.emplace_back(std::make_pair("APP_EXEC_POLICY", apparmor.get()));
 
         retval.splice(retval.end(), confinedEnv(_appname, "/usr/share"));
     }

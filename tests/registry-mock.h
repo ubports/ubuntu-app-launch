@@ -180,7 +180,7 @@ public:
 class RegistryImplMock : public ubuntu::app_launch::Registry::Impl
 {
 public:
-    RegistryImplMock(ubuntu::app_launch::Registry* reg)
+    RegistryImplMock(ubuntu::app_launch::Registry& reg)
         : ubuntu::app_launch::Registry::Impl(reg)
     {
         setupZgWatcher();
@@ -188,7 +188,7 @@ public:
         g_debug("Registry Mock Implementation Created");
     }
 
-    RegistryImplMock(ubuntu::app_launch::Registry* reg,
+    RegistryImplMock(ubuntu::app_launch::Registry& reg,
                      std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> appStores)
         : ubuntu::app_launch::Registry::Impl(reg, appStores)
     {
@@ -221,13 +221,13 @@ public:
     RegistryMock()
     {
         g_debug("Registry Mock Created");
-        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(this));
+        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(*this));
     }
 
     RegistryMock(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> appStores)
     {
         g_debug("Registry Mock Created");
-        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(this, appStores));
+        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(*this, appStores));
     }
 
     ~RegistryMock()
