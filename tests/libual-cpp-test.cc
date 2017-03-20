@@ -1297,63 +1297,96 @@ TEST_F(LibUAL, StartSessionHelper)
     return;
 }
 
-#if 0
-/* Need to change as helpers change to not use Upstart features */
+/* Hardcore socket stuff */
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+
 TEST_F(LibUAL, SetExec)
 {
-    DbusTestDbusMockObject* obj =
-        dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
+    /* Create a socket */
+    class SmartSocket
+    {
+    public:
+        int fd;
+        SmartSocket()
+            : fd(socket(AF_UNIX, SOCK_STREAM, 0))
+        {
+        }
+        ~SmartSocket()
+        {
+            close(fd);
+        }
+    };
+    SmartSocket sock;
+    ASSERT_NE(0, sock.fd);
 
-    const char* exec = "lets exec this";
+    std::string socketname{"/ual-setexec-test-12445343"};
 
-    g_setenv("UPSTART_JOB", "fubar", TRUE);
-    g_unsetenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME");
-    EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, NULL));
+    struct sockaddr_un socketaddr = {0};
+    socketaddr.sun_family = AF_UNIX;
+    strncpy(socketaddr.sun_path, socketname.c_str(), sizeof(socketaddr.sun_path) - 1);
+    socketaddr.sun_path[0] = 0;
 
-    guint len = 0;
-    const DbusTestDbusMockCall* calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
-    ASSERT_NE(nullptr, calls);
-    ASSERT_EQ(1u, len);
+    ASSERT_EQ(0, bind(sock.fd, (const struct sockaddr*)&socketaddr, sizeof(struct sockaddr_un)));
+    listen(sock.fd, 1); /* 1 is the number of people who can connect */
 
-    gchar* appexecstr = g_strdup_printf("APP_EXEC=%s", exec);
-    GVariant* appexecenv = g_variant_get_child_value(calls[0].params, 1);
-    EXPECT_STREQ(appexecstr, g_variant_get_string(appexecenv, nullptr));
-    g_variant_unref(appexecenv);
-    g_free(appexecstr);
+    setenv("UBUNTU_APP_LAUNCH_HELPER_EXECTOOL_SETEXEC_SOCKET", socketname.c_str(), 1);
 
-    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+    std::promise<std::vector<std::string>> socketpromise;
+    std::thread socketreader([&]() {
+        std::vector<std::string> socketvals;
 
-    /* Now check for the demangler */
-    g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", g_dbus_connection_get_unique_name(bus), TRUE);
-    EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, NULL));
+        int readsocket = accept(sock.fd, NULL, NULL);
 
-    calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
-    ASSERT_NE(nullptr, calls);
-    ASSERT_EQ(1u, len);
+        /* Keeping this similar to the helper-helper code as that's what
+         * we're running against. Not making it C++-style. */
+        char readbuf[2048] = {0};
+        int thisread = 0;
+        int amountread = 0;
+        while ((thisread = read(readsocket, readbuf + amountread, 2048 - amountread)) > 0)
+        {
+            amountread += thisread;
 
-    gchar* demangleexecstr = g_strdup_printf("APP_EXEC=%s %s", SOCKET_DEMANGLER_INSTALL, exec);
-    appexecenv = g_variant_get_child_value(calls[0].params, 1);
-    EXPECT_STREQ(demangleexecstr, g_variant_get_string(appexecenv, nullptr));
-    g_variant_unref(appexecenv);
-    g_free(demangleexecstr);
+            if (amountread == 2048)
+            {
+                try
+                {
+                    throw std::runtime_error{"Read too many bytes from socket"};
+                }
+                catch (...)
+                {
+                    socketpromise.set_exception(std::current_exception());
+                }
+                return;
+            }
+        }
 
-    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+        close(readsocket);
 
-    /* Now check for the directory */
-    g_setenv("UBUNTU_APP_LAUNCH_DEMANGLE_NAME", g_dbus_connection_get_unique_name(bus), TRUE);
-    EXPECT_TRUE(ubuntu_app_launch_helper_set_exec(exec, "/not/a/real/directory"));
+        /* Parse data */
+        if (amountread > 0)
+        {
+            char* startvar = readbuf;
 
-    calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnv", &len, NULL);
-    ASSERT_NE(nullptr, calls);
-    EXPECT_EQ(2u, len);
+            do
+            {
+                socketvals.emplace_back(std::string(startvar));
 
-    appexecenv = g_variant_get_child_value(calls[1].params, 1);
-    EXPECT_STREQ("APP_DIR=/not/a/real/directory", g_variant_get_string(appexecenv, nullptr));
-    g_variant_unref(appexecenv);
+                startvar = startvar + strlen(startvar) + 1;
+            } while (startvar < readbuf + amountread);
+        }
 
-    ASSERT_TRUE(dbus_test_dbus_mock_object_clear_method_calls(mock, obj, NULL));
+        /* Read socket */
+        socketpromise.set_value(socketvals);
+    });
+    socketreader.detach(); /* avoid thread cleanup code when we don't really care */
+
+    std::vector<std::string> execList{"Foo", "Bar", "Really really really long value", "Another value"};
+    ubuntu::app_launch::Helper::setExec(execList);
+
+    EXPECT_EQ(execList, socketpromise.get_future().get());
 }
-#endif
 
 TEST_F(LibUAL, AppInfo)
 {

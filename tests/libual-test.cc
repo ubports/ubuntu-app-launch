@@ -989,7 +989,18 @@ TEST_F(LibUAL, SetExec)
     socketreader.detach(); /* avoid thread cleanup code when we don't really care */
 
     std::vector<std::string> execList{"Foo", "Bar", "Really really really long value", "Another value"};
-    ubuntu::app_launch::Helper::setExec(execList);
+    ubuntu_app_launch_helper_set_exec(std::accumulate(execList.begin(), execList.end(), std::string{},
+                                                      [](std::string accum, std::string val) {
+                                                          std::string newval = val;
+                                                          if (std::find(val.begin(), val.end(), ' ') != val.end())
+                                                          {
+                                                              newval = "\"" + val + "\"";
+                                                          }
+
+                                                          return accum.empty() ? newval : accum + " " + newval;
+                                                      })
+                                          .c_str(),
+                                      nullptr);
 
     EXPECT_EQ(execList, socketpromise.get_future().get());
 }
