@@ -18,18 +18,7 @@
  */
 
 #define _POSIX_C_SOURCE 200212L
-
-/* TODO: Cannot figure out how to get the compiler to include
- * these from bits/siginfo.h */
-enum
-{
-  CLD_EXITED = 1,
-  CLD_KILLED,
-  CLD_DUMPED,
-  CLD_TRAPPED,
-  CLD_STOPPED,
-  CLD_CONTINUED
-};
+#define _XOPEN_SOURCE 700
 
 #include <errno.h>
 #include <unistd.h>
@@ -153,19 +142,14 @@ get_params (char * readbuf, char ** exectool)
 	close(readsocket);
 	close(socketfd);
 
-	int childstatus;
-	do {
-		waitpid(childpid, &childstatus, 0);
-	} while (!WIFEXITED(childstatus) && !WIFSIGNALED(childstatus));
+	siginfo_t waitiddata = {0};
+	if (waitid(P_PID, childpid, &waitiddata, WEXITED) != 0) {
+		perror("waitid on child failed");
+		exit(EXIT_FAILURE);
+	}
 
-	if (WIFEXITED(childstatus) && WEXITSTATUS(childstatus) != 0) {
-		fprintf(stderr, "Child exec-tool returned error: %d\n", WEXITSTATUS(childstatus));
-		exit(EXIT_FAILURE);
-	}
-	if (WIFSIGNALED(childstatus)) {
-		fprintf(stderr, "Child exec-tool stopped by signal: %d\n", WTERMSIG(childstatus));
-		exit(EXIT_FAILURE);
-	}
+	/* Use the same handler of errors */
+	sigchild_handler(SIGCHLD, &waitiddata, NULL);
 
 	return amountread;
 }
