@@ -23,7 +23,6 @@
 #include <regex>
 #include <unity/util/GlibMemory.h>
 #include <unity/util/GObjectMemory.h>
-#include <upstart.h>
 
 using namespace unity::util;
 
