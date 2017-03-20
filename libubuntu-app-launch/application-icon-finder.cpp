@@ -220,7 +220,6 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared
 
         auto newDirs = addSubdirectoryByType(themefile, directories[i], themePath);
         subdirs.splice(subdirs.end(), newDirs);
-
     }
     return subdirs;
 }

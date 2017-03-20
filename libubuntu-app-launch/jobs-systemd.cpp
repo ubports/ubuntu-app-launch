@@ -193,107 +193,109 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
                                nullptr);
 
         /* Setup Unit add/remove signals */
-        handle_unitNew = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
-            bus.get(),                  /* bus */
-            nullptr,                    /* sender */
-            SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
-            "UnitNew",                  /* signal */
-            SYSTEMD_DBUS_PATH_MANAGER,  /* path */
-            nullptr,                    /* arg0 */
-            G_DBUS_SIGNAL_FLAGS_NONE,
-            [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-               gpointer user_data) -> void {
-                auto pthis = static_cast<SystemD*>(user_data);
+        handle_unitNew = managedDBusSignalConnection(
+            g_dbus_connection_signal_subscribe(bus.get(),                  /* bus */
+                                               nullptr,                    /* sender */
+                                               SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
+                                               "UnitNew",                  /* signal */
+                                               SYSTEMD_DBUS_PATH_MANAGER,  /* path */
+                                               nullptr,                    /* arg0 */
+                                               G_DBUS_SIGNAL_FLAGS_NONE,
+                                               [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
+                                                  const gchar*, GVariant* params, gpointer user_data) -> void {
+                                                   auto pthis = static_cast<SystemD*>(user_data);
 
-                if (!g_variant_check_format_string(params, "(so)", FALSE))
-                {
-                    g_warning("Got 'UnitNew' signal with unknown parameter type: %s",
-                              g_variant_get_type_string(params));
-                    return;
-                }
+                                                   if (!g_variant_check_format_string(params, "(so)", FALSE))
+                                                   {
+                                                       g_warning("Got 'UnitNew' signal with unknown parameter type: %s",
+                                                                 g_variant_get_type_string(params));
+                                                       return;
+                                                   }
 
-                const gchar* unitname{nullptr};
-                const gchar* unitpath{nullptr};
+                                                   const gchar* unitname{nullptr};
+                                                   const gchar* unitpath{nullptr};
 
-                g_variant_get(params, "(&s&o)", &unitname, &unitpath);
+                                                   g_variant_get(params, "(&s&o)", &unitname, &unitpath);
 
-                if (unitname == nullptr || unitpath == nullptr)
-                {
-                    g_warning("Got 'UnitNew' signal with funky params %p, %p", unitname, unitpath);
-                    return;
-                }
+                                                   if (unitname == nullptr || unitpath == nullptr)
+                                                   {
+                                                       g_warning("Got 'UnitNew' signal with funky params %p, %p",
+                                                                 unitname, unitpath);
+                                                       return;
+                                                   }
 
-                try
-                {
-                    pthis->parseUnit(unitname);
-                }
-                catch (std::runtime_error& e)
-                {
-                    /* Not for UAL */
-                    g_debug("Unable to parse unit: %s", unitname);
-                    return;
-                }
+                                                   try
+                                                   {
+                                                       pthis->parseUnit(unitname);
+                                                   }
+                                                   catch (std::runtime_error& e)
+                                                   {
+                                                       /* Not for UAL */
+                                                       g_debug("Unable to parse unit: %s", unitname);
+                                                       return;
+                                                   }
 
-                try
-                {
-                    auto info = pthis->unitNew(unitname, unitpath, pthis->userbus_);
-                    pthis->sig_jobStarted(info.job, info.appid, info.inst);
-                }
-                catch (std::runtime_error& e)
-                {
-                    g_warning("%s", e.what());
-                }
-            },        /* callback */
-            this,     /* user data */
-            nullptr), /* user data destroy */
-                bus);
+                                                   try
+                                                   {
+                                                       auto info = pthis->unitNew(unitname, unitpath, pthis->userbus_);
+                                                       pthis->sig_jobStarted(info.job, info.appid, info.inst);
+                                                   }
+                                                   catch (std::runtime_error& e)
+                                                   {
+                                                       g_warning("%s", e.what());
+                                                   }
+                                               },        /* callback */
+                                               this,     /* user data */
+                                               nullptr), /* user data destroy */
+            bus);
 
-        handle_unitRemoved = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
-            bus.get(),                  /* bus */
-            nullptr,                    /* sender */
-            SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
-            "UnitRemoved",              /* signal */
-            SYSTEMD_DBUS_PATH_MANAGER,  /* path */
-            nullptr,                    /* arg0 */
-            G_DBUS_SIGNAL_FLAGS_NONE,
-            [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-               gpointer user_data) -> void {
-                auto pthis = static_cast<SystemD*>(user_data);
+        handle_unitRemoved = managedDBusSignalConnection(
+            g_dbus_connection_signal_subscribe(
+                bus.get(),                  /* bus */
+                nullptr,                    /* sender */
+                SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
+                "UnitRemoved",              /* signal */
+                SYSTEMD_DBUS_PATH_MANAGER,  /* path */
+                nullptr,                    /* arg0 */
+                G_DBUS_SIGNAL_FLAGS_NONE,
+                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
+                   gpointer user_data) -> void {
+                    auto pthis = static_cast<SystemD*>(user_data);
 
-                if (!g_variant_check_format_string(params, "(so)", FALSE))
-                {
-                    g_warning("Got 'UnitRemoved' signal with unknown parameter type: %s",
-                              g_variant_get_type_string(params));
-                    return;
-                }
+                    if (!g_variant_check_format_string(params, "(so)", FALSE))
+                    {
+                        g_warning("Got 'UnitRemoved' signal with unknown parameter type: %s",
+                                  g_variant_get_type_string(params));
+                        return;
+                    }
 
-                const gchar* unitname{nullptr};
-                const gchar* unitpath{nullptr};
+                    const gchar* unitname{nullptr};
+                    const gchar* unitpath{nullptr};
 
-                g_variant_get(params, "(&s&o)", &unitname, &unitpath);
+                    g_variant_get(params, "(&s&o)", &unitname, &unitpath);
 
-                if (unitname == nullptr || unitpath == nullptr)
-                {
-                    g_warning("Got 'UnitRemoved' signal with funky params %p, %p", unitname, unitpath);
-                    return;
-                }
+                    if (unitname == nullptr || unitpath == nullptr)
+                    {
+                        g_warning("Got 'UnitRemoved' signal with funky params %p, %p", unitname, unitpath);
+                        return;
+                    }
 
-                try
-                {
-                    pthis->parseUnit(unitname);
-                }
-                catch (std::runtime_error& e)
-                {
-                    /* Not for UAL */
-                    g_debug("Unable to parse unit: %s", unitname);
-                    return;
-                }
+                    try
+                    {
+                        pthis->parseUnit(unitname);
+                    }
+                    catch (std::runtime_error& e)
+                    {
+                        /* Not for UAL */
+                        g_debug("Unable to parse unit: %s", unitname);
+                        return;
+                    }
 
-                pthis->unitRemoved(unitname, unitpath);
-            },        /* callback */
-            this,     /* user data */
-            nullptr), /* user data destroy */
-                bus);
+                    pthis->unitRemoved(unitname, unitpath);
+                },        /* callback */
+                this,     /* user data */
+                nullptr), /* user data destroy */
+            bus);
 
         getInitialUnits(bus, cancel);
 
@@ -314,17 +316,17 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
 {
     GError* error = nullptr;
 
-    auto callt = unique_glib(g_dbus_connection_call_sync(bus.get(),             /* user bus */
-                                             SYSTEMD_DBUS_ADDRESS,              /* bus name */
-                                             SYSTEMD_DBUS_PATH_MANAGER,         /* path */
-                                             SYSTEMD_DBUS_IFACE_MANAGER,        /* interface */
-                                             "ListUnits",                       /* method */
-                                             nullptr,                           /* params */
-                                             G_VARIANT_TYPE("(a(ssssssouso))"), /* ret type */
-                                             G_DBUS_CALL_FLAGS_NONE,            /* flags */
-                                             -1,                                /* timeout */
-                                             cancel.get(),                      /* cancellable */
-                                             &error));
+    auto callt = unique_glib(g_dbus_connection_call_sync(bus.get(),                         /* user bus */
+                                                         SYSTEMD_DBUS_ADDRESS,              /* bus name */
+                                                         SYSTEMD_DBUS_PATH_MANAGER,         /* path */
+                                                         SYSTEMD_DBUS_IFACE_MANAGER,        /* interface */
+                                                         "ListUnits",                       /* method */
+                                                         nullptr,                           /* params */
+                                                         G_VARIANT_TYPE("(a(ssssssouso))"), /* ret type */
+                                                         G_DBUS_CALL_FLAGS_NONE,            /* flags */
+                                                         -1,                                /* timeout */
+                                                         cancel.get(),                      /* cancellable */
+                                                         &error));
 
     if (error != nullptr)
     {
@@ -349,8 +351,8 @@ void SystemD::getInitialUnits(const std::shared_ptr<GDBusConnection>& bus, const
     const gchar* jobType;
     const gchar* jobPath;
     auto iter = unique_glib(g_variant_iter_new(call.get()));
-    while (g_variant_iter_loop(iter.get(), "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState, &subState,
-                               &following, &path, &jobId, &jobType, &jobPath))
+    while (g_variant_iter_loop(iter.get(), "(&s&s&s&s&s&s&ou&s&o)", &id, &description, &loadState, &activeState,
+                               &subState, &following, &path, &jobId, &jobType, &jobPath))
     {
         g_debug("List Units: %s", id);
         try
@@ -976,17 +978,17 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
         throw std::runtime_error{"Unable to get SystemD unit path for '" + name + "': Registry out of scope"};
     }
 
-    auto call = unique_glib(g_dbus_connection_call_sync(bus.get(),                         /* user bus */
-                                                 SYSTEMD_DBUS_ADDRESS,                     /* bus name */
-                                                 SYSTEMD_DBUS_PATH_MANAGER,                /* path */
-                                                 SYSTEMD_DBUS_IFACE_MANAGER,               /* interface */
-                                                 "GetUnit",                                /* method */
-                                                 g_variant_new("(s)", name.c_str()),       /* params */
-                                                 G_VARIANT_TYPE("(o)"),                    /* ret type */
-                                                 G_DBUS_CALL_FLAGS_NONE,                   /* flags */
-                                                 -1,                                       /* timeout */
-                                                 reg->impl->thread.getCancellable().get(), /* cancellable */
-                                                 &error));
+    auto call = unique_glib(g_dbus_connection_call_sync(bus.get(),                                /* user bus */
+                                                        SYSTEMD_DBUS_ADDRESS,                     /* bus name */
+                                                        SYSTEMD_DBUS_PATH_MANAGER,                /* path */
+                                                        SYSTEMD_DBUS_IFACE_MANAGER,               /* interface */
+                                                        "GetUnit",                                /* method */
+                                                        g_variant_new("(s)", name.c_str()),       /* params */
+                                                        G_VARIANT_TYPE("(o)"),                    /* ret type */
+                                                        G_DBUS_CALL_FLAGS_NONE,                   /* flags */
+                                                        -1,                                       /* timeout */
+                                                        reg->impl->thread.getCancellable().get(), /* cancellable */
+                                                        &error));
 
     if (error != nullptr)
     {
@@ -1239,85 +1241,86 @@ core::Signal<const std::string&, const std::string&, const std::string&, Registr
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             auto data = new FailedData{reg};
 
-            handle_appFailed = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
-                userbus_.get(),                    /* bus */
-                SYSTEMD_DBUS_ADDRESS,              /* sender */
-                "org.freedesktop.DBus.Properties", /* interface */
-                "PropertiesChanged",               /* signal */
-                nullptr,                           /* path */
-                SYSTEMD_DBUS_IFACE_SERVICE,        /* arg0 */
-                G_DBUS_SIGNAL_FLAGS_NONE,
-                [](GDBusConnection*, const gchar*, const gchar* path, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = static_cast<FailedData*>(user_data);
-                    auto reg = data->registry.lock();
+            handle_appFailed = managedDBusSignalConnection(
+                g_dbus_connection_signal_subscribe(
+                    userbus_.get(),                    /* bus */
+                    SYSTEMD_DBUS_ADDRESS,              /* sender */
+                    "org.freedesktop.DBus.Properties", /* interface */
+                    "PropertiesChanged",               /* signal */
+                    nullptr,                           /* path */
+                    SYSTEMD_DBUS_IFACE_SERVICE,        /* arg0 */
+                    G_DBUS_SIGNAL_FLAGS_NONE,
+                    [](GDBusConnection*, const gchar*, const gchar* path, const gchar*, const gchar*, GVariant* params,
+                       gpointer user_data) -> void {
+                        auto data = static_cast<FailedData*>(user_data);
+                        auto reg = data->registry.lock();
 
-                    if (!reg)
-                    {
-                        g_warning("Registry object invalid!");
-                        return;
-                    }
-
-                    auto manager = std::dynamic_pointer_cast<SystemD>(reg->impl->jobs);
-
-                    /* Check to see if this is a path we care about */
-                    bool pathfound{false};
-                    UnitInfo unitinfo;
-                    for (const auto& unit : manager->unitPaths)
-                    {
-                        if (unit.second->unitpath == path)
+                        if (!reg)
                         {
-                            pathfound = true;
-                            unitinfo = unit.first;
-                            break;
+                            g_warning("Registry object invalid!");
+                            return;
                         }
-                    }
-                    if (!pathfound)
-                    {
-                        return;
-                    }
 
-                    /* Now see if it is a property we care about */
-                    auto vdict = unique_glib(g_variant_get_child_value(params, 1));
-                    GVariantDict dict;
-                    g_variant_dict_init(&dict, vdict.get());
+                        auto manager = std::dynamic_pointer_cast<SystemD>(reg->impl->jobs);
 
-                    if (g_variant_dict_contains(&dict, "Result") == FALSE)
-                    {
-                        /* We don't care about anything else */
+                        /* Check to see if this is a path we care about */
+                        bool pathfound{false};
+                        UnitInfo unitinfo;
+                        for (const auto& unit : manager->unitPaths)
+                        {
+                            if (unit.second->unitpath == path)
+                            {
+                                pathfound = true;
+                                unitinfo = unit.first;
+                                break;
+                            }
+                        }
+                        if (!pathfound)
+                        {
+                            return;
+                        }
+
+                        /* Now see if it is a property we care about */
+                        auto vdict = unique_glib(g_variant_get_child_value(params, 1));
+                        GVariantDict dict;
+                        g_variant_dict_init(&dict, vdict.get());
+
+                        if (g_variant_dict_contains(&dict, "Result") == FALSE)
+                        {
+                            /* We don't care about anything else */
+                            g_variant_dict_clear(&dict);
+                            return;
+                        }
+
+                        /* Check to see if it just was successful */
+                        const gchar* value{nullptr};
+                        g_variant_dict_lookup(&dict, "Result", "&s", &value);
+
+                        if (g_strcmp0(value, "success") == 0)
+                        {
+                            g_variant_dict_clear(&dict);
+                            return;
+                        }
                         g_variant_dict_clear(&dict);
-                        return;
-                    }
 
-                    /* Check to see if it just was successful */
-                    const gchar* value{nullptr};
-                    g_variant_dict_lookup(&dict, "Result", "&s", &value);
+                        /* Reset the failure bit on the unit */
+                        manager->resetUnit(unitinfo);
 
-                    if (g_strcmp0(value, "success") == 0)
-                    {
-                        g_variant_dict_clear(&dict);
-                        return;
-                    }
-                    g_variant_dict_clear(&dict);
+                        /* Oh, we might want to do something now */
+                        auto reason{Registry::FailureType::CRASH};
+                        if (g_strcmp0(value, "exit-code") == 0)
+                        {
+                            reason = Registry::FailureType::START_FAILURE;
+                        }
 
-                    /* Reset the failure bit on the unit */
-                    manager->resetUnit(unitinfo);
-
-                    /* Oh, we might want to do something now */
-                    auto reason{Registry::FailureType::CRASH};
-                    if (g_strcmp0(value, "exit-code") == 0)
-                    {
-                        reason = Registry::FailureType::START_FAILURE;
-                    }
-
-                    manager->sig_jobFailed(unitinfo.job, unitinfo.appid, unitinfo.inst, reason);
-                },    /* callback */
-                data, /* user data */
-                [](gpointer user_data) {
-                    auto data = static_cast<FailedData*>(user_data);
-                    delete data;
-                }), /* user data destroy */
-                    userbus_);
+                        manager->sig_jobFailed(unitinfo.job, unitinfo.appid, unitinfo.inst, reason);
+                    },    /* callback */
+                    data, /* user data */
+                    [](gpointer user_data) {
+                        auto data = static_cast<FailedData*>(user_data);
+                        delete data;
+                    }), /* user data destroy */
+                userbus_);
 
             return true;
         });

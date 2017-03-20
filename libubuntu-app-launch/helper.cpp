@@ -21,8 +21,8 @@
 #include <list>
 #include <numeric>
 
-#include <unity/util/GlibMemory.h>
 #include <unity/util/GObjectMemory.h>
+#include <unity/util/GlibMemory.h>
 #include <unity/util/ResourcePtr.h>
 
 #include "helper-impl.h"
@@ -220,7 +220,7 @@ class MirFDProxy
 {
 public:
     std::shared_ptr<Registry> reg_;
-    ResourcePtr<int, void(*)(int)> mirfd;
+    ResourcePtr<int, void (*)(int)> mirfd;
     std::shared_ptr<proxySocketDemangler> skel;
     ManagedSignalConnection<proxySocketDemangler> handle;
     std::string path;
@@ -229,7 +229,11 @@ public:
 
     MirFDProxy(MirPromptSession* session, const AppID& appid, const std::shared_ptr<Registry>& reg)
         : reg_(reg)
-        , mirfd(0, [](int fp){if (fp != 0) close(fp);})
+        , mirfd(0,
+                [](int fp) {
+                    if (fp != 0)
+                        close(fp);
+                })
         , handle(SignalUnsubscriber<proxySocketDemangler>{})
         , name(g_dbus_connection_get_unique_name(reg->impl->_dbus.get()))
     {
@@ -264,45 +268,44 @@ public:
         }
 
         /* Setup the DBus interface */
-        std::tie(skel, handle, path) =
-            reg->impl->thread.executeOnThread<std::tuple<std::shared_ptr<proxySocketDemangler>, ManagedSignalConnection<proxySocketDemangler>, std::string>>(
-                [this, appid, reg]() {
-                    auto skel = share_gobject(proxy_socket_demangler_skeleton_new());
-                    auto handle = managedSignalConnection<proxySocketDemangler>(g_signal_connect(G_OBJECT(skel.get()), "handle-get-mir-socket",
-                                                   G_CALLBACK(staticProxyCb), this), skel);
+        std::tie(skel, handle, path) = reg->impl->thread.executeOnThread<std::tuple<
+            std::shared_ptr<proxySocketDemangler>, ManagedSignalConnection<proxySocketDemangler>, std::string>>(
+            [this, appid, reg]() {
+                auto skel = share_gobject(proxy_socket_demangler_skeleton_new());
+                auto handle = managedSignalConnection<proxySocketDemangler>(
+                    g_signal_connect(G_OBJECT(skel.get()), "handle-get-mir-socket", G_CALLBACK(staticProxyCb), this),
+                    skel);
 
-                    /* Find a path to export on */
-                    auto dbusAppid = dbusSafe(std::string{appid});
-                    std::string path;
+                /* Find a path to export on */
+                auto dbusAppid = dbusSafe(std::string{appid});
+                std::string path;
 
-                    while (path.empty())
+                while (path.empty())
+                {
+                    GError* error = nullptr;
+                    std::string tryname = "/com/canonical/UbuntuAppLaunch/" + dbusAppid + "/" + std::to_string(rand());
+
+                    g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skel.get()), reg->impl->_dbus.get(),
+                                                     tryname.c_str(), &error);
+
+                    if (error == nullptr)
                     {
-                        GError* error = nullptr;
-                        std::string tryname =
-                            "/com/canonical/UbuntuAppLaunch/" + dbusAppid + "/" + std::to_string(rand());
-
-                        g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skel.get()), reg->impl->_dbus.get(),
-                                                         tryname.c_str(), &error);
-
-                        if (error == nullptr)
-                        {
-                            path = tryname;
-                        }
-                        else
-                        {
-                            if (!g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_OBJECT_PATH_IN_USE))
-                            {
-                                std::string message =
-                                    "Unable to export Mir trusted proxy: " + std::string{error->message};
-                                g_clear_error(&error);
-                                throw std::runtime_error{message};
-                            }
-                            g_clear_error(&error);
-                        }
+                        path = tryname;
                     }
+                    else
+                    {
+                        if (!g_error_matches(error, G_DBUS_ERROR, G_DBUS_ERROR_OBJECT_PATH_IN_USE))
+                        {
+                            std::string message = "Unable to export Mir trusted proxy: " + std::string{error->message};
+                            g_clear_error(&error);
+                            throw std::runtime_error{message};
+                        }
+                        g_clear_error(&error);
+                    }
+                }
 
-                    return std::make_tuple(skel, std::move(handle), path);
-                });
+                return std::make_tuple(skel, std::move(handle), path);
+            });
     }
 
     ~MirFDProxy()

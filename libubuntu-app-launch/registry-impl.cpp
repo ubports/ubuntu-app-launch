@@ -21,8 +21,8 @@
 #include "application-icon-finder.h"
 #include "application-impl-base.h"
 #include <regex>
-#include <unity/util/GlibMemory.h>
 #include <unity/util/GObjectMemory.h>
+#include <unity/util/GlibMemory.h>
 
 using namespace unity::util;
 
@@ -186,9 +186,8 @@ core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdate
         for (const auto& app : apps)
         {
             infoWatchers_.emplace_back(
-                std::make_pair(app, app->infoChanged().connect([this](const std::shared_ptr<Application>& app) {
-                    sig_appInfoUpdated(app);
-                })));
+                std::make_pair(app, app->infoChanged().connect(
+                                        [this](const std::shared_ptr<Application>& app) { sig_appInfoUpdated(app); })));
         }
     });
     return sig_appInfoUpdated;
