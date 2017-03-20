@@ -154,9 +154,16 @@ get_params (char * readbuf, char ** exectool)
 	close(socketfd);
 
 	int childstatus;
-	waitpid(childpid, &childstatus, 0);
-	if (WEXITSTATUS(childstatus) != 0) {
-		fprintf(stderr, "Child exec-tool returned error\n");
+	do {
+		waitpid(childpid, &childstatus, 0);
+	} while (!WIFEXITED(childstatus) && !WIFSIGNALED(childstatus));
+
+	if (WIFEXITED(childstatus) && WEXITSTATUS(childstatus) != 0) {
+		fprintf(stderr, "Child exec-tool returned error: %d\n", WEXITSTATUS(childstatus));
+		exit(EXIT_FAILURE);
+	}
+	if (WIFSIGNALED(childstatus)) {
+		fprintf(stderr, "Child exec-tool stopped by signal: %d\n", WTERMSIG(childstatus));
 		exit(EXIT_FAILURE);
 	}
 
