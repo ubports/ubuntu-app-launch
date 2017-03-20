@@ -198,25 +198,31 @@ main (int argc, char * argv[])
 
 	/* Copy in app exec */
 	for (; currentargc < argc && /* Don't overrun argv */
-			argv[currentargc][0] != '-' && argv[currentargc][1] != '-' && /* Cheap strcmp "--" */
 			currentparam < PARAMS_COUNT; /* Don't overrun our static array */
 			currentargc++, currentparam++) {
+		if (argv[currentargc][0] == '-' && argv[currentargc][1] == '-') { /* Cheap strcmp "--" */
+			currentargc++;
+			break;
+		}
 		apparray[currentparam] = argv[currentargc];
 	}
-	currentargc++; /* Get past the '--' or push it further over the edge if nothing (no harm there) */
 
 	/* Parse the scoket data into params we can insert */
 	if (amountread > 0) {
 		char * startvar = readbuf;
 
 		do {
-			if (startvar[0] != '%' && !(startvar[1] == 'u' ||  startvar[1] == 'U')) {
-				/* Removing the %u and %U from legacy stuff */
+			/* Removing the %u and %U from legacy stuff */
+			if (!(startvar[0] == '%' && startvar[1] == 'u') &&
+					!(startvar[0] == '%' && startvar[1] == 'U')) {
+				if (debug) printf("Socket value: %s\n", startvar); 
 				apparray[currentparam] = startvar;
+				currentparam++;
+			} else {
+				if (debug) printf("Ignore value: %s\n", startvar); 
 			}
 
 			startvar = startvar + strlen(startvar) + 1;
-			currentparam++;
 		}
 		while (startvar < readbuf + amountread && currentparam < PARAMS_COUNT - 1);
 
