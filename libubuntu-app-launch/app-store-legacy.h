@@ -62,6 +62,10 @@ public:
 private:
     std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>> monitors_;
     std::once_flag monitorsSetup_;
+
+    static void directoryChangedStatic(
+        GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type, gpointer user_data);
+    void directoryChanged(GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type);
 };
 
 }  // namespace app_store

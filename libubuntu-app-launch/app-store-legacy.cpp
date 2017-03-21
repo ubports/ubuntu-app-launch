@@ -196,10 +196,56 @@ std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid, const std::s
     return std::make_shared<app_impls::Legacy>(appid.appname, registry);
 }
 
+void Legacy::directoryChangedStatic(
+    GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type, gpointer user_data)
+{
+    auto pthis = static_cast<Legacy*>(user_data);
+    pthis->directoryChanged(monitor, file, other_file, type);
+}
+
+void Legacy::directoryChanged(GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type)
+{
+    switch (type)
+    {
+        case G_FILE_MONITOR_EVENT_CREATED:
+        case G_FILE_MONITOR_EVENT_CHANGED:
+        {
+            if (g_file_query_file_type(file, G_FILE_QUERY_INFO_NONE, nullptr) != G_FILE_TYPE_REGULAR)
+            {
+                break;
+            }
+
+            auto cdesktopname = unique_gchar(g_file_get_basename(file));
+            if (!cdesktopname)
+                break;
+            std::string desktopname{cdesktopname.get()};
+
+            std::string appname;
+            std::smatch match;
+            if (std::regex_match(desktopname, match, desktop_remover))
+            {
+                appname = match[1].str();
+            }
+            else
+            {
+                break;
+            }
+
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), getReg());
+
+            infoChanged_(app);
+            break;
+        }
+        case G_FILE_MONITOR_EVENT_DELETED: /* TODO: Handle */
+        default:
+            break;
+    };
+}
+
 core::Signal<const std::shared_ptr<Application>&>& Legacy::infoChanged()
 {
     std::call_once(monitorsSetup_, [this]() {
-        auto monitorDir = [](const gchar* dirname) {
+        auto monitorDir = [this](const gchar* dirname) {
             auto appdir = unique_gchar(g_build_filename(dirname, "applications", nullptr));
             auto gfile = unity::util::unique_gobject(g_file_new_for_path(appdir.get()));
 
@@ -223,6 +269,8 @@ core::Signal<const std::shared_ptr<Application>&>& Legacy::infoChanged()
                 g_error_free(error);
                 throw std::runtime_error{message};
             }
+
+            g_signal_connect(monitor.get(), "changed", G_CALLBACK(directoryChangedStatic), this);
 
             return monitor;
         };
