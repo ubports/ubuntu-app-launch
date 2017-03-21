@@ -196,6 +196,63 @@ std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid, const std::s
     return std::make_shared<app_impls::Legacy>(appid.appname, registry);
 }
 
+core::Signal<const std::shared_ptr<Application>&>& Legacy::infoChanged()
+{
+    std::call_once(monitorsSetup_, [this]() {
+        auto monitorDir = [](const gchar* dirname) {
+            auto appdir = unique_gchar(g_build_filename(dirname, "applications", nullptr));
+            auto gfile = unity::util::unique_gobject(g_file_new_for_path(appdir.get()));
+
+            if (!g_file_query_exists(gfile.get(), nullptr))
+            {
+                throw std::runtime_error("Directory doesn't exist");
+            }
+
+            if (g_file_query_file_type(gfile.get(), G_FILE_QUERY_INFO_NONE, nullptr) != G_FILE_TYPE_DIRECTORY)
+            {
+                throw std::runtime_error("Not a directory");
+            }
+
+            GError* error = nullptr;
+            auto monitor = unity::util::unique_gobject(
+                g_file_monitor_directory(gfile.get(), G_FILE_MONITOR_NONE, nullptr, &error));
+
+            if (error != nullptr)
+            {
+                std::string message = std::string{"Unable to create file monitor: "} + error->message;
+                g_error_free(error);
+                throw std::runtime_error{message};
+            }
+
+            return monitor;
+        };
+
+        auto dirs = g_get_system_data_dirs();
+        for (int i = 0; dirs != nullptr && dirs[i] != nullptr; i++)
+        {
+            try
+            {
+                monitors_.insert(monitorDir(dirs[i]));
+            }
+            catch (std::runtime_error& e)
+            {
+                g_debug("Unable to create directory monitor for system dir '%s': %s", dirs[i], e.what());
+            }
+        }
+
+        try
+        {
+            monitors_.insert(monitorDir(g_get_user_data_dir()));
+        }
+        catch (std::runtime_error& e)
+        {
+            g_debug("Unable to create directory monitor for user data dir: %s", e.what());
+        }
+    });
+
+    return infoChanged_;
+}
+
 }  // namespace app_store
 }  // namespace app_launch
 }  // namespace ubuntu
