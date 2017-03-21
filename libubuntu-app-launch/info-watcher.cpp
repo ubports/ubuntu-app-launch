@@ -27,6 +27,7 @@ namespace info_watcher
 {
 
 Base::Base(const std::shared_ptr<Registry>& registry)
+    : registry_(registry)
 {
 }
 
