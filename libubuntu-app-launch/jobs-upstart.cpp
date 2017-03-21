@@ -473,9 +473,9 @@ Upstart::~Upstart()
         }
     };
 
-    dohandle(handle_appStarted);
-    dohandle(handle_appStopped);
-    dohandle(handle_appFailed);
+    dohandle(handle_jobStarted);
+    dohandle(handle_jobStopped);
+    dohandle(handle_jobFailed);
 }
 
 /** Launch an application and create a new Upstart instance object to track
@@ -674,10 +674,9 @@ const std::regex instanceenv_regex{"^INSTANCE=(.*?)(?:\\-([0-9]*))?+$"};
 /** Core of most of the events that come from Upstart directly. Includes parsing of the
     Upstart event environment and calling the appropriate signal with the right Application
     object and eventually its instance */
-void Upstart::upstartEventEmitted(
-    core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& signal,
-    std::shared_ptr<GVariant> params,
-    const std::shared_ptr<Registry>& reg)
+void Upstart::upstartEventEmitted(core::Signal<const std::string&, const std::string&, const std::string&>& signal,
+                                  std::shared_ptr<GVariant> params,
+                                  const std::shared_ptr<Registry>& reg)
 {
     std::string jobname;
     std::string sappid;
@@ -713,24 +712,20 @@ void Upstart::upstartEventEmitted(
 
     g_debug("Upstart Event for job '%s' appid '%s' instance '%s'", jobname.c_str(), sappid.c_str(), instance.c_str());
 
-    auto appid = AppID::find(reg, sappid);
-    auto app = Application::create(appid, reg);
-    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instance);
-
-    signal(app, inst);
+    signal(jobname, sappid, instance);
 }
 
 /** Grab the signal object for application startup. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Upstart::appStarted()
+core::Signal<const std::string&, const std::string&, const std::string&>& Upstart::jobStarted()
 {
-    std::call_once(flag_appStarted, [this]() {
+    std::call_once(flag_jobStarted, [this]() {
         auto reg = registry_.lock();
 
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appStarted = g_dbus_connection_signal_subscribe(
+            handle_jobStarted = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(), /* bus */
                 nullptr,                /* sender */
                 DBUS_INTERFACE_UPSTART, /* interface */
@@ -751,7 +746,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
-                    upstart->upstartEventEmitted(upstart->sig_appStarted, sparams, reg);
+                    upstart->upstartEventEmitted(upstart->sig_jobStarted, sparams, reg);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
@@ -763,20 +758,20 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
         });
     });
 
-    return sig_appStarted;
+    return sig_jobStarted;
 }
 
 /** Grab the signal object for application stopping. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Upstart::appStopped()
+core::Signal<const std::string&, const std::string&, const std::string&>& Upstart::jobStopped()
 {
-    std::call_once(flag_appStopped, [this]() {
+    std::call_once(flag_jobStopped, [this]() {
         auto reg = registry_.lock();
 
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appStopped = g_dbus_connection_signal_subscribe(
+            handle_jobStopped = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(), /* bus */
                 nullptr,                /* sender */
                 DBUS_INTERFACE_UPSTART, /* interface */
@@ -797,7 +792,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
                     auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
-                    upstart->upstartEventEmitted(upstart->sig_appStopped, sparams, reg);
+                    upstart->upstartEventEmitted(upstart->sig_jobStopped, sparams, reg);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
@@ -809,21 +804,20 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
         });
     });
 
-    return sig_appStopped;
+    return sig_jobStopped;
 }
 
 /** Grab the signal object for application failing. If we're not already listing for
     those signals this sets up a listener for them. */
-core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
-    Upstart::appFailed()
+core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>& Upstart::jobFailed()
 {
-    std::call_once(flag_appFailed, [this]() {
+    std::call_once(flag_jobFailed, [this]() {
         auto reg = registry_.lock();
 
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appFailed = g_dbus_connection_signal_subscribe(
+            handle_jobFailed = g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
                 nullptr,                         /* sender */
                 "com.canonical.UbuntuAppLaunch", /* interface */
@@ -862,12 +856,8 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
                         g_warning("Application failure type '%s' unknown, reporting as a crash", typestr);
                     }
 
-                    auto appid = AppID::find(reg, sappid);
-                    auto app = Application::create(appid, reg);
-                    auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(sinstid);
-
                     auto upstart = std::dynamic_pointer_cast<Upstart>(reg->impl->jobs);
-                    upstart->sig_appFailed(app, {}, type);
+                    upstart->sig_jobFailed("application-snap", sappid, sinstid, type);
                 },    /* callback */
                 data, /* user data */
                 [](gpointer user_data) {
@@ -879,7 +869,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
         });
     });
 
-    return sig_appFailed;
+    return sig_jobFailed;
 }
 
 /** Initialize the CGManager connection, including a timeout to disconnect
@@ -1135,29 +1125,35 @@ std::list<std::string> Upstart::upstartInstancesForJob(const std::string& job)
         });
 }
 
-std::list<std::shared_ptr<Application>> Upstart::runningApps()
+std::list<std::string> Upstart::runningAppIds(const std::list<std::string>& jobs)
 {
     std::list<std::string> instances;
 
-    /* Get all the legacy instances */
-    instances.splice(instances.begin(), upstartInstancesForJob("application-legacy"));
-    /* Get all the snap instances */
-    instances.splice(instances.begin(), upstartInstancesForJob("application-snap"));
+    for (const auto& job : jobs)
+    {
+        auto jobinst = upstartInstancesForJob(job);
 
-    /* Remove the instance ID */
-    std::transform(instances.begin(), instances.end(), instances.begin(), [](std::string& instancename) -> std::string {
-        static const std::regex instanceregex("^(.*)-[0-9]*$");
-        std::smatch match;
-        if (std::regex_match(instancename, match, instanceregex))
+        if (job != "application-click")
         {
-            return match[1].str();
+            /* Remove the instance ID */
+            std::transform(jobinst.begin(), jobinst.end(), jobinst.begin(),
+                           [](std::string& instancename) -> std::string {
+                               static const std::regex instanceregex("^(.*)-[0-9]*$");
+                               std::smatch match;
+                               if (std::regex_match(instancename, match, instanceregex))
+                               {
+                                   return match[1].str();
+                               }
+                               else
+                               {
+                                   g_warning("Unable to match instance name: %s", instancename.c_str());
+                                   return {};
+                               }
+                           });
         }
-        else
-        {
-            g_warning("Unable to match instance name: %s", instancename.c_str());
-            return {};
-        }
-    });
+
+        instances.splice(instances.begin(), jobinst);
+    }
 
     /* Deduplicate Set */
     std::set<std::string> instanceset;
@@ -1167,29 +1163,13 @@ std::list<std::shared_ptr<Application>> Upstart::runningApps()
             instanceset.insert(instance);
     }
 
-    /* Add in the click instances */
-    for (auto instance : upstartInstancesForJob("application-click"))
-    {
-        instanceset.insert(instance);
-    }
-
     g_debug("Overall there are %d instances: %s", int(instanceset.size()),
             std::accumulate(instanceset.begin(), instanceset.end(), std::string{}, [](const std::string& instr,
                                                                                       std::string instance) {
                 return instr.empty() ? instance : instr + ", " + instance;
             }).c_str());
 
-    /* Convert to Applications */
-    auto registry = registry_.lock();
-    std::list<std::shared_ptr<Application>> apps;
-    for (auto instance : instanceset)
-    {
-        auto appid = AppID::find(registry, instance);
-        auto app = Application::create(appid, registry);
-        apps.push_back(app);
-    }
-
-    return apps;
+    return {instanceset.begin(), instanceset.end()};
 }
 
 }  // namespace manager

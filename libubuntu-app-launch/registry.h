@@ -223,6 +223,37 @@ public:
     static std::list<std::shared_ptr<Helper>> runningHelpers(Helper::Type type,
                                                              std::shared_ptr<Registry> registry = getDefault());
 
+    /** Get the signal object that is signaled when helper has been
+        started.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param type Helper type string
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStarted(
+        Helper::Type type, const std::shared_ptr<Registry>& reg = getDefault());
+
+    /** Get the signal object that is signaled when a helper has stopped.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param type Helper type string
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStopped(
+        Helper::Type type, const std::shared_ptr<Registry>& reg = getDefault());
+
+    /** Get the signal object that is signaled when a helper has failed.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param type Helper type string
+        \param reg Registry to get the handler from
+    */
+    static core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, FailureType>&
+        helperFailed(Helper::Type type, const std::shared_ptr<Registry>& reg = getDefault());
+
     /* Default Junk */
     /** Use the Registry as a global singleton, this function will create
         a Registry object if one doesn't exist. Use of this function is

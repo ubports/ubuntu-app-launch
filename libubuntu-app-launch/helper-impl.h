@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016 Canonical Ltd.
+ * Copyright © 2017 Canonical Ltd.
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 3, as published
@@ -17,9 +17,12 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include <list>
 
 #include "helper.h"
+#include "jobs-base.h"
 
 namespace ubuntu
 {
@@ -28,20 +31,33 @@ namespace app_launch
 namespace helper_impls
 {
 
-class Click : public Helper
+/** We really should have put a relationship between Helper::Instance
+and Application::Instance in the API. But to work around that today
+we're just handling it here because the helper interface is a subset
+of what the Application::Instance class provides */
+class BaseInstance : public Helper::Instance
 {
 public:
-    Click(const Helper::Type& type, const AppID& appid, const std::shared_ptr<Registry>& registry)
-        : _type(type)
-        , _appid(appid)
-        , _registry(registry)
-    {
-    }
+    std::shared_ptr<jobs::instance::Base> impl;
 
-    AppID appId() override
+    BaseInstance(const std::shared_ptr<jobs::instance::Base>& inst);
+    BaseInstance(const std::shared_ptr<Application::Instance>& inst);
+
+    bool isRunning() override;
+    void stop() override;
+
+    const std::string& getInstanceId()
     {
-        return _appid;
+        return impl->getInstanceId();
     }
+};
+
+class Base : public Helper
+{
+public:
+    Base(const Helper::Type& type, const AppID& appid, const std::shared_ptr<Registry>& registry);
+
+    AppID appId() override;
 
     bool hasInstances() override;
     std::vector<std::shared_ptr<Helper::Instance>> instances() override;
@@ -49,12 +65,14 @@ public:
     std::shared_ptr<Helper::Instance> launch(std::vector<Helper::URL> urls = {}) override;
     std::shared_ptr<Helper::Instance> launch(MirPromptSession* session, std::vector<Helper::URL> urls = {}) override;
 
-    static std::list<std::shared_ptr<Helper>> running(Helper::Type type, std::shared_ptr<Registry> registry);
+    std::shared_ptr<Helper::Instance> existingInstance(const std::string& instanceid);
 
 private:
     Helper::Type _type;
     AppID _appid;
     std::shared_ptr<Registry> _registry;
+
+    std::list<std::pair<std::string, std::string>> defaultEnv();
 };
 
 }  // namespace helper_impl
