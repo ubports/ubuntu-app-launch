@@ -21,8 +21,8 @@
 #include <cerrno>
 #include <cstring>
 #include <numeric>
-#include <unity/util/GlibMemory.h>
 #include <unity/util/GObjectMemory.h>
+#include <unity/util/GlibMemory.h>
 #include <unity/util/ResourcePtr.h>
 
 #include "application-impl-base.h"
@@ -215,35 +215,35 @@ core::Signal<const std::shared_ptr<Application>&,
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appPaused = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
-                reg->impl->_dbus.get(),          /* bus */
-                nullptr,                         /* sender */
-                "com.canonical.UbuntuAppLaunch", /* interface */
-                "ApplicationPaused",             /* signal */
-                "/",                             /* path */
-                nullptr,                         /* arg0 */
-                G_DBUS_SIGNAL_FLAGS_NONE,
-                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    auto reg = data->weakReg.lock();
+            handle_appPaused = managedDBusSignalConnection(
+                g_dbus_connection_signal_subscribe(reg->impl->_dbus.get(),          /* bus */
+                                                   nullptr,                         /* sender */
+                                                   "com.canonical.UbuntuAppLaunch", /* interface */
+                                                   "ApplicationPaused",             /* signal */
+                                                   "/",                             /* path */
+                                                   nullptr,                         /* arg0 */
+                                                   G_DBUS_SIGNAL_FLAGS_NONE,
+                                                   [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
+                                                      const gchar*, GVariant* params, gpointer user_data) -> void {
+                                                       auto data = reinterpret_cast<upstartEventData*>(user_data);
+                                                       auto reg = data->weakReg.lock();
 
-                    if (!reg)
-                    {
-                        g_warning("Registry object invalid!");
-                        return;
-                    }
+                                                       if (!reg)
+                                                       {
+                                                           g_warning("Registry object invalid!");
+                                                           return;
+                                                       }
 
-                    auto sparams = share_glib(g_variant_ref(params));
-                    auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
-                    manager->pauseEventEmitted(manager->sig_appPaused, sparams, reg);
-                },    /* callback */
-                data, /* user data */
-                [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    delete data;
-                }), /* user data destroy */
-            		reg->impl->_dbus);
+                                                       auto sparams = share_glib(g_variant_ref(params));
+                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
+                                                       manager->pauseEventEmitted(manager->sig_appPaused, sparams, reg);
+                                                   },    /* callback */
+                                                   data, /* user data */
+                                                   [](gpointer user_data) {
+                                                       auto data = reinterpret_cast<upstartEventData*>(user_data);
+                                                       delete data;
+                                                   }), /* user data destroy */
+                reg->impl->_dbus);
 
             return true;
         });
@@ -265,35 +265,36 @@ core::Signal<const std::shared_ptr<Application>&,
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appResumed = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
-                reg->impl->_dbus.get(),          /* bus */
-                nullptr,                         /* sender */
-                "com.canonical.UbuntuAppLaunch", /* interface */
-                "ApplicationResumed",            /* signal */
-                "/",                             /* path */
-                nullptr,                         /* arg0 */
-                G_DBUS_SIGNAL_FLAGS_NONE,
-                [](GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant* params,
-                   gpointer user_data) -> void {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    auto reg = data->weakReg.lock();
+            handle_appResumed = managedDBusSignalConnection(
+                g_dbus_connection_signal_subscribe(reg->impl->_dbus.get(),          /* bus */
+                                                   nullptr,                         /* sender */
+                                                   "com.canonical.UbuntuAppLaunch", /* interface */
+                                                   "ApplicationResumed",            /* signal */
+                                                   "/",                             /* path */
+                                                   nullptr,                         /* arg0 */
+                                                   G_DBUS_SIGNAL_FLAGS_NONE,
+                                                   [](GDBusConnection*, const gchar*, const gchar*, const gchar*,
+                                                      const gchar*, GVariant* params, gpointer user_data) -> void {
+                                                       auto data = reinterpret_cast<upstartEventData*>(user_data);
+                                                       auto reg = data->weakReg.lock();
 
-                    if (!reg)
-                    {
-                        g_warning("Registry object invalid!");
-                        return;
-                    }
+                                                       if (!reg)
+                                                       {
+                                                           g_warning("Registry object invalid!");
+                                                           return;
+                                                       }
 
-                    auto sparams = share_glib(g_variant_ref(params));
-                    auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
-                    manager->pauseEventEmitted(manager->sig_appResumed, sparams, reg);
-                },    /* callback */
-                data, /* user data */
-                [](gpointer user_data) {
-                    auto data = reinterpret_cast<upstartEventData*>(user_data);
-                    delete data;
-                }), /* user data destroy */
-            		reg->impl->_dbus);
+                                                       auto sparams = share_glib(g_variant_ref(params));
+                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
+                                                       manager->pauseEventEmitted(manager->sig_appResumed, sparams,
+                                                                                  reg);
+                                                   },    /* callback */
+                                                   data, /* user data */
+                                                   [](gpointer user_data) {
+                                                       auto data = reinterpret_cast<upstartEventData*>(user_data);
+                                                       delete data;
+                                                   }), /* user data destroy */
+                reg->impl->_dbus);
 
             return true;
         });
@@ -548,68 +549,74 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
         }
 
         if (!reg->impl->thread.executeOnThread<bool>([this, reg]() {
-                handle_managerSignalFocus = managedDBusSignalConnection(managerSignalHelper(
-                    reg, "UnityFocusRequest",
-                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
-                       const std::shared_ptr<Application::Instance>& instance,
-                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
-                       const std::shared_ptr<GVariant>& params) {
-                        /* Nothing to do today */
-                        std::dynamic_pointer_cast<Base>(reg->impl->jobs)
-                            ->manager_->focusRequest(app, instance, [](bool response) {
-                                /* NOTE: We have no clue what thread this is gonna be
-                                   executed on, but since we're just talking to the GDBus
-                                   thread it isn't an issue today. Be careful in changing
-                                   this code. */
-                            });
-                    }), reg->impl->_dbus);
-                handle_managerSignalStarting = managedDBusSignalConnection(managerSignalHelper(
-                    reg, "UnityStartingBroadcast",
-                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
-                       const std::shared_ptr<Application::Instance>& instance,
-                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
-                       const std::shared_ptr<GVariant>& params) {
+                handle_managerSignalFocus = managedDBusSignalConnection(
+                    managerSignalHelper(
+                        reg, "UnityFocusRequest",
+                        [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                           const std::shared_ptr<Application::Instance>& instance,
+                           const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                           const std::shared_ptr<GVariant>& params) {
+                            /* Nothing to do today */
+                            std::dynamic_pointer_cast<Base>(reg->impl->jobs)
+                                ->manager_->focusRequest(app, instance, [](bool response) {
+                                    /* NOTE: We have no clue what thread this is gonna be
+                                       executed on, but since we're just talking to the GDBus
+                                       thread it isn't an issue today. Be careful in changing
+                                       this code. */
+                                });
+                        }),
+                    reg->impl->_dbus);
+                handle_managerSignalStarting = managedDBusSignalConnection(
+                    managerSignalHelper(
+                        reg, "UnityStartingBroadcast",
+                        [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                           const std::shared_ptr<Application::Instance>& instance,
+                           const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                           const std::shared_ptr<GVariant>& params) {
 
-                        std::dynamic_pointer_cast<Base>(reg->impl->jobs)
-                            ->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
-                                /* NOTE: We have no clue what thread this is gonna be
-                                   executed on, but since we're just talking to the GDBus
-                                   thread it isn't an issue today. Be careful in changing
-                                   this code. */
-                                if (response)
-                                {
-                                    g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
-                                                                  "/",                             /* path */
-                                                                  "com.canonical.UbuntuAppLaunch", /* interface */
-                                                                  "UnityStartingSignal",           /* signal */
-                                                                  params.get(), /* params, the same */
-                                                                  nullptr);     /* error */
-                                }
-                            });
-                    }), reg->impl->_dbus);
-                handle_managerSignalResume = managedDBusSignalConnection(managerSignalHelper(
-                    reg, "UnityResumeRequest",
-                    [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
-                       const std::shared_ptr<Application::Instance>& instance,
-                       const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
-                       const std::shared_ptr<GVariant>& params) {
-                        std::dynamic_pointer_cast<Base>(reg->impl->jobs)
-                            ->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
-                                /* NOTE: We have no clue what thread this is gonna be
-                                   executed on, but since we're just talking to the GDBus
-                                   thread it isn't an issue today. Be careful in changing
-                                   this code. */
-                                if (response)
-                                {
-                                    g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
-                                                                  "/",                             /* path */
-                                                                  "com.canonical.UbuntuAppLaunch", /* interface */
-                                                                  "UnityResumeResponse",           /* signal */
-                                                                  params.get(), /* params, the same */
-                                                                  nullptr);     /* error */
-                                }
-                            });
-                    }), reg->impl->_dbus);
+                            std::dynamic_pointer_cast<Base>(reg->impl->jobs)
+                                ->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
+                                    /* NOTE: We have no clue what thread this is gonna be
+                                       executed on, but since we're just talking to the GDBus
+                                       thread it isn't an issue today. Be careful in changing
+                                       this code. */
+                                    if (response)
+                                    {
+                                        g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                                      "/",                             /* path */
+                                                                      "com.canonical.UbuntuAppLaunch", /* interface */
+                                                                      "UnityStartingSignal",           /* signal */
+                                                                      params.get(), /* params, the same */
+                                                                      nullptr);     /* error */
+                                    }
+                                });
+                        }),
+                    reg->impl->_dbus);
+                handle_managerSignalResume = managedDBusSignalConnection(
+                    managerSignalHelper(
+                        reg, "UnityResumeRequest",
+                        [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
+                           const std::shared_ptr<Application::Instance>& instance,
+                           const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
+                           const std::shared_ptr<GVariant>& params) {
+                            std::dynamic_pointer_cast<Base>(reg->impl->jobs)
+                                ->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
+                                    /* NOTE: We have no clue what thread this is gonna be
+                                       executed on, but since we're just talking to the GDBus
+                                       thread it isn't an issue today. Be careful in changing
+                                       this code. */
+                                    if (response)
+                                    {
+                                        g_dbus_connection_emit_signal(conn.get(), sender.c_str(),      /* destination */
+                                                                      "/",                             /* path */
+                                                                      "com.canonical.UbuntuAppLaunch", /* interface */
+                                                                      "UnityResumeResponse",           /* signal */
+                                                                      params.get(), /* params, the same */
+                                                                      nullptr);     /* error */
+                                    }
+                                });
+                        }),
+                    reg->impl->_dbus);
 
                 return true;
             }))
@@ -956,7 +963,8 @@ std::string Base::pidToOomPath(pid_t pid)
             procpath = envvar;
     }
 
-    auto gpath = unique_gchar(g_build_filename(procpath.c_str(), std::to_string(pid).c_str(), "oom_score_adj", nullptr));
+    auto gpath =
+        unique_gchar(g_build_filename(procpath.c_str(), std::to_string(pid).c_str(), "oom_score_adj", nullptr));
     return std::string(gpath.get());
 }
 
@@ -970,8 +978,7 @@ void Base::oomValueToPid(pid_t pid, const oom::Score oomvalue)
 {
     auto oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
     auto path = pidToOomPath(pid);
-    ResourcePtr<FILE*, void(*)(FILE*)> adj(fopen(path.c_str(), "w"), [](FILE* fp)
-    {
+    ResourcePtr<FILE*, void (*)(FILE*)> adj(fopen(path.c_str(), "w"), [](FILE* fp) {
         if (fp != nullptr)
         {
             fclose(fp);
@@ -1032,21 +1039,22 @@ void Base::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
     std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomstr.c_str(), nullptr};
 
     g_debug("Excuting OOM Helper (pid: %d, score: %d): %s", int(pid), int(oomvalue),
-            std::accumulate(args.begin(), args.end(), std::string{}, [](const std::string& instr,
-                                                                        const char* output) -> std::string {
-                if (instr.empty())
-                {
-                    return output;
-                }
-                else if (output != nullptr)
-                {
-                    return instr + " " + std::string(output);
-                }
-                else
-                {
-                    return instr;
-                }
-            }).c_str());
+            std::accumulate(args.begin(), args.end(), std::string{},
+                            [](const std::string& instr, const char* output) -> std::string {
+                                if (instr.empty())
+                                {
+                                    return output;
+                                }
+                                else if (output != nullptr)
+                                {
+                                    return instr + " " + std::string(output);
+                                }
+                                else
+                                {
+                                    return instr;
+                                }
+                            })
+                .c_str());
 
     g_spawn_async(nullptr,               /* working dir */
                   (char**)(args.data()), /* args */
@@ -1085,7 +1093,7 @@ GCharVUPtr Base::urlsToStrv(const std::vector<Application::URL>& urls)
         g_array_append_val(array, str);
     }
 
-    return unique_gcharv((gchar**) g_array_free(array, FALSE));
+    return unique_gcharv((gchar**)g_array_free(array, FALSE));
 }
 
 }  // namespace instance

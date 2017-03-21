@@ -153,8 +153,9 @@ public:
         Helper::Type type);
     virtual core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStopped(
         Helper::Type type);
-    virtual core::
-        Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
+    virtual core::Signal<const std::shared_ptr<Helper>&,
+                         const std::shared_ptr<Helper::Instance>&,
+                         Registry::FailureType>&
         helperFailed(Helper::Type type);
     /* Job signals from implementations */
     virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStarted() = 0;
@@ -212,11 +213,16 @@ private:
                                           Registry::FailureType>>>
         sig_helpersFailed;
 
-    ManagedDBusSignalConnection handle_managerSignalFocus{DBusSignalUnsubscriber{}};    /**< GDBus signal watcher handle for app focused signal */
-    ManagedDBusSignalConnection handle_managerSignalResume{DBusSignalUnsubscriber{}};   /**< GDBus signal watcher handle for app resumed signal */
-    ManagedDBusSignalConnection handle_managerSignalStarting{DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app starting signal */
-    ManagedDBusSignalConnection handle_appPaused{DBusSignalUnsubscriber{}};             /**< GDBus signal watcher handle for app paused signal */
-    ManagedDBusSignalConnection handle_appResumed{DBusSignalUnsubscriber{}};            /**< GDBus signal watcher handle for app resumed signal */
+    ManagedDBusSignalConnection handle_managerSignalFocus{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app focused signal */
+    ManagedDBusSignalConnection handle_managerSignalResume{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app resumed signal */
+    ManagedDBusSignalConnection handle_managerSignalStarting{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app starting signal */
+    ManagedDBusSignalConnection handle_appPaused{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app paused signal */
+    ManagedDBusSignalConnection handle_appResumed{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app resumed signal */
 
     std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
                                            signals of focused, resumed and starting */

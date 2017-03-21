@@ -99,8 +99,9 @@ public:
 
         \param reg Registry to get the handler from
     */
-    static core::
-        Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, FailureType>&
+    static core::Signal<const std::shared_ptr<Application>&,
+                        const std::shared_ptr<Application::Instance>&,
+                        FailureType>&
         appFailed(const std::shared_ptr<Registry>& reg = getDefault());
 
     /** Get the signal object that is signaled when an application has been
