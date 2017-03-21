@@ -125,7 +125,7 @@ public:
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
 
-    const std::list<std::string>& getAllJobs() const;
+    const std::list<std::string>& getAllApplicationJobs() const;
 
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
 
@@ -168,8 +168,8 @@ protected:
     /** A link to the registry */
     std::weak_ptr<Registry> registry_;
 
-    /** A set of all the job names */
-    std::list<std::string> allJobs_;
+    /** A set of all the job names used by applications */
+    std::list<std::string> allApplicationJobs_;
 
     /** The DBus connection we're connecting to */
     std::shared_ptr<GDBusConnection> dbus_;

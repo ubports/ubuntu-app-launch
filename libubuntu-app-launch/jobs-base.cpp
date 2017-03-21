@@ -39,7 +39,7 @@ namespace manager
 
 Base::Base(const std::shared_ptr<Registry>& registry)
     : registry_(registry)
-    , allJobs_{"application-legacy", "application-snap"}
+    , allApplicationJobs_{"application-legacy", "application-snap"}
     , dbus_(registry->impl->_dbus)
 {
 }
@@ -69,17 +69,18 @@ std::shared_ptr<Base> Base::determineFactory(std::shared_ptr<Registry> registry)
     return std::make_shared<jobs::manager::SystemD>(registry);
 }
 
-const std::list<std::string>& Base::getAllJobs() const
+const std::list<std::string>& Base::getAllApplicationJobs() const
 {
-    return allJobs_;
+    return allApplicationJobs_;
 }
 
 core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Base::appStarted()
 {
     std::call_once(flag_appStarted, [this]() {
         jobStarted().connect([this](const std::string& job, const std::string& appid, const std::string& instanceid) {
-            if (std::find(allJobs_.begin(), allJobs_.end(), job) == allJobs_.end())
+            if (std::find(allApplicationJobs_.begin(), allApplicationJobs_.end(), job) == allApplicationJobs_.end())
             {
+                /* Not an application, different signal */
                 return;
             }
 
@@ -107,8 +108,9 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 {
     std::call_once(flag_appStopped, [this]() {
         jobStopped().connect([this](const std::string& job, const std::string& appid, const std::string& instanceid) {
-            if (std::find(allJobs_.begin(), allJobs_.end(), job) == allJobs_.end())
+            if (std::find(allApplicationJobs_.begin(), allApplicationJobs_.end(), job) == allApplicationJobs_.end())
             {
+                /* Not an application, different signal */
                 return;
             }
 
@@ -138,8 +140,9 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
     std::call_once(flag_appFailed, [this]() {
         jobFailed().connect([this](const std::string& job, const std::string& appid, const std::string& instanceid,
                                    Registry::FailureType reason) {
-            if (std::find(allJobs_.begin(), allJobs_.end(), job) == allJobs_.end())
+            if (std::find(allApplicationJobs_.begin(), allApplicationJobs_.end(), job) == allApplicationJobs_.end())
             {
+                /* Not an application, different signal */
                 return;
             }
 
@@ -645,7 +648,7 @@ std::list<std::shared_ptr<Application>> Base::runningApps()
         return {};
     }
 
-    auto appids = runningAppIds(allJobs_);
+    auto appids = runningAppIds(allApplicationJobs_);
 
     std::list<std::shared_ptr<Application>> apps;
     for (const auto& appid : appids)

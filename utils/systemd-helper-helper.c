@@ -18,18 +18,7 @@
  */
 
 #define _POSIX_C_SOURCE 200212L
-
-/* TODO: Cannot figure out how to get the compiler to include
- * these from bits/siginfo.h */
-enum
-{
-  CLD_EXITED = 1,
-  CLD_KILLED,
-  CLD_DUMPED,
-  CLD_TRAPPED,
-  CLD_STOPPED,
-  CLD_CONTINUED
-};
+#define _XOPEN_SOURCE 700
 
 #include <errno.h>
 #include <unistd.h>
@@ -153,12 +142,16 @@ get_params (char * readbuf, char ** exectool)
 	close(readsocket);
 	close(socketfd);
 
-	int childstatus;
-	waitpid(childpid, &childstatus, 0);
-	if (WEXITSTATUS(childstatus) != 0) {
-		fprintf(stderr, "Child exec-tool returned error\n");
-		exit(EXIT_FAILURE);
+	siginfo_t waitiddata = {0};
+	if (waitid(P_PID, childpid, &waitiddata, WEXITED) != 0) {
+		if (errno != ECHILD) {
+			perror("waitid on child failed");
+			exit(EXIT_FAILURE);
+		}
 	}
+
+	/* Use the same handler of errors */
+	sigchild_handler(SIGCHLD, &waitiddata, NULL);
 
 	return amountread;
 }
@@ -198,25 +191,31 @@ main (int argc, char * argv[])
 
 	/* Copy in app exec */
 	for (; currentargc < argc && /* Don't overrun argv */
-			argv[currentargc][0] != '-' && argv[currentargc][1] != '-' && /* Cheap strcmp "--" */
 			currentparam < PARAMS_COUNT; /* Don't overrun our static array */
 			currentargc++, currentparam++) {
+		if (argv[currentargc][0] == '-' && argv[currentargc][1] == '-') { /* Cheap strcmp "--" */
+			currentargc++;
+			break;
+		}
 		apparray[currentparam] = argv[currentargc];
 	}
-	currentargc++; /* Get past the '--' or push it further over the edge if nothing (no harm there) */
 
 	/* Parse the scoket data into params we can insert */
 	if (amountread > 0) {
 		char * startvar = readbuf;
 
 		do {
-			if (startvar[0] != '%' && !(startvar[1] == 'u' ||  startvar[1] == 'U')) {
-				/* Removing the %u and %U from legacy stuff */
+			/* Removing the %u and %U from legacy stuff */
+			if (!(startvar[0] == '%' && startvar[1] == 'u') &&
+					!(startvar[0] == '%' && startvar[1] == 'U')) {
+				if (debug) printf("Socket value: %s\n", startvar); 
 				apparray[currentparam] = startvar;
+				currentparam++;
+			} else {
+				if (debug) printf("Ignore value: %s\n", startvar); 
 			}
 
 			startvar = startvar + strlen(startvar) + 1;
-			currentparam++;
 		}
 		while (startvar < readbuf + amountread && currentparam < PARAMS_COUNT - 1);
 

@@ -932,6 +932,8 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directo
 	g_return_val_if_fail(execline != NULL, FALSE);
 	g_return_val_if_fail(execline[0] != '\0', FALSE);
 
+	g_debug("Helper Set Exec: %s", execline);
+
 	GError * error{nullptr};
 	gchar ** splitexec{nullptr};
 	if (!g_shell_parse_argv(execline, nullptr, &splitexec, &error) || error != nullptr) {
