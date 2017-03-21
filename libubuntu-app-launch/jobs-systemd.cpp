@@ -587,7 +587,8 @@ std::shared_ptr<Application::Instance> SystemD::launch(
     if (appId.empty())
         return {};
 
-    bool isApplication = std::find(allJobs_.begin(), allJobs_.end(), job) != allJobs_.end();
+    bool isApplication =
+        std::find(allApplicationJobs_.begin(), allApplicationJobs_.end(), job) != allApplicationJobs_.end();
 
     auto registry = registry_.lock();
     return registry->impl->thread.executeOnThread<std::shared_ptr<instance::SystemD>>(
