@@ -17,6 +17,7 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#include "app-store-base.h"
 #include "glib-thread.h"
 #include "info-watcher-zg.h"
 #include "jobs-base.h"
@@ -99,6 +100,11 @@ public:
 
     core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
 
+    std::list<std::shared_ptr<app_store::Base>> appStores()
+    {
+        return _appStores;
+    }
+
 private:
     Registry* _registry; /**< The Registry that we're spawned from */
 
@@ -116,6 +122,9 @@ private:
 
     /** Path to the OOM Helper */
     std::string oomHelper_;
+
+    /** Application stores */
+    std::list<std::shared_ptr<app_store::Base>> _appStores;
 
     /** Signal for application info changing */
     core::Signal<const std::shared_ptr<Application>&> sig_appInfoUpdated;
