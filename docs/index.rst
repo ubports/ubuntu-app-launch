@@ -13,10 +13,10 @@ Ubuntu App Launch is the abstraction that creates a consistent interface for
 managing apps on Ubuntu Touch. It is used by Unity8 and other programs to
 start and stop applications, as well as query which ones are currently open.
 It doesn't have its own service or processes though, it relies on the system
-init daemon to manage the processes (currently Upstart_) but configures them
+init daemon to manage the processes (currently systemd_) but configures them
 in a way that they're discoverable and usable by higher level applications.
 
-.. _Upstart: http://upstart.ubuntu.com/
+.. _systemd: http://freedesktop.org/wiki/Software/systemd/
 
 
 Environment Variables
@@ -24,12 +24,6 @@ Environment Variables
 
 There are a few environment variables that can effect the behavior of UAL while
 it is running.
-
-UBUNTU_APP_LAUNCH_CG_MANAGER_NAME
-  The DBus name that CG Manager registers under if it is on the session bus.
-
-UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS
-  Tell UAL to look on the session bus for CG Manager.
 
 UBUNTU_APP_LAUNCH_DEMANGLER
   Path to the UAL demangler tool that will get the Mir FD for trusted prompt session.
@@ -269,26 +263,6 @@ Jobs Instance Base
 ------------------
 
 .. doxygenclass:: ubuntu::app_launch::jobs::instance::Base
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Jobs Manager Upstart
---------------------
-
-.. doxygenclass:: ubuntu::app_launch::jobs::manager::Upstart
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Jobs Instance Upstart
----------------------
-
-.. doxygenclass:: ubuntu::app_launch::jobs::instance::Upstart
    :project: libubuntu-app-launch
    :members:
    :protected-members:

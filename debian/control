@@ -23,18 +23,14 @@ Build-Depends: abi-compliance-checker,
                liblibertine-dev,
                liblttng-ust-dev,
                libmirclient-dev (>= 0.5),
-               libnih-dbus-dev,
-               libnih-dev,
                libproperties-cpp-dev,
 # For ABI check to distro version
 # Make sure to set DEB_BUILD_PROFILES when bootstrapping
                libubuntu-app-launch3-dev <!stage1>,
-               libupstart-dev,
                libwhoopsie-dev (>= 0.2.52),
                libzeitgeist-2.0-dev,
                gobject-introspection,
                python3-dbusmock,
-               upstart (>= 1.13),
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/ubuntu-app-launch
 # If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
@@ -46,10 +42,8 @@ Package: ubuntu-app-launch
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         cgmanager,
          click-apparmor,
-         libpam-cgfs | libpam-cgm | cgmanager (<< 0.37),
-         upstart (>= 1.13),
+         dbus-user-session,
          xmir [amd64 armhf i386],
          zeitgeist-core,
 Replaces: upstart-app-launch
@@ -78,6 +72,7 @@ Section: libs
 Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
+         ubuntu-app-launch (= ${binary:Version}),
          libertine-tools,
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
