@@ -46,6 +46,16 @@ public:
 protected:
     core::Signal<const std::shared_ptr<Application>&> infoChanged_;
     std::weak_ptr<Registry> registry_;
+
+    std::shared_ptr<Registry> getReg()
+    {
+        auto reg = registry_.lock();
+        if (!reg)
+        {
+            throw std::runtime_error{"Unable to get registry."};
+        }
+        return reg;
+    }
 };
 
 }  // namespace info_watcher
