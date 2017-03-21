@@ -119,7 +119,7 @@ std::shared_ptr<GCancellable> ContextThread::getCancellable()
     return _cancel;
 }
 
-void ContextThread::simpleSource(std::function<GSource*()> srcBuilder, std::function<void()> work)
+guint ContextThread::simpleSource(std::function<GSource*()> srcBuilder, std::function<void()> work)
 {
     if (isCancelled())
     {
@@ -144,22 +144,33 @@ void ContextThread::simpleSource(std::function<GSource*()> srcBuilder, std::func
                               delete heapWork;
                           });
 
-    g_source_attach(source.get(), _context.get());
+    return g_source_attach(source.get(), _context.get());
 }
 
-void ContextThread::executeOnThread(std::function<void()> work)
+guint ContextThread::executeOnThread(std::function<void()> work)
 {
-    simpleSource(g_idle_source_new, work);
+    return simpleSource(g_idle_source_new, work);
 }
 
-void ContextThread::timeout(const std::chrono::milliseconds& length, std::function<void()> work)
+guint ContextThread::timeout(const std::chrono::milliseconds& length, std::function<void()> work)
 {
-    simpleSource([length]() { return g_timeout_source_new(length.count()); }, work);
+    return simpleSource([length]() { return g_timeout_source_new(length.count()); }, work);
 }
 
-void ContextThread::timeoutSeconds(const std::chrono::seconds& length, std::function<void()> work)
+guint ContextThread::timeoutSeconds(const std::chrono::seconds& length, std::function<void()> work)
 {
-    simpleSource([length]() { return g_timeout_source_new_seconds(length.count()); }, work);
+    return simpleSource([length]() { return g_timeout_source_new_seconds(length.count()); }, work);
+}
+
+void ContextThread::removeSource(guint sourceid)
+{
+    auto source = g_main_context_find_source_by_id(_context.get(), sourceid);
+    if (source == nullptr)
+    {
+        return;
+    }
+
+    g_source_destroy(source);
 }
 
 }  // ns GLib

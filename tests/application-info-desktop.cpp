@@ -408,10 +408,11 @@ TEST_F(ApplicationInfoDesktop, Popularity)
         .WillOnce(testing::Return(ubuntu::app_launch::Application::Info::Popularity::from_raw(5u)));
 
     auto keyfile = defaultKeyfile();
-    EXPECT_EQ(5u, ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
-                                                        ubuntu::app_launch::app_info::DesktopFlags::NONE, registry())
-                      .popularity()
-                      .value());
+    EXPECT_EQ(5u,
+              ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, registry())
+                  .popularity()
+                  .value());
 }
 
 }  // anonymous namespace

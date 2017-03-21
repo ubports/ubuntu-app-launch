@@ -3,7 +3,6 @@ Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
 Build-Depends: abi-compliance-checker,
-               click-dev (>= 0.2.2),
                cmake,
                cmake-extras (>= 0.10),
                dbus-x11,
@@ -11,7 +10,6 @@ Build-Depends: abi-compliance-checker,
                debhelper (>= 9),
                googletest | google-mock,
                libcgmanager-dev,
-               libclick-0.4-dev,
                libcurl4-dev | libcurl4-gnutls-dev,
                libdbus-1-dev,
                libdbustest1-dev (>= 14.04.0),
@@ -42,7 +40,6 @@ Package: ubuntu-app-launch
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         click-apparmor,
          dbus-user-session,
          xmir [amd64 armhf i386],
          zeitgeist-core,

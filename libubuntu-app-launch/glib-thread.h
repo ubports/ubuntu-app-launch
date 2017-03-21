@@ -46,7 +46,7 @@ public:
     bool isCancelled();
     std::shared_ptr<GCancellable> getCancellable();
 
-    void executeOnThread(std::function<void()> work);
+    guint executeOnThread(std::function<void()> work);
     template <typename T>
     auto executeOnThread(std::function<T()> work) -> T
     {
@@ -75,21 +75,23 @@ public:
         return future.get();
     }
 
-    void timeout(const std::chrono::milliseconds& length, std::function<void()> work);
+    guint timeout(const std::chrono::milliseconds& length, std::function<void()> work);
     template <class Rep, class Period>
-    void timeout(const std::chrono::duration<Rep, Period>& length, std::function<void()> work)
+    guint timeout(const std::chrono::duration<Rep, Period>& length, std::function<void()> work)
     {
         return timeout(std::chrono::duration_cast<std::chrono::milliseconds>(length), work);
     }
 
-    void timeoutSeconds(const std::chrono::seconds& length, std::function<void()> work);
+    guint timeoutSeconds(const std::chrono::seconds& length, std::function<void()> work);
     template <class Rep, class Period>
-    void timeoutSeconds(const std::chrono::duration<Rep, Period>& length, std::function<void()> work)
+    guint timeoutSeconds(const std::chrono::duration<Rep, Period>& length, std::function<void()> work)
     {
         return timeoutSeconds(std::chrono::duration_cast<std::chrono::seconds>(length), work);
     }
 
+    void removeSource(guint sourceid);
+
 private:
-    void simpleSource(std::function<GSource*()> srcBuilder, std::function<void()> work);
+    guint simpleSource(std::function<GSource*()> srcBuilder, std::function<void()> work);
 };
 }

@@ -23,7 +23,6 @@
 #include "jobs-base.h"
 #include "registry.h"
 #include "snapd-info.h"
-#include <click.h>
 #include <gio/gio.h>
 #include <json-glib/json-glib.h>
 #include <map>
@@ -47,14 +46,12 @@ class Registry::Impl
 {
 public:
     Impl(Registry* registry);
+    Impl(Registry* registry, std::list<std::shared_ptr<app_store::Base>> appStores);
+
     virtual ~Impl()
     {
         thread.quit();
     }
-
-    std::shared_ptr<JsonObject> getClickManifest(const std::string& package);
-    std::list<AppID::Package> getClickPackages();
-    std::string getClickDir(const std::string& package);
 
     static void setManager(const std::shared_ptr<Registry::Manager>& manager,
                            const std::shared_ptr<Registry>& registry);
@@ -66,10 +63,8 @@ public:
     /** DBus shared connection for the session bus */
     std::shared_ptr<GDBusConnection> _dbus;
 
-#ifdef ENABLE_SNAPPY
     /** Snapd information object */
     snapd::Info snapdInfo;
-#endif
 
     std::shared_ptr<jobs::manager::Base> jobs;
 
@@ -105,13 +100,13 @@ public:
         return _appStores;
     }
 
+    void setAppStores(std::list<std::shared_ptr<app_store::Base>>& newlist)
+    {
+        _appStores = newlist;
+    }
+
 private:
     Registry* _registry; /**< The Registry that we're spawned from */
-
-    std::shared_ptr<ClickDB> _clickDB;     /**< Shared instance of the Click Database */
-    std::shared_ptr<ClickUser> _clickUser; /**< Click database filtered by the current user */
-
-    void initClick();
 
     /** Shared instance of the Zeitgeist Log */
     std::shared_ptr<ZeitgeistLog> zgLog_;

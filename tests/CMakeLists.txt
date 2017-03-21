@@ -1,13 +1,5 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-configure_file ("click-db-dir/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-db-dir/test.conf" @ONLY)
-set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_CURRENT_BINARY_DIR}/click-db-dir/test.conf")
-
-if(CURL_FOUND)
-add_definitions ( -DENABLE_SNAPPY=1 )
-endif()
-
-
 # Google Test
 
 find_package(GMock)
@@ -17,14 +9,14 @@ find_package(GMock)
 add_executable (helper-test helper-test.cc)
 add_definitions ( -DCMAKE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}" )
 add_definitions ( -DCMAKE_BINARY_DIR="${CMAKE_CURRENT_BINARY_DIR}" )
-target_link_libraries (helper-test helpers gtest_main ${GTEST_MAIN_LIBRARIES} ${DBUSTEST_LIBRARIES})
+target_link_libraries (helper-test launcher-static gtest_main ${GTEST_MAIN_LIBRARIES} ${DBUSTEST_LIBRARIES})
 
 add_test (helper-test helper-test)
 
 # Helper test
 
 add_executable (helper-handshake-test helper-handshake-test.cc)
-target_link_libraries (helper-handshake-test helpers gtest_main ${GTEST_MAIN_LIBRARIES})
+target_link_libraries (helper-handshake-test launcher-static gtest_main ${GTEST_MAIN_LIBRARIES})
 
 add_test (helper-handshake-test helper-handshake-test)
 
@@ -33,7 +25,7 @@ add_test (helper-handshake-test helper-handshake-test)
 include_directories("${CMAKE_SOURCE_DIR}/libubuntu-app-launch")
 add_definitions ( -DSPEW_UTILITY="${CMAKE_CURRENT_BINARY_DIR}/data-spew" )
 add_definitions ( -DSESSION_TEMP_FILE="${CMAKE_CURRENT_BINARY_DIR}/libual-test-session-start-temp" )
-add_definitions ( -DSOCKET_DEMANGLER="${CMAKE_BINARY_DIR}/socket-demangler" )
+add_definitions ( -DSOCKET_DEMANGLER="${CMAKE_BINARY_DIR}/utils/socket-demangler" )
 add_definitions ( -DSOCKET_DEMANGLER_INSTALL="${pkglibexecdir}/socket-demangler" )
 add_definitions ( -DSOCKET_TOOL="${CMAKE_CURRENT_BINARY_DIR}/socket-tool" )
 add_definitions ( -DSNAP_BASEDIR="${CMAKE_CURRENT_SOURCE_DIR}/snap-basedir" )
@@ -46,7 +38,7 @@ target_link_libraries (libual-test gtest_main ${GTEST_MAIN_LIBRARIES} ${LIBUPSTA
 add_executable (libual-cpp-test
 	libual-cpp-test.cc
 	mir-mock.cpp)
-target_link_libraries (libual-cpp-test gtest_main ${GTEST_MAIN_LIBRARIES} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
+target_link_libraries (libual-cpp-test gtest_main ${GMOCK_LIBRARIES} ${LIBUPSTART_LIBRARIES} ${DBUSTEST_LIBRARIES} launcher-static)
 
 add_executable (data-spew
 	data-spew.c)
@@ -122,12 +114,6 @@ add_test (NAME application-icon-finder-test COMMAND application-icon-finder-test
 
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-# Desktop Hook Test
-
-configure_file ("click-desktop-hook-db/test.conf.in" "${CMAKE_CURRENT_BINARY_DIR}/click-desktop-hook-db/test.conf" @ONLY)
-configure_file ("desktop-hook-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/desktop-hook-test.sh" @ONLY)
-add_test (desktop-hook-test desktop-hook-test.sh)
-
 # XMir helper Test
 
 configure_file ("xmir-helper-test.in" "${CMAKE_CURRENT_BINARY_DIR}/xmir-helper-test" @ONLY)
@@ -144,6 +130,7 @@ add_custom_target(format-tests
 	COMMAND clang-format -i -style=file
 	application-info-desktop.cpp
 	libual-cpp-test.cc
+	libual-test.cc
 	list-apps.cpp
 	eventually-fixture.h
 	info-watcher-zg.cpp

@@ -23,7 +23,7 @@
 #include <gio/gio.h>
 
 extern "C" {
-#include "../helpers.h"
+#include "utils.h"
 }
 
 class HelperTest : public ::testing::Test
@@ -78,7 +78,7 @@ TEST_F(HelperTest, DesktopExecParse)
 	g_array_free(output, TRUE);
 
 	/* Little u with a single URL */
-	output = desktop_exec_parse("foo %u", "http://ubuntu.com");
+	output = desktop_exec_parse("foo %U", "http://ubuntu.com");
 	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
@@ -273,7 +273,7 @@ TEST_F(HelperTest, DesktopToExec)
 	ASSERT_TRUE(g_key_file_load_from_file(keyfile, CMAKE_SOURCE_DIR "/applications/foo.desktop", G_KEY_FILE_NONE, NULL));
 	exec = desktop_to_exec(keyfile, "");
 	ASSERT_TRUE(exec != NULL);
-	ASSERT_STREQ(exec, "foo");
+	ASSERT_STREQ(exec, "foo %U");
 	g_free(exec);
 	g_key_file_free(keyfile);
 
@@ -316,42 +316,3 @@ TEST_F(HelperTest, DesktopToExec)
 	return;
 }
 
-TEST_F(HelperTest, ManifestToDesktop)
-{
-	gchar * desktop = NULL;
-
-	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
-	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.good_application_1.2.3");
-	ASSERT_STREQ(CMAKE_SOURCE_DIR "/click-app-dir/application.desktop", desktop);
-	g_free(desktop);
-	desktop = NULL;
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.bad-version_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-app_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-hooks_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-version_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-exist_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-json_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-object_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	/* Bad App ID */
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.good_application-1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	return;
-}

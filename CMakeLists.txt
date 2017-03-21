@@ -76,9 +76,6 @@ include_directories(${JSONGLIB_INCLUDE_DIRS})
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
-pkg_check_modules(CLICK REQUIRED click-0.4>=0.4.18)
-include_directories(${CLICK_INCLUDE_DIRS})
-
 pkg_check_modules(DBUS REQUIRED dbus-1)
 include_directories(${DBUS_INCLUDE_DIRS})
 
@@ -109,36 +106,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 
 add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 add_definitions( -DSNAPPY_XMIR="${CMAKE_INSTALL_FULL_BINDIR}/snappy-xmir" )
-
-####################
-# Helpers
-####################
-
-add_library(helpers STATIC helpers.c helpers-shared.c)
-target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
-
-####################
-# desktop-hook
-####################
-
-add_executable(desktop-hook desktop-hook.c)
-set_target_properties(desktop-hook PROPERTIES OUTPUT_NAME "desktop-hook")
-target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
-install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# oom-adjust-setuid-helper
-####################
-
-add_executable(oom-adjust-setuid-helper oom-adjust-setuid-helper.c)
-set_target_properties(oom-adjust-setuid-helper PROPERTIES OUTPUT_NAME "oom-adjust-setuid-helper")
-install(TARGETS oom-adjust-setuid-helper RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# ubuntu-app-launch-desktop.click-hook
-####################
-
-configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/ubuntu-app-launch-desktop.click-hook" @ONLY)
 
 add_subdirectory(libubuntu-app-launch)
 add_subdirectory(tools)

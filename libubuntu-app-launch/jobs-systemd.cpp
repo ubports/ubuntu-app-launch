@@ -19,9 +19,9 @@
 
 #include "jobs-systemd.h"
 #include "application-impl-base.h"
-#include "helpers.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
+#include "utils.h"
 
 extern "C" {
 #include "ubuntu-app-launch-trace.h"
@@ -587,6 +587,9 @@ std::shared_ptr<Application::Instance> SystemD::launch(
     if (appId.empty())
         return {};
 
+    bool isApplication =
+        std::find(allApplicationJobs_.begin(), allApplicationJobs_.end(), job) != allApplicationJobs_.end();
+
     auto registry = registry_.lock();
     return registry->impl->thread.executeOnThread<std::shared_ptr<instance::SystemD>>(
         [&]() -> std::shared_ptr<instance::SystemD> {
@@ -602,10 +605,15 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                 timeout = 0;
             }
 
-            auto handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
-            if (handshake == nullptr)
+            handshake_t* handshake{nullptr};
+
+            if (isApplication)
             {
-                g_warning("Unable to setup starting handshake");
+                handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
+                if (handshake == nullptr)
+                {
+                    g_warning("Unable to setup starting handshake");
+                }
             }
 
             /* Figure out the unit name for the job */
@@ -903,8 +911,7 @@ std::string SystemD::userBusPath()
 }
 
 /* TODO: Application job names */
-const std::regex unitNaming{
-    "^ubuntu\\-app\\-launch\\-(application\\-(?:click|legacy|snap))\\-(.*)\\-([0-9]*)\\.service$"};
+const std::regex unitNaming{"^ubuntu\\-app\\-launch\\-\\-(.*)\\-\\-(.*)\\-\\-([0-9]*)\\.service$"};
 
 SystemD::UnitInfo SystemD::parseUnit(const std::string& unit) const
 {
@@ -919,7 +926,7 @@ SystemD::UnitInfo SystemD::parseUnit(const std::string& unit) const
 
 std::string SystemD::unitName(const SystemD::UnitInfo& info) const
 {
-    return std::string{"ubuntu-app-launch-"} + info.job + "-" + info.appid + "-" + info.inst + ".service";
+    return std::string{"ubuntu-app-launch--"} + info.job + "--" + info.appid + "--" + info.inst + ".service";
 }
 
 std::string SystemD::unitPath(const SystemD::UnitInfo& info)
@@ -1347,6 +1354,11 @@ void SystemD::resetUnit(const UnitInfo& info) const
     auto cancel = registry->impl->thread.getCancellable();
 
     registry->impl->thread.executeOnThread([bus, unitname, cancel] {
+        if (g_cancellable_is_cancelled(cancel.get()))
+        {
+            return;
+        }
+
         g_dbus_connection_call(bus.get(),                       /* user bus */
                                SYSTEMD_DBUS_ADDRESS,            /* bus name */
                                SYSTEMD_DBUS_PATH_MANAGER,       /* path */

@@ -28,7 +28,7 @@ extern "C" {
 #include <libwhoopsie/recoverable-problem.h>
 
 #include "ubuntu-app-launch-trace.h"
-#include "helpers.h"
+#include "utils.h"
 #include "ual-tracepoint.h"
 #include "proxy-socket-demangler.h"
 }
@@ -423,11 +423,12 @@ gboolean
 ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
 {
 	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+	auto reg = ubuntu::app_launch::Registry::getDefault();
 
 	appFailedObservers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
 			core::ScopedConnection(
-				ubuntu::app_launch::Registry::appFailed().connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
+				ubuntu::app_launch::Registry::appFailed(reg).connect([context, observer, user_data](std::shared_ptr<ubuntu::app_launch::Application> app, std::shared_ptr<ubuntu::app_launch::Application::Instance> instance, ubuntu::app_launch::Registry::FailureType type) {
 					std::string appid = app->appId();
 					executeOnContext(context, [appid, type, observer, user_data]() {
 						UbuntuAppLaunchAppFailed ctype{UBUNTU_APP_LAUNCH_APP_FAILED_CRASH};
@@ -524,7 +525,8 @@ ubuntu_app_launch_list_running_apps (void)
 		}
 
 		return (gchar **)g_array_free(apps, FALSE);
-	} catch (...) {
+	} catch (const std::exception& e) {
+		g_debug("Unable to list applications: %s", e.what());
 		return nullptr;
 	}
 }
@@ -539,7 +541,8 @@ ubuntu_app_launch_get_primary_pid (const gchar * appid)
 		auto appId = ubuntu::app_launch::AppID::find(appid);
 		auto app = ubuntu::app_launch::Application::create(appId, registry);
 		return app->instances().at(0)->primaryPid();
-	} catch (...) {
+	} catch (const std::exception& e) {
+		g_debug("Unable to get primary pid: %s", e.what());
 		return 0;
 	}
 }
@@ -637,6 +640,7 @@ ubuntu_app_launch_triplet_to_app_id (const gchar * pkg, const gchar * app, const
 
 	auto appid = ubuntu::app_launch::AppID::discover(package, appname, version);
 	if (appid.empty()) {
+		g_debug("Triplet lookup for '%s' '%s' '%s' returned empty", pkg, app, ver);
 		return nullptr;
 	}
 
@@ -666,10 +670,10 @@ ubuntu_app_launch_start_helper (const gchar * type, const gchar * appid, const g
 			throw std::runtime_error{"Empty instance"};
 		}
 
-		return true;
+		return TRUE;
 	} catch (std::runtime_error &e) {
 		g_warning("Unable to launch helper of type '%s' id '%s': %s", type, appid, e.what());
-		return false;
+		return FALSE;
 	}
 }
 
@@ -954,3 +958,9 @@ ubuntu_app_launch_helper_set_exec (const gchar * execline, const gchar * directo
 	}
 }
 
+gboolean
+ubuntu_app_launch_application_info (const gchar * appid, gchar ** appdir, gchar ** appdesktop)
+{
+	/* TODO: Remove next ABI break */
+	return FALSE;
+}

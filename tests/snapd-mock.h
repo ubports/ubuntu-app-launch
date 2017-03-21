@@ -124,8 +124,10 @@ public:
         thread.timeout(std::chrono::milliseconds{10}, [&promise]() { promise.set_value(); });
         promise.get_future().wait();
 
+        int i = 0;
         for (auto testcase : testCases)
         {
+            g_debug("Checking test case: %d", i++);
             EXPECT_EQ(testcase.input, testcase.result);
         }
 

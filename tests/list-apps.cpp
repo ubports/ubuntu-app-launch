@@ -25,7 +25,6 @@
 #include "eventually-fixture.h"
 #include "libertine-service.h"
 
-#include "app-store-click.h"
 #include "app-store-legacy.h"
 #include "app-store-libertine.h"
 #include "app-store-snap.h"
@@ -33,10 +32,8 @@
 #include "application.h"
 #include "registry.h"
 
-#ifdef ENABLE_SNAPPY
 #include "snapd-mock.h"
 #define SNAPD_LIST_APPS_SOCKET SNAPD_TEST_SOCKET "-list-apps"
-#endif
 
 class ListApps : public EventuallyFixture
 {
@@ -47,28 +44,16 @@ protected:
 
     virtual void SetUp()
     {
-#ifdef ENABLE_SNAPPY
         /* Ensure it is cleared */
         g_unlink(SNAPD_LIST_APPS_SOCKET);
-#endif
-
-        /* Click DB test mode */
-        g_setenv("TEST_CLICK_DB", CMAKE_BINARY_DIR "/click-db-dir", TRUE);
-        g_setenv("TEST_CLICK_USER", "test-user", TRUE);
-
-        gchar* linkfarmpath = g_build_filename(CMAKE_SOURCE_DIR, "link-farm", nullptr);
-        g_setenv("UBUNTU_APP_LAUNCH_LINK_FARM", linkfarmpath, TRUE);
-        g_free(linkfarmpath);
 
         g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
         g_setenv("XDG_CACHE_HOME", CMAKE_SOURCE_DIR "/libertine-data", TRUE);
         g_setenv("XDG_DATA_HOME", CMAKE_SOURCE_DIR "/libertine-home", TRUE);
 
-#ifdef ENABLE_SNAPPY
         g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_LIST_APPS_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
-#endif
 
         service = dbus_test_service_new(nullptr);
 
@@ -85,9 +70,7 @@ protected:
 
     virtual void TearDown()
     {
-#ifdef ENABLE_SNAPPY
         g_unlink(SNAPD_LIST_APPS_SOCKET);
-#endif
 
         libertine.reset();
         g_clear_object(&service);
@@ -153,34 +136,6 @@ protected:
     }
 };
 
-TEST_F(ListApps, ListClick)
-{
-    auto registry = std::make_shared<ubuntu::app_launch::Registry>();
-    ubuntu::app_launch::app_store::Click store;
-    auto apps = store.list(registry);
-
-    printApps(apps);
-
-    EXPECT_EQ(11, int(apps.size()));
-
-    EXPECT_TRUE(findApp(apps, "chatter.robert-ancell_chatter_2"));
-    EXPECT_TRUE(findApp(apps, "com.test.bad-version_application_4.5.6"));
-    EXPECT_TRUE(findApp(apps, "com.test.good_application_1.2.3"));
-    EXPECT_TRUE(findApp(apps, "com.test.mir_mir_1"));
-    EXPECT_TRUE(findApp(apps, "com.test.mir_nomir_1"));
-    EXPECT_TRUE(findApp(apps, "com.test.multiple_first_1.2.3"));
-    EXPECT_TRUE(findApp(apps, "com.test.multiple_second_1.2.3"));
-    EXPECT_TRUE(findApp(apps, "com.test.multiple_third_1.2.3"));
-    EXPECT_TRUE(findApp(apps, "com.test.multiple_fourth_1.2.3"));
-    EXPECT_TRUE(findApp(apps, "com.test.multiple_fifth_1.2.3"));
-    EXPECT_TRUE(findApp(apps, "com.test.no-app_no-application_1.2.3"));
-
-    EXPECT_FALSE(findApp(apps, "com.test.no-hooks_application_1.2.3"));
-    EXPECT_FALSE(findApp(apps, "com.test.no-json_application_1.2.3"));
-    EXPECT_FALSE(findApp(apps, "com.test.no-object_application_1.2.3"));
-    EXPECT_FALSE(findApp(apps, "com.test.no-version_application_1.2.3"));
-}
-
 TEST_F(ListApps, ListLegacy)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
@@ -210,7 +165,6 @@ TEST_F(ListApps, ListLibertine)
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
 }
 
-#ifdef ENABLE_SNAPPY
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
@@ -237,10 +191,10 @@ static std::pair<std::string, std::string> x11Package{
 TEST_F(ListApps, ListSnap)
 {
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u8Package, /* unity8 check */
-                    interfaces, u8Package, u8Package, /* mir check */
+                   {interfaces, u8Package,                                             /* unity8 check */
+                    interfaces, u8Package, u8Package,                                  /* mir check */
                     interfaces, u8Package, u7Package, u7Package, u7Package, u8Package, /* unity7 check */
-                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
+                    interfaces, x11Package, x11Package, x11Package}};                  /* x11 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     ubuntu::app_launch::app_store::Snap store;
@@ -261,33 +215,32 @@ TEST_F(ListApps, ListSnap)
     EXPECT_FALSE(findApp(apps, "unity7-package_scope_x123"));
     EXPECT_FALSE(findApp(apps, "x11-package_hidden_x123"));
 
-    EXPECT_TRUE(getApp(apps, "unity8-package_foo_x123")->info()
-                    ->supportsUbuntuLifecycle());
-    EXPECT_FALSE(getApp(apps, "unity7-package_single_x123")->info()
-                    ->supportsUbuntuLifecycle());
-    EXPECT_FALSE(getApp(apps, "unity7-package_multiple_x123")->info()
-                    ->supportsUbuntuLifecycle());
+    EXPECT_TRUE(getApp(apps, "unity8-package_foo_x123")->info()->supportsUbuntuLifecycle());
+    EXPECT_FALSE(getApp(apps, "unity7-package_single_x123")->info()->supportsUbuntuLifecycle());
+    EXPECT_FALSE(getApp(apps, "unity7-package_multiple_x123")->info()->supportsUbuntuLifecycle());
 
-    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(getApp(apps, "x11-package_multiple_x123")->info())
+    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
+                    getApp(apps, "x11-package_multiple_x123")->info())
                     ->xMirEnable());
-    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(getApp(apps, "unity7-package_single_x123")->info())
+    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
+                    getApp(apps, "unity7-package_single_x123")->info())
                     ->xMirEnable());
-    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(getApp(apps, "unity8-package_foo_x123")->info())
+    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
+                    getApp(apps, "unity8-package_foo_x123")->info())
                     ->xMirEnable());
-    EXPECT_FALSE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(getApp(apps, "unity8-package_qmlapp_x123")->info())
-                    ->xMirEnable());
+    EXPECT_FALSE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
+                     getApp(apps, "unity8-package_qmlapp_x123")->info())
+                     ->xMirEnable());
 }
-#endif
 
 TEST_F(ListApps, ListAll)
 {
-#ifdef ENABLE_SNAPPY
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,
-                   {interfaces, u8Package, /* unity8 check */
-                    interfaces, u8Package, u8Package, /* mir check */
+                   {interfaces, u8Package,                                             /* unity8 check */
+                    interfaces, u8Package, u8Package,                                  /* mir check */
                     interfaces, u8Package, u7Package, u7Package, u7Package, u8Package, /* unity7 check */
-                    interfaces, x11Package, x11Package, x11Package}}; /* x11 check */
-#endif
+                    interfaces, x11Package, x11Package, x11Package}};                  /* x11 check */
+
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
     /* Get all the apps */
@@ -295,9 +248,5 @@ TEST_F(ListApps, ListAll)
 
     printApps(apps);
 
-#ifdef ENABLE_SNAPPY
-    EXPECT_EQ(20, int(apps.size()));
-#else
-    EXPECT_EQ(15, int(apps.size()));
-#endif
+    EXPECT_EQ(9, int(apps.size()));
 }

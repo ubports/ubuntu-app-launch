@@ -86,7 +86,7 @@ bool Base::hasInstances()
 std::vector<std::shared_ptr<Helper::Instance>> Base::instances()
 {
     auto insts = _registry->impl->jobs->instances(_appid, _type.value());
-    std::vector<std::shared_ptr<Helper::Instance>> wrapped;
+    std::vector<std::shared_ptr<Helper::Instance>> wrapped{insts.size()};
 
     std::transform(insts.begin(), insts.end(), wrapped.begin(),
                    [](std::shared_ptr<jobs::instance::Base>& inst) { return std::make_shared<BaseInstance>(inst); });
@@ -110,8 +110,12 @@ std::string genInstanceId()
 std::vector<Application::URL> appURL(const std::vector<Helper::URL>& in)
 {
     std::vector<Application::URL> out;
-    std::transform(in.begin(), in.end(), out.begin(),
-                   [](Helper::URL url) { return Application::URL::from_raw(url.value()); });
+
+    for (const auto& hurl : in)
+    {
+        out.push_back(Application::URL::from_raw(hurl.value()));
+    }
+
     return out;
 }
 
@@ -191,6 +195,8 @@ std::list<std::pair<std::string, std::string>> Base::defaultEnv()
                                                        return accum.empty() ? addon : accum + " " + addon;
                                                    })));
 
+    envs.emplace_back(std::make_pair("HELPER_TYPE", _type.value()));
+
     return envs;
 }
 
@@ -206,14 +212,17 @@ std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
 class MirFDProxy
 {
 public:
+    std::shared_ptr<Registry> reg_;
     int mirfd;
     std::shared_ptr<proxySocketDemangler> skel;
     guint handle;
     std::string path;
     std::string name;
+    guint timeout{0};
 
     MirFDProxy(MirPromptSession* session, const AppID& appid, const std::shared_ptr<Registry>& reg)
-        : name(g_dbus_connection_get_unique_name(reg->impl->_dbus.get()))
+        : reg_(reg)
+        , name(g_dbus_connection_get_unique_name(reg->impl->_dbus.get()))
     {
         if (appid.empty())
         {
@@ -291,6 +300,7 @@ public:
 
     ~MirFDProxy()
     {
+        g_debug("Mir Prompt Proxy shutdown");
         if (mirfd != 0)
         {
             close(mirfd);
@@ -302,6 +312,11 @@ public:
         }
 
         g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(skel.get()));
+    }
+
+    void setTimeout(guint timeoutin)
+    {
+        timeout = timeoutin;
     }
 
     static std::string dbusSafe(const std::string& in)
@@ -347,6 +362,13 @@ public:
         }
 
         mirfd = 0;
+
+        /* Remove the timeout on the mainloop */
+        auto reg = reg_;
+        auto timeoutlocal = timeout;
+
+        reg->impl->thread.executeOnThread([reg, timeoutlocal]() { reg->impl->thread.removeSource(timeoutlocal); });
+
         return true;
     }
 
@@ -391,7 +413,8 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
 
     /* This will maintain a reference to the proxy for two
        seconds. And then it'll be dropped. */
-    _registry->impl->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); });
+    proxy->setTimeout(
+        _registry->impl->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); }));
 
     return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
         _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));

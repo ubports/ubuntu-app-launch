@@ -18,13 +18,9 @@
  */
 
 #include "app-store-base.h"
-#include "app-store-click.h"
 #include "app-store-legacy.h"
 #include "app-store-libertine.h"
-
-#if ENABLE_SNAPPY
 #include "app-store-snap.h"
-#endif
 
 namespace ubuntu
 {
@@ -44,17 +40,12 @@ Base::~Base()
 
 std::list<std::shared_ptr<Base>> Base::allAppStores()
 {
-    return
-    {
-        std::make_shared<Click>() /* Click */
-            ,
-            std::make_shared<Legacy>() /* Legacy */
-            ,
-            std::make_shared<Libertine>() /* Libertine */
-#if ENABLE_SNAPPY
-            ,
-            std::make_shared<Snap>() /* Snappy */
-#endif
+    return {
+        std::make_shared<Legacy>() /* Legacy */
+        ,
+        std::make_shared<Libertine>() /* Libertine */
+        ,
+        std::make_shared<Snap>() /* Snappy */
     };
 }
 

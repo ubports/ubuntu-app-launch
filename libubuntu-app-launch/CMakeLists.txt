@@ -39,8 +39,6 @@ set(LAUNCHER_CPP_SOURCES
 application.cpp
 app-store-base.h
 app-store-base.cpp
-app-store-click.h
-app-store-click.cpp
 app-store-legacy.h
 app-store-legacy.cpp
 app-store-libertine.h
@@ -54,12 +52,12 @@ registry-impl.h
 registry-impl.cpp
 application-impl-base.h
 application-impl-base.cpp
-application-impl-click.h
-application-impl-click.cpp
 application-impl-legacy.h
 application-impl-legacy.cpp
 application-impl-libertine.h
 application-impl-libertine.cpp
+application-impl-snap.h
+application-impl-snap.cpp
 application-info-desktop.h
 application-info-desktop.cpp
 application-icon-finder.h
@@ -74,24 +72,17 @@ jobs-base.h
 jobs-base.cpp
 jobs-systemd.h
 jobs-systemd.cpp
+snapd-info.h
+snapd-info.cpp
 )
 
 set(LAUNCHER_SOURCES
 ubuntu-app-launch.cpp
 second-exec-core.c
 ubuntu-app-launch-trace.c
-app-info.c
+utils.c
+utils-shared.c
 )
-
-if(CURL_FOUND)
-add_definitions ( -DENABLE_SNAPPY=1 )
-list(APPEND LAUNCHER_CPP_SOURCES
-application-impl-snap.h
-application-impl-snap.cpp
-snapd-info.h
-snapd-info.cpp
-)
-endif()
 
 add_custom_target(format
 	COMMAND clang-format -i -style=file ${LAUNCHER_CPP_HEADERS} ${LAUNCHER_CPP_SOURCES}
@@ -117,7 +108,6 @@ target_link_libraries(launcher-static
 	${LIBERTINE_LIBRARIES}
 	${CURL_LIBRARIES}
 	-lpthread
-	helpers
 	-Wl,--no-undefined
 )
 
@@ -144,7 +134,6 @@ target_link_libraries(ubuntu-launcher
 	${LIBERTINE_LIBRARIES}
 	${CURL_LIBRARIES}
 	-lpthread
-	helpers
 	-Wl,--no-undefined
 )
 

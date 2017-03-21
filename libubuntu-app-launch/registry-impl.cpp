@@ -28,11 +28,13 @@ namespace app_launch
 {
 
 Registry::Impl::Impl(Registry* registry)
+    : Impl(registry, app_store::Base::allAppStores())
+{
+}
+
+Registry::Impl::Impl(Registry* registry, std::list<std::shared_ptr<app_store::Base>> appStores)
     : thread([]() {},
              [this]() {
-                 _clickUser.reset();
-                 _clickDB.reset();
-
                  zgLog_.reset();
                  jobs.reset();
 
@@ -42,7 +44,7 @@ Registry::Impl::Impl(Registry* registry)
              })
     , _registry{registry}
     , _iconFinders()
-    , _appStores(app_store::Base::allAppStores())
+    , _appStores(appStores)
 {
     auto cancel = thread.getCancellable();
     _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
@@ -59,52 +61,6 @@ Registry::Impl::Impl(Registry* registry)
     else
     {
         oomHelper_ = OOM_HELPER;
-    }
-}
-
-void Registry::Impl::initClick()
-{
-    if (_clickDB && _clickUser)
-    {
-        return;
-    }
-
-    auto init = thread.executeOnThread<bool>([this]() {
-        GError* error = nullptr;
-
-        if (!_clickDB)
-        {
-            _clickDB = std::shared_ptr<ClickDB>(click_db_new(), [](ClickDB* db) { g_clear_object(&db); });
-            /* If TEST_CLICK_DB is unset, this reads the system database. */
-            click_db_read(_clickDB.get(), g_getenv("TEST_CLICK_DB"), &error);
-
-            if (error != nullptr)
-            {
-                auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-                throw std::runtime_error(perror->message);
-            }
-        }
-
-        if (!_clickUser)
-        {
-            _clickUser =
-                std::shared_ptr<ClickUser>(click_user_new_for_user(_clickDB.get(), g_getenv("TEST_CLICK_USER"), &error),
-                                           [](ClickUser* user) { g_clear_object(&user); });
-
-            if (error != nullptr)
-            {
-                auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-                throw std::runtime_error(perror->message);
-            }
-        }
-
-        g_debug("Initialized Click DB");
-        return true;
-    });
-
-    if (!init)
-    {
-        throw std::runtime_error("Unable to initialize the Click Database");
     }
 }
 
@@ -133,89 +89,8 @@ std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
     return retval;
 }
 
-std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& package)
-{
-    initClick();
-
-    auto retval = thread.executeOnThread<std::shared_ptr<JsonObject>>([this, package]() {
-        GError* error = nullptr;
-        auto mani = click_user_get_manifest(_clickUser.get(), package.c_str(), &error);
-
-        if (error != nullptr)
-        {
-            auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            g_debug("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
-            return std::shared_ptr<JsonObject>();
-        }
-
-        auto node = json_node_alloc();
-        json_node_init_object(node, mani);
-        json_object_unref(mani);
-
-        auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
-
-        json_node_free(node);
-
-        return retval;
-    });
-
-    if (!retval)
-        throw std::runtime_error("Unable to get Click manifest for package: " + package);
-
-    return retval;
-}
-
-std::list<AppID::Package> Registry::Impl::getClickPackages()
-{
-    initClick();
-
-    return thread.executeOnThread<std::list<AppID::Package>>([this]() {
-        GError* error = nullptr;
-        GList* pkgs = click_user_get_package_names(_clickUser.get(), &error);
-
-        if (error != nullptr)
-        {
-            auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            throw std::runtime_error(perror->message);
-        }
-
-        std::list<AppID::Package> list;
-        for (GList* item = pkgs; item != nullptr; item = g_list_next(item))
-        {
-            auto pkgobj = static_cast<gchar*>(item->data);
-            if (pkgobj)
-            {
-                list.emplace_back(AppID::Package::from_raw(pkgobj));
-            }
-        }
-
-        g_list_free_full(pkgs, g_free);
-        return list;
-    });
-}
-
-std::string Registry::Impl::getClickDir(const std::string& package)
-{
-    initClick();
-
-    return thread.executeOnThread<std::string>([this, package]() {
-        GError* error = nullptr;
-        auto dir = click_user_get_path(_clickUser.get(), package.c_str(), &error);
-
-        if (error != nullptr)
-        {
-            auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            throw std::runtime_error(perror->message);
-        }
-
-        std::string cppdir(dir);
-        g_free(dir);
-        return cppdir;
-    });
-}
-
-/** Send an event to Zeitgeist using the registry thread so that
-        the callback comes back in the right place. */
+/** Send an event to Zietgeist using the registry thread so that
+    the callback comes back in the right place. */
 void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
 {
     thread.executeOnThread([this, appid, eventtype] {
