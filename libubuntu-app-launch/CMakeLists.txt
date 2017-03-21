@@ -72,8 +72,10 @@ jobs-base.h
 jobs-base.cpp
 jobs-systemd.h
 jobs-systemd.cpp
+signal-unsubscriber.h
 snapd-info.h
 snapd-info.cpp
+string-util.h
 )
 
 set(LAUNCHER_SOURCES

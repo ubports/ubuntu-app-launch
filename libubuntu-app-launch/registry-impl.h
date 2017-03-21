@@ -45,8 +45,8 @@ class IconFinder;
 class Registry::Impl
 {
 public:
-    Impl(Registry* registry);
-    Impl(Registry* registry, std::list<std::shared_ptr<app_store::Base>> appStores);
+    Impl(Registry& registry);
+    Impl(Registry& registry, std::list<std::shared_ptr<app_store::Base>> appStores);
 
     virtual ~Impl()
     {
@@ -106,7 +106,7 @@ public:
     }
 
 private:
-    Registry* _registry; /**< The Registry that we're spawned from */
+    Registry& _registry; /**< The Registry that we're spawned from */
 
     /** Shared instance of the Zeitgeist Log */
     std::shared_ptr<ZeitgeistLog> zgLog_;

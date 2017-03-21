@@ -26,6 +26,7 @@
 #include "application-impl-base.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
+#include "string-util.h"
 #include "utils.h"
 
 extern "C" {
@@ -80,23 +81,19 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
     cset("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
 
     /* Add the application's dir to the list of sources for data */
-    gchar* basedatadirs = g_strjoinv(":", (gchar**)g_get_system_data_dirs());
-    gchar* datadirs = g_strjoin(":", pkgdir.c_str(), basedatadirs, nullptr);
-    cset("XDG_DATA_DIRS", datadirs);
-    g_free(datadirs);
-    g_free(basedatadirs);
+    auto basedatadirs = unique_gchar(g_strjoinv(":", (gchar**)g_get_system_data_dirs()));
+    auto datadirs = unique_gchar(g_strjoin(":", pkgdir.c_str(), basedatadirs.get(), nullptr));
+    cset("XDG_DATA_DIRS", datadirs.get());
 
     /* Set TMPDIR to something sane and application-specific */
-    gchar* tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package.c_str());
-    cset("TMPDIR", tmpdir);
-    g_debug("Creating '%s'", tmpdir);
-    g_mkdir_with_parents(tmpdir, 0700);
-    g_free(tmpdir);
+    auto tmpdir = unique_gchar(g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package.c_str()));
+    cset("TMPDIR", tmpdir.get());
+    g_debug("Creating '%s'", tmpdir.get());
+    g_mkdir_with_parents(tmpdir.get(), 0700);
 
     /* Do the same for nvidia */
-    gchar* nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package.c_str());
-    cset("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
-    g_free(nv_shader_cachedir);
+    auto nv_shader_cachedir = unique_gchar(g_strdup_printf("%s/%s", g_get_user_cache_dir(), package.c_str()));
+    cset("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir.get());
 
     return retval;
 }

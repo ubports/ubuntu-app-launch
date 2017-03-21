@@ -21,12 +21,18 @@
 #include <cerrno>
 #include <cstring>
 #include <numeric>
+#include <unity/util/GlibMemory.h>
+#include <unity/util/GObjectMemory.h>
+#include <unity/util/ResourcePtr.h>
 
 #include "application-impl-base.h"
 #include "helper-impl.h"
 #include "jobs-base.h"
 #include "jobs-systemd.h"
 #include "registry-impl.h"
+#include "string-util.h"
+
+using namespace unity::util;
 
 namespace ubuntu
 {
@@ -46,19 +52,6 @@ Base::Base(const std::shared_ptr<Registry>& registry)
 
 Base::~Base()
 {
-    auto dohandle = [&](guint& handle) {
-        if (handle != 0)
-        {
-            g_dbus_connection_signal_unsubscribe(dbus_.get(), handle);
-            handle = 0;
-        }
-    };
-
-    dohandle(handle_managerSignalFocus);
-    dohandle(handle_managerSignalResume);
-    dohandle(handle_managerSignalStarting);
-    dohandle(handle_appPaused);
-    dohandle(handle_appResumed);
 }
 
 /** Should determine which jobs backend to use, but we only have
@@ -185,30 +178,26 @@ void Base::pauseEventEmitted(core::Signal<const std::shared_ptr<Application>&,
                              const std::shared_ptr<Registry>& reg)
 {
     std::vector<pid_t> pids;
-    GVariant* vappid = g_variant_get_child_value(params.get(), 0);
-    GVariant* vinstid = g_variant_get_child_value(params.get(), 1);
-    GVariant* vpids = g_variant_get_child_value(params.get(), 2);
+    auto vappid = unique_glib(g_variant_get_child_value(params.get(), 0));
+    auto vinstid = unique_glib(g_variant_get_child_value(params.get(), 1));
+    auto vpids = unique_glib(g_variant_get_child_value(params.get(), 2));
     guint64 pid;
     GVariantIter thispid;
-    g_variant_iter_init(&thispid, vpids);
+    g_variant_iter_init(&thispid, vpids.get());
 
     while (g_variant_iter_loop(&thispid, "t", &pid))
     {
         pids.emplace_back(pid);
     }
 
-    auto cappid = g_variant_get_string(vappid, NULL);
-    auto cinstid = g_variant_get_string(vinstid, NULL);
+    auto cappid = g_variant_get_string(vappid.get(), NULL);
+    auto cinstid = g_variant_get_string(vinstid.get(), NULL);
 
     auto appid = ubuntu::app_launch::AppID::find(reg, cappid);
     auto app = Application::create(appid, reg);
     auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(cinstid);
 
     signal(app, inst, pids);
-
-    g_variant_unref(vappid);
-    g_variant_unref(vinstid);
-    g_variant_unref(vpids);
 
     return;
 }
@@ -226,7 +215,7 @@ core::Signal<const std::shared_ptr<Application>&,
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appPaused = g_dbus_connection_signal_subscribe(
+            handle_appPaused = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
                 nullptr,                         /* sender */
                 "com.canonical.UbuntuAppLaunch", /* interface */
@@ -245,7 +234,7 @@ core::Signal<const std::shared_ptr<Application>&,
                         return;
                     }
 
-                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto sparams = share_glib(g_variant_ref(params));
                     auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
                     manager->pauseEventEmitted(manager->sig_appPaused, sparams, reg);
                 },    /* callback */
@@ -253,7 +242,8 @@ core::Signal<const std::shared_ptr<Application>&,
                 [](gpointer user_data) {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     delete data;
-                }); /* user data destroy */
+                }), /* user data destroy */
+            		reg->impl->_dbus);
 
             return true;
         });
@@ -275,7 +265,7 @@ core::Signal<const std::shared_ptr<Application>&,
         reg->impl->thread.executeOnThread<bool>([this, reg]() {
             upstartEventData* data = new upstartEventData{reg};
 
-            handle_appResumed = g_dbus_connection_signal_subscribe(
+            handle_appResumed = managedDBusSignalConnection(g_dbus_connection_signal_subscribe(
                 reg->impl->_dbus.get(),          /* bus */
                 nullptr,                         /* sender */
                 "com.canonical.UbuntuAppLaunch", /* interface */
@@ -294,7 +284,7 @@ core::Signal<const std::shared_ptr<Application>&,
                         return;
                     }
 
-                    auto sparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
+                    auto sparams = share_glib(g_variant_ref(params));
                     auto manager = std::dynamic_pointer_cast<Base>(reg->impl->jobs);
                     manager->pauseEventEmitted(manager->sig_appResumed, sparams, reg);
                 },    /* callback */
@@ -302,7 +292,8 @@ core::Signal<const std::shared_ptr<Application>&,
                 [](gpointer user_data) {
                     auto data = reinterpret_cast<upstartEventData*>(user_data);
                     delete data;
-                }); /* user data destroy */
+                }), /* user data destroy */
+            		reg->impl->_dbus);
 
             return true;
         });
@@ -510,9 +501,8 @@ guint Base::managerSignalHelper(const std::shared_ptr<Registry>& reg,
 
             try
             {
-                auto vparams = std::shared_ptr<GVariant>(g_variant_ref(params), g_variant_unref);
-                auto conn = std::shared_ptr<GDBusConnection>(reinterpret_cast<GDBusConnection*>(g_object_ref(cconn)),
-                                                             [](GDBusConnection* con) { g_clear_object(&con); });
+                auto vparams = share_glib(g_variant_ref(params));
+                auto conn = share_gobject(G_DBUS_CONNECTION(g_object_ref(cconn)));
                 std::string sender = csender;
                 std::shared_ptr<Application> app;
                 std::shared_ptr<Application::Instance> instance;
@@ -558,7 +548,7 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
         }
 
         if (!reg->impl->thread.executeOnThread<bool>([this, reg]() {
-                handle_managerSignalFocus = managerSignalHelper(
+                handle_managerSignalFocus = managedDBusSignalConnection(managerSignalHelper(
                     reg, "UnityFocusRequest",
                     [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
                        const std::shared_ptr<Application::Instance>& instance,
@@ -572,8 +562,8 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                                    thread it isn't an issue today. Be careful in changing
                                    this code. */
                             });
-                    });
-                handle_managerSignalStarting = managerSignalHelper(
+                    }), reg->impl->_dbus);
+                handle_managerSignalStarting = managedDBusSignalConnection(managerSignalHelper(
                     reg, "UnityStartingBroadcast",
                     [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
                        const std::shared_ptr<Application::Instance>& instance,
@@ -596,8 +586,8 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                                                                   nullptr);     /* error */
                                 }
                             });
-                    });
-                handle_managerSignalResume = managerSignalHelper(
+                    }), reg->impl->_dbus);
+                handle_managerSignalResume = managedDBusSignalConnection(managerSignalHelper(
                     reg, "UnityResumeRequest",
                     [](const std::shared_ptr<Registry>& reg, const std::shared_ptr<Application>& app,
                        const std::shared_ptr<Application::Instance>& instance,
@@ -619,7 +609,7 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                                                                   nullptr);     /* error */
                                 }
                             });
-                    });
+                    }), reg->impl->_dbus);
 
                 return true;
             }))
@@ -844,29 +834,24 @@ void Base::pidListToDbus(const std::shared_ptr<Registry>& reg,
                          const std::vector<pid_t>& pids,
                          const std::string& signal)
 {
-    auto vpids = std::shared_ptr<GVariant>(
-        [pids]() {
-            GVariant* pidarray = nullptr;
+    GVariantUPtr vpids;
 
-            if (pids.empty())
-            {
-                pidarray = g_variant_new_array(G_VARIANT_TYPE_UINT64, nullptr, 0);
-                g_variant_ref_sink(pidarray);
-                return pidarray;
-            }
+    if (pids.empty())
+    {
+        vpids = unique_glib(g_variant_ref_sink(g_variant_new_array(G_VARIANT_TYPE_UINT64, nullptr, 0)));
+    }
+    else
+    {
+        GVariantBuilder builder;
+        g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
 
-            GVariantBuilder builder;
-            g_variant_builder_init(&builder, G_VARIANT_TYPE_ARRAY);
-            for (auto pid : pids)
-            {
-                g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
-            }
+        for (auto pid : pids)
+        {
+            g_variant_builder_add_value(&builder, g_variant_new_uint64(pid));
+        }
 
-            pidarray = g_variant_builder_end(&builder);
-            g_variant_ref_sink(pidarray);
-            return pidarray;
-        }(),
-        [](GVariant* var) { g_variant_unref(var); });
+        vpids = unique_glib(g_variant_ref_sink(g_variant_builder_end(&builder)));
+    }
 
     GVariantBuilder params;
     g_variant_builder_init(&params, G_VARIANT_TYPE_TUPLE);
@@ -926,7 +911,8 @@ const oom::Score Base::getOomAdjustment()
 
     if (error != nullptr)
     {
-        auto serror = std::shared_ptr<GError>(error, g_error_free);
+        auto serror = unique_glib(error);
+        error = nullptr;
         throw std::runtime_error("Unable to access OOM value for '" + std::string(appId_) + "' primary PID '" +
                                  std::to_string(pid) + "' because: " + serror->message);
     }
@@ -970,10 +956,8 @@ std::string Base::pidToOomPath(pid_t pid)
             procpath = envvar;
     }
 
-    gchar* gpath = g_build_filename(procpath.c_str(), std::to_string(pid).c_str(), "oom_score_adj", nullptr);
-    std::string path = gpath;
-    g_free(gpath);
-    return path;
+    auto gpath = unique_gchar(g_build_filename(procpath.c_str(), std::to_string(pid).c_str(), "oom_score_adj", nullptr));
+    return std::string(gpath.get());
 }
 
 /** Writes an OOM value to proc, assuming we have a string
@@ -986,10 +970,16 @@ void Base::oomValueToPid(pid_t pid, const oom::Score oomvalue)
 {
     auto oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
     auto path = pidToOomPath(pid);
-    FILE* adj = fopen(path.c_str(), "w");
+    ResourcePtr<FILE*, void(*)(FILE*)> adj(fopen(path.c_str(), "w"), [](FILE* fp)
+    {
+        if (fp != nullptr)
+        {
+            fclose(fp);
+        }
+    });
     int openerr = errno;
 
-    if (adj == nullptr)
+    if (adj.get() == nullptr)
     {
         switch (openerr)
         {
@@ -1014,9 +1004,9 @@ void Base::oomValueToPid(pid_t pid, const oom::Score oomvalue)
         }
     }
 
-    size_t writesize = fwrite(oomstr.c_str(), 1, oomstr.size(), adj);
+    size_t writesize = fwrite(oomstr.c_str(), 1, oomstr.size(), adj.get());
     int writeerr = errno;
-    fclose(adj);
+    adj.dealloc();
 
     if (writesize == oomstr.size())
         return;
@@ -1079,11 +1069,11 @@ void Base::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
 
     \param urls Vector of URLs to make into C strings
 */
-std::shared_ptr<gchar*> Base::urlsToStrv(const std::vector<Application::URL>& urls)
+GCharVUPtr Base::urlsToStrv(const std::vector<Application::URL>& urls)
 {
     if (urls.empty())
     {
-        return {};
+        return GCharVUPtr(nullptr, &g_strfreev);
     }
 
     auto array = g_array_new(TRUE, FALSE, sizeof(gchar*));
@@ -1095,7 +1085,7 @@ std::shared_ptr<gchar*> Base::urlsToStrv(const std::vector<Application::URL>& ur
         g_array_append_val(array, str);
     }
 
-    return std::shared_ptr<gchar*>((gchar**)g_array_free(array, FALSE), g_strfreev);
+    return unique_gcharv((gchar**) g_array_free(array, FALSE));
 }
 
 }  // namespace instance

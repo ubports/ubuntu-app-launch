@@ -19,6 +19,7 @@
 
 #include "app-store-legacy.h"
 #include "application-impl-legacy.h"
+#include "string-util.h"
 
 #include <regex>
 
@@ -88,9 +89,8 @@ bool Legacy::verifyAppname(const AppID::Package& package,
 
     auto desktop = std::string(appname) + ".desktop";
     auto evaldir = [&desktop](const gchar* dir) {
-        char* fulldir = g_build_filename(dir, "applications", desktop.c_str(), nullptr);
-        gboolean found = g_file_test(fulldir, G_FILE_TEST_EXISTS);
-        g_free(fulldir);
+        auto fulldir = unique_gchar(g_build_filename(dir, "applications", desktop.c_str(), nullptr));
+        gboolean found = g_file_test(fulldir.get(), G_FILE_TEST_EXISTS);
         return found == TRUE;
     };
 
@@ -143,8 +143,9 @@ static const std::regex desktop_remover("^(.*)\\.desktop$");
 std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
 {
     std::list<std::shared_ptr<Application>> list;
-    GList* head = g_app_info_get_all();
-    for (GList* item = head; item != nullptr; item = g_list_next(item))
+    std::unique_ptr<GList, decltype(&g_list_free)> head(g_app_info_get_all(),
+                                                        [](GList* l) { g_list_free_full(l, g_object_unref); });
+    for (GList* item = head.get(); item != nullptr; item = g_list_next(item))
     {
         GDesktopAppInfo* appinfo = G_DESKTOP_APP_INFO(item->data);
 
@@ -186,8 +187,6 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
             g_debug("Unable to create application for legacy appname '%s': %s", appname.c_str(), e.what());
         }
     }
-
-    g_list_free_full(head, g_object_unref);
 
     return list;
 }

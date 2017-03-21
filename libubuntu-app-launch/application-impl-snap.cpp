@@ -22,6 +22,11 @@
 #include "application-impl-snap.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
+#include "string-util.h"
+
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
 
 namespace ubuntu
 {
@@ -65,12 +70,13 @@ public:
                       /* This is a function to get the keyfile out of the snap using
                          the paths that snappy places things inside the dir. */
                       std::string path = snapDir + "/meta/gui/" + appid.appname.value() + ".desktop";
-                      std::shared_ptr<GKeyFile> keyfile(g_key_file_new(), g_key_file_free);
+                      auto keyfile = share_glib(g_key_file_new());
                       GError* error = nullptr;
                       g_key_file_load_from_file(keyfile.get(), path.c_str(), G_KEY_FILE_NONE, &error);
                       if (error != nullptr)
                       {
-                          auto perror = std::shared_ptr<GError>(error, g_error_free);
+                          auto perror = unique_glib(error);
+                          error = nullptr;
                           throw std::runtime_error("Unable to find keyfile for '" + std::string(appid) + "' at '" +
                                                    path + "' because: " + perror.get()->message);
                       }
@@ -78,18 +84,19 @@ public:
                       /* For bad reasons the Icon values in snaps have gotten to be a
                          bit crazy. We're going to try to un-fu-bar a few common patterns
                          here, but eh, we're just encouraging bad behavior */
-                      auto iconvalue = g_key_file_get_string(keyfile.get(), "Desktop Entry", "Icon", nullptr);
-                      if (iconvalue != nullptr)
+                      auto iconvalue =
+                          unique_gchar(g_key_file_get_string(keyfile.get(), "Desktop Entry", "Icon", nullptr));
+                      if (iconvalue)
                       {
                           const gchar* prefix{nullptr};
-                          if (g_str_has_prefix(iconvalue, "${SNAP}/"))
+                          if (g_str_has_prefix(iconvalue.get(), "${SNAP}/"))
                           {
                               /* There isn't environment parsing in desktop file values :-( */
                               prefix = "${SNAP}/";
                           }
 
                           auto currentdir = std::string{"/snap/"} + appid.package.value() + "/current/";
-                          if (g_str_has_prefix(iconvalue, currentdir.c_str()))
+                          if (g_str_has_prefix(iconvalue.get(), currentdir.c_str()))
                           {
                               /* What? Why would we encode the snap path from root in a package
                                  format that is supposed to be relocatable? */
@@ -99,11 +106,9 @@ public:
                           if (prefix != nullptr)
                           {
                               g_key_file_set_string(keyfile.get(), "Desktop Entry", "Icon",
-                                                    iconvalue + strlen(prefix) - 1);
+                                                    iconvalue.get() + strlen(prefix) - 1);
                               /* -1 to leave trailing slash */
                           }
-
-                          g_free(iconvalue);
                       }
 
                       return keyfile;
@@ -127,10 +132,14 @@ public:
     Exec execLine() override
     {
         std::string keyfile = _exec.value();
-        gchar** parsed = nullptr;
         GError* error = nullptr;
 
-        g_shell_parse_argv(keyfile.c_str(), nullptr, &parsed, &error);
+        GCharVUPtr parsed(nullptr, &g_strfreev);
+        {
+            gchar** tmp = nullptr;
+            g_shell_parse_argv(keyfile.c_str(), nullptr, &tmp, &error);
+            parsed = unique_gcharv(tmp);
+        }
 
         if (error != nullptr)
         {
@@ -139,18 +148,16 @@ public:
             return Exec::from_raw({});
         }
 
-        if (g_strv_length(parsed) == 0)
+        if (g_strv_length(parsed.get()) == 0)
         {
             g_warning("Parse resulted in a blank line");
-            g_strfreev(parsed);
             return Exec::from_raw({});
         }
 
         /* Skip the first entry */
-        gchar** parsedpp = &(parsed[1]);
+        gchar** parsedpp = &(parsed.get()[1]);
 
-        gchar* params = g_strjoinv(" ", parsedpp);
-        g_strfreev(parsed);
+        auto params = unique_gchar(g_strjoinv(" ", parsedpp));
 
         std::string binname;
         if (appId_.package.value() == appId_.appname.value())
@@ -162,8 +169,7 @@ public:
             binname = appId_.package.value() + "." + appId_.appname.value();
         }
 
-        binname = "/snap/bin/" + binname + " " + params;
-        g_free(params);
+        binname = "/snap/bin/" + binname + " " + params.get();
 
         return Exec::from_raw(binname);
     }

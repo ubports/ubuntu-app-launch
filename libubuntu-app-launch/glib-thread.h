@@ -39,7 +39,7 @@ class ContextThread
     std::shared_ptr<std::once_flag> afterFlag_;
 
 public:
-    ContextThread(std::function<void()> beforeLoop = [] {}, std::function<void()> afterLoop = [] {});
+    ContextThread(const std::function<void()>& beforeLoop = [] {}, const std::function<void()>& afterLoop = [] {});
     ~ContextThread();
 
     void quit();

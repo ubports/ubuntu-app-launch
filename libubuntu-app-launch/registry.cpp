@@ -31,7 +31,7 @@ namespace app_launch
 
 Registry::Registry()
 {
-    impl = std::unique_ptr<Impl>(new Impl(this));
+    impl = std::unique_ptr<Impl>(new Impl(*this));
 }
 
 Registry::~Registry()

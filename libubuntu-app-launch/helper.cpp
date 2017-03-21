@@ -21,8 +21,13 @@
 #include <list>
 #include <numeric>
 
+#include <unity/util/GlibMemory.h>
+#include <unity/util/GObjectMemory.h>
+#include <unity/util/ResourcePtr.h>
+
 #include "helper-impl.h"
 #include "registry-impl.h"
+#include "signal-unsubscriber.h"
 
 #include "ubuntu-app-launch.h"
 
@@ -30,6 +35,8 @@ extern "C" {
 #include "proxy-socket-demangler.h"
 #include <gio/gunixfdlist.h>
 }
+
+using namespace unity::util;
 
 namespace ubuntu
 {
@@ -213,15 +220,17 @@ class MirFDProxy
 {
 public:
     std::shared_ptr<Registry> reg_;
-    int mirfd;
+    ResourcePtr<int, void(*)(int)> mirfd;
     std::shared_ptr<proxySocketDemangler> skel;
-    guint handle;
+    ManagedSignalConnection<proxySocketDemangler> handle;
     std::string path;
     std::string name;
     guint timeout{0};
 
     MirFDProxy(MirPromptSession* session, const AppID& appid, const std::shared_ptr<Registry>& reg)
         : reg_(reg)
+        , mirfd(0, [](int fp){if (fp != 0) close(fp);})
+        , handle(SignalUnsubscriber<proxySocketDemangler>{})
         , name(g_dbus_connection_get_unique_name(reg->impl->_dbus.get()))
     {
         if (appid.empty())
@@ -247,22 +256,20 @@ public:
             },
             &promise);
 
-        mirfd = promise.get_future().get();
+        mirfd.reset(promise.get_future().get());
 
-        if (mirfd == 0)
+        if (mirfd.get() == 0)
         {
             throw std::runtime_error{"Unable to Mir FD from Prompt Session"};
         }
 
         /* Setup the DBus interface */
         std::tie(skel, handle, path) =
-            reg->impl->thread.executeOnThread<std::tuple<std::shared_ptr<proxySocketDemangler>, guint, std::string>>(
+            reg->impl->thread.executeOnThread<std::tuple<std::shared_ptr<proxySocketDemangler>, ManagedSignalConnection<proxySocketDemangler>, std::string>>(
                 [this, appid, reg]() {
-                    auto skel = std::shared_ptr<proxySocketDemangler>(
-                        proxy_socket_demangler_skeleton_new(),
-                        [](proxySocketDemangler* skel) { g_clear_object(&skel); });
-                    auto handle = g_signal_connect(G_OBJECT(skel.get()), "handle-get-mir-socket",
-                                                   G_CALLBACK(staticProxyCb), this);
+                    auto skel = share_gobject(proxy_socket_demangler_skeleton_new());
+                    auto handle = managedSignalConnection<proxySocketDemangler>(g_signal_connect(G_OBJECT(skel.get()), "handle-get-mir-socket",
+                                                   G_CALLBACK(staticProxyCb), this), skel);
 
                     /* Find a path to export on */
                     auto dbusAppid = dbusSafe(std::string{appid});
@@ -294,23 +301,13 @@ public:
                         }
                     }
 
-                    return std::make_tuple(skel, handle, path);
+                    return std::make_tuple(skel, std::move(handle), path);
                 });
     }
 
     ~MirFDProxy()
     {
         g_debug("Mir Prompt Proxy shutdown");
-        if (mirfd != 0)
-        {
-            close(mirfd);
-        }
-
-        if (handle != 0)
-        {
-            g_signal_handler_disconnect(skel.get(), handle);
-        }
-
         g_dbus_interface_skeleton_unexport(G_DBUS_INTERFACE_SKELETON(skel.get()));
     }
 
@@ -328,40 +325,28 @@ public:
 
     bool proxyCb(GDBusMethodInvocation* invocation)
     {
-        if (mirfd == 0)
+        if (mirfd.get() == 0)
         {
             g_warning("Mir FD proxy called with no FDs!");
+            return false;
+        }
+
+        GError* error = nullptr;
+        std::unique_ptr<GUnixFDList, decltype(&g_object_unref)> list(g_unix_fd_list_new(), &g_object_unref);
+        g_unix_fd_list_append(list.get(), mirfd.get(), &error);
+
+        if (error != nullptr)
+        {
+            g_warning("Unable to pass FD %d: %s", mirfd.get(), error->message);
+            g_error_free(error);
             return false;
         }
 
         /* Index into fds */
         auto handle = g_variant_new_handle(0);
         auto tuple = g_variant_new_tuple(&handle, 1);
-
-        GError* error = nullptr;
-        GUnixFDList* list = g_unix_fd_list_new();
-        g_unix_fd_list_append(list, mirfd, &error);
-
-        if (error == nullptr)
-        {
-            g_dbus_method_invocation_return_value_with_unix_fd_list(invocation, tuple, list);
-        }
-        else
-        {
-            g_variant_ref_sink(tuple);
-            g_variant_unref(tuple);
-        }
-
-        g_object_unref(list);
-
-        if (error != nullptr)
-        {
-            g_warning("Unable to pass FD %d: %s", mirfd, error->message);
-            g_error_free(error);
-            return false;
-        }
-
-        mirfd = 0;
+        g_dbus_method_invocation_return_value_with_unix_fd_list(invocation, tuple, list.get());
+        mirfd.dealloc();
 
         /* Remove the timeout on the mainloop */
         auto reg = reg_;

@@ -24,7 +24,10 @@
 #include <future>
 #include <gio/gio.h>
 #include <map>
+#include <memory>
 #include <mutex>
+#include <signal-unsubscriber.h>
+#include <unity/util/ResourcePtr.h>
 
 namespace ubuntu
 {
@@ -76,9 +79,9 @@ private:
     core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStopped;
     core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType> sig_jobFailed;
 
-    guint handle_unitNew{0};     /**< GDBus signal watcher handle for the unit new signal */
-    guint handle_unitRemoved{0}; /**< GDBus signal watcher handle for the unit removed signal */
-    guint handle_appFailed{0};   /**< GDBus signal watcher handle for app failed signal */
+    ManagedDBusSignalConnection handle_unitNew;     /**< GDBus signal watcher handle for the unit new signal */
+    ManagedDBusSignalConnection handle_unitRemoved; /**< GDBus signal watcher handle for the unit removed signal */
+    ManagedDBusSignalConnection handle_appFailed;   /**< GDBus signal watcher handle for app failed signal */
 
     bool noResetUnits_{false}; /**< Debug flag to avoid resetting the systemd units */
 

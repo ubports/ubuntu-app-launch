@@ -40,6 +40,9 @@ extern "C" {
 #include "registry.h"
 #include "registry-impl.h"
 #include <algorithm>
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
 
 /* Make a typed string vector out of a GStrv */
 template <typename T>
@@ -161,7 +164,7 @@ static void executeOnContext (const std::shared_ptr<GMainContext>& context, std:
 
     auto heapWork = new std::function<void()>(work);
 
-    auto source = std::shared_ptr<GSource>(g_idle_source_new(), [](GSource* src) { g_clear_pointer(&src, g_source_unref); });
+    auto source = unique_glib(g_idle_source_new());
     g_source_set_callback(source.get(),
                           [](gpointer data) {
                               auto heapWork = static_cast<std::function<void()>*>(data);
@@ -183,7 +186,7 @@ template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Application>&, 
 static gboolean
 observer_add (UbuntuAppLaunchAppObserver observer, gpointer user_data, std::map<std::pair<UbuntuAppLaunchAppObserver, gpointer>, core::ScopedConnection> &observers)
 {
-	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+	auto context = share_glib(g_main_context_ref_thread_default());
 
 	observers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
@@ -282,13 +285,13 @@ private:
 	struct ObserverData {
 		UbuntuAppLaunchAppObserver observer;
 		gpointer user_data;
-		std::shared_ptr<GMainContext> context;
+		GMainContextSPtr context;
 
 		/** Handy constructor to get the context in one place */
 		ObserverData(UbuntuAppLaunchAppObserver obs, gpointer ud)
 			: observer(obs)
 			, user_data(ud) {
-			context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+			context = share_glib(g_main_context_ref_thread_default());
 		}
 	};
 
@@ -422,7 +425,7 @@ static std::map<std::pair<UbuntuAppLaunchAppFailedObserver, gpointer>, core::Sco
 gboolean
 ubuntu_app_launch_observer_add_app_failed (UbuntuAppLaunchAppFailedObserver observer, gpointer user_data)
 {
-	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+	auto context = share_glib(g_main_context_ref_thread_default());
 	auto reg = ubuntu::app_launch::Registry::getDefault();
 
 	appFailedObservers.emplace(std::make_pair(
@@ -462,7 +465,7 @@ template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Application>&, 
 static gboolean
 observer_add_pause (UbuntuAppLaunchAppPausedResumedObserver observer, gpointer user_data, std::map<std::pair<UbuntuAppLaunchAppPausedResumedObserver, gpointer>, core::ScopedConnection> &observers)
 {
-	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+	auto context = share_glib(g_main_context_ref_thread_default());
 
 	observers.emplace(std::make_pair(
 		std::make_pair(observer, user_data),
@@ -845,7 +848,7 @@ template <core::Signal<const std::shared_ptr<ubuntu::app_launch::Helper>&, const
 static gboolean
 helper_add (UbuntuAppLaunchHelperObserver observer, const gchar * helper_type, gpointer user_data, std::map<std::tuple<UbuntuAppLaunchHelperObserver, std::string, gpointer>, core::ScopedConnection> &observers)
 {
-	auto context = std::shared_ptr<GMainContext>(g_main_context_ref_thread_default(), [](GMainContext * context) { g_clear_pointer(&context, g_main_context_unref); });
+	auto context = share_glib(g_main_context_ref_thread_default());
 	auto type = ubuntu::app_launch::Helper::Type::from_raw(helper_type);
 
 	observers.emplace(std::make_pair(
