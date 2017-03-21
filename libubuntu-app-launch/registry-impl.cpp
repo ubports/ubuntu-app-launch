@@ -186,8 +186,9 @@ core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdate
         for (const auto& app : apps)
         {
             infoWatchers_.emplace_back(
-                std::make_pair(app, app->infoChanged().connect(
-                                        [this](const std::shared_ptr<Application>& app) { sig_appInfoUpdated(app); })));
+                std::make_pair(app, app->infoChanged().connect([this](const std::shared_ptr<Application>& app) {
+                    sig_appInfoUpdated(app);
+                })));
         }
     });
     return sig_appInfoUpdated;

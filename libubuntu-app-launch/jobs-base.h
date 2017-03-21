@@ -153,9 +153,8 @@ public:
         Helper::Type type);
     virtual core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStopped(
         Helper::Type type);
-    virtual core::Signal<const std::shared_ptr<Helper>&,
-                         const std::shared_ptr<Helper::Instance>&,
-                         Registry::FailureType>&
+    virtual core::
+        Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
         helperFailed(Helper::Type type);
     /* Job signals from implementations */
     virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStarted() = 0;
