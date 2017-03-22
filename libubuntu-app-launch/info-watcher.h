@@ -43,8 +43,21 @@ public:
         return infoChanged_;
     }
 
+    virtual core::Signal<const std::shared_ptr<Application>&>& appAdded()
+    {
+        return appAdded_;
+    }
+
+    virtual core::Signal<const AppID&>& appRemoved()
+    {
+        return appRemoved_;
+    }
+
 protected:
     core::Signal<const std::shared_ptr<Application>&> infoChanged_;
+    core::Signal<const std::shared_ptr<Application>&> appAdded_;
+    core::Signal<const AppID&> appRemoved_;
+
     std::weak_ptr<Registry> registry_;
 
     std::shared_ptr<Registry> getReg()

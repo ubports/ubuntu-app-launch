@@ -137,6 +137,11 @@ public:
     static core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(
         const std::shared_ptr<Registry>& reg = getDefault());
 
+    /* TODO */
+    static core::Signal<const std::shared_ptr<Application>&>& appAdded(
+        const std::shared_ptr<Registry>& reg = getDefault());
+    static core::Signal<const AppID&>& appRemoved(const std::shared_ptr<Registry>& reg = getDefault());
+
     /** The Application Manager, almost always if you're not Unity8, don't
         use this API. Testing is a special case. Subclass this interface and
         implement these functions.

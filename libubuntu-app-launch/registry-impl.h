@@ -94,6 +94,8 @@ public:
     }
 
     core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
+    core::Signal<const std::shared_ptr<Application>&>& appAdded(const std::shared_ptr<Registry>& reg);
+    core::Signal<const AppID&>& appRemoved(const std::shared_ptr<Registry>& reg);
 
     std::list<std::shared_ptr<app_store::Base>> appStores()
     {
@@ -123,10 +125,22 @@ private:
 
     /** Signal for application info changing */
     core::Signal<const std::shared_ptr<Application>&> sig_appInfoUpdated;
+    /** Signal for applications added */
+    core::Signal<const std::shared_ptr<Application>&> sig_appAdded;
+    /** Signal for applications removed */
+    core::Signal<const AppID&> sig_appRemoved;
+
+    void infoWatchersSetup(const std::shared_ptr<Registry>& reg);
     /** Flag to see if we've initialized the info watcher list */
-    std::once_flag flag_appInfoUpdated;
+    std::once_flag flag_infoWatchersSetup;
+    struct infoWatcherConnections
+    {
+        core::ScopedConnection infoUpdated;
+        core::ScopedConnection appAdded;
+        core::ScopedConnection appRemoved;
+    };
     /** List of info watchers along with a signal handle to our connection to their update signal */
-    std::list<std::pair<std::shared_ptr<info_watcher::Base>, core::ScopedConnection>> infoWatchers_;
+    std::list<std::pair<std::shared_ptr<info_watcher::Base>, infoWatcherConnections>> infoWatchers_;
 
 protected:
     /** ZG Info Watcher */
