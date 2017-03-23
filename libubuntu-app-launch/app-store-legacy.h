@@ -58,14 +58,14 @@ public:
 
     /* Info watching */
     virtual core::Signal<const std::shared_ptr<Application>&>& infoChanged() override;
+    virtual core::Signal<const std::shared_ptr<Application>&>& appAdded() override;
+    virtual core::Signal<const AppID&>& appRemoved() override;
 
 private:
     std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>> monitors_;
     std::once_flag monitorsSetup_;
 
-    static void directoryChangedStatic(
-        GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type, gpointer user_data);
-    void directoryChanged(GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type);
+    void directoryChanged(GFile* file, GFileMonitorEvent type);
     void setupMonitors();
 };
 

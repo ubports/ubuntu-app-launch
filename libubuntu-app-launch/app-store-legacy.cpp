@@ -196,14 +196,10 @@ std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid, const std::s
     return std::make_shared<app_impls::Legacy>(appid.appname, registry);
 }
 
-void Legacy::directoryChangedStatic(
-    GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type, gpointer user_data)
-{
-    auto pthis = static_cast<Legacy*>(user_data);
-    pthis->directoryChanged(monitor, file, other_file, type);
-}
-
-void Legacy::directoryChanged(GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type)
+/** Turns a directory changed event from a file monitor into an
+ *  internal signal. Makes sure we can deal with it first, and
+ *  then propegates up the stack. */
+void Legacy::directoryChanged(GFile* file, GFileMonitorEvent type)
 {
     if (g_file_query_file_type(file, G_FILE_QUERY_INFO_NONE, nullptr) != G_FILE_TYPE_REGULAR)
     {
@@ -254,6 +250,10 @@ void Legacy::directoryChanged(GFileMonitor* monitor, GFile* file, GFile* other_f
     };
 }
 
+/** Function that setups file monitors on all of the system application
+ *  directories and the user application directory. Any time an application
+ *  is added or removed or changed we send the appropriate signal up the
+ *  stack. */
 void Legacy::setupMonitors()
 {
     std::call_once(monitorsSetup_, [this]() {
@@ -282,7 +282,12 @@ void Legacy::setupMonitors()
                 throw std::runtime_error{message};
             }
 
-            g_signal_connect(monitor.get(), "changed", G_CALLBACK(directoryChangedStatic), this);
+            g_signal_connect(monitor.get(), "changed", G_CALLBACK(+[](GFileMonitor*, GFile* file, GFile*,
+                                                                      GFileMonitorEvent type, gpointer user_data) {
+                                 auto pthis = static_cast<Legacy*>(user_data);
+                                 pthis->directoryChanged(file, type);
+                             }),
+                             this);
 
             return monitor;
         };
@@ -311,10 +316,28 @@ void Legacy::setupMonitors()
     });
 }
 
+/** Return the signal object, but make sure we have the
+ *  monitors setup first */
 core::Signal<const std::shared_ptr<Application>&>& Legacy::infoChanged()
 {
     setupMonitors();
     return infoChanged_;
+}
+
+/** Return the signal object, but make sure we have the
+ *  monitors setup first */
+core::Signal<const std::shared_ptr<Application>&>& Legacy::appAdded()
+{
+    setupMonitors();
+    return appAdded_;
+}
+
+/** Return the signal object, but make sure we have the
+ *  monitors setup first */
+core::Signal<const AppID&>& Legacy::appRemoved()
+{
+    setupMonitors();
+    return appRemoved_;
 }
 
 }  // namespace app_store
