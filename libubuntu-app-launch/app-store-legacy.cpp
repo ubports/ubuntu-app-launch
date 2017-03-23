@@ -205,44 +205,56 @@ void Legacy::directoryChangedStatic(
 
 void Legacy::directoryChanged(GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type)
 {
+    if (g_file_query_file_type(file, G_FILE_QUERY_INFO_NONE, nullptr) != G_FILE_TYPE_REGULAR)
+    {
+        return;
+    }
+
+    auto cdesktopname = unique_gchar(g_file_get_basename(file));
+    if (!cdesktopname)
+        return;
+    std::string desktopname{cdesktopname.get()};
+
+    std::string appname;
+    std::smatch match;
+    if (std::regex_match(desktopname, match, desktop_remover))
+    {
+        appname = match[1].str();
+    }
+    else
+    {
+        return;
+    }
+
     switch (type)
     {
         case G_FILE_MONITOR_EVENT_CREATED:
+        {
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), getReg());
+
+            appAdded_(app);
+            break;
+        }
         case G_FILE_MONITOR_EVENT_CHANGED:
         {
-            if (g_file_query_file_type(file, G_FILE_QUERY_INFO_NONE, nullptr) != G_FILE_TYPE_REGULAR)
-            {
-                break;
-            }
-
-            auto cdesktopname = unique_gchar(g_file_get_basename(file));
-            if (!cdesktopname)
-                break;
-            std::string desktopname{cdesktopname.get()};
-
-            std::string appname;
-            std::smatch match;
-            if (std::regex_match(desktopname, match, desktop_remover))
-            {
-                appname = match[1].str();
-            }
-            else
-            {
-                break;
-            }
-
             auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), getReg());
 
             infoChanged_(app);
             break;
         }
-        case G_FILE_MONITOR_EVENT_DELETED: /* TODO: Handle */
+        case G_FILE_MONITOR_EVENT_DELETED:
+        {
+            AppID appid{AppID::Package::from_raw({}), AppID::AppName::from_raw(appname), AppID::Version::from_raw({})};
+
+            appRemoved_(appid);
+            break;
+        }
         default:
             break;
     };
 }
 
-core::Signal<const std::shared_ptr<Application>&>& Legacy::infoChanged()
+void Legacy::setupMonitors()
 {
     std::call_once(monitorsSetup_, [this]() {
         auto monitorDir = [this](const gchar* dirname) {
@@ -297,7 +309,11 @@ core::Signal<const std::shared_ptr<Application>&>& Legacy::infoChanged()
             g_debug("Unable to create directory monitor for user data dir: %s", e.what());
         }
     });
+}
 
+core::Signal<const std::shared_ptr<Application>&>& Legacy::infoChanged()
+{
+    setupMonitors();
     return infoChanged_;
 }
 

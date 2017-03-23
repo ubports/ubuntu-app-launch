@@ -66,6 +66,7 @@ private:
     static void directoryChangedStatic(
         GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type, gpointer user_data);
     void directoryChanged(GFileMonitor* monitor, GFile* file, GFile* other_file, GFileMonitorEvent type);
+    void setupMonitors();
 };
 
 }  // namespace app_store
