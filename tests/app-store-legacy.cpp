@@ -48,6 +48,7 @@ class TestDirectory
     std::string dirname_;
     std::string appdir_;
 
+public:
     TestDirectory()
     {
         GError *error{nullptr};
@@ -62,6 +63,7 @@ class TestDirectory
         dirname_ = dirname.get();
 
         appdir_ = ubuntu::app_launch::unique_gchar(g_build_filename(dirname.get(), "applications", nullptr)).get();
+        g_mkdir_with_parents(appdir_.c_str(), 0700);
 
         auto datadirs =
             ubuntu::app_launch::unique_gchar(g_strdup_printf("%s:%s", dirname.get(), g_getenv("XDG_DATA_DIRS")));
@@ -116,4 +118,22 @@ TEST_F(AppStoreLegacy, Init)
 {
     auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>();
     store.reset();
+}
+
+TEST_F(AppStoreLegacy, FindApp)
+{
+    TestDirectory testdir;
+    testdir.addApp("testapp",
+                   {{G_KEY_FILE_DESKTOP_GROUP,
+                     {
+                         {G_KEY_FILE_DESKTOP_KEY_NAME, "Test App"},
+                         {G_KEY_FILE_DESKTOP_KEY_TYPE, "Application"},
+                         {G_KEY_FILE_DESKTOP_KEY_ICON, "foo.png"},
+                         {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
+                     }}});
+
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>();
+
+    EXPECT_TRUE(store->verifyAppname(ubuntu::app_launch::AppID::Package::from_raw({}),
+                                     ubuntu::app_launch::AppID::AppName::from_raw("testapp"), registry));
 }
