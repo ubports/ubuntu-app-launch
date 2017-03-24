@@ -1,8 +1,0 @@
-{
-	"version": "1.2.3",
-	"hooks": {
-		"no-application": {
-			"desktop": "application.desktop"
-		}
-	}
-}

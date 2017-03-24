@@ -21,9 +21,12 @@
 
 #include "application.h"
 #include "registry.h"
+#include "signal-unsubscriber.h"
+#include "string-util.h"
 
 #include <core/signal.h>
 #include <gio/gio.h>
+#include <map>
 #include <set>
 
 namespace ubuntu
@@ -50,6 +53,11 @@ public:
     void pause() override;
     void resume() override;
     void focus() override;
+
+    const std::string& getInstanceId()
+    {
+        return instance_;
+    }
 
     /* OOM Functions */
     void setOomAdjustment(const oom::Score score) override;
@@ -78,7 +86,7 @@ protected:
     static void oomValueToPid(pid_t pid, const oom::Score oomvalue);
     static void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
     static std::string pidToOomPath(pid_t pid);
-    static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
+    static GCharVUPtr urlsToStrv(const std::vector<Application::URL>& urls);
 };
 
 }  // namespace instance
@@ -112,23 +120,26 @@ public:
                                                             const std::string& instance,
                                                             const std::vector<Application::URL>& urls) = 0;
 
-    virtual std::list<std::shared_ptr<Application>> runningApps() = 0;
+    virtual std::list<std::shared_ptr<Application>> runningApps();
+    virtual std::list<std::shared_ptr<Helper>> runningHelpers(const Helper::Type& type);
+
+    virtual std::list<std::string> runningAppIds(const std::list<std::string>& jobs) = 0;
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) = 0;
 
-    const std::set<std::string>& getAllJobs() const;
+    const std::list<std::string>& getAllApplicationJobs() const;
 
     static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
 
     /* Signals to apps */
     virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStarted() = 0;
+        appStarted();
     virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStopped() = 0;
+        appStopped();
     virtual core::Signal<const std::shared_ptr<Application>&,
                          const std::shared_ptr<Application::Instance>&,
                          Registry::FailureType>&
-        appFailed() = 0;
+        appFailed();
     virtual core::Signal<const std::shared_ptr<Application>&,
                          const std::shared_ptr<Application::Instance>&,
                          const std::vector<pid_t>&>&
@@ -137,6 +148,20 @@ public:
                          const std::shared_ptr<Application::Instance>&,
                          const std::vector<pid_t>&>&
         appResumed();
+    /* Signals to helpers */
+    virtual core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStarted(
+        Helper::Type type);
+    virtual core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStopped(
+        Helper::Type type);
+    virtual core::Signal<const std::shared_ptr<Helper>&,
+                         const std::shared_ptr<Helper::Instance>&,
+                         Registry::FailureType>&
+        helperFailed(Helper::Type type);
+    /* Job signals from implementations */
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStarted() = 0;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStopped() = 0;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>&
+        jobFailed() = 0;
 
     /* App manager */
     virtual void setManager(std::shared_ptr<Registry::Manager> manager);
@@ -146,8 +171,8 @@ protected:
     /** A link to the registry */
     std::weak_ptr<Registry> registry_;
 
-    /** A set of all the job names */
-    std::set<std::string> allJobs_;
+    /** A set of all the job names used by applications */
+    std::list<std::string> allApplicationJobs_;
 
     /** The DBus connection we're connecting to */
     std::shared_ptr<GDBusConnection> dbus_;
@@ -155,6 +180,7 @@ protected:
     /** Application manager instance */
     std::shared_ptr<Registry::Manager> manager_;
 
+private:
     /** Signal object for applications started */
     core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&> sig_appStarted;
     /** Signal object for applications stopped */
@@ -175,15 +201,37 @@ protected:
                  const std::vector<pid_t>&>
         sig_appResumed;
 
-private:
-    guint handle_managerSignalFocus{0};    /**< GDBus signal watcher handle for app focused signal */
-    guint handle_managerSignalResume{0};   /**< GDBus signal watcher handle for app resumed signal */
-    guint handle_managerSignalStarting{0}; /**< GDBus signal watcher handle for app starting signal */
-    guint handle_appPaused{0};             /**< GDBus signal watcher handle for app paused signal */
-    guint handle_appResumed{0};            /**< GDBus signal watcher handle for app resumed signal */
+    std::map<std::string,
+             std::shared_ptr<core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>>>
+        sig_helpersStarted;
+    std::map<std::string,
+             std::shared_ptr<core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>>>
+        sig_helpersStopped;
+    std::map<std::string,
+             std::shared_ptr<core::Signal<const std::shared_ptr<Helper>&,
+                                          const std::shared_ptr<Helper::Instance>&,
+                                          Registry::FailureType>>>
+        sig_helpersFailed;
+
+    ManagedDBusSignalConnection handle_managerSignalFocus{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app focused signal */
+    ManagedDBusSignalConnection handle_managerSignalResume{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app resumed signal */
+    ManagedDBusSignalConnection handle_managerSignalStarting{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app starting signal */
+    ManagedDBusSignalConnection handle_appPaused{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app paused signal */
+    ManagedDBusSignalConnection handle_appResumed{
+        DBusSignalUnsubscriber{}}; /**< GDBus signal watcher handle for app resumed signal */
 
     std::once_flag flag_managerSignals; /**< Variable to track to see if signal handlers are installed for the manager
                                            signals of focused, resumed and starting */
+    std::once_flag flag_appStarted;     /**< Variable to track to see if signal handlers are installed for application
+                                           started */
+    std::once_flag flag_appStopped;     /**< Variable to track to see if signal handlers are installed for application
+                                           stopped */
+    std::once_flag
+        flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
     std::once_flag
         flag_appPaused; /**< Variable to track to see if signal handlers are installed for application paused */
     std::once_flag flag_appResumed; /**< Variable to track to see if signal handlers are installed for application

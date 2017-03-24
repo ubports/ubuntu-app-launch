@@ -134,10 +134,21 @@ public:
             &error);
         throwError(error);
 
-        dbus_test_dbus_mock_object_add_method(mock, managerobj, "StartTransientUnit",
-                                              G_VARIANT_TYPE("(ssa(sv)a(sa(sv)))"),
-                                              G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
-                                              "ret = '/'", &error);
+        dbus_test_dbus_mock_object_add_method(
+            mock, managerobj, "StartTransientUnit", G_VARIANT_TYPE("(ssa(sv)a(sa(sv)))"),
+            G_VARIANT_TYPE_OBJECT_PATH, /* ret type */
+            std::accumulate(instances.begin(), instances.end(), std::string{"ret = '/'\n"},
+                            [](const std::string accum, const Instance& inst) {
+                                std::string retval = accum;
+
+                                retval += "if args[0] == '" + instanceName(inst) + "':\n";
+                                retval += "\traise dbus.exceptions.DBusException('Already running app" +
+                                          instanceName(inst) + "', name='org.freedesktop.systemd1.UnitExists')\n";
+
+                                return retval;
+                            })
+                .c_str(),
+            &error);
         throwError(error);
 
         dbus_test_dbus_mock_object_add_method(mock, managerobj, "ResetFailedUnit", G_VARIANT_TYPE_STRING,
@@ -163,18 +174,19 @@ public:
 
             g_mkdir_with_parents(dir, 0777);
 
-            g_file_set_contents(tasks, std::accumulate(instance.pids.begin(), instance.pids.end(), std::string{},
-                                                       [](const std::string& accum, pid_t pid) {
-                                                           if (accum.empty())
-                                                           {
-                                                               return std::to_string(pid);
-                                                           }
-                                                           else
-                                                           {
-                                                               return accum + "\n" + std::to_string(pid);
-                                                           }
-                                                       })
-                                           .c_str(),
+            g_file_set_contents(tasks,
+                                std::accumulate(instance.pids.begin(), instance.pids.end(), std::string{},
+                                                [](const std::string& accum, pid_t pid) {
+                                                    if (accum.empty())
+                                                    {
+                                                        return std::to_string(pid);
+                                                    }
+                                                    else
+                                                    {
+                                                        return accum + "\n" + std::to_string(pid);
+                                                    }
+                                                })
+                                    .c_str(),
                                 -1, &error);
             throwError(error);
 
@@ -225,7 +237,7 @@ public:
 
     static std::string instanceName(const Instance& inst)
     {
-        return std::string{"ubuntu-app-launch-"} + inst.job + "-" + inst.appid + "-" + inst.instanceid + ".service";
+        return std::string{"ubuntu-app-launch--"} + inst.job + "--" + inst.appid + "--" + inst.instanceid + ".service";
     }
 
     operator std::shared_ptr<DbusTestTask>()
@@ -238,6 +250,11 @@ public:
     operator DbusTestTask*()
     {
         return DBUS_TEST_TASK(mock);
+    }
+
+    operator DbusTestProcess*()
+    {
+        return DBUS_TEST_PROCESS(mock);
     }
 
     operator DbusTestDbusMock*()
@@ -527,7 +544,7 @@ public:
         }
     }
 
-    void managerEmitFailed(const Instance& inst)
+    void managerEmitFailed(const Instance& inst, const std::string& reason = "fail")
     {
         auto instobj =
             std::find_if(insts.begin(), insts.end(), [inst](const std::pair<Instance, DbusTestDbusMockObject*>& item) {
@@ -541,8 +558,8 @@ public:
         }
 
         GError* error = nullptr;
-        dbus_test_dbus_mock_object_update_property(mock, instobj->second, "Result", g_variant_new_string("fail"),
-                                                   &error);
+        dbus_test_dbus_mock_object_update_property(mock, instobj->second, "Result",
+                                                   g_variant_new_string(reason.c_str()), &error);
 
         if (error != nullptr)
         {
@@ -550,5 +567,10 @@ public:
             g_error_free(error);
             throw std::runtime_error{"Mock disfunctional"};
         }
+    }
+
+    std::function<DbusTestTaskState()> stateFunc()
+    {
+        return [this] { return dbus_test_task_get_state(DBUS_TEST_TASK(mock)); };
     }
 };

@@ -15,16 +15,16 @@ export MIR_SOCKET=
 export UBUNTU_APP_LAUNCH_SNAPPY_XMIR_HELPER="@CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-helper.sh"
 export UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH="@CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-libertine-launch.sh"
 
-@CMAKE_BINARY_DIR@/snappy-xmir appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
+@CMAKE_BINARY_DIR@/utils/snappy-xmir appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
 
 # Add a Mir variable to make sure it gets cleared
 
 export MIR_SOCKET="/this/is/a/socket"
 
-@CMAKE_BINARY_DIR@/snappy-xmir appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
+@CMAKE_BINARY_DIR@/utils/snappy-xmir appid @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
 
 # This is a long appid test
 
 export UBUNTU_APP_LAUNCH_SNAPPY_XMIR_HELPER="@CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-helper-long.sh"
 
-@CMAKE_BINARY_DIR@/snappy-xmir "this-is-a-really-really-really_long_appid-that-we-shouldnt-reallyhave_13523432324235.234.234.234234+foo" @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
+@CMAKE_BINARY_DIR@/utils/snappy-xmir "this-is-a-really-really-really_long_appid-that-we-shouldnt-reallyhave_13523432324235.234.234.234234+foo" @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh

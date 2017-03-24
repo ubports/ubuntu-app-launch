@@ -19,10 +19,14 @@
 
 #include "glib-thread.h"
 
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
+
 namespace GLib
 {
 
-ContextThread::ContextThread(std::function<void()> beforeLoop, std::function<void()> afterLoop)
+ContextThread::ContextThread(const std::function<void()>& beforeLoop, const std::function<void()>& afterLoop)
 {
     _cancel = std::shared_ptr<GCancellable>(g_cancellable_new(), [](GCancellable* cancel) {
         if (cancel != nullptr)
@@ -37,31 +41,27 @@ ContextThread::ContextThread(std::function<void()> beforeLoop, std::function<voi
        know that beforeLoop will stay valid long enough, but we can't say the
        same for afterLoop */
     afterLoop_ = afterLoop;
-    auto flag = std::make_shared<std::once_flag>();
-    afterFlag_ = flag;
+    afterFlag_ = std::make_shared<std::once_flag>();
 
-    _thread = std::thread([&context_promise, &beforeLoop, afterLoop, flag, this]() {
+    _thread = std::thread([&context_promise, &beforeLoop, this]() {
         /* Build up the context and loop for the async events and a place
            for GDBus to send its events back to */
-        auto context = std::shared_ptr<GMainContext>(
-            g_main_context_new(), [](GMainContext* context) { g_clear_pointer(&context, g_main_context_unref); });
-        auto loop = std::shared_ptr<GMainLoop>(g_main_loop_new(context.get(), FALSE),
-                                               [](GMainLoop* loop) { g_clear_pointer(&loop, g_main_loop_unref); });
+        auto context = share_glib(g_main_context_new());
+        auto loop = share_glib(g_main_loop_new(context.get(), FALSE));
 
         g_main_context_push_thread_default(context.get());
 
         beforeLoop();
 
         /* Free's the constructor to continue */
-        auto pair = std::pair<std::shared_ptr<GMainContext>, std::shared_ptr<GMainLoop>>(context, loop);
-        context_promise.set_value(pair);
+        context_promise.set_value(std::make_pair(context, loop));
 
         if (!g_cancellable_is_cancelled(_cancel.get()))
         {
             g_main_loop_run(loop.get());
         }
 
-        std::call_once(*flag, afterLoop);
+        std::call_once(*afterFlag_, afterLoop_);
     });
 
     /* We need to have the context and the mainloop ready before
@@ -119,7 +119,7 @@ std::shared_ptr<GCancellable> ContextThread::getCancellable()
     return _cancel;
 }
 
-void ContextThread::simpleSource(std::function<GSource*()> srcBuilder, std::function<void()> work)
+guint ContextThread::simpleSource(std::function<GSource*()> srcBuilder, std::function<void()> work)
 {
     if (isCancelled())
     {
@@ -131,7 +131,7 @@ void ContextThread::simpleSource(std::function<GSource*()> srcBuilder, std::func
        it to the context. */
     auto heapWork = new std::function<void()>(work);
 
-    auto source = std::shared_ptr<GSource>(srcBuilder(), [](GSource* src) { g_clear_pointer(&src, g_source_unref); });
+    auto source = unique_glib(srcBuilder());
     g_source_set_callback(source.get(),
                           [](gpointer data) {
                               auto heapWork = static_cast<std::function<void()>*>(data);
@@ -144,22 +144,33 @@ void ContextThread::simpleSource(std::function<GSource*()> srcBuilder, std::func
                               delete heapWork;
                           });
 
-    g_source_attach(source.get(), _context.get());
+    return g_source_attach(source.get(), _context.get());
 }
 
-void ContextThread::executeOnThread(std::function<void()> work)
+guint ContextThread::executeOnThread(std::function<void()> work)
 {
-    simpleSource(g_idle_source_new, work);
+    return simpleSource(g_idle_source_new, work);
 }
 
-void ContextThread::timeout(const std::chrono::milliseconds& length, std::function<void()> work)
+guint ContextThread::timeout(const std::chrono::milliseconds& length, std::function<void()> work)
 {
-    simpleSource([length]() { return g_timeout_source_new(length.count()); }, work);
+    return simpleSource([length]() { return g_timeout_source_new(length.count()); }, work);
 }
 
-void ContextThread::timeoutSeconds(const std::chrono::seconds& length, std::function<void()> work)
+guint ContextThread::timeoutSeconds(const std::chrono::seconds& length, std::function<void()> work)
 {
-    simpleSource([length]() { return g_timeout_source_new_seconds(length.count()); }, work);
+    return simpleSource([length]() { return g_timeout_source_new_seconds(length.count()); }, work);
+}
+
+void ContextThread::removeSource(guint sourceid)
+{
+    auto source = g_main_context_find_source_by_id(_context.get(), sourceid);
+    if (source == nullptr)
+    {
+        return;
+    }
+
+    g_source_destroy(source);
 }
 
 }  // ns GLib

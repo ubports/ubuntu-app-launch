@@ -13,10 +13,10 @@ Ubuntu App Launch is the abstraction that creates a consistent interface for
 managing apps on Ubuntu Touch. It is used by Unity8 and other programs to
 start and stop applications, as well as query which ones are currently open.
 It doesn't have its own service or processes though, it relies on the system
-init daemon to manage the processes (currently Upstart_) but configures them
+init daemon to manage the processes (currently systemd_) but configures them
 in a way that they're discoverable and usable by higher level applications.
 
-.. _Upstart: http://upstart.ubuntu.com/
+.. _systemd: http://freedesktop.org/wiki/Software/systemd/
 
 
 Environment Variables
@@ -24,12 +24,6 @@ Environment Variables
 
 There are a few environment variables that can effect the behavior of UAL while
 it is running.
-
-UBUNTU_APP_LAUNCH_CG_MANAGER_NAME
-  The DBus name that CG Manager registers under if it is on the session bus.
-
-UBUNTU_APP_LAUNCH_CG_MANAGER_SESSION_BUS
-  Tell UAL to look on the session bus for CG Manager.
 
 UBUNTU_APP_LAUNCH_DEMANGLER
   Path to the UAL demangler tool that will get the Mir FD for trusted prompt session.
@@ -42,9 +36,6 @@ UBUNTU_APP_LAUNCH_LEGACY_ROOT
 
 UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH
   Path to the libertine launch utility for setting up libertine containers and XMir based legacy apps.
-
-UBUNTU_APP_LAUNCH_LINK_FARM
-  Path to the link farm that is created by Click of all the installed Click applications.
 
 UBUNTU_APP_LAUNCH_OOM_HELPER
   Path to the setuid helper that configures OOM values on application processes that we otherwise couldn't, mostly this is for Oxide.
@@ -60,6 +51,15 @@ UBUNTU_APP_LAUNCH_SNAP_LEGACY_EXEC
 
 UBUNTU_APP_LAUNCH_SNAPD_SOCKET
   Path to the snapd socket.
+
+UBUNTU_APP_LAUNCH_SYSTEMD_CGROUP_ROOT
+  Path to the root of the cgroups that we should look in for PIDs. Defaults to `/sys/fs/cgroup/systemd/`.
+
+UBUNTU_APP_LAUNCH_SYSTEMD_PATH
+  Path to the dbus bus that is used to talk to systemd. This allows us to talk to the user bus while Upstart is still setting up a session bus. Defaults to `/run/user/$uid/bus`.
+
+UBUNTU_APP_LAUNCH_SYSTEMD_NO_RESET
+  Don't reset the job after it fails. This makes it so it can't be run again, but leaves debugging information around for investigation.
 
 UBUNTU_APP_LAUNCH_XMIR_HELPER
   Tool that helps to start XMir and sets the DISPLAY variable for applications
@@ -110,16 +110,6 @@ Application Implementation Base
 -------------------------------
 
 .. doxygenclass:: ubuntu::app_launch::app_impls::Base
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Application Implementation Click
---------------------------------
-
-.. doxygenclass:: ubuntu::app_launch::app_impls::Click
    :project: libubuntu-app-launch
    :members:
    :protected-members:
@@ -186,10 +176,50 @@ Application Icon Finder
    :private-members:
    :undoc-members:
 
-Helper Implementation Click
----------------------------
+Application Storage Base
+------------------------
 
-.. doxygenclass:: ubuntu::app_launch::helper_impls::Click
+.. doxygenclass:: ubuntu::app_launch::app_store::Base
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Storage Legacy
+--------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_store::Legacy
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Storage Libertine
+-----------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_store::Libertine
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Application Storage Snap
+------------------------
+
+.. doxygenclass:: ubuntu::app_launch::app_store::Snap
+   :project: libubuntu-app-launch
+   :members:
+   :protected-members:
+   :private-members:
+   :undoc-members:
+
+Helper Implementation Base
+--------------------------
+
+.. doxygenclass:: ubuntu::app_launch::helper_impls::Base
    :project: libubuntu-app-launch
    :members:
    :protected-members:
@@ -210,26 +240,6 @@ Jobs Instance Base
 ------------------
 
 .. doxygenclass:: ubuntu::app_launch::jobs::instance::Base
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Jobs Manager Upstart
---------------------
-
-.. doxygenclass:: ubuntu::app_launch::jobs::manager::Upstart
-   :project: libubuntu-app-launch
-   :members:
-   :protected-members:
-   :private-members:
-   :undoc-members:
-
-Jobs Instance Upstart
----------------------
-
-.. doxygenclass:: ubuntu::app_launch::jobs::instance::Upstart
    :project: libubuntu-app-launch
    :members:
    :protected-members:

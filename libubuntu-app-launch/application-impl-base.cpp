@@ -24,13 +24,10 @@
 #include <numeric>
 
 #include "application-impl-base.h"
-#include "application-impl-click.h"
-#include "application-impl-legacy.h"
-#include "application-impl-libertine.h"
-#include "application-impl-snap.h"
-#include "helpers.h"
 #include "registry-impl.h"
 #include "second-exec-core.h"
+#include "string-util.h"
+#include "utils.h"
 
 extern "C" {
 #include "ubuntu-app-launch-trace.h"
@@ -52,39 +49,6 @@ Base::Base(const std::shared_ptr<Registry>& registry)
 Base::~Base()
 {
     g_debug("Application deconstruction: %p", static_cast<void*>(this));
-}
-
-/* Put all the logic into a function so that we can deal have a simple
-   function to deal with each subtype */
-template <typename T>
-void watcher_append_list(const std::shared_ptr<Registry>& reg, std::list<std::shared_ptr<info_watcher::Base>>& list)
-{
-    auto watcher = T::createInfoWatcher(reg);
-
-    if (watcher)
-    {
-        list.push_back(watcher);
-    }
-}
-
-/* This little template makes it so that we can take a list, but
-   then break it down to calls to the base function. */
-template <typename T, typename T2, typename... TArgs>
-void watcher_append_list(const std::shared_ptr<Registry>& reg, std::list<std::shared_ptr<info_watcher::Base>>& list)
-{
-    watcher_append_list<T>(reg, list);
-    watcher_append_list<T2, TArgs...>(reg, list);
-}
-
-/** Builds an info watcher from each subclass and returns the list of
-    them to the registry */
-std::list<std::shared_ptr<info_watcher::Base>> Base::createInfoWatchers(const std::shared_ptr<Registry>& reg)
-{
-    std::list<std::shared_ptr<info_watcher::Base>> retval;
-
-    watcher_append_list<app_impls::Click, app_impls::Legacy, app_impls::Libertine, app_impls::Snap>(reg, retval);
-
-    return retval;
 }
 
 bool Base::hasInstances()
@@ -117,23 +81,19 @@ std::list<std::pair<std::string, std::string>> Base::confinedEnv(const std::stri
     cset("XDG_RUNTIME_DIR", g_get_user_runtime_dir());
 
     /* Add the application's dir to the list of sources for data */
-    gchar* basedatadirs = g_strjoinv(":", (gchar**)g_get_system_data_dirs());
-    gchar* datadirs = g_strjoin(":", pkgdir.c_str(), basedatadirs, nullptr);
-    cset("XDG_DATA_DIRS", datadirs);
-    g_free(datadirs);
-    g_free(basedatadirs);
+    auto basedatadirs = unique_gchar(g_strjoinv(":", (gchar**)g_get_system_data_dirs()));
+    auto datadirs = unique_gchar(g_strjoin(":", pkgdir.c_str(), basedatadirs.get(), nullptr));
+    cset("XDG_DATA_DIRS", datadirs.get());
 
     /* Set TMPDIR to something sane and application-specific */
-    gchar* tmpdir = g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package.c_str());
-    cset("TMPDIR", tmpdir);
-    g_debug("Creating '%s'", tmpdir);
-    g_mkdir_with_parents(tmpdir, 0700);
-    g_free(tmpdir);
+    auto tmpdir = unique_gchar(g_strdup_printf("%s/confined/%s", g_get_user_runtime_dir(), package.c_str()));
+    cset("TMPDIR", tmpdir.get());
+    g_debug("Creating '%s'", tmpdir.get());
+    g_mkdir_with_parents(tmpdir.get(), 0700);
 
     /* Do the same for nvidia */
-    gchar* nv_shader_cachedir = g_strdup_printf("%s/%s", g_get_user_cache_dir(), package.c_str());
-    cset("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir);
-    g_free(nv_shader_cachedir);
+    auto nv_shader_cachedir = unique_gchar(g_strdup_printf("%s/%s", g_get_user_cache_dir(), package.c_str()));
+    cset("__GL_SHADER_DISK_CACHE_PATH", nv_shader_cachedir.get());
 
     return retval;
 }

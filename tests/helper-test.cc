@@ -23,7 +23,7 @@
 #include <gio/gio.h>
 
 extern "C" {
-#include "../helpers.h"
+#include "utils.h"
 }
 
 class HelperTest : public ::testing::Test
@@ -78,7 +78,7 @@ TEST_F(HelperTest, DesktopExecParse)
 	g_array_free(output, TRUE);
 
 	/* Little u with a single URL */
-	output = desktop_exec_parse("foo %u", "http://ubuntu.com");
+	output = desktop_exec_parse("foo %U", "http://ubuntu.com");
 	ASSERT_EQ(guint(2), output->len);
 	ASSERT_STREQ(g_array_index(output, gchar *, 0), "foo");
 	ASSERT_STREQ(g_array_index(output, gchar *, 1), "http://ubuntu.com");
@@ -264,111 +264,6 @@ TEST_F(HelperTest, KeyfileForAppid)
 	return;
 }
 
-TEST_F(HelperTest, SetConfinedEnvvars)
-{
-	g_unsetenv("XDG_DATA_DIRS");
-
-	DbusTestService * service = dbus_test_service_new(NULL);
-	DbusTestDbusMock * mock = dbus_test_dbus_mock_new("com.ubuntu.Upstart");
-
-	DbusTestDbusMockObject * obj = dbus_test_dbus_mock_get_object(mock, "/com/ubuntu/Upstart", "com.ubuntu.Upstart0_6", NULL);
-
-	dbus_test_dbus_mock_object_add_method(mock, obj,
-		"SetEnvList",
-		G_VARIANT_TYPE("(asasb)"),
-		NULL,
-		"",
-		NULL);
-
-	dbus_test_service_add_task(service, DBUS_TEST_TASK(mock));
-	dbus_test_service_start_tasks(service);
-
-	GDBusConnection * bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-	g_dbus_connection_set_exit_on_close(bus, FALSE);
-	g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
-
-	/* Not a test other than "don't crash" */
-	EnvHandle * handle = env_handle_start();
-	set_confined_envvars(handle, "foo-app-pkg", "/foo/bar");
-	env_handle_finish(handle);
-
-	guint len = 0;
-	const DbusTestDbusMockCall * calls = dbus_test_dbus_mock_object_get_method_calls(mock, obj, "SetEnvList", &len, NULL);
-
-	ASSERT_EQ(guint(1), len);
-	ASSERT_NE(calls, nullptr);
-	ASSERT_STREQ("SetEnvList", calls[0].name);
-
-	bool got_app_isolation = false;
-	bool got_cache_home = false;
-	bool got_config_home = false;
-	bool got_data_home = false;
-	bool got_runtime_dir = false;
-	bool got_data_dirs = false;
-	bool got_temp_dir = false;
-	bool got_shader_dir = false;
-
-	GVariant * envarray = g_variant_get_child_value(calls[0].params, 1);
-	GVariantIter iter;
-	g_variant_iter_init(&iter, envarray);
-	gchar * envvar = NULL;
-
-	while (g_variant_iter_loop(&iter, "s", &envvar)) {
-		gchar * var = g_strdup(envvar);
-
-		gchar * equal = g_strstr_len(var, -1, "=");
-		ASSERT_NE(equal, nullptr);
-
-		equal[0] = '\0';
-		gchar * value = &(equal[1]);
-
-		if (g_strcmp0(var, "UBUNTU_APPLICATION_ISOLATION") == 0) {
-			ASSERT_STREQ(value, "1");
-			got_app_isolation = true;
-		} else if (g_strcmp0(var, "XDG_CACHE_HOME") == 0) {
-			got_cache_home = true;
-		} else if (g_strcmp0(var, "XDG_CONFIG_HOME") == 0) {
-			got_config_home = true;
-		} else if (g_strcmp0(var, "XDG_DATA_HOME") == 0) {
-			got_data_home = true;
-		} else if (g_strcmp0(var, "XDG_RUNTIME_DIR") == 0) {
-			got_runtime_dir = true;
-		} else if (g_strcmp0(var, "XDG_DATA_DIRS") == 0) {
-			ASSERT_TRUE(g_str_has_prefix(value, "/foo/bar:"));
-			ASSERT_TRUE(g_strstr_len(value, -1, "/usr/share") != NULL);
-			got_data_dirs = true;
-		} else if (g_strcmp0(var, "TMPDIR") == 0) {
-			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
-			got_temp_dir = true;
-		} else if (g_strcmp0(var, "__GL_SHADER_DISK_CACHE_PATH") == 0) {
-			ASSERT_TRUE(g_str_has_suffix(value, "foo-app-pkg"));
-			got_shader_dir = true;
-		} else {
-			g_warning("Unknown variable! %s", var);
-			ASSERT_TRUE(false);
-		}
-
-		g_free(var);
-	}
-
-	g_variant_unref(envarray);
-
-	ASSERT_TRUE(got_app_isolation);
-	ASSERT_TRUE(got_cache_home);
-	ASSERT_TRUE(got_config_home);
-	ASSERT_TRUE(got_data_home);
-	ASSERT_TRUE(got_runtime_dir);
-	ASSERT_TRUE(got_data_dirs);
-	ASSERT_TRUE(got_temp_dir);
-	ASSERT_TRUE(got_shader_dir);
-
-	g_object_unref(bus);
-	g_object_unref(mock);
-	g_object_unref(service);
-
-	return;
-}
-
 TEST_F(HelperTest, DesktopToExec)
 {
 	GKeyFile * keyfile = NULL;
@@ -378,7 +273,7 @@ TEST_F(HelperTest, DesktopToExec)
 	ASSERT_TRUE(g_key_file_load_from_file(keyfile, CMAKE_SOURCE_DIR "/applications/foo.desktop", G_KEY_FILE_NONE, NULL));
 	exec = desktop_to_exec(keyfile, "");
 	ASSERT_TRUE(exec != NULL);
-	ASSERT_STREQ(exec, "foo");
+	ASSERT_STREQ(exec, "foo %U");
 	g_free(exec);
 	g_key_file_free(keyfile);
 
@@ -421,42 +316,3 @@ TEST_F(HelperTest, DesktopToExec)
 	return;
 }
 
-TEST_F(HelperTest, ManifestToDesktop)
-{
-	gchar * desktop = NULL;
-
-	g_setenv("TEST_CLICK_DB", "click-db-dir", TRUE);
-	g_setenv("TEST_CLICK_USER", "test-user", TRUE);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.good_application_1.2.3");
-	ASSERT_STREQ(CMAKE_SOURCE_DIR "/click-app-dir/application.desktop", desktop);
-	g_free(desktop);
-	desktop = NULL;
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.bad-version_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-app_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-hooks_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-version_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-exist_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-json_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.no-object_application_1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	/* Bad App ID */
-	desktop = manifest_to_desktop(CMAKE_SOURCE_DIR "/click-app-dir/", "com.test.good_application-1.2.3");
-	ASSERT_TRUE(desktop == NULL);
-
-	return;
-}

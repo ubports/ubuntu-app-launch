@@ -24,15 +24,6 @@
 #include "registry-impl.h"
 #include "registry.h"
 
-#include "application-impl-click.h"
-#include "application-impl-legacy.h"
-#include "application-impl-libertine.h"
-#ifdef ENABLE_SNAPPY
-#include "application-impl-snap.h"
-#endif
-
-#include "helper-impl-click.h"
-
 namespace ubuntu
 {
 namespace app_launch
@@ -40,7 +31,7 @@ namespace app_launch
 
 Registry::Registry()
 {
-    impl = std::unique_ptr<Impl>(new Impl(this));
+    impl = std::unique_ptr<Impl>(new Impl(*this));
 }
 
 Registry::~Registry()
@@ -61,23 +52,22 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
 {
     std::list<std::shared_ptr<Application>> list;
 
-    list.splice(list.begin(), app_impls::Click::list(connection));
-    list.splice(list.begin(), app_impls::Legacy::list(connection));
-    list.splice(list.begin(), app_impls::Libertine::list(connection));
-#ifdef ENABLE_SNAPPY
-    list.splice(list.begin(), app_impls::Snap::list(connection));
-#endif
+    for (const auto& appStore : connection->impl->appStores())
+    {
+        list.splice(list.begin(), appStore->list(connection));
+    }
 
     return list;
 }
 
-std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, std::shared_ptr<Registry> connection)
+std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, std::shared_ptr<Registry> registry)
 {
-    std::list<std::shared_ptr<Helper>> list;
+    if (!registry->impl->jobs)
+    {
+        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
+    }
 
-    list.splice(list.begin(), helper_impls::Click::running(type, connection));
-
-    return list;
+    return registry->impl->jobs->runningHelpers(type);
 }
 
 /* Quick little helper to bundle up standard code */
@@ -158,6 +148,27 @@ core::Signal<const std::shared_ptr<Application>&,
 {
     setJobs(reg);
     return reg->impl->jobs->appResumed();
+}
+
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Registry::helperStarted(
+    Helper::Type type, const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->helperStarted(type);
+}
+
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Registry::helperStopped(
+    Helper::Type type, const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->helperStopped(type);
+}
+
+core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
+    Registry::helperFailed(Helper::Type type, const std::shared_ptr<Registry>& reg)
+{
+    setJobs(reg);
+    return reg->impl->jobs->helperFailed(type);
 }
 
 core::Signal<const std::shared_ptr<Application>&>& Registry::appInfoUpdated(const std::shared_ptr<Registry>& reg)

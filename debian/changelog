@@ -1,3 +1,18 @@
+ubuntu-app-launch (0.11+17.04.20170321-0ubuntu1) zesty; urgency=medium
+
+  [ Ted Gould ]
+  * Migrate untrusted helpers to C++ interfaces and jobs backend
+  * Put all application specific static functions into a single AppStore
+    object
+  * Remove Upstart
+  * Removing support for Click
+
+  [ Pete Woods ]
+  * Switch to reference counted memory management in all c++ code
+  * Run make format target following managed memory branch
+
+ -- Ted Gould <ted@gould.cx>  Tue, 21 Mar 2017 03:29:09 +0000
+
 ubuntu-app-launch (0.10+17.04.20170310-0ubuntu1) zesty; urgency=medium
 
   [ Ken VanDine ]

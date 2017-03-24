@@ -22,7 +22,7 @@
 #include <gio/gio.h>
 
 extern "C" {
-#include "../helpers.h"
+#include "utils.h"
 }
 
 class HelperHandshakeTest : public ::testing::Test
