@@ -28,7 +28,7 @@ namespace app_launch
 namespace info_watcher
 {
 
-Zeitgeist::Zeitgeist(const std::shared_ptr<Registry>& registry)
+Zeitgeist::Zeitgeist(const Registry& registry)
     : Base(registry)
 {
     g_debug("Created a ZG Watcher");

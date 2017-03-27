@@ -151,7 +151,7 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
             try
             {
                 auto appid = AppID::parse(apps.get()[j]);
-                auto sapp = std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
+                auto sapp = std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry->impl);
                 applist.emplace_back(sapp);
             }
             catch (std::runtime_error& e)
@@ -164,7 +164,7 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
     return applist;
 }
 
-std::shared_ptr<app_impls::Base> Libertine::create(const AppID& appid, const std::shared_ptr<Registry>& registry)
+std::shared_ptr<app_impls::Base> Libertine::create(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry)
 {
     return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
 }

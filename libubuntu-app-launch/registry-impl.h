@@ -17,6 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include "app-store-base.h"
 #include "glib-thread.h"
 #include "info-watcher-zg.h"
@@ -29,14 +31,16 @@
 #include <unordered_map>
 #include <zeitgeist.h>
 
-#pragma once
-
 namespace ubuntu
 {
 namespace app_launch
 {
 
 class IconFinder;
+namespace app_store
+{
+class Base;
+}
 
 /** \private
     \brief Private implementation of the Registry object
@@ -86,11 +90,10 @@ public:
         return oomHelper_;
     }
 
-    static std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher(const std::shared_ptr<Registry>& reg)
+    std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher()
     {
-        std::call_once(reg->impl->zgWatcherOnce_,
-                       [reg] { reg->impl->zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(reg); });
-        return reg->impl->zgWatcher_;
+        std::call_once(zgWatcherOnce_, [this] { zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(_registry); });
+        return zgWatcher_;
     }
 
     core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);

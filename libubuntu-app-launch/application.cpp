@@ -57,7 +57,7 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
     {
         if (appStore->hasAppId(appid, registry))
         {
-            return appStore->create(appid, registry);
+            return appStore->create(appid, registry->impl);
         }
     }
 

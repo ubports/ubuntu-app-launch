@@ -218,7 +218,7 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
             auto interfaceInfo = std::make_tuple(xMirEnable, lifecycleForApp(id));
             try
             {
-                auto app = std::make_shared<app_impls::Snap>(id, registry, interfaceInfo);
+                auto app = std::make_shared<app_impls::Snap>(id, registry->impl, interfaceInfo);
                 apps.emplace(app);
             }
             catch (std::runtime_error& e)
@@ -239,7 +239,7 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
     return std::list<std::shared_ptr<Application>>(apps.begin(), apps.end());
 }
 
-std::shared_ptr<app_impls::Base> Snap::create(const AppID& appid, const std::shared_ptr<Registry>& registry)
+std::shared_ptr<app_impls::Base> Snap::create(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry)
 {
     return std::make_shared<app_impls::Snap>(appid, registry);
 }

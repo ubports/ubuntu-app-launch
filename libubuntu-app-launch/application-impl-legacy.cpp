@@ -52,7 +52,7 @@ void clear_keyfile(GKeyFile* keyfile)
     }
 }
 
-Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry)
+Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry::Impl>& registry)
     : Base(registry)
     , _appname(appname)
 {
@@ -73,7 +73,7 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
         flags |= app_info::DesktopFlags::XMIR_DEFAULT;
     }
 
-    appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, rootDir, flags, _registry);
+    appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, rootDir, flags, registry_);
 
     if (!_keyfile)
     {
@@ -135,7 +135,7 @@ std::shared_ptr<Application::Info> Legacy::info()
 
 std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
 {
-    auto vbase = _registry->impl->jobs->instances(appId(), "application-legacy");
+    auto vbase = registry_->jobs->instances(appId(), "application-legacy");
     return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
@@ -222,8 +222,8 @@ std::shared_ptr<Application::Instance> Legacy::launch(const std::vector<Applicat
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls,
-                                         jobs::manager::launchMode::STANDARD, envfunc);
+    return registry_->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::STANDARD,
+                                   envfunc);
 }
 
 /** Create an UpstartInstance for this AppID using the UpstartInstance launch
@@ -237,13 +237,13 @@ std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Appl
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this, instance]() {
         return launchEnv(instance);
     };
-    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
-                                         envfunc);
+    return registry_->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
+                                   envfunc);
 }
 
 std::shared_ptr<Application::Instance> Legacy::findInstance(const std::string& instanceid)
 {
-    return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
+    return registry_->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
 }
 
 }  // namespace app_impls

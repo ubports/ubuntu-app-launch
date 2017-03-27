@@ -181,13 +181,14 @@ core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdate
         g_debug("App Info Updated Signal Initialized");
 
         std::list<std::shared_ptr<info_watcher::Base>> apps{_appStores.begin(), _appStores.end()};
-        apps.push_back(Registry::Impl::getZgWatcher(reg));
+        apps.push_back(getZgWatcher());
 
         for (const auto& app : apps)
         {
             infoWatchers_.emplace_back(
-                std::make_pair(app, app->infoChanged().connect(
-                                        [this](const std::shared_ptr<Application>& app) { sig_appInfoUpdated(app); })));
+                std::make_pair(app, app->infoChanged().connect([this](const std::shared_ptr<Application>& app) {
+                    sig_appInfoUpdated(app);
+                })));
         }
     });
     return sig_appInfoUpdated;

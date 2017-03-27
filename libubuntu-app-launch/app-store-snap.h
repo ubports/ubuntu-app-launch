@@ -52,7 +52,7 @@ public:
 
     /* Application Creation */
     virtual std::shared_ptr<app_impls::Base> create(const AppID& appid,
-                                                    const std::shared_ptr<Registry>& registry) override;
+                                                    const std::shared_ptr<Registry::Impl>& registry) override;
 };
 
 }  // namespace app_store

@@ -179,7 +179,7 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
 
         try
         {
-            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry);
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry->impl);
             list.push_back(app);
         }
         catch (std::runtime_error& e)
@@ -191,7 +191,7 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
     return list;
 }
 
-std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid, const std::shared_ptr<Registry>& registry)
+std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry)
 {
     return std::make_shared<app_impls::Legacy>(appid.appname, registry);
 }

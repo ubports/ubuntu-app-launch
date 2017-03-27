@@ -28,6 +28,10 @@ namespace ubuntu
 {
 namespace app_launch
 {
+namespace app_impls
+{
+class Base;
+}
 namespace app_store
 {
 
@@ -54,7 +58,8 @@ public:
     virtual std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry) = 0;
 
     /* Application Creation */
-    virtual std::shared_ptr<app_impls::Base> create(const AppID& appid, const std::shared_ptr<Registry>& registry) = 0;
+    virtual std::shared_ptr<app_impls::Base> create(const AppID& appid,
+                                                    const std::shared_ptr<Registry::Impl>& registry) = 0;
 
     /* Static get all */
     static std::list<std::shared_ptr<Base>> allAppStores();

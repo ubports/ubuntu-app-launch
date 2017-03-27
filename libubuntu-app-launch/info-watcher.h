@@ -35,7 +35,7 @@ namespace info_watcher
 class Base
 {
 public:
-    Base(const std::shared_ptr<Registry>& registry);
+    Base(const Registry& registry);
     virtual ~Base() = default;
 
     virtual core::Signal<const std::shared_ptr<Application>&>& infoChanged()
