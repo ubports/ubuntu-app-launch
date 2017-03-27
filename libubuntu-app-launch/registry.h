@@ -273,7 +273,7 @@ public:
     /** \private */
     class Impl;
     /** \private */
-    std::unique_ptr<Impl> impl;
+    std::shared_ptr<Impl> impl;
 };
 
 }  // namespace app_launch
