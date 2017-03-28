@@ -100,7 +100,7 @@ public:
 
     core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
 
-    std::list<std::shared_ptr<app_store::Base>> appStores()
+    const std::list<std::shared_ptr<app_store::Base>>& appStores()
     {
         return _appStores;
     }
@@ -110,8 +110,17 @@ public:
         _appStores = newlist;
     }
 
+    /* Create functions */
     std::shared_ptr<Application> createApp(const AppID& appid);
     std::shared_ptr<Helper> createHelper(const Helper::Type& type, const AppID& appid);
+
+    /* AppID functions */
+    AppID find(const std::string& sappid);
+    AppID discover(const std::string& package, const std::string& appname, const std::string& version);
+    AppID discover(const std::string& package,
+                   AppID::ApplicationWildcard appwildcard,
+                   AppID::VersionWildcard versionwildcard);
+    AppID discover(const std::string& package, const std::string& appname, AppID::VersionWildcard versionwildcard);
 
 private:
     Registry& _registry; /**< The Registry that we're spawned from */

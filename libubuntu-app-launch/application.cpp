@@ -97,10 +97,15 @@ bool AppID::valid(const std::string& sappid)
 AppID AppID::find(const std::string& sappid)
 {
     auto registry = Registry::getDefault();
-    return find(registry, sappid);
+    return registry->impl->find(sappid);
 }
 
 AppID AppID::find(const std::shared_ptr<Registry>& registry, const std::string& sappid)
+{
+    return registry->impl->find(sappid);
+}
+
+AppID Registry::Impl::find(const std::string& sappid)
 {
     std::smatch match;
 
@@ -111,7 +116,7 @@ AppID AppID::find(const std::shared_ptr<Registry>& registry, const std::string& 
     }
     else if (std::regex_match(sappid, match, short_appid_regex))
     {
-        return discover(registry, match[1].str(), match[2].str());
+        return discover(match[1].str(), match[2].str(), AppID::VersionWildcard::CURRENT_USER_VERSION);
     }
     else if (std::regex_match(sappid, match, legacy_appid_regex))
     {
@@ -168,9 +173,14 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                       const std::string& appname,
                       const std::string& version)
 {
+    return registry->impl->discover(package, appname, version);
+}
+
+AppID Registry::Impl::discover(const std::string& package, const std::string& appname, const std::string& version)
+{
     auto pkg = AppID::Package::from_raw(package);
 
-    for (const auto& appStore : registry->impl->appStores())
+    for (const auto& appStore : appStores())
     {
         /* Figure out which type we have */
         try
@@ -181,15 +191,15 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 
                 if (appname.empty() || appname == "first-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::FIRST_LISTED);
+                    app = appStore->findAppname(pkg, AppID::ApplicationWildcard::FIRST_LISTED);
                 }
                 else if (appname == "last-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::LAST_LISTED);
+                    app = appStore->findAppname(pkg, AppID::ApplicationWildcard::LAST_LISTED);
                 }
                 else if (appname == "only-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::ONLY_LISTED);
+                    app = appStore->findAppname(pkg, AppID::ApplicationWildcard::ONLY_LISTED);
                 }
                 else
                 {
@@ -231,9 +241,16 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                       ApplicationWildcard appwildcard,
                       VersionWildcard versionwildcard)
 {
+    return registry->impl->discover(package, appwildcard, versionwildcard);
+}
+
+AppID Registry::Impl::discover(const std::string& package,
+                               AppID::ApplicationWildcard appwildcard,
+                               AppID::VersionWildcard versionwildcard)
+{
     auto pkg = AppID::Package::from_raw(package);
 
-    for (const auto& appStore : registry->impl->appStores())
+    for (const auto& appStore : appStores())
     {
         try
         {
@@ -259,10 +276,17 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                       const std::string& appname,
                       VersionWildcard versionwildcard)
 {
+    return registry->impl->discover(package, appname, versionwildcard);
+}
+
+AppID Registry::Impl::discover(const std::string& package,
+                               const std::string& appname,
+                               AppID::VersionWildcard versionwildcard)
+{
     auto pkg = AppID::Package::from_raw(package);
     auto app = AppID::AppName::from_raw(appname);
 
-    for (const auto& appStore : registry->impl->appStores())
+    for (const auto& appStore : appStores())
     {
         try
         {
@@ -285,19 +309,19 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 AppID AppID::discover(const std::string& package, const std::string& appname, const std::string& version)
 {
     auto registry = Registry::getDefault();
-    return discover(registry, package, appname, version);
+    return registry->impl->discover(package, appname, version);
 }
 
 AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
 {
     auto registry = Registry::getDefault();
-    return discover(registry, package, appwildcard, versionwildcard);
+    return registry->impl->discover(package, appwildcard, versionwildcard);
 }
 
 AppID AppID::discover(const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
 {
     auto registry = Registry::getDefault();
-    return discover(registry, package, appname, versionwildcard);
+    return registry->impl->discover(package, appname, versionwildcard);
 }
 
 enum class oom::Score : std::int32_t
