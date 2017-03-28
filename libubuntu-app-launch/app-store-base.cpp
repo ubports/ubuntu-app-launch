@@ -29,8 +29,8 @@ namespace app_launch
 namespace app_store
 {
 
-Base::Base()
-    : info_watcher::Base({})
+Base::Base(const Registry& registry)
+    : info_watcher::Base(registry)
 {
 }
 
@@ -38,14 +38,14 @@ Base::~Base()
 {
 }
 
-std::list<std::shared_ptr<Base>> Base::allAppStores()
+std::list<std::shared_ptr<Base>> Base::allAppStores(const Registry& registry)
 {
     return {
-        std::make_shared<Legacy>() /* Legacy */
+        std::make_shared<Legacy>(registry) /* Legacy */
         ,
-        std::make_shared<Libertine>() /* Libertine */
+        std::make_shared<Libertine>(registry) /* Libertine */
         ,
-        std::make_shared<Snap>() /* Snappy */
+        std::make_shared<Snap>(registry) /* Snappy */
     };
 }
 

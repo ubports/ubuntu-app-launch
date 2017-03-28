@@ -43,7 +43,8 @@ const std::string LIFECYCLE_INTERFACE{"unity8"};
 /** Snappy has more restrictive appnames than everyone else */
 const std::regex appnameRegex{"^[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$"};
 
-Snap::Snap()
+Snap::Snap(const Registry& registry)
+    : Base(registry)
 {
 }
 
@@ -59,7 +60,7 @@ Snap::~Snap()
     \param appid Application ID of the snap
     \param registry Registry to use for persistent connections
 */
-bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registry)
+bool Snap::hasAppId(const AppID& appId)
 {
     if (appId.package.value().empty() || appId.version.value().empty())
     {
@@ -71,7 +72,7 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
         return false;
     }
 
-    auto pkginfo = registry->impl->snapdInfo.pkgInfo(appId.package);
+    auto pkginfo = registry_.impl->snapdInfo.pkgInfo(appId.package);
     return app_impls::Snap::checkPkgInfo(pkginfo, appId);
 }
 
@@ -80,11 +81,11 @@ bool Snap::hasAppId(const AppID& appId, const std::shared_ptr<Registry>& registr
     \param package Package name
     \param registry Registry to use for persistent connections
 */
-bool Snap::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
+bool Snap::verifyPackage(const AppID::Package& package)
 {
     try
     {
-        auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+        auto pkgInfo = registry_.impl->snapdInfo.pkgInfo(package);
         return pkgInfo != nullptr;
     }
     catch (std::runtime_error& e)
@@ -99,16 +100,14 @@ bool Snap::verifyPackage(const AppID::Package& package, const std::shared_ptr<Re
     \param appname Command name
     \param registry Registry to use for persistent connections
 */
-bool Snap::verifyAppname(const AppID::Package& package,
-                         const AppID::AppName& appname,
-                         const std::shared_ptr<Registry>& registry)
+bool Snap::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
 {
     if (!std::regex_match(appname.value(), appnameRegex))
     {
         return false;
     }
 
-    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+    auto pkgInfo = registry_.impl->snapdInfo.pkgInfo(package);
 
     if (!pkgInfo)
     {
@@ -125,11 +124,9 @@ bool Snap::verifyAppname(const AppID::Package& package,
     \param card Wildcard to use for finding the appname
     \param registry Registry to use for persistent connections
 */
-AppID::AppName Snap::findAppname(const AppID::Package& package,
-                                 AppID::ApplicationWildcard card,
-                                 const std::shared_ptr<Registry>& registry)
+AppID::AppName Snap::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
 {
-    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+    auto pkgInfo = registry_.impl->snapdInfo.pkgInfo(package);
 
     if (!pkgInfo)
     {
@@ -165,11 +162,9 @@ AppID::AppName Snap::findAppname(const AppID::Package& package,
     \param appname Not used for snaps
     \param registry Registry to use for persistent connections
 */
-AppID::Version Snap::findVersion(const AppID::Package& package,
-                                 const AppID::AppName& appname,
-                                 const std::shared_ptr<Registry>& registry)
+AppID::Version Snap::findVersion(const AppID::Package& package, const AppID::AppName& appname)
 {
-    auto pkgInfo = registry->impl->snapdInfo.pkgInfo(package);
+    auto pkgInfo = registry_.impl->snapdInfo.pkgInfo(package);
     if (pkgInfo)
     {
         return AppID::Version::from_raw(pkgInfo->revision);
@@ -194,11 +189,11 @@ struct appcompare
 
     \param registry Registry to use for persistent connections
 */
-std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registry>& registry)
+std::list<std::shared_ptr<Application>> Snap::list()
 {
     std::set<std::shared_ptr<Application>, appcompare> apps;
 
-    auto lifecycleApps = registry->impl->snapdInfo.appsForInterface(LIFECYCLE_INTERFACE);
+    auto lifecycleApps = registry_.impl->snapdInfo.appsForInterface(LIFECYCLE_INTERFACE);
 
     auto lifecycleForApp = [&](const AppID& appID) {
         auto iterator = lifecycleApps.find(appID);
@@ -213,12 +208,12 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
     };
 
     auto addAppsForInterface = [&](const std::string& interface, app_info::Desktop::XMirEnable xMirEnable) {
-        for (const auto& id : registry->impl->snapdInfo.appsForInterface(interface))
+        for (const auto& id : registry_.impl->snapdInfo.appsForInterface(interface))
         {
             auto interfaceInfo = std::make_tuple(xMirEnable, lifecycleForApp(id));
             try
             {
-                auto app = std::make_shared<app_impls::Snap>(id, registry->impl, interfaceInfo);
+                auto app = std::make_shared<app_impls::Snap>(id, registry_.impl, interfaceInfo);
                 apps.emplace(app);
             }
             catch (std::runtime_error& e)
@@ -239,9 +234,9 @@ std::list<std::shared_ptr<Application>> Snap::list(const std::shared_ptr<Registr
     return std::list<std::shared_ptr<Application>>(apps.begin(), apps.end());
 }
 
-std::shared_ptr<app_impls::Base> Snap::create(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry)
+std::shared_ptr<app_impls::Base> Snap::create(const AppID& appid)
 {
-    return std::make_shared<app_impls::Snap>(appid, registry);
+    return std::make_shared<app_impls::Snap>(appid, registry_.impl);
 }
 
 }  // namespace app_store

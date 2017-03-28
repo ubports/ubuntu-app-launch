@@ -27,6 +27,7 @@ namespace info_watcher
 {
 
 Base::Base(const Registry& registry)
+    : registry_(registry)
 {
 }
 

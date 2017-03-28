@@ -21,6 +21,8 @@
 
 #include "application-info-desktop.h"
 #include "application.h"
+#include "registry-impl.h"
+#include "registry.h"
 
 namespace ubuntu
 {

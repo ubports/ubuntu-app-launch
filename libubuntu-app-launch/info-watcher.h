@@ -45,6 +45,7 @@ public:
 
 protected:
     core::Signal<const std::shared_ptr<Application>&> infoChanged_;
+    const Registry& registry_;
 };
 
 }  // namespace info_watcher

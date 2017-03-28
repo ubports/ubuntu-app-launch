@@ -50,7 +50,9 @@ class Registry::Impl
 {
 public:
     Impl(Registry& registry);
-    Impl(Registry& registry, std::list<std::shared_ptr<app_store::Base>> appStores);
+    Impl(Registry& registry,
+         std::list<std::shared_ptr<app_store::Base>> appStores,
+         std::shared_ptr<jobs::manager::Base> jobEngine);
 
     virtual ~Impl()
     {
@@ -107,6 +109,9 @@ public:
     {
         _appStores = newlist;
     }
+
+    std::shared_ptr<Application> createApp(const AppID& appid);
+    std::shared_ptr<Helper> createHelper(const Helper::Type& type, const AppID& appid);
 
 private:
     Registry& _registry; /**< The Registry that we're spawned from */

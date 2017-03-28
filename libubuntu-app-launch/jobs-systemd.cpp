@@ -57,7 +57,7 @@ public:
                      const std::string& job,
                      const std::string& instance,
                      const std::vector<Application::URL>& urls,
-                     const std::shared_ptr<Registry>& registry);
+                     const std::shared_ptr<Registry::Impl>& registry);
     virtual ~SystemD()
     {
         g_debug("Destroying a SystemD for '%s' instance '%s'", std::string(appId_).c_str(), instance_.c_str());
@@ -76,7 +76,7 @@ SystemD::SystemD(const AppID& appId,
                  const std::string& job,
                  const std::string& instance,
                  const std::vector<Application::URL>& urls,
-                 const std::shared_ptr<Registry>& registry)
+                 const std::shared_ptr<Registry::Impl>& registry)
     : Base(appId, job, instance, urls, registry)
 {
     g_debug("Creating a new SystemD for '%s' instance '%s'", std::string(appId).c_str(), instance.c_str());
@@ -84,19 +84,19 @@ SystemD::SystemD(const AppID& appId,
 
 pid_t SystemD::primaryPid()
 {
-    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs);
     return manager->unitPrimaryPid(appId_, job_, instance_);
 }
 
 std::vector<pid_t> SystemD::pids()
 {
-    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs);
     return manager->unitPids(appId_, job_, instance_);
 }
 
 void SystemD::stop()
 {
-    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->impl->jobs);
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs);
     manager->stopUnit(appId_, job_, instance_);
 }
 
@@ -111,7 +111,7 @@ static const char* SYSTEMD_DBUS_PATH_MANAGER{"/org/freedesktop/systemd1"};
 // static const char * SYSTEMD_DBUS_IFACE_UNIT{"org.freedesktop.systemd1.Unit"};
 static const char* SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Service"};
 
-SystemD::SystemD(std::shared_ptr<Registry> registry)
+SystemD::SystemD(const Registry& registry)
     : Base(registry)
     , handle_unitNew(DBusSignalUnsubscriber{})
     , handle_unitRemoved(DBusSignalUnsubscriber{})
@@ -129,8 +129,8 @@ SystemD::SystemD(std::shared_ptr<Registry> registry)
         cgroup_root_ = gcgroup_root;
     }
 
-    auto cancel = registry->impl->thread.getCancellable();
-    userbus_ = registry->impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
+    auto cancel = registry.impl->thread.getCancellable();
+    userbus_ = registry.impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
         GError* error = nullptr;
         auto bus = std::shared_ptr<GDBusConnection>(
             [&]() -> GDBusConnection* {
@@ -511,12 +511,12 @@ void SystemD::application_start_cb(GObject* obj, GAsyncResult* res, gpointer use
             if (g_strcmp0(remote_error, "org.freedesktop.systemd1.UnitExists") == 0)
             {
                 auto urls = instance::SystemD::urlsToStrv(data->ptr->urls_);
-                second_exec(data->bus.get(),                                           /* DBus */
-                            data->ptr->registry_->impl->thread.getCancellable().get(), /* cancellable */
-                            data->ptr->primaryPid(),                                   /* primary pid */
-                            std::string(data->ptr->appId_).c_str(),                    /* appid */
-                            data->ptr->instance_.c_str(),                              /* instance */
-                            urls.get());                                               /* urls */
+                second_exec(data->bus.get(),                                     /* DBus */
+                            data->ptr->registry_->thread.getCancellable().get(), /* cancellable */
+                            data->ptr->primaryPid(),                             /* primary pid */
+                            std::string(data->ptr->appId_).c_str(),              /* appid */
+                            data->ptr->instance_.c_str(),                        /* instance */
+                            urls.get());                                         /* urls */
             }
 
             g_free(remote_error);
@@ -582,10 +582,9 @@ std::shared_ptr<Application::Instance> SystemD::launch(
     bool isApplication =
         std::find(allApplicationJobs_.begin(), allApplicationJobs_.end(), job) != allApplicationJobs_.end();
 
-    auto registry = registry_.lock();
-    return registry->impl->thread.executeOnThread<std::shared_ptr<instance::SystemD>>(
+    return registry_.impl->thread.executeOnThread<std::shared_ptr<instance::SystemD>>(
         [&]() -> std::shared_ptr<instance::SystemD> {
-            auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry->impl->jobs);
+            auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_.impl->jobs);
             std::string appIdStr{appId};
             g_debug("Initializing params for an new instance::SystemD for: %s", appIdStr.c_str());
 
@@ -791,10 +790,10 @@ std::shared_ptr<Application::Instance> SystemD::launch(
             /* Dependent Units (none) */
             g_variant_builder_add_value(&builder, g_variant_new_array(G_VARIANT_TYPE("(sa(sv))"), nullptr, 0));
 
-            auto retval = std::make_shared<instance::SystemD>(appId, job, instance, urls, registry);
+            auto retval = std::make_shared<instance::SystemD>(appId, job, instance, urls, registry_.impl);
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
-            chelper->bus = registry->impl->_dbus;
+            chelper->bus = registry_.impl->_dbus;
 
             tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
             starting_handshake_wait(handshake);
@@ -811,7 +810,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
                                    G_VARIANT_TYPE("(o)"),                         /* return */
                                    G_DBUS_CALL_FLAGS_NONE,                        /* flags */
                                    -1,                                            /* default timeout */
-                                   registry->impl->thread.getCancellable().get(), /* cancellable */
+                                   registry_.impl->thread.getCancellable().get(), /* cancellable */
                                    application_start_cb,                          /* callback */
                                    chelper                                        /* object */
                                    );
@@ -827,20 +826,13 @@ std::shared_ptr<Application::Instance> SystemD::existing(const AppID& appId,
                                                          const std::string& instance,
                                                          const std::vector<Application::URL>& urls)
 {
-    return std::make_shared<instance::SystemD>(appId, job, instance, urls, registry_.lock());
+    return std::make_shared<instance::SystemD>(appId, job, instance, urls, registry_.impl);
 }
 
 std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& appID, const std::string& job)
 {
     std::vector<std::shared_ptr<instance::Base>> instances;
     std::vector<Application::URL> urls;
-    auto registry = registry_.lock();
-
-    if (!registry)
-    {
-        g_warning("Unable to list instances without a registry");
-        return {};
-    }
 
     std::string sappid{appID};
     for (const auto& unit : unitPaths)
@@ -857,7 +849,7 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
             continue;
         }
 
-        instances.emplace_back(std::make_shared<instance::SystemD>(appID, job, unitinfo.inst, urls, registry));
+        instances.emplace_back(std::make_shared<instance::SystemD>(appID, job, unitinfo.inst, urls, registry_.impl));
     }
 
     g_debug("Found %d instances for AppID '%s'", int(instances.size()), std::string(appID).c_str());
@@ -867,14 +859,6 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
 
 std::list<std::string> SystemD::runningAppIds(const std::list<std::string>& allJobs)
 {
-    auto registry = registry_.lock();
-
-    if (!registry)
-    {
-        g_warning("Unable to list instances without a registry");
-        return {};
-    }
-
     std::set<std::string> appids;
 
     for (const auto& unit : unitPaths)
@@ -930,17 +914,9 @@ std::string SystemD::unitPath(const SystemD::UnitInfo& info)
         return {};
     }
 
-    auto registry = registry_.lock();
-
-    if (!registry)
-    {
-        g_warning("Unable to get registry to determine path");
-        return {};
-    }
-
     /* Execute on the thread so that we're sure that we're not in
        a dbus call to get the value. No racey for you! */
-    return registry->impl->thread.executeOnThread<std::string>([&data]() { return data->unitpath; });
+    return registry_.impl->thread.executeOnThread<std::string>([&data]() { return data->unitpath; });
 }
 
 SystemD::UnitInfo SystemD::unitNew(const std::string& name,
@@ -971,24 +947,16 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
        comes an asking at this point we'll think that we have the
        app, but not yet its path */
     GError* error{nullptr};
-    auto reg = registry_.lock();
-
-    if (!reg)
-    {
-        g_warning("Unable to get SystemD unit path for '%s': Registry out of scope", name.c_str());
-        throw std::runtime_error{"Unable to get SystemD unit path for '" + name + "': Registry out of scope"};
-    }
-
-    auto call = unique_glib(g_dbus_connection_call_sync(bus.get(),                                /* user bus */
-                                                        SYSTEMD_DBUS_ADDRESS,                     /* bus name */
-                                                        SYSTEMD_DBUS_PATH_MANAGER,                /* path */
-                                                        SYSTEMD_DBUS_IFACE_MANAGER,               /* interface */
-                                                        "GetUnit",                                /* method */
-                                                        g_variant_new("(s)", name.c_str()),       /* params */
-                                                        G_VARIANT_TYPE("(o)"),                    /* ret type */
-                                                        G_DBUS_CALL_FLAGS_NONE,                   /* flags */
-                                                        -1,                                       /* timeout */
-                                                        reg->impl->thread.getCancellable().get(), /* cancellable */
+    auto call = unique_glib(g_dbus_connection_call_sync(bus.get(),                                     /* user bus */
+                                                        SYSTEMD_DBUS_ADDRESS,                          /* bus name */
+                                                        SYSTEMD_DBUS_PATH_MANAGER,                     /* path */
+                                                        SYSTEMD_DBUS_IFACE_MANAGER,                    /* interface */
+                                                        "GetUnit",                                     /* method */
+                                                        g_variant_new("(s)", name.c_str()),            /* params */
+                                                        G_VARIANT_TYPE("(o)"),                         /* ret type */
+                                                        G_DBUS_CALL_FLAGS_NONE,                        /* flags */
+                                                        -1,                                            /* timeout */
+                                                        registry_.impl->thread.getCancellable().get(), /* cancellable */
                                                         &error));
 
     if (error != nullptr)
@@ -1023,14 +991,6 @@ void SystemD::unitRemoved(const std::string& name, const std::string& path)
 
 pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const std::string& instance)
 {
-    auto registry = registry_.lock();
-
-    if (!registry)
-    {
-        g_warning("Unable to get registry to determine primary PID");
-        return 0;
-    }
-
     auto unitinfo = SystemD::UnitInfo{appId, job, instance};
     auto unitname = unitName(unitinfo);
     auto unitpath = unitPath(unitinfo);
@@ -1040,7 +1000,7 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
         return 0;
     }
 
-    return registry->impl->thread.executeOnThread<pid_t>([this, registry, unitname, unitpath]() {
+    return registry_.impl->thread.executeOnThread<pid_t>([this, unitname, unitpath]() {
         GError* error{nullptr};
         auto call = unique_glib(
             g_dbus_connection_call_sync(userbus_.get(),                                               /* user bus */
@@ -1052,7 +1012,7 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
                                         G_VARIANT_TYPE("(v)"),                                        /* ret type */
                                         G_DBUS_CALL_FLAGS_NONE,                                       /* flags */
                                         -1,                                                           /* timeout */
-                                        registry->impl->thread.getCancellable().get(),                /* cancellable */
+                                        registry_.impl->thread.getCancellable().get(),                /* cancellable */
                                         &error));
 
         if (error != nullptr)
@@ -1080,14 +1040,6 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
 
 std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job, const std::string& instance)
 {
-    auto registry = registry_.lock();
-
-    if (!registry)
-    {
-        g_warning("Unable to get registry to determine primary PID");
-        return {};
-    }
-
     auto unitinfo = SystemD::UnitInfo{appId, job, instance};
     auto unitname = unitName(unitinfo);
     auto unitpath = unitPath(unitinfo);
@@ -1097,7 +1049,7 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         return {};
     }
 
-    auto cgrouppath = registry->impl->thread.executeOnThread<std::string>([this, registry, unitname, unitpath]() {
+    auto cgrouppath = registry_.impl->thread.executeOnThread<std::string>([this, unitname, unitpath]() {
         GError* error{nullptr};
         auto call = unique_glib(
             g_dbus_connection_call_sync(userbus_.get(),                    /* user bus */
@@ -1109,7 +1061,7 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
                                         G_VARIANT_TYPE("(v)"),                         /* ret type */
                                         G_DBUS_CALL_FLAGS_NONE,                        /* flags */
                                         -1,                                            /* timeout */
-                                        registry->impl->thread.getCancellable().get(), /* cancellable */
+                                        registry_.impl->thread.getCancellable().get(), /* cancellable */
                                         &error));
 
         if (error != nullptr)
@@ -1182,10 +1134,9 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
 
 void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::string& instance)
 {
-    auto registry = registry_.lock();
     auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
 
-    registry->impl->thread.executeOnThread<bool>([this, registry, unitname] {
+    registry_.impl->thread.executeOnThread<bool>([this, unitname] {
         GError* error{nullptr};
         unique_glib(g_dbus_connection_call_sync(
             userbus_.get(),             /* user bus */
@@ -1200,7 +1151,7 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
             G_VARIANT_TYPE("(o)"),       /* ret type */
             G_DBUS_CALL_FLAGS_NONE,      /* flags */
             -1,                          /* timeout */
-            registry->impl->thread.getCancellable().get(), /* cancellable */
+            registry_.impl->thread.getCancellable().get(), /* cancellable */
             &error));
 
         if (error != nullptr)
@@ -1231,16 +1182,14 @@ core::Signal<const std::string&, const std::string&, const std::string&>& System
 
 struct FailedData
 {
-    std::weak_ptr<Registry> registry;
+    std::weak_ptr<Registry::Impl> registry;
 };
 
 core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>& SystemD::jobFailed()
 {
     std::call_once(flag_appFailed, [this]() {
-        auto reg = registry_.lock();
-
-        reg->impl->thread.executeOnThread<bool>([this, reg]() {
-            auto data = new FailedData{reg};
+        registry_.impl->thread.executeOnThread<bool>([this]() {
+            auto data = new FailedData{registry_.impl};
 
             handle_appFailed = managedDBusSignalConnection(
                 g_dbus_connection_signal_subscribe(
@@ -1258,11 +1207,10 @@ core::Signal<const std::string&, const std::string&, const std::string&, Registr
 
                         if (!reg)
                         {
-                            g_warning("Registry object invalid!");
-                            return;
+                            throw std::runtime_error{"Lost our connection with the registry"};
                         }
 
-                        auto manager = std::dynamic_pointer_cast<SystemD>(reg->impl->jobs);
+                        auto manager = std::dynamic_pointer_cast<SystemD>(reg->jobs);
 
                         /* Check to see if this is a path we care about */
                         bool pathfound{false};
@@ -1341,12 +1289,11 @@ void SystemD::resetUnit(const UnitInfo& info) const
         return;
     }
 
-    auto registry = registry_.lock();
     auto unitname = unitName(info);
     auto bus = userbus_;
-    auto cancel = registry->impl->thread.getCancellable();
+    auto cancel = registry_.impl->thread.getCancellable();
 
-    registry->impl->thread.executeOnThread([bus, unitname, cancel] {
+    registry_.impl->thread.executeOnThread([bus, unitname, cancel] {
         if (g_cancellable_is_cancelled(cancel.get()))
         {
             return;

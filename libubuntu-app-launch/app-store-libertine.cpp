@@ -30,7 +30,8 @@ namespace app_launch
 namespace app_store
 {
 
-Libertine::Libertine()
+Libertine::Libertine(const Registry& registry)
+    : Base(registry)
 {
 }
 
@@ -44,7 +45,7 @@ Libertine::~Libertine()
     \param appid AppID to check
     \param registry persistent connections to use
 */
-bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
+bool Libertine::hasAppId(const AppID& appid)
 {
     try
     {
@@ -53,7 +54,7 @@ bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& re
             return false;
         }
 
-        return verifyAppname(appid.package, appid.appname, registry);
+        return verifyAppname(appid.package, appid.appname);
     }
     catch (std::runtime_error& e)
     {
@@ -67,7 +68,7 @@ bool Libertine::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& re
     \param package Container name
     \param registry persistent connections to use
 */
-bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
+bool Libertine::verifyPackage(const AppID::Package& package)
 {
     auto containers = unique_gcharv(libertine_list_containers());
 
@@ -90,9 +91,7 @@ bool Libertine::verifyPackage(const AppID::Package& package, const std::shared_p
     \param appname Application name to look for
     \param registry persistent connections to use
 */
-bool Libertine::verifyAppname(const AppID::Package& package,
-                              const AppID::AppName& appname,
-                              const std::shared_ptr<Registry>& registry)
+bool Libertine::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
 {
     auto apps = unique_gcharv(libertine_list_apps_for_container(package.value().c_str()));
 
@@ -115,9 +114,7 @@ bool Libertine::verifyAppname(const AppID::Package& package,
     \param card Application search paths
     \param registry persistent connections to use
 */
-AppID::AppName Libertine::findAppname(const AppID::Package& package,
-                                      AppID::ApplicationWildcard card,
-                                      const std::shared_ptr<Registry>& registry)
+AppID::AppName Libertine::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
 {
     throw std::runtime_error("Legacy apps can't be discovered by package");
 }
@@ -128,14 +125,12 @@ AppID::AppName Libertine::findAppname(const AppID::Package& package,
     \param appname Application name (unused)
     \param registry persistent connections to use (unused)
 */
-AppID::Version Libertine::findVersion(const AppID::Package& package,
-                                      const AppID::AppName& appname,
-                                      const std::shared_ptr<Registry>& registry)
+AppID::Version Libertine::findVersion(const AppID::Package& package, const AppID::AppName& appname)
 {
     return AppID::Version::from_raw("0.0");
 }
 
-std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Registry>& registry)
+std::list<std::shared_ptr<Application>> Libertine::list()
 {
     std::list<std::shared_ptr<Application>> applist;
 
@@ -151,7 +146,7 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
             try
             {
                 auto appid = AppID::parse(apps.get()[j]);
-                auto sapp = std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry->impl);
+                auto sapp = std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry_.impl);
                 applist.emplace_back(sapp);
             }
             catch (std::runtime_error& e)
@@ -164,9 +159,9 @@ std::list<std::shared_ptr<Application>> Libertine::list(const std::shared_ptr<Re
     return applist;
 }
 
-std::shared_ptr<app_impls::Base> Libertine::create(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry)
+std::shared_ptr<app_impls::Base> Libertine::create(const AppID& appid)
 {
-    return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry);
+    return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry_.impl);
 }
 
 }  // namespace app_store

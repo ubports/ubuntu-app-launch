@@ -48,20 +48,7 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         throw std::runtime_error("Invalid registry object");
     }
 
-    if (!registry->impl->jobs)
-    {
-        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
-    }
-
-    for (const auto& appStore : registry->impl->appStores())
-    {
-        if (appStore->hasAppId(appid, registry))
-        {
-            return appStore->create(appid, registry->impl);
-        }
-    }
-
-    throw std::runtime_error("Invalid app ID: " + std::string(appid));
+    return registry->impl->createApp(appid);
 }
 
 AppID::AppID()
@@ -188,26 +175,26 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
         /* Figure out which type we have */
         try
         {
-            if (appStore->verifyPackage(pkg, registry))
+            if (appStore->verifyPackage(pkg))
             {
                 auto app = AppID::AppName::from_raw({});
 
                 if (appname.empty() || appname == "first-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::FIRST_LISTED, registry);
+                    app = appStore->findAppname(pkg, ApplicationWildcard::FIRST_LISTED);
                 }
                 else if (appname == "last-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::LAST_LISTED, registry);
+                    app = appStore->findAppname(pkg, ApplicationWildcard::LAST_LISTED);
                 }
                 else if (appname == "only-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::ONLY_LISTED, registry);
+                    app = appStore->findAppname(pkg, ApplicationWildcard::ONLY_LISTED);
                 }
                 else
                 {
                     app = AppID::AppName::from_raw(appname);
-                    if (!appStore->verifyAppname(pkg, app, registry))
+                    if (!appStore->verifyAppname(pkg, app))
                     {
                         throw std::runtime_error("App name passed in is not valid for this package type");
                     }
@@ -216,12 +203,12 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                 auto ver = AppID::Version::from_raw({});
                 if (version.empty() || version == "current-user-version")
                 {
-                    ver = appStore->findVersion(pkg, app, registry);
+                    ver = appStore->findVersion(pkg, app);
                 }
                 else
                 {
                     ver = AppID::Version::from_raw(version);
-                    if (!appStore->hasAppId({pkg, app, ver}, registry))
+                    if (!appStore->hasAppId({pkg, app, ver}))
                     {
                         throw std::runtime_error("Invalid version passed for this package type");
                     }
@@ -250,10 +237,10 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
     {
         try
         {
-            if (appStore->verifyPackage(pkg, registry))
+            if (appStore->verifyPackage(pkg))
             {
-                auto app = appStore->findAppname(pkg, appwildcard, registry);
-                auto ver = appStore->findVersion(pkg, app, registry);
+                auto app = appStore->findAppname(pkg, appwildcard);
+                auto ver = appStore->findVersion(pkg, app);
                 return AppID{pkg, app, ver};
             }
         }
@@ -279,9 +266,9 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
     {
         try
         {
-            if (appStore->verifyPackage(pkg, registry) && appStore->verifyAppname(pkg, app, registry))
+            if (appStore->verifyPackage(pkg) && appStore->verifyAppname(pkg, app))
             {
-                auto ver = appStore->findVersion(pkg, app, registry);
+                auto ver = appStore->findVersion(pkg, app);
                 return AppID{pkg, app, ver};
             }
         }

@@ -40,11 +40,6 @@ Registry::~Registry()
 
 std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> registry)
 {
-    if (!registry->impl->jobs)
-    {
-        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
-    }
-
     return registry->impl->jobs->runningApps();
 }
 
@@ -54,7 +49,7 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
 
     for (const auto& appStore : connection->impl->appStores())
     {
-        list.splice(list.begin(), appStore->list(connection));
+        list.splice(list.begin(), appStore->list());
     }
 
     return list;
@@ -62,26 +57,11 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
 
 std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, std::shared_ptr<Registry> registry)
 {
-    if (!registry->impl->jobs)
-    {
-        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
-    }
-
     return registry->impl->jobs->runningHelpers(type);
-}
-
-/* Quick little helper to bundle up standard code */
-inline void setJobs(const std::shared_ptr<Registry>& registry)
-{
-    if (!registry->impl->jobs)
-    {
-        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
-    }
 }
 
 void Registry::setManager(const std::shared_ptr<Manager>& manager, const std::shared_ptr<Registry>& registry)
 {
-    setJobs(registry);
     registry->impl->jobs->setManager(manager);
 }
 
@@ -114,21 +94,18 @@ void Registry::clearDefault()
 core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Registry::appStarted(
     const std::shared_ptr<Registry>& reg)
 {
-    setJobs(reg);
     return reg->impl->jobs->appStarted();
 }
 
 core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Registry::appStopped(
     const std::shared_ptr<Registry>& reg)
 {
-    setJobs(reg);
     return reg->impl->jobs->appStopped();
 }
 
 core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
     Registry::appFailed(const std::shared_ptr<Registry>& reg)
 {
-    setJobs(reg);
     return reg->impl->jobs->appFailed();
 }
 
@@ -137,7 +114,6 @@ core::Signal<const std::shared_ptr<Application>&,
              const std::vector<pid_t>&>&
     Registry::appPaused(const std::shared_ptr<Registry>& reg)
 {
-    setJobs(reg);
     return reg->impl->jobs->appPaused();
 }
 
@@ -146,28 +122,24 @@ core::Signal<const std::shared_ptr<Application>&,
              const std::vector<pid_t>&>&
     Registry::appResumed(const std::shared_ptr<Registry>& reg)
 {
-    setJobs(reg);
     return reg->impl->jobs->appResumed();
 }
 
 core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Registry::helperStarted(
     Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
-    setJobs(reg);
     return reg->impl->jobs->helperStarted(type);
 }
 
 core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Registry::helperStopped(
     Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
-    setJobs(reg);
     return reg->impl->jobs->helperStopped(type);
 }
 
 core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
     Registry::helperFailed(Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
-    setJobs(reg);
     return reg->impl->jobs->helperFailed(type);
 }
 

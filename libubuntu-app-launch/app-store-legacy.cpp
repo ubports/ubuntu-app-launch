@@ -30,7 +30,8 @@ namespace app_launch
 namespace app_store
 {
 
-Legacy::Legacy()
+Legacy::Legacy(const Registry& registry)
+    : Base(registry)
 {
 }
 
@@ -44,7 +45,7 @@ Legacy::~Legacy()
     \param appid AppID to check
     \param registry persistent connections to use
 */
-bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
+bool Legacy::hasAppId(const AppID& appid)
 {
     try
     {
@@ -53,7 +54,7 @@ bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& regis
             return false;
         }
 
-        return verifyAppname(appid.package, appid.appname, registry);
+        return verifyAppname(appid.package, appid.appname);
     }
     catch (std::runtime_error& e)
     {
@@ -66,7 +67,7 @@ bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& regis
     \param package Container name
     \param registry persistent connections to use
 */
-bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
+bool Legacy::verifyPackage(const AppID::Package& package)
 {
     return package.value().empty();
 }
@@ -78,11 +79,9 @@ bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<
     \param appname Application name to look for
     \param registry persistent connections to use
 */
-bool Legacy::verifyAppname(const AppID::Package& package,
-                           const AppID::AppName& appname,
-                           const std::shared_ptr<Registry>& registry)
+bool Legacy::verifyAppname(const AppID::Package& package, const AppID::AppName& appname)
 {
-    if (!verifyPackage(package, registry))
+    if (!verifyPackage(package))
     {
         throw std::runtime_error{"Invalid Legacy package: " + std::string(package)};
     }
@@ -118,9 +117,7 @@ bool Legacy::verifyAppname(const AppID::Package& package,
     \param card Application search paths
     \param registry persistent connections to use
 */
-AppID::AppName Legacy::findAppname(const AppID::Package& package,
-                                   AppID::ApplicationWildcard card,
-                                   const std::shared_ptr<Registry>& registry)
+AppID::AppName Legacy::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
 {
     throw std::runtime_error("Legacy apps can't be discovered by package");
 }
@@ -131,16 +128,14 @@ AppID::AppName Legacy::findAppname(const AppID::Package& package,
     \param appname Application name (unused)
     \param registry persistent connections to use (unused)
 */
-AppID::Version Legacy::findVersion(const AppID::Package& package,
-                                   const AppID::AppName& appname,
-                                   const std::shared_ptr<Registry>& registry)
+AppID::Version Legacy::findVersion(const AppID::Package& package, const AppID::AppName& appname)
 {
     return AppID::Version::from_raw({});
 }
 
 static const std::regex desktop_remover("^(.*)\\.desktop$");
 
-std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
+std::list<std::shared_ptr<Application>> Legacy::list()
 {
     std::list<std::shared_ptr<Application>> list;
     std::unique_ptr<GList, decltype(&g_list_free)> head(g_app_info_get_all(),
@@ -179,7 +174,7 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
 
         try
         {
-            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry->impl);
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry_.impl);
             list.push_back(app);
         }
         catch (std::runtime_error& e)
@@ -191,9 +186,9 @@ std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Regis
     return list;
 }
 
-std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry)
+std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid)
 {
-    return std::make_shared<app_impls::Legacy>(appid.appname, registry);
+    return std::make_shared<app_impls::Legacy>(appid.appname, registry_.impl);
 }
 
 }  // namespace app_store
