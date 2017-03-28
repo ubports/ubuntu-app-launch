@@ -30,24 +30,27 @@ class InfoWatcherZg : public EventuallyFixture
 {
 protected:
     std::shared_ptr<DbusTestService> service;
-    RegistryMock registry;
+    std::shared_ptr<RegistryMock> registry;
 
     virtual void SetUp()
     {
         service = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
                                                    [](DbusTestService* service) { g_clear_object(&service); });
         dbus_test_service_start_tasks(service.get());
+
+        registry = std::shared_ptr<RegistryMock>();
     }
 
     virtual void TearDown()
     {
+        registry.reset();
         service.reset();
     }
 };
 
 TEST_F(InfoWatcherZg, InitTest)
 {
-    auto watcher = std::make_shared<ubuntu::app_launch::info_watcher::Zeitgeist>(registry);
+    auto watcher = std::make_shared<ubuntu::app_launch::info_watcher::Zeitgeist>(*registry);
 
     watcher.reset();
 }
