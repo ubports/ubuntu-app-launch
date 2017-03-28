@@ -79,7 +79,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
             try
             {
-                auto appId = AppID::find(/* TODO reg,*/ appid);
+                auto appId = registry_.impl->find(appid);
                 auto app = registry_.impl->createApp(appId);
                 auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
@@ -107,7 +107,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
             try
             {
-                auto appId = AppID::find(/* TODO reg,*/ appid);
+                auto appId = registry_.impl->find(appid);
                 auto app = registry_.impl->createApp(appId);
                 auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
@@ -137,7 +137,7 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
             try
             {
-                auto appId = AppID::find(/* TODO reg,*/ appid);
+                auto appId = registry_.impl->find(appid);
                 auto app = registry_.impl->createApp(appId);
                 auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
@@ -187,7 +187,7 @@ void Base::pauseEventEmitted(core::Signal<const std::shared_ptr<Application>&,
     auto cappid = g_variant_get_string(vappid.get(), NULL);
     auto cinstid = g_variant_get_string(vinstid.get(), NULL);
 
-    auto appid = ubuntu::app_launch::AppID::find(/* TODO reg,*/ cappid);
+    auto appid = reg->find(cappid);
     auto app = reg->createApp(appid);
     auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(cinstid);
 
@@ -311,7 +311,7 @@ core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Insta
 
                 try
                 {
-                    auto appId = ubuntu::app_launch::AppID::find(/*TODO, */ appid);
+                    auto appId = registry_.impl->find(appid);
                     auto helper = registry_.impl->createHelper(type, appId);
                     auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
 
@@ -420,7 +420,7 @@ std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>>
     const gchar* cinstid = nullptr;
     g_variant_get(params.get(), "(&s&s)", &cappid, &cinstid);
 
-    auto appid = ubuntu::app_launch::AppID::find(/*TODO reg,*/ cappid);
+    auto appid = reg->find(cappid);
     app = reg->createApp(appid);
 
     /* TODO Instance */
@@ -627,7 +627,7 @@ std::list<std::shared_ptr<Application>> Base::runningApps()
     std::list<std::shared_ptr<Application>> apps;
     for (const auto& appid : appids)
     {
-        auto id = AppID::find(/* TODO registry,*/ appid);
+        auto id = registry_.impl->find(appid);
         if (id.empty())
         {
             g_debug("Unable to handle AppID: %s", appid.c_str());
@@ -656,7 +656,7 @@ std::list<std::shared_ptr<Helper>> Base::runningHelpers(const Helper::Type& type
     std::list<std::shared_ptr<Helper>> helpers;
     for (const auto& appid : appids)
     {
-        auto id = AppID::find(/*TODO*/ appid);
+        auto id = registry_.impl->find(appid);
         if (id.empty())
         {
             g_debug("Unable to handle AppID: %s", appid.c_str());
