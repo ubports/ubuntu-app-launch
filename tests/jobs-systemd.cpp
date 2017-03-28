@@ -96,13 +96,15 @@ protected:
 /* Make sure we can build an object and destroy it */
 TEST_F(JobsSystemd, Init)
 {
-    registry->impl->jobs = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    registry->impl->jobs = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
 }
 
 /* Make sure we make the initial call to get signals and an initial list */
 TEST_F(JobsSystemd, Startup)
 {
-    registry->impl->jobs = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
+    registry->impl->jobs = manager;
+    manager->runningApps();
 
     EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([this]() { return systemd->subscribeCallsCnt() > 0; }));
     EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([this]() -> bool { return systemd->listCallsCnt() > 0; }));
@@ -117,7 +119,7 @@ std::function<bool(const std::shared_ptr<ubuntu::app_launch::Application> &app)>
 /* Get the running apps and check out their instances */
 TEST_F(JobsSystemd, RunningApps)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     auto apps = manager->runningApps();
@@ -144,7 +146,7 @@ TEST_F(JobsSystemd, RunningApps)
 /* Check to make sure we're getting the user bus path correctly */
 TEST_F(JobsSystemd, UserBusPath)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     EXPECT_EQ(std::string{"/this/should/not/exist"}, manager->userBusPath());
@@ -156,7 +158,7 @@ TEST_F(JobsSystemd, UserBusPath)
 /* PID Tools */
 TEST_F(JobsSystemd, PidTools)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     EXPECT_EQ(5, manager->unitPrimaryPid(singleAppID(), defaultJobName(), {}));
@@ -167,7 +169,7 @@ TEST_F(JobsSystemd, PidTools)
 /* PID Instance */
 TEST_F(JobsSystemd, PidInstance)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     auto inst = manager->existing(singleAppID(), defaultJobName(), {}, {});
@@ -181,7 +183,7 @@ TEST_F(JobsSystemd, PidInstance)
 /* Stopping a Job */
 TEST_F(JobsSystemd, StopUnit)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     manager->stopUnit(singleAppID(), defaultJobName(), {});
@@ -211,7 +213,7 @@ TEST_F(JobsSystemd, StopUnit)
 /* Stop Instance */
 TEST_F(JobsSystemd, StopInstance)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     auto inst = manager->existing(singleAppID(), defaultJobName(), {}, {});
@@ -231,7 +233,7 @@ TEST_F(JobsSystemd, StopInstance)
 /* Starting a new job */
 TEST_F(JobsSystemd, LaunchJob)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     bool gotenv{false};
@@ -291,7 +293,7 @@ TEST_F(JobsSystemd, LaunchJob)
 
 TEST_F(JobsSystemd, SignalNew)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     std::promise<ubuntu::app_launch::AppID> newunit;
@@ -327,7 +329,7 @@ TEST_F(JobsSystemd, SignalNew)
 
 TEST_F(JobsSystemd, SignalRemove)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     std::promise<ubuntu::app_launch::AppID> removeunit;
@@ -363,7 +365,7 @@ TEST_F(JobsSystemd, SignalRemove)
 
 TEST_F(JobsSystemd, UnitFailure)
 {
-    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
     registry->impl->jobs = manager;
 
     ubuntu::app_launch::AppID failedappid;

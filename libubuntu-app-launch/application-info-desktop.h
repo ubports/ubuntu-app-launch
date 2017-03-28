@@ -17,12 +17,14 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include "application.h"
+#include "registry-impl.h"
+#include "registry.h"
 #include <bitset>
 #include <glib.h>
 #include <mutex>
-
-#pragma once
 
 namespace ubuntu
 {
@@ -46,7 +48,7 @@ public:
             const std::string& basePath,
             const std::string& rootDir,
             std::bitset<2> flags,
-            std::shared_ptr<Registry> registry);
+            const std::shared_ptr<Registry::Impl>& registry);
 
     const Application::Info::Name& name() override
     {

@@ -50,10 +50,10 @@ class Snap : public Base
 public:
     typedef std::tuple<app_info::Desktop::XMirEnable, Application::Info::UbuntuLifecycle> InterfaceInfo;
 
-    Snap(const AppID& appid, const std::shared_ptr<Registry>& registry);
-    Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const InterfaceInfo& interfaceInfo);
+    Snap(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry);
+    Snap(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry, const InterfaceInfo& interfaceInfo);
 
-    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
+    static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry::Impl>& registry);
 
     AppID appId() override;
 
@@ -66,7 +66,7 @@ public:
 
     virtual std::shared_ptr<Application::Instance> findInstance(const std::string& instanceid) override;
 
-    static InterfaceInfo findInterfaceInfo(const AppID& appid, const std::shared_ptr<Registry>& registry);
+    static InterfaceInfo findInterfaceInfo(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry);
     static bool checkPkgInfo(const std::shared_ptr<snapd::Info::PkgInfo>& pkginfo, const AppID& appid);
 
 private:

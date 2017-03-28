@@ -36,7 +36,7 @@ namespace info_watcher
 class Zeitgeist : public Base
 {
 public:
-    Zeitgeist(const std::shared_ptr<Registry>& registry);
+    Zeitgeist(const Registry& registry);
     virtual ~Zeitgeist() = default;
 
     virtual Application::Info::Popularity lookupAppPopularity(const AppID& appid);

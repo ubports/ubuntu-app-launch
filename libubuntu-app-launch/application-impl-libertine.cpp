@@ -35,7 +35,7 @@ namespace app_impls
 
 Libertine::Libertine(const AppID::Package& container,
                      const AppID::AppName& appname,
-                     const std::shared_ptr<Registry>& registry)
+                     const std::shared_ptr<Registry::Impl>& registry)
     : Base(registry)
     , _container(container)
     , _appname(appname)
@@ -68,7 +68,7 @@ Libertine::Libertine(const AppID::Package& container,
                                  container.value() + "'"};
 
     appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, _container_path,
-                                                   app_info::DesktopFlags::XMIR_DEFAULT, _registry);
+                                                   app_info::DesktopFlags::XMIR_DEFAULT, registry_);
 
     g_debug("Application Libertine object for container '%s' app '%s'", container.value().c_str(),
             appname.value().c_str());
@@ -137,7 +137,7 @@ std::shared_ptr<Application::Info> Libertine::info()
 
 std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
 {
-    auto vbase = _registry->impl->jobs->instances(appId(), "application-legacy");
+    auto vbase = registry_->jobs->instances(appId(), "application-legacy");
     return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
@@ -181,21 +181,21 @@ std::shared_ptr<Application::Instance> Libertine::launch(const std::vector<Appli
 {
     auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls,
-                                         jobs::manager::launchMode::STANDARD, envfunc);
+    return registry_->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::STANDARD,
+                                   envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::launchTest(const std::vector<Application::URL>& urls)
 {
     auto instance = getInstance(appinfo_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
-                                         envfunc);
+    return registry_->jobs->launch(appId(), "application-legacy", instance, urls, jobs::manager::launchMode::TEST,
+                                   envfunc);
 }
 
 std::shared_ptr<Application::Instance> Libertine::findInstance(const std::string& instanceid)
 {
-    return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
+    return registry_->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
 }
 
 }  // namespace app_impls

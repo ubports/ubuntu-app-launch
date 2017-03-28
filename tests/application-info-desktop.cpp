@@ -88,7 +88,7 @@ protected:
     {
         auto reg = registry();
 
-        return std::dynamic_pointer_cast<zgWatcherMock>(reg->impl->getZgWatcher(reg));
+        return std::dynamic_pointer_cast<zgWatcherMock>(reg->impl->getZgWatcher());
     }
 };
 
@@ -410,7 +410,7 @@ TEST_F(ApplicationInfoDesktop, Popularity)
     auto keyfile = defaultKeyfile();
     EXPECT_EQ(5u,
               ubuntu::app_launch::app_info::Desktop(simpleAppID(), keyfile, "/", {},
-                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, registry())
+                                                    ubuntu::app_launch::app_info::DesktopFlags::NONE, registry()->impl)
                   .popularity()
                   .value());
 }

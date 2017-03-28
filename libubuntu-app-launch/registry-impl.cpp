@@ -20,6 +20,7 @@
 #include "registry-impl.h"
 #include "application-icon-finder.h"
 #include "application-impl-base.h"
+#include "helper-impl.h"
 #include <regex>
 #include <unity/util/GObjectMemory.h>
 #include <unity/util/GlibMemory.h>
@@ -32,11 +33,13 @@ namespace app_launch
 {
 
 Registry::Impl::Impl(Registry& registry)
-    : Impl(registry, app_store::Base::allAppStores())
+    : Impl(registry, app_store::Base::allAppStores(registry), jobs::manager::Base::determineFactory(registry))
 {
 }
 
-Registry::Impl::Impl(Registry& registry, std::list<std::shared_ptr<app_store::Base>> appStores)
+Registry::Impl::Impl(Registry& registry,
+                     std::list<std::shared_ptr<app_store::Base>> appStores,
+                     std::shared_ptr<jobs::manager::Base> jobEngine)
     : thread([]() {},
              [this]() {
                  zgLog_.reset();
@@ -46,6 +49,7 @@ Registry::Impl::Impl(Registry& registry, std::list<std::shared_ptr<app_store::Ba
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
                  _dbus.reset();
              })
+    , jobs(jobEngine)
     , _registry{registry}
     , _iconFinders()
     , _appStores(appStores)
@@ -178,14 +182,14 @@ bool Registry::Impl::isWatchingAppStarting()
 /** Sets up the signals down to the info watchers and we aggregate
     them up to users of UAL. We connect to all their signals and
     pass them up. */
-void Registry::Impl::infoWatchersSetup(const std::shared_ptr<Registry>& reg)
+void Registry::Impl::infoWatchersSetup()
 {
-    std::call_once(flag_infoWatchersSetup, [this, reg] {
+    std::call_once(flag_infoWatchersSetup, [this] {
         g_debug("Info watchers signals setup");
 
         /* Grab all the app stores and the ZG info watcher */
         std::list<std::shared_ptr<info_watcher::Base>> watchers{_appStores.begin(), _appStores.end()};
-        watchers.push_back(Registry::Impl::getZgWatcher(reg));
+        watchers.push_back(getZgWatcher());
 
         /* Connect each of their signals to us, and track that connection */
         for (const auto& watcher : watchers)
@@ -202,22 +206,41 @@ void Registry::Impl::infoWatchersSetup(const std::shared_ptr<Registry>& reg)
     });
 }
 
-core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated(const std::shared_ptr<Registry>& reg)
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated()
 {
-    infoWatchersSetup(reg);
+    infoWatchersSetup();
     return sig_appInfoUpdated;
 }
 
-core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appAdded(const std::shared_ptr<Registry>& reg)
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appAdded()
 {
-    infoWatchersSetup(reg);
+    infoWatchersSetup();
     return sig_appAdded;
 }
 
-core::Signal<const AppID&>& Registry::Impl::appRemoved(const std::shared_ptr<Registry>& reg)
+core::Signal<const AppID&>& Registry::Impl::appRemoved()
 {
-    infoWatchersSetup(reg);
+    infoWatchersSetup();
     return sig_appRemoved;
+}
+
+std::shared_ptr<Application> Registry::Impl::createApp(const AppID& appid)
+{
+    for (const auto& appStore : appStores())
+    {
+        if (appStore->hasAppId(appid))
+        {
+            return appStore->create(appid);
+        }
+    }
+
+    throw std::runtime_error("Invalid app ID: " + std::string(appid));
+}
+
+std::shared_ptr<Helper> Registry::Impl::createHelper(const Helper::Type& type, const AppID& appid)
+{
+    /* Only one type today */
+    return std::make_shared<helper_impls::Base>(type, appid, _registry.impl);
 }
 
 }  // namespace app_launch

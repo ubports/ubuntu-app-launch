@@ -116,7 +116,7 @@ public:
 
 TEST_F(AppStoreLegacy, Init)
 {
-    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>();
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
     store.reset();
 }
 
@@ -132,8 +132,8 @@ TEST_F(AppStoreLegacy, FindApp)
                          {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
                      }}});
 
-    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>();
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
 
     EXPECT_TRUE(store->verifyAppname(ubuntu::app_launch::AppID::Package::from_raw({}),
-                                     ubuntu::app_launch::AppID::AppName::from_raw("testapp"), registry));
+                                     ubuntu::app_launch::AppID::AppName::from_raw("testapp")));
 }

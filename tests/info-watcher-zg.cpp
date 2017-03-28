@@ -37,7 +37,8 @@ protected:
         service = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
                                                    [](DbusTestService* service) { g_clear_object(&service); });
         dbus_test_service_start_tasks(service.get());
-        registry = std::make_shared<RegistryMock>();
+
+        registry = std::shared_ptr<RegistryMock>();
     }
 
     virtual void TearDown()
@@ -49,7 +50,7 @@ protected:
 
 TEST_F(InfoWatcherZg, InitTest)
 {
-    auto watcher = std::make_shared<ubuntu::app_launch::info_watcher::Zeitgeist>(registry);
+    auto watcher = std::make_shared<ubuntu::app_launch::info_watcher::Zeitgeist>(*registry);
 
     watcher.reset();
 }

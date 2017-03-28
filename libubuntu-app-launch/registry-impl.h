@@ -17,6 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include "app-store-base.h"
 #include "glib-thread.h"
 #include "info-watcher-zg.h"
@@ -29,14 +31,16 @@
 #include <unordered_map>
 #include <zeitgeist.h>
 
-#pragma once
-
 namespace ubuntu
 {
 namespace app_launch
 {
 
 class IconFinder;
+namespace app_store
+{
+class Base;
+}
 
 /** \private
     \brief Private implementation of the Registry object
@@ -46,7 +50,9 @@ class Registry::Impl
 {
 public:
     Impl(Registry& registry);
-    Impl(Registry& registry, std::list<std::shared_ptr<app_store::Base>> appStores);
+    Impl(Registry& registry,
+         std::list<std::shared_ptr<app_store::Base>> appStores,
+         std::shared_ptr<jobs::manager::Base> jobEngine);
 
     virtual ~Impl()
     {
@@ -86,18 +92,17 @@ public:
         return oomHelper_;
     }
 
-    static std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher(const std::shared_ptr<Registry>& reg)
+    std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher()
     {
-        std::call_once(reg->impl->zgWatcherOnce_,
-                       [reg] { reg->impl->zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(reg); });
-        return reg->impl->zgWatcher_;
+        std::call_once(zgWatcherOnce_, [this] { zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(_registry); });
+        return zgWatcher_;
     }
 
-    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
-    core::Signal<const std::shared_ptr<Application>&>& appAdded(const std::shared_ptr<Registry>& reg);
-    core::Signal<const AppID&>& appRemoved(const std::shared_ptr<Registry>& reg);
+    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated();
+    core::Signal<const std::shared_ptr<Application>&>& appAdded();
+    core::Signal<const AppID&>& appRemoved();
 
-    std::list<std::shared_ptr<app_store::Base>> appStores()
+    const std::list<std::shared_ptr<app_store::Base>>& appStores()
     {
         return _appStores;
     }
@@ -106,6 +111,18 @@ public:
     {
         _appStores = newlist;
     }
+
+    /* Create functions */
+    std::shared_ptr<Application> createApp(const AppID& appid);
+    std::shared_ptr<Helper> createHelper(const Helper::Type& type, const AppID& appid);
+
+    /* AppID functions */
+    AppID find(const std::string& sappid);
+    AppID discover(const std::string& package, const std::string& appname, const std::string& version);
+    AppID discover(const std::string& package,
+                   AppID::ApplicationWildcard appwildcard,
+                   AppID::VersionWildcard versionwildcard);
+    AppID discover(const std::string& package, const std::string& appname, AppID::VersionWildcard versionwildcard);
 
 private:
     Registry& _registry; /**< The Registry that we're spawned from */
@@ -141,6 +158,7 @@ private:
     };
     /** List of info watchers along with a signal handle to our connection to their update signal */
     std::list<std::pair<std::shared_ptr<info_watcher::Base>, infoWatcherConnections>> infoWatchers_;
+    void infoWatchersSetup();
 
 protected:
     /** ZG Info Watcher */

@@ -35,7 +35,7 @@ namespace info_watcher
 class Base
 {
 public:
-    Base(const std::shared_ptr<Registry>& registry);
+    Base(const Registry& registry);
     virtual ~Base() = default;
 
     virtual core::Signal<const std::shared_ptr<Application>&>& infoChanged()
@@ -58,17 +58,7 @@ protected:
     core::Signal<const std::shared_ptr<Application>&> appAdded_;
     core::Signal<const AppID&> appRemoved_;
 
-    std::weak_ptr<Registry> registry_;
-
-    std::shared_ptr<Registry> getReg()
-    {
-        auto reg = registry_.lock();
-        if (!reg)
-        {
-            throw std::runtime_error{"Unable to get registry."};
-        }
-        return reg;
-    }
+    const Registry& registry_;
 };
 
 }  // namespace info_watcher
