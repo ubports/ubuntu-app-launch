@@ -42,7 +42,6 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          dbus-user-session,
-         xmir [amd64 armhf i386],
          zeitgeist-core,
 Replaces: upstart-app-launch
 Conflicts: upstart-app-launch
