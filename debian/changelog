@@ -1,3 +1,9 @@
+ubuntu-app-launch (0.11+17.04.20170328-0ubuntu1) zesty; urgency=medium
+
+  * Explicitly depend on libertine-xmir-tools (#1671938).
+
+ -- Larry Price <larry.price@canonical.com>  Tue, 28 Mar 2017 14:16:27 +0000
+
 ubuntu-app-launch (0.11+17.04.20170321-0ubuntu1) zesty; urgency=medium
 
   [ Ted Gould ]
