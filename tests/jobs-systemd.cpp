@@ -102,7 +102,9 @@ TEST_F(JobsSystemd, Init)
 /* Make sure we make the initial call to get signals and an initial list */
 TEST_F(JobsSystemd, Startup)
 {
-    registry->impl->jobs = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
+    auto manager = std::make_shared<ubuntu::app_launch::jobs::manager::SystemD>(*registry);
+    registry->impl->jobs = manager;
+    manager->runningApps();
 
     EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([this]() { return systemd->subscribeCallsCnt() > 0; }));
     EXPECT_EVENTUALLY_FUNC_EQ(true, std::function<bool()>([this]() -> bool { return systemd->listCallsCnt() > 0; }));
