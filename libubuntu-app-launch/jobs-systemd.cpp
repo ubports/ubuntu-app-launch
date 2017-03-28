@@ -838,6 +838,8 @@ std::shared_ptr<Application::Instance> SystemD::existing(const AppID& appId,
 
 std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& appID, const std::string& job)
 {
+    get_userbus();
+
     std::vector<std::shared_ptr<instance::Base>> instances;
     std::vector<Application::URL> urls;
 
@@ -866,6 +868,7 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
 
 std::list<std::string> SystemD::runningAppIds(const std::list<std::string>& allJobs)
 {
+    get_userbus();
     std::set<std::string> appids;
 
     for (const auto& unit : unitPaths)
@@ -914,6 +917,7 @@ std::string SystemD::unitName(const SystemD::UnitInfo& info) const
 
 std::string SystemD::unitPath(const SystemD::UnitInfo& info)
 {
+    get_userbus();
     auto data = unitPaths[info];
 
     if (!data)
