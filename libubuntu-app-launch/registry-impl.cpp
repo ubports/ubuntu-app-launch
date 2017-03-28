@@ -179,9 +179,9 @@ bool Registry::Impl::isWatchingAppStarting()
     return watchingAppStarting_;
 }
 
-core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated(const std::shared_ptr<Registry>& reg)
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated()
 {
-    std::call_once(flag_appInfoUpdated, [this, reg] {
+    std::call_once(flag_appInfoUpdated, [this] {
         g_debug("App Info Updated Signal Initialized");
 
         std::list<std::shared_ptr<info_watcher::Base>> apps{_appStores.begin(), _appStores.end()};

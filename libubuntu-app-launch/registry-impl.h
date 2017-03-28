@@ -98,7 +98,7 @@ public:
         return zgWatcher_;
     }
 
-    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
+    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated();
 
     const std::list<std::shared_ptr<app_store::Base>>& appStores()
     {
