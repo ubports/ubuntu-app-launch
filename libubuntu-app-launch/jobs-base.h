@@ -173,9 +173,6 @@ protected:
     /** A set of all the job names used by applications */
     std::list<std::string> allApplicationJobs_;
 
-    /** The DBus connection we're connecting to */
-    std::shared_ptr<GDBusConnection> dbus_;
-
     /** Application manager instance */
     std::shared_ptr<Registry::Manager> manager_;
 

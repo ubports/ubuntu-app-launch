@@ -46,7 +46,6 @@ namespace manager
 Base::Base(const Registry& registry)
     : registry_(registry)
     , allApplicationJobs_{"application-legacy", "application-snap"}
-    , dbus_(registry.impl->_dbus)
 {
 }
 
