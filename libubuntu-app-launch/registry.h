@@ -269,6 +269,9 @@ public:
     class Impl;
     /** \private */
     std::shared_ptr<Impl> impl;
+
+protected:
+    Registry(const std::shared_ptr<Impl>& inimpl);
 };
 
 }  // namespace app_launch

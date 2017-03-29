@@ -30,8 +30,13 @@ namespace app_launch
 {
 
 Registry::Registry()
+    : impl{std::make_shared<Impl>(*this)}
 {
-    impl = std::unique_ptr<Impl>(new Impl(*this));
+}
+
+Registry::Registry(const std::shared_ptr<Impl>& inimpl)
+    : impl{inimpl}
+{
 }
 
 Registry::~Registry()

@@ -210,16 +210,16 @@ class RegistryMock : public ubuntu::app_launch::Registry
 {
 public:
     RegistryMock()
+        : Registry(std::make_shared<RegistryImplMock>(*this))
     {
         g_debug("Registry Mock Created");
-        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(*this));
     }
 
     RegistryMock(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> appStores,
                  std::shared_ptr<ubuntu::app_launch::jobs::manager::Base> jobManager)
+        : Registry(std::make_shared<RegistryImplMock>(*this, appStores, jobManager))
     {
         g_debug("Registry Mock Created");
-        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(*this, appStores, jobManager));
     }
 
     ~RegistryMock()
