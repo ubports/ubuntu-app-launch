@@ -264,13 +264,13 @@ void Legacy::setupMonitors()
 
                         if (!g_file_query_exists(gfile.get(), nullptr))
                         {
-                            throw std::runtime_error("Directory doesn't exist");
+                            throw std::runtime_error{std::string{"Directory '"} + appdir.get() + "' doesn't exist"};
                         }
 
                         if (g_file_query_file_type(gfile.get(), G_FILE_QUERY_INFO_NONE, nullptr) !=
                             G_FILE_TYPE_DIRECTORY)
                         {
-                            throw std::runtime_error("Not a directory");
+                            throw std::runtime_error{std::string{"'"} + appdir.get() + "' is not a directory"};
                         }
 
                         GError* error = nullptr;
