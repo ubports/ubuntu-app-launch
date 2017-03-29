@@ -154,8 +154,8 @@ public:
 class zgWatcherMock : public ubuntu::app_launch::info_watcher::Zeitgeist
 {
 public:
-    zgWatcherMock()
-        : ubuntu::app_launch::info_watcher::Zeitgeist({})
+    zgWatcherMock(const ubuntu::app_launch::Registry& reg)
+        : ubuntu::app_launch::info_watcher::Zeitgeist(reg)
     {
     }
 
@@ -173,7 +173,7 @@ public:
     RegistryImplMock(ubuntu::app_launch::Registry& reg)
         : ubuntu::app_launch::Registry::Impl(reg)
     {
-        setupZgWatcher();
+        setupZgWatcher(reg);
 
         g_debug("Registry Mock Implementation Created");
     }
@@ -183,14 +183,14 @@ public:
                      std::shared_ptr<ubuntu::app_launch::jobs::manager::Base> jobManager)
         : ubuntu::app_launch::Registry::Impl(reg, appStores, jobManager)
     {
-        setupZgWatcher();
+        setupZgWatcher(reg);
 
         g_debug("Registry Mock Implementation Created");
     }
 
-    void setupZgWatcher()
+    void setupZgWatcher(ubuntu::app_launch::Registry& reg)
     {
-        auto zgWatcher = std::make_shared<zgWatcherMock>();
+        auto zgWatcher = std::make_shared<zgWatcherMock>(reg);
         zgWatcher_ = zgWatcher;
         std::call_once(zgWatcherOnce_, [] {});
 

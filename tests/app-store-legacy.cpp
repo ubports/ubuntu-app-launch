@@ -76,7 +76,7 @@ public:
     {
         auto command = ubuntu::app_launch::unique_gchar(g_strdup_printf("rm -rf %s", dirname_.c_str()));
         g_spawn_command_line_sync(command.get(), nullptr, nullptr, nullptr, nullptr);
-	g_debug("Removing test directory: %s", dirname_.c_str());
+        g_debug("Removing test directory: %s", dirname_.c_str());
     }
 
     void addApp(const std::string &appname,
