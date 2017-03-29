@@ -197,14 +197,21 @@ std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid)
  *  then propegates up the stack. */
 void Legacy::directoryChanged(GFile* file, GFileMonitorEvent type)
 {
-    if (g_file_query_file_type(file, G_FILE_QUERY_INFO_NONE, nullptr) != G_FILE_TYPE_REGULAR)
+    g_debug("Getting event for '%s'", unique_gchar(g_file_get_path(file)).get());
+
+    auto filetype = g_file_query_file_type(file, G_FILE_QUERY_INFO_NONE, nullptr);
+    if (filetype != G_FILE_TYPE_REGULAR && filetype != G_FILE_TYPE_UNKNOWN)
     {
+        g_debug("\tNot a regular file");
         return;
     }
 
     auto cdesktopname = unique_gchar(g_file_get_basename(file));
     if (!cdesktopname)
+    {
+        g_debug("\tNo basename");
         return;
+    }
     std::string desktopname{cdesktopname.get()};
 
     std::string appname;
