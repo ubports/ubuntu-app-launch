@@ -118,6 +118,22 @@ protected:
         return eventuallyLoop(func);                                                                             \
     }
 
+#define _EVENTUALLY_FUTURE_HELPER(oper)                                                                            \
+    template <typename comptype>                                                                                   \
+    testing::AssertionResult eventuallyFutureHelper##oper(const char *desca, const char *descb, comptype expected, \
+                                                          std::future<comptype> future)                            \
+    {                                                                                                              \
+        std::function<testing::AssertionResult(void)> func = [&]() {                                               \
+            auto status = future.wait_for(std::chrono::seconds{0});                                                \
+            if (status != std::future_status::ready)                                                               \
+            {                                                                                                      \
+                return testing::AssertionFailure();                                                                \
+            }                                                                                                      \
+            return testing::internal::CmpHelper##oper(desca, descb, expected, future.get());                       \
+        };                                                                                                         \
+        return eventuallyLoop(func);                                                                               \
+    }
+
     _EVENTUALLY_HELPER(EQ);
     _EVENTUALLY_HELPER(NE);
     _EVENTUALLY_HELPER(LT);
@@ -132,8 +148,16 @@ protected:
     _EVENTUALLY_FUNC_HELPER(STREQ);
     _EVENTUALLY_FUNC_HELPER(STRNE);
 
+    _EVENTUALLY_FUTURE_HELPER(EQ);
+    _EVENTUALLY_FUTURE_HELPER(NE);
+    _EVENTUALLY_FUTURE_HELPER(LT);
+    _EVENTUALLY_FUTURE_HELPER(GT);
+    _EVENTUALLY_FUTURE_HELPER(STREQ);
+    _EVENTUALLY_FUTURE_HELPER(STRNE);
+
 #undef _EVENTUALLY_HELPER
 #undef _EVENTUALLY_FUNC_HELPER
+#undef _EVENTUALLY_FUTURE_HELPER
 };
 
 /* Helpers */
@@ -209,3 +233,40 @@ protected:
 
 #define ASSERT_EVENTUALLY_FUNC_STRNE(expected, actual) \
     ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyFuncHelperSTRNE, expected, actual)
+
+/* Future Helpers */
+#define EXPECT_EVENTUALLY_FUTURE_EQ(expected, actual) \
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperEQ, expected, actual)
+
+#define EXPECT_EVENTUALLY_FUTURE_NE(expected, actual) \
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperNE, expected, actual)
+
+#define EXPECT_EVENTUALLY_FUTURE_LT(expected, actual) \
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperLT, expected, actual)
+
+#define EXPECT_EVENTUALLY_FUTURE_GT(expected, actual) \
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperGT, expected, actual)
+
+#define EXPECT_EVENTUALLY_FUTURE_STREQ(expected, actual) \
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperSTREQ, expected, actual)
+
+#define EXPECT_EVENTUALLY_FUTURE_STRNE(expected, actual) \
+    EXPECT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperSTRNE, expected, actual)
+
+#define ASSERT_EVENTUALLY_FUTURE_EQ(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperEQ, expected, actual)
+
+#define ASSERT_EVENTUALLY_FUTURE_NE(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperNE, expected, actual)
+
+#define ASSERT_EVENTUALLY_FUTURE_LT(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperLT, expected, actual)
+
+#define ASSERT_EVENTUALLY_FUTURE_GT(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperGT, expected, actual)
+
+#define ASSERT_EVENTUALLY_FUTURE_STREQ(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperSTREQ, expected, actual)
+
+#define ASSERT_EVENTUALLY_FUTURE_STRNE(expected, actual) \
+    ASSERT_PRED_FORMAT2(EventuallyFixture::eventuallyFutureHelperSTRNE, expected, actual)

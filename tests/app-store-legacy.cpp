@@ -160,5 +160,5 @@ TEST_F(AppStoreLegacy, RemoveApp)
 
     testdir.removeApp("testapp");
 
-    EXPECT_EQ("testapp", removedAppId.get_future().get());
+    EXPECT_EVENTUALLY_FUTURE_EQ(std::string{"testapp"}, removedAppId.get_future());
 }
