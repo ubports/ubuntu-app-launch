@@ -244,8 +244,17 @@ void Legacy::directoryChanged(GFile* file, GFileMonitorEvent type)
         case G_FILE_MONITOR_EVENT_DELETED:
         {
             AppID appid{AppID::Package::from_raw({}), AppID::AppName::from_raw(appname), AppID::Version::from_raw({})};
-
-            appRemoved_(appid);
+            if (verifyAppname(appid.package, appid.appname))
+            {
+                /* Check to see if we've got a shadow situation and we
+                 * can still build this app */
+                auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry_.impl);
+                infoChanged_(app);
+            }
+            else
+            {
+                appRemoved_(appid);
+            }
             break;
         }
         default:
