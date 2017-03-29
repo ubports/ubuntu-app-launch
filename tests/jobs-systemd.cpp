@@ -324,7 +324,7 @@ TEST_F(JobsSystemd, SignalNew)
                                 {defaultJobName(), std::string{multipleAppID()}, "1234", 1, {}}),
                             "/foo");
 
-    EXPECT_EQ(multipleAppID(), newunit.get_future().get());
+    EXPECT_EVENTUALLY_FUTURE_EQ(multipleAppID(), newunit.get_future());
 }
 
 TEST_F(JobsSystemd, SignalRemove)
@@ -360,7 +360,7 @@ TEST_F(JobsSystemd, SignalRemove)
                                     {defaultJobName(), std::string{multipleAppID()}, "1234567890", 1, {}}),
                                 "/foo");
 
-    EXPECT_EQ(multipleAppID(), removeunit.get_future().get());
+    EXPECT_EVENTUALLY_FUTURE_EQ(multipleAppID(), removeunit.get_future());
 }
 
 TEST_F(JobsSystemd, UnitFailure)

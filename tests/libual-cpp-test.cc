@@ -1277,13 +1277,7 @@ TEST_F(LibUAL, StartSessionHelper)
     });
     t.detach();
 
-    auto outputfuture = outputpromise.get_future();
-    while (outputfuture.wait_for(std::chrono::milliseconds{1}) != std::future_status::ready)
-    {
-        pause();
-    }
-
-    ASSERT_STREQ(filedata, outputfuture.get().c_str());
+    EXPECT_EVENTUALLY_FUTURE_EQ(std::string{filedata}, outputpromise.get_future());
 
     return;
 }
@@ -1376,7 +1370,7 @@ TEST_F(LibUAL, SetExec)
     std::vector<std::string> execList{"Foo", "Bar", "Really really really long value", "Another value"};
     ubuntu::app_launch::Helper::setExec(execList);
 
-    EXPECT_EQ(execList, socketpromise.get_future().get());
+    EXPECT_EVENTUALLY_FUTURE_EQ(execList, socketpromise.get_future());
 }
 
 TEST_F(LibUAL, AppInfo)
