@@ -132,6 +132,21 @@ protected:
             return testing::internal::CmpHelper##oper(desca, descb, expected, future.get());                       \
         };                                                                                                         \
         return eventuallyLoop(func);                                                                               \
+    }                                                                                                              \
+                                                                                                                   \
+    template <typename comptype>                                                                                   \
+    testing::AssertionResult eventuallyFutureHelper##oper(const char *desca, const char *descb, comptype expected, \
+                                                          std::shared_future<comptype> future)                     \
+    {                                                                                                              \
+        std::function<testing::AssertionResult(void)> func = [&]() {                                               \
+            auto status = future.wait_for(std::chrono::seconds{0});                                                \
+            if (status != std::future_status::ready)                                                               \
+            {                                                                                                      \
+                return testing::AssertionFailure();                                                                \
+            }                                                                                                      \
+            return testing::internal::CmpHelper##oper(desca, descb, expected, future.get());                       \
+        };                                                                                                         \
+        return eventuallyLoop(func);                                                                               \
     }
 
     _EVENTUALLY_HELPER(EQ);

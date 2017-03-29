@@ -183,3 +183,45 @@ TEST_F(AppStoreLegacy, AddedApp)
 
     EXPECT_EVENTUALLY_FUTURE_EQ(std::string{"testapp"}, addedAppId.get_future());
 }
+
+TEST_F(AppStoreLegacy, ShadowDelete)
+{
+    TestDirectory testdir;
+    testdir.addApp("testapp",
+                   {{G_KEY_FILE_DESKTOP_GROUP,
+                     {
+                         {G_KEY_FILE_DESKTOP_KEY_NAME, "Test App"},
+                         {G_KEY_FILE_DESKTOP_KEY_TYPE, "Application"},
+                         {G_KEY_FILE_DESKTOP_KEY_ICON, "foo.png"},
+                         {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
+                     }}});
+
+    TestDirectory testdir2;
+    testdir2.addApp("testapp",
+                    {{G_KEY_FILE_DESKTOP_GROUP,
+                      {
+                          {G_KEY_FILE_DESKTOP_KEY_NAME, "Test App"},
+                          {G_KEY_FILE_DESKTOP_KEY_TYPE, "Application"},
+                          {G_KEY_FILE_DESKTOP_KEY_ICON, "foo.png"},
+                          {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
+                      }}});
+
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
+
+    std::promise<std::string> updatedAppId;
+    store->infoChanged().connect(
+        [&](const std::shared_ptr<ubuntu::app_launch::Application> &app) { updatedAppId.set_value(app->appId()); });
+
+    std::promise<std::string> deleteAppId;
+    store->appRemoved().connect([&](const ubuntu::app_launch::AppID &appid) { deleteAppId.set_value(appid); });
+    std::shared_future<std::string> deleteFuture = deleteAppId.get_future();
+
+    testdir.removeApp("testapp");
+
+    EXPECT_EVENTUALLY_FUTURE_EQ(std::string{"testapp"}, updatedAppId.get_future());
+    EXPECT_NE(std::future_status::ready, deleteFuture.wait_for(std::chrono::seconds{0}));
+
+    testdir2.removeApp("testapp");
+
+    EXPECT_EVENTUALLY_FUTURE_EQ(std::string{"testapp"}, deleteFuture);
+}
