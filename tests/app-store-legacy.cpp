@@ -162,3 +162,24 @@ TEST_F(AppStoreLegacy, RemoveApp)
 
     EXPECT_EVENTUALLY_FUTURE_EQ(std::string{"testapp"}, removedAppId.get_future());
 }
+
+TEST_F(AppStoreLegacy, AddedApp)
+{
+    TestDirectory testdir;
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
+
+    std::promise<std::string> addedAppId;
+    store->appAdded().connect(
+        [&](const std::shared_ptr<ubuntu::app_launch::Application> &app) { addedAppId.set_value(app->appId()); });
+
+    testdir.addApp("testapp",
+                   {{G_KEY_FILE_DESKTOP_GROUP,
+                     {
+                         {G_KEY_FILE_DESKTOP_KEY_NAME, "Test App"},
+                         {G_KEY_FILE_DESKTOP_KEY_TYPE, "Application"},
+                         {G_KEY_FILE_DESKTOP_KEY_ICON, "foo.png"},
+                         {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
+                     }}});
+
+    EXPECT_EVENTUALLY_FUTURE_EQ(std::string{"testapp"}, addedAppId.get_future());
+}
