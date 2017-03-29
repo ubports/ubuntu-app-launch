@@ -35,11 +35,12 @@ protected:
 
     virtual void SetUp()
     {
-        g_setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, TRUE);
+        setenv("XDG_DATA_DIRS", CMAKE_SOURCE_DIR, 1);
 
         service = unity::util::unique_gobject(dbus_test_service_new(nullptr));
         dbus_test_service_start_tasks(service.get());
-        registry = std::make_shared<RegistryMock>();
+        registry = std::make_shared<RegistryMock>(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>>{},
+                                                  std::shared_ptr<ubuntu::app_launch::jobs::manager::Base>{});
     }
 };
 
@@ -61,19 +62,21 @@ public:
             throw std::runtime_error{message};
         }
         dirname_ = dirname.get();
+        g_debug("Setting temp XDG_DATA directory: %s", dirname.get());
 
         appdir_ = ubuntu::app_launch::unique_gchar(g_build_filename(dirname.get(), "applications", nullptr)).get();
         g_mkdir_with_parents(appdir_.c_str(), 0700);
 
         auto datadirs =
             ubuntu::app_launch::unique_gchar(g_strdup_printf("%s:%s", dirname.get(), g_getenv("XDG_DATA_DIRS")));
-        g_setenv("XDG_DATA_DIRS", datadirs.get(), TRUE);
+        setenv("XDG_DATA_DIRS", datadirs.get(), 1);
     }
 
     ~TestDirectory()
     {
         auto command = ubuntu::app_launch::unique_gchar(g_strdup_printf("rm -rf %s", dirname_.c_str()));
         g_spawn_command_line_sync(command.get(), nullptr, nullptr, nullptr, nullptr);
+	g_debug("Removing test directory: %s", dirname_.c_str());
     }
 
     void addApp(const std::string &appname,
@@ -136,4 +139,26 @@ TEST_F(AppStoreLegacy, FindApp)
 
     EXPECT_TRUE(store->verifyAppname(ubuntu::app_launch::AppID::Package::from_raw({}),
                                      ubuntu::app_launch::AppID::AppName::from_raw("testapp")));
+}
+
+TEST_F(AppStoreLegacy, RemoveApp)
+{
+    TestDirectory testdir;
+    testdir.addApp("testapp",
+                   {{G_KEY_FILE_DESKTOP_GROUP,
+                     {
+                         {G_KEY_FILE_DESKTOP_KEY_NAME, "Test App"},
+                         {G_KEY_FILE_DESKTOP_KEY_TYPE, "Application"},
+                         {G_KEY_FILE_DESKTOP_KEY_ICON, "foo.png"},
+                         {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
+                     }}});
+
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
+
+    std::promise<std::string> removedAppId;
+    store->appRemoved().connect([&](const ubuntu::app_launch::AppID &appid) { removedAppId.set_value(appid); });
+
+    testdir.removeApp("testapp");
+
+    EXPECT_EQ("testapp", removedAppId.get_future().get());
 }
