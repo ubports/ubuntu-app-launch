@@ -588,9 +588,9 @@ TEST_F(LibUAL, AppIdParse)
 
 TEST_F(LibUAL, DBusID)
 {
-    auto id = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
+    auto id = ubuntu::app_launch::AppID::parse("container-name_test_0.0");
     ASSERT_FALSE(id.empty());
-    EXPECT_EQ("com_2etest_2egood_5fapplication_5f1_2e2_2e3", id.dbusID());
+    EXPECT_EQ("container_2dname_5ftest_5f0_2e0", id.dbusID());
     EXPECT_FALSE(ubuntu::app_launch::AppID::valid(id.dbusID()));
 
     auto parsed = ubuntu::app_launch::AppID::parseDBusID(id.dbusID());
@@ -600,9 +600,9 @@ TEST_F(LibUAL, DBusID)
 
 TEST_F(LibUAL, PersistentID)
 {
-    auto id = ubuntu::app_launch::AppID::parse("com.test.good_application_1.2.3");
+    auto id = ubuntu::app_launch::AppID::parse("container-name_test_0.0");
     ASSERT_FALSE(id.empty());
-    EXPECT_EQ("com.test.good_application", id.persistentID());
+    EXPECT_EQ("container-name_test", id.persistentID());
     EXPECT_FALSE(ubuntu::app_launch::AppID::valid(id.persistentID()));
 
     auto found = ubuntu::app_launch::AppID::find(registry, id.persistentID());
