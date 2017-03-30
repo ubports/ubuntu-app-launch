@@ -137,9 +137,23 @@ public:
     static core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(
         const std::shared_ptr<Registry>& reg = getDefault());
 
-    /* TODO */
+    /** Get the signal object that is signaled when there is a new application
+        that has been added to the system.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
     static core::Signal<const std::shared_ptr<Application>&>& appAdded(
         const std::shared_ptr<Registry>& reg = getDefault());
+
+    /** Get the signal object that is signaled when an application is
+        removed from the system.
+
+        \note This signal handler is activated on the UAL thread
+
+        \param reg Registry to get the handler from
+    */
     static core::Signal<const AppID&>& appRemoved(const std::shared_ptr<Registry>& reg = getDefault());
 
     /** The Application Manager, almost always if you're not Unity8, don't
