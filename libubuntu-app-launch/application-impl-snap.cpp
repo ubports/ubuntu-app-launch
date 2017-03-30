@@ -219,7 +219,7 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
 }
 
 /** Returns the stored AppID */
-AppID Snap::appId()
+AppID Snap::appId() const
 {
     return appid_;
 }

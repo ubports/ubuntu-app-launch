@@ -352,5 +352,15 @@ const oom::Score oom::fromLabelAndValue(std::int32_t value, const std::string& l
     return static_cast<oom::Score>(value);
 }
 
+bool Application::operator==(const Application& b) const
+{
+    return appId() == b.appId();
+}
+
+bool Application::operator!=(const Application& b) const
+{
+    return appId() != b.appId();
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

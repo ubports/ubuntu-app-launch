@@ -55,7 +55,7 @@ public:
 
     static std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry);
 
-    AppID appId() override;
+    AppID appId() const override;
 
     std::shared_ptr<Info> info() override;
 
