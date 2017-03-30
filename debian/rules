@@ -12,10 +12,7 @@ export G_MESSAGES_DEBUG=all
 export DPKG_GENSYMBOLS_CHECK_LEVEL=4
 
 %:
-	dh $@ --with click,gir --fail-missing
-
-override_dh_click:
-	dh_click --name ubuntu-app-launch-desktop
+	dh $@ --with gir --fail-missing
 
 override_dh_installdeb:
 	sed -e"s/#MULTIARCH#/$(DEB_HOST_MULTIARCH)/g" \

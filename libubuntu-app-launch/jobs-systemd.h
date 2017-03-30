@@ -24,7 +24,10 @@
 #include <future>
 #include <gio/gio.h>
 #include <map>
+#include <memory>
 #include <mutex>
+#include <signal-unsubscriber.h>
+#include <unity/util/ResourcePtr.h>
 
 namespace ubuntu
 {
@@ -53,18 +56,14 @@ public:
                                                             const std::string& instance,
                                                             const std::vector<Application::URL>& urls) override;
 
-    virtual std::list<std::shared_ptr<Application>> runningApps() override;
+    virtual std::list<std::string> runningAppIds(const std::list<std::string>& jobs) override;
 
     virtual std::vector<std::shared_ptr<instance::Base>> instances(const AppID& appID, const std::string& job) override;
 
-    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStarted() override;
-    virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
-        appStopped() override;
-    virtual core::Signal<const std::shared_ptr<Application>&,
-                         const std::shared_ptr<Application::Instance>&,
-                         Registry::FailureType>&
-        appFailed() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStarted() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStopped() override;
+    virtual core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>& jobFailed()
+        override;
 
     static std::string userBusPath();
 
@@ -76,9 +75,15 @@ private:
     std::string cgroup_root_;
     std::shared_ptr<GDBusConnection> userbus_;
 
-    guint handle_unitNew{0};     /**< GDBus signal watcher handle for the unit new signal */
-    guint handle_unitRemoved{0}; /**< GDBus signal watcher handle for the unit removed signal */
-    guint handle_appFailed{0};   /**< GDBus signal watcher handle for app failed signal */
+    core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStarted;
+    core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStopped;
+    core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType> sig_jobFailed;
+
+    ManagedDBusSignalConnection handle_unitNew;     /**< GDBus signal watcher handle for the unit new signal */
+    ManagedDBusSignalConnection handle_unitRemoved; /**< GDBus signal watcher handle for the unit removed signal */
+    ManagedDBusSignalConnection handle_appFailed;   /**< GDBus signal watcher handle for app failed signal */
+
+    bool noResetUnits_{false}; /**< Debug flag to avoid resetting the systemd units */
 
     std::once_flag
         flag_appFailed; /**< Variable to track to see if signal handlers are installed for application failed */
@@ -116,9 +121,6 @@ private:
 
     UnitInfo unitNew(const std::string& name, const std::string& path, const std::shared_ptr<GDBusConnection>& bus);
     void unitRemoved(const std::string& name, const std::string& path);
-    void emitSignal(
-        core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& sig,
-        UnitInfo& info);
 
     static std::string findEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);
     static void removeEnv(const std::string& value, std::list<std::pair<std::string, std::string>>& env);

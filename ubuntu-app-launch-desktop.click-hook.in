@@ -1,4 +1,0 @@
-Pattern: ${home}/.cache/ubuntu-app-launch/desktop/${id}.desktop
-Exec: @pkglibexecdir@/desktop-hook
-User-Level: yes
-Hook-Name: desktop

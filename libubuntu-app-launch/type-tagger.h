@@ -32,6 +32,14 @@ public:
     {
         return _value;
     }
+    bool operator==(const TypeTagger<Tag, T>& b) const
+    {
+        return _value == b._value;
+    }
+    bool operator==(const T& b) const
+    {
+        return _value == b;
+    }
     ~TypeTagger()
     {
     }

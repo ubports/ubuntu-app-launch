@@ -18,7 +18,12 @@
  */
 
 #include "application-icon-finder.h"
+#include "string-util.h"
 #include <regex>
+
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
 
 namespace ubuntu
 {
@@ -27,10 +32,8 @@ namespace app_launch
 namespace
 {
 constexpr auto ICONS_DIR = "/icons";
-constexpr auto HICOLOR_THEME_DIR = "/icons/hicolor";
-constexpr auto HUMANITY_THEME_DIR = "/icons/Humanity";
+constexpr auto ICON_THEMES = {"suru", "Humanity", "Adwaita", "gnome", "hicolor"};
 constexpr auto THEME_INDEX_FILE = "index.theme";
-constexpr auto APPLICATIONS_TYPE = "Applications";
 constexpr auto SIZE_PROPERTY = "Size";
 constexpr auto MAXSIZE_PROPERTY = "MaxSize";
 constexpr auto THRESHOLD_PROPERTY = "Threshold";
@@ -45,7 +48,8 @@ constexpr auto PIXMAPS_PATH = "/pixmaps/";
 constexpr auto ICON_TYPES = {".png", ".svg", ".xpm"};
 constexpr auto METAGUI_PATH = "/meta/gui";
 
-static const std::regex iconSizeDirname = std::regex("^(\\d+)x\\1$");
+static const std::regex ICON_SIZE_DIRNAME = std::regex("^(\\d+)x\\1$");
+static const std::regex SCALABLE_WITH_REGEX = std::regex("^scalable-up-to-(\\d+)$");
 }  // anonymous namespace
 
 IconFinder::IconFinder(std::string basePath)
@@ -103,26 +107,23 @@ std::string IconFinder::findExistingIcon(const std::string& path, const std::str
     /* If it already has an extension, only check that one */
     if (hasImageExtension(iconName.c_str()))
     {
-        auto fullpath = g_build_filename(path.c_str(), iconName.c_str(), nullptr);
-        if (g_file_test(fullpath, G_FILE_TEST_EXISTS))
+        auto fullpath = unique_gchar(g_build_filename(path.c_str(), iconName.c_str(), nullptr));
+        if (g_file_test(fullpath.get(), G_FILE_TEST_EXISTS))
         {
-            iconPath = fullpath;
+            iconPath = fullpath.get();
         }
-        g_free(fullpath);
         return iconPath;
     }
 
     /* Otherwise check all the valid extensions to see if they exist */
     for (const auto& extension : ICON_TYPES)
     {
-        auto fullpath = g_build_filename(path.c_str(), (iconName + extension).c_str(), nullptr);
-        if (g_file_test(fullpath, G_FILE_TEST_EXISTS))
+        auto fullpath = unique_gchar(g_build_filename(path.c_str(), (iconName + extension).c_str(), nullptr));
+        if (g_file_test(fullpath.get(), G_FILE_TEST_EXISTS))
         {
-            iconPath = fullpath;
-            g_free(fullpath);
+            iconPath = fullpath.get();
             break;
         }
-        g_free(fullpath);
     }
     return iconPath;
 }
@@ -133,12 +134,11 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::validDirectories(const std:
                                                                       int size)
 {
     std::list<IconFinder::ThemeSubdirectory> dirs;
-    auto globalHicolorTheme = g_build_filename(themePath.c_str(), directory, nullptr);
-    if (g_file_test(globalHicolorTheme, G_FILE_TEST_EXISTS))
+    auto globalHicolorTheme = unique_gchar(g_build_filename(themePath.c_str(), directory, nullptr));
+    if (g_file_test(globalHicolorTheme.get(), G_FILE_TEST_EXISTS))
     {
-        dirs.emplace_back(ThemeSubdirectory{std::string(globalHicolorTheme), size});
+        dirs.emplace_back(ThemeSubdirectory{std::string(globalHicolorTheme.get()), size});
     }
-    g_free(globalHicolorTheme);
 
     return dirs;
 }
@@ -149,14 +149,13 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::addSubdirectoryByType(std::
                                                                            const std::string& themePath)
 {
     GError* error = nullptr;
-    auto gType = g_key_file_get_string(themefile.get(), directory, TYPE_PROPERTY, &error);
+    auto gType = unique_gchar(g_key_file_get_string(themefile.get(), directory, TYPE_PROPERTY, &error));
     if (error != nullptr)
     {
         g_error_free(error);
         return std::list<ThemeSubdirectory>{};
     }
-    std::string type(gType);
-    g_free(gType);
+    std::string type(gType.get());
 
     if (type == FIXED_CONTEXT)
     {
@@ -212,18 +211,15 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared
     for (auto i = 0; directories[i] != nullptr; ++i)
     {
         GError* error = nullptr;
-        auto context = g_key_file_get_string(themefile.get(), directories[i], CONTEXT_PROPERTY, &error);
+        auto context = unique_gchar(g_key_file_get_string(themefile.get(), directories[i], CONTEXT_PROPERTY, &error));
         if (error != nullptr)
         {
             g_error_free(error);
             continue;
         }
-        if (g_strcmp0(context, APPLICATIONS_TYPE) == 0)
-        {
-            auto newDirs = addSubdirectoryByType(themefile, directories[i], themePath);
-            subdirs.splice(subdirs.end(), newDirs);
-        }
-        g_free(context);
+
+        auto newDirs = addSubdirectoryByType(themefile, directories[i], themePath);
+        subdirs.splice(subdirs.end(), newDirs);
     }
     return subdirs;
 }
@@ -232,40 +228,38 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::searchIconPaths(std::shared
     if it exists */
 std::list<IconFinder::ThemeSubdirectory> IconFinder::themeFileSearchPaths(const std::string& themePath)
 {
-    auto themeFilePath = g_build_filename(themePath.c_str(), THEME_INDEX_FILE, nullptr);
+    auto themeFilePath = unique_gchar(g_build_filename(themePath.c_str(), THEME_INDEX_FILE, nullptr));
     GError* error = nullptr;
-    auto themefile = std::shared_ptr<GKeyFile>(g_key_file_new(), g_key_file_free);
-    g_key_file_load_from_file(themefile.get(), themeFilePath, G_KEY_FILE_NONE, &error);
+    auto themefile = share_glib(g_key_file_new());
+    g_key_file_load_from_file(themefile.get(), themeFilePath.get(), G_KEY_FILE_NONE, &error);
     if (error != nullptr)
     {
-        g_debug("Unable to find theme file: %s", themeFilePath);
+        g_debug("Unable to find theme file: %s", themeFilePath.get());
         g_error_free(error);
         return std::list<ThemeSubdirectory>();
     }
 
     g_key_file_set_list_separator(themefile.get(), ',');
-    auto directories =
-        g_key_file_get_string_list(themefile.get(), ICON_THEME_KEY, DIRECTORIES_PROPERTY, nullptr, &error);
+    auto directories = unique_gcharv(
+        g_key_file_get_string_list(themefile.get(), ICON_THEME_KEY, DIRECTORIES_PROPERTY, nullptr, &error));
     if (error != nullptr)
     {
-        g_debug("Theme file '%s' didn't have any directories", themeFilePath);
+        g_debug("Theme file '%s' didn't have any directories", themeFilePath.get());
         g_error_free(error);
         return std::list<ThemeSubdirectory>();
     }
 
-    auto iconPaths = searchIconPaths(themefile, directories, themePath);
-    g_strfreev(directories);
-    g_free(themeFilePath);
+    auto iconPaths = searchIconPaths(themefile, directories.get(), themePath);
     return iconPaths;
 }
 
 /** Look into a theme directory and see if we can use the subdirectories
-    as icon folders. Sadly inefficient. */
+    as icon folders. This is a fallback, and is sadly inefficient. */
 std::list<IconFinder::ThemeSubdirectory> IconFinder::themeDirSearchPaths(const std::string& themeDir)
 {
     std::list<IconFinder::ThemeSubdirectory> searchPaths;
     GError* error = nullptr;
-    auto gdir = g_dir_open(themeDir.c_str(), 0, &error);
+    auto gdir = unique_glib(g_dir_open(themeDir.c_str(), 0, &error));
 
     if (error != nullptr)
     {
@@ -275,32 +269,55 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::themeDirSearchPaths(const s
     }
 
     const gchar* dirname = nullptr;
-    while ((dirname = g_dir_read_name(gdir)) != nullptr)
+    while ((dirname = g_dir_read_name(gdir.get())) != nullptr)
     {
-        auto fullPath = g_build_filename(themeDir.c_str(), dirname, "apps", nullptr);
-        /* Directories only */
-        if (g_file_test(fullPath, G_FILE_TEST_IS_DIR))
+        /* Iterate over size-based directories */
+        auto sizePath = unique_gchar(g_build_filename(themeDir.c_str(), dirname, nullptr));
+        if (g_file_test(sizePath.get(), G_FILE_TEST_IS_DIR))
         {
-            if (g_strcmp0(dirname, "scalable") == 0)
-            {
-                /* We don't really know what to do with scalable here, let's
-                   call them 256 images */
-                searchPaths.emplace_back(IconFinder::ThemeSubdirectory{fullPath, 256});
-                continue;
-            }
-
             std::smatch match;
             std::string dirstr(dirname);
-            /* We want it to match and have the same values for the first and second size */
-            if (std::regex_match(dirstr, match, iconSizeDirname))
+            int size;
+            if (std::regex_match(dirstr, match, ICON_SIZE_DIRNAME))
             {
-                searchPaths.emplace_back(IconFinder::ThemeSubdirectory{fullPath, std::atoi(match[1].str().c_str())});
+                size = std::atoi(match[1].str().c_str());
+            }
+            else if (g_strcmp0(dirname, "scalable") == 0)
+            {
+                /* We don't really know what to do with scalable icons, let's
+                   call them 256 images */
+                size = 256;
+            }
+            else
+            {
+                /* Some directories are "scalable with", meaning that they
+                   are meant to be used up to a certain size */
+                std::smatch scalablewith;
+                if (std::regex_match(dirstr, scalablewith, SCALABLE_WITH_REGEX))
+                {
+                    size = std::atoi(scalablewith[1].str().c_str());
+                }
+                else
+                {
+                    /* Otherwise we don't know what to do with this dir,
+                       ignore for now */
+                    continue;
+                }
+            }
+
+            auto subdir = unique_glib(g_dir_open(sizePath.get(), 0, &error));
+            const gchar* subdirname = nullptr;
+            while ((subdirname = g_dir_read_name(subdir.get())) != nullptr)
+            {
+                auto fullPath = unique_gchar(g_build_filename(sizePath.get(), subdirname, nullptr));
+                if (g_file_test(fullPath.get(), G_FILE_TEST_IS_DIR))
+                {
+                    searchPaths.emplace_back(IconFinder::ThemeSubdirectory{fullPath.get(), size});
+                }
             }
         }
-        g_free(fullPath);
     }
 
-    g_dir_close(gdir);
     return searchPaths;
 }
 
@@ -335,41 +352,33 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
 {
     std::list<IconFinder::ThemeSubdirectory> iconPaths;
 
-    /* Icons from the hicolor theme */
-    auto hicolorDir = g_build_filename(basePath.c_str(), HICOLOR_THEME_DIR, nullptr);
-    auto hicolorIcons = iconsFromThemePath(hicolorDir);
-    iconPaths.splice(iconPaths.end(), hicolorIcons);
-    g_free(hicolorDir);
-
-    /* Icons from the Humanity theme */
-    auto humanityDir = g_build_filename(basePath.c_str(), HUMANITY_THEME_DIR, nullptr);
-    auto humanityIcons = iconsFromThemePath(humanityDir);
-    iconPaths.splice(iconPaths.end(), humanityIcons);
-    g_free(humanityDir);
+    for (const auto& theme : ICON_THEMES)
+    {
+        auto dir = unique_gchar(g_build_filename(basePath.c_str(), ICONS_DIR, theme, nullptr));
+        auto icons = iconsFromThemePath(dir.get());
+        iconPaths.splice(iconPaths.end(), icons);
+    }
 
     /* Add root icons directory as potential path */
-    auto iconsPath = g_build_filename(basePath.c_str(), ICONS_DIR, nullptr);
-    if (g_file_test(iconsPath, G_FILE_TEST_IS_DIR))
+    auto iconsPath = unique_gchar(g_build_filename(basePath.c_str(), ICONS_DIR, nullptr));
+    if (g_file_test(iconsPath.get(), G_FILE_TEST_IS_DIR))
     {
-        iconPaths.emplace_back(IconFinder::ThemeSubdirectory{iconsPath, 1});
+        iconPaths.emplace_back(IconFinder::ThemeSubdirectory{iconsPath.get(), 1});
     }
-    g_free(iconsPath);
 
     /* Add the pixmaps path as a fallback if it exists */
-    auto pixmapsPath = g_build_filename(basePath.c_str(), PIXMAPS_PATH, nullptr);
-    if (g_file_test(pixmapsPath, G_FILE_TEST_IS_DIR))
+    auto pixmapsPath = unique_gchar(g_build_filename(basePath.c_str(), PIXMAPS_PATH, nullptr));
+    if (g_file_test(pixmapsPath.get(), G_FILE_TEST_IS_DIR))
     {
-        iconPaths.emplace_back(IconFinder::ThemeSubdirectory{pixmapsPath, 1});
+        iconPaths.emplace_back(IconFinder::ThemeSubdirectory{pixmapsPath.get(), 1});
     }
-    g_free(pixmapsPath);
 
     /* Add the snap meta/gui path as a fallback if it exists */
-    auto snapMetaGuiPath = g_build_filename(basePath.c_str(), METAGUI_PATH, nullptr);
-    if (g_file_test(snapMetaGuiPath, G_FILE_TEST_IS_DIR))
+    auto snapMetaGuiPath = unique_gchar(g_build_filename(basePath.c_str(), METAGUI_PATH, nullptr));
+    if (g_file_test(snapMetaGuiPath.get(), G_FILE_TEST_IS_DIR))
     {
-        iconPaths.emplace_back(IconFinder::ThemeSubdirectory{snapMetaGuiPath, 1});
+        iconPaths.emplace_back(IconFinder::ThemeSubdirectory{snapMetaGuiPath.get(), 1});
     }
-    g_free(snapMetaGuiPath);
 
     /* Add the base directory itself as a fallback, for "foo.png" icon names */
     iconPaths.emplace_back(IconFinder::ThemeSubdirectory{basePath, 1});
@@ -379,5 +388,5 @@ std::list<IconFinder::ThemeSubdirectory> IconFinder::getSearchPaths(const std::s
     return iconPaths;
 }
 
-}  // namesapce app_launch
+}  // namespace app_launch
 }  // namespace ubuntu

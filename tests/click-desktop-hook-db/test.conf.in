@@ -1,2 +1,0 @@
-[Click Database]
-root = @CMAKE_CURRENT_BINARY_DIR@/click-root-desktop-hook

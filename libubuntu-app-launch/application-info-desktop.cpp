@@ -20,8 +20,12 @@
 #include "application-info-desktop.h"
 #include "application-icon-finder.h"
 #include "registry-impl.h"
+#include "string-util.h"
 #include <algorithm>
 #include <cstdlib>
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
 
 namespace ubuntu
 {
@@ -68,11 +72,13 @@ auto stringFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
                                const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
-    auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
+    auto keyval =
+        unique_gchar(g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error));
 
     if (error != nullptr)
     {
-        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        auto perror = unique_glib(error);
+        error = nullptr;
         if (!exceptionText.empty())
         {
             throw std::runtime_error(exceptionText + perror.get()->message);
@@ -81,8 +87,7 @@ auto stringFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
         return T::from_raw({});
     }
 
-    T retval = T::from_raw(keyval);
-    g_free(keyval);
+    T retval = T::from_raw(keyval.get());
     return retval;
 }
 
@@ -100,11 +105,12 @@ auto fileFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
                              const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
-    auto keyval = g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error);
+    auto keyval =
+        unique_gchar(g_key_file_get_locale_string(keyfile.get(), DESKTOP_GROUP, key.c_str(), nullptr, &error));
 
     if (error != nullptr)
     {
-        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        auto perror = unique_glib(error);
         if (!exceptionText.empty())
         {
             throw std::runtime_error(exceptionText + perror.get()->message);
@@ -114,27 +120,22 @@ auto fileFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
     }
 
     /* If we're already an absolute path, don't prepend the base path */
-    if (keyval[0] == '/')
+    if (keyval.get()[0] == '/')
     {
-        T retval = T::from_raw(keyval);
+        T retval = T::from_raw(keyval.get());
 
         if (!rootDir.empty())
         {
-            auto fullpath = g_build_filename(rootDir.c_str(), keyval, nullptr);
-            retval = T::from_raw(fullpath);
-            g_free(fullpath);
+            auto fullpath = unique_gchar(g_build_filename(rootDir.c_str(), keyval.get(), nullptr));
+            retval = T::from_raw(fullpath.get());
         }
 
-        g_free(keyval);
         return retval;
     }
 
-    auto cpath = g_build_filename(basePath.c_str(), keyval, nullptr);
+    auto cpath = unique_gchar(g_build_filename(basePath.c_str(), keyval.get(), nullptr));
 
-    T retval = T::from_raw(cpath);
-
-    g_free(keyval);
-    g_free(cpath);
+    T retval = T::from_raw(cpath.get());
 
     return retval;
 }
@@ -158,7 +159,8 @@ auto boolFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
 
     if (error != nullptr)
     {
-        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        auto perror = unique_glib(error);
+        error = nullptr;
         throw std::runtime_error(exceptionText + perror.get()->message);
     }
 
@@ -185,11 +187,13 @@ auto stringlistFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
                                    const std::string& exceptionText) -> T
 {
     GError* error = nullptr;
-    auto keyval = g_key_file_get_locale_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, nullptr, &error);
+    auto keyval =
+        unique_gcharv(g_key_file_get_locale_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, nullptr, &error));
 
     if (error != nullptr)
     {
-        auto perror = std::shared_ptr<GError>(error, g_error_free);
+        auto perror = unique_glib(error);
+        error = nullptr;
         if (!exceptionText.empty())
         {
             throw std::runtime_error(exceptionText + perror.get()->message);
@@ -199,14 +203,13 @@ auto stringlistFromKeyfileRequired(const std::shared_ptr<GKeyFile>& keyfile,
     }
 
     std::vector<std::string> results;
-    for (auto i = 0; keyval[i] != nullptr; ++i)
+    for (auto i = 0; keyval.get()[i] != nullptr; ++i)
     {
-        if (strlen(keyval[i]) != 0)
+        if (strlen(keyval.get()[i]) != 0)
         {
-            results.emplace_back(keyval[i]);
+            results.emplace_back(keyval.get()[i]);
         }
     }
-    g_strfreev(keyval);
 
     return T::from_raw(results);
 }
@@ -223,7 +226,7 @@ bool stringlistFromKeyfileContains(const std::shared_ptr<GKeyFile>& keyfile,
                                    bool defaultValue)
 {
     GError* error = nullptr;
-    auto results = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, &error);
+    auto results = unique_gcharv(g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, &error));
     if (error != nullptr)
     {
         g_error_free(error);
@@ -231,15 +234,14 @@ bool stringlistFromKeyfileContains(const std::shared_ptr<GKeyFile>& keyfile,
     }
 
     bool result = false;
-    for (auto i = 0; results[i] != nullptr; ++i)
+    for (auto i = 0; results.get()[i] != nullptr; ++i)
     {
-        if (results[i] == match)
+        if (results.get()[i] == match)
         {
             result = true;
             break;
         }
     }
-    g_strfreev(results);
 
     return result;
 }
@@ -247,15 +249,14 @@ bool stringlistFromKeyfileContains(const std::shared_ptr<GKeyFile>& keyfile,
 std::set<std::string> stringlistFromKeyfileSet(const std::shared_ptr<GKeyFile>& keyfile, const gchar* key)
 {
     GError* error = nullptr;
-    auto results = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, &error);
+    auto results = unique_gcharv(g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP, key, nullptr, &error));
     if (error != nullptr)
     {
         g_error_free(error);
         return {};
     }
 
-    auto retval = strvToSet(results);
-    g_strfreev(results);
+    auto retval = strvToSet(results.get());
     return retval;
 }
 
@@ -287,9 +288,8 @@ Desktop::Desktop(const AppID& appid,
         if (xdg_current_desktop != nullptr)
         {
             /* Split the CURRENT_DESKTOP by colons if there are multiple */
-            auto current_desktops = g_strsplit(xdg_current_desktop, ":", -1);
-            auto cdesktops = strvToSet(current_desktops);
-            g_strfreev(current_desktops);
+            auto current_desktops = unique_gcharv(g_strsplit(xdg_current_desktop, ":", -1));
+            auto cdesktops = strvToSet(current_desktops.get());
 
             auto onlyshowin = stringlistFromKeyfileSet(keyfile, "OnlyShowIn");
             auto noshowin = stringlistFromKeyfileSet(keyfile, "NotShowIn");
@@ -346,8 +346,8 @@ Desktop::Desktop(const AppID& appid,
         Orientations all = {true, true, true, true};
 
         GError* error = nullptr;
-        auto orientationStrv = g_key_file_get_string_list(keyfile.get(), DESKTOP_GROUP,
-                                                          "X-Ubuntu-Supported-Orientations", nullptr, &error);
+        auto orientationStrv = unique_gcharv(g_key_file_get_string_list(
+            keyfile.get(), DESKTOP_GROUP, "X-Ubuntu-Supported-Orientations", nullptr, &error));
 
         if (error != nullptr)
         {
@@ -359,33 +359,34 @@ Desktop::Desktop(const AppID& appid,
 
         try
         {
-            for (auto i = 0; orientationStrv[i] != nullptr; i++)
+            for (auto i = 0; orientationStrv.get()[i] != nullptr; i++)
             {
-                g_strstrip(orientationStrv[i]); /* remove whitespace */
+                auto item = orientationStrv.get()[i];
+                g_strstrip(item); /* remove whitespace */
 
-                if (g_ascii_strcasecmp("portrait", orientationStrv[i]) == 0)
+                if (g_ascii_strcasecmp("portrait", item) == 0)
                 {
                     retval.portrait = true;
                 }
-                else if (g_ascii_strcasecmp("landscape", orientationStrv[i]) == 0)
+                else if (g_ascii_strcasecmp("landscape", item) == 0)
                 {
                     retval.landscape = true;
                 }
-                else if (g_ascii_strcasecmp("invertedPortrait", orientationStrv[i]) == 0)
+                else if (g_ascii_strcasecmp("invertedPortrait", item) == 0)
                 {
                     retval.invertedPortrait = true;
                 }
-                else if (g_ascii_strcasecmp("invertedLandscape", orientationStrv[i]) == 0)
+                else if (g_ascii_strcasecmp("invertedLandscape", item) == 0)
                 {
                     retval.invertedLandscape = true;
                 }
-                else if (g_ascii_strcasecmp("primary", orientationStrv[i]) == 0 && i == 0)
+                else if (g_ascii_strcasecmp("primary", item) == 0 && i == 0)
                 {
                     /* Pass, we'll let primary be the first entry, it should be the only. */
                 }
                 else
                 {
-                    throw std::runtime_error("Invalid orientation string '" + std::string(orientationStrv[i]) + "'");
+                    throw std::runtime_error("Invalid orientation string '" + std::string(item) + "'");
                 }
             }
         }
@@ -394,7 +395,6 @@ Desktop::Desktop(const AppID& appid,
             retval = all;
         }
 
-        g_strfreev(orientationStrv);
         return retval;
     }())
     , _rotatesWindow(

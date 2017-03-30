@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=No XMir Needed
-Type=Application
-Exec=noxmir
-NoDisplay=false
-Hidden=false
-Terminal=false
-X-Ubuntu-XMir-Enable=false
-Icon=nomir.png

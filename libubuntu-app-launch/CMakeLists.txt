@@ -15,10 +15,12 @@ endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -Wpedantic")
-add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" -DDEMANGLER_PATH="${pkglibexecdir}/socket-demangler" )
+add_definitions ( -DOOM_HELPER="${pkglibexecdir}/oom-adjust-setuid-helper" )
 add_definitions ( -DLIBERTINE_LAUNCH="${CMAKE_INSTALL_FULL_BINDIR}/libertine-launch" )
 add_definitions ( -DG_LOG_DOMAIN="ubuntu-app-launch" )
 add_definitions ( -DUBUNTU_APP_LAUNCH_ARCH="${UBUNTU_APP_LAUNCH_ARCH}" )
+add_definitions ( -DHELPER_EXEC_TOOL_DIR="${pkglibexecdir}" )
+add_definitions ( -DHELPER_HELPER_TOOL="${pkglibexecdir}/systemd-helper-helper" )
 
 set(LAUNCHER_HEADERS
 ubuntu-app-launch.h
@@ -35,23 +37,31 @@ type-tagger.h
 
 set(LAUNCHER_CPP_SOURCES
 application.cpp
+app-store-base.h
+app-store-base.cpp
+app-store-legacy.h
+app-store-legacy.cpp
+app-store-libertine.h
+app-store-libertine.cpp
+app-store-snap.h
+app-store-snap.cpp
 helper.cpp
+helper-impl.h
 registry.cpp
 registry-impl.h
 registry-impl.cpp
 application-impl-base.h
 application-impl-base.cpp
-application-impl-click.h
-application-impl-click.cpp
 application-impl-legacy.h
 application-impl-legacy.cpp
 application-impl-libertine.h
 application-impl-libertine.cpp
+application-impl-snap.h
+application-impl-snap.cpp
 application-info-desktop.h
 application-info-desktop.cpp
 application-icon-finder.h
 application-icon-finder.cpp
-helper-impl-click.cpp
 info-watcher.h
 info-watcher.cpp
 info-watcher-zg.h
@@ -62,26 +72,19 @@ jobs-base.h
 jobs-base.cpp
 jobs-systemd.h
 jobs-systemd.cpp
-jobs-upstart.h
-jobs-upstart.cpp
+signal-unsubscriber.h
+snapd-info.h
+snapd-info.cpp
+string-util.h
 )
 
 set(LAUNCHER_SOURCES
 ubuntu-app-launch.cpp
 second-exec-core.c
 ubuntu-app-launch-trace.c
-app-info.c
+utils.c
+utils-shared.c
 )
-
-if(CURL_FOUND)
-add_definitions ( -DENABLE_SNAPPY=1 )
-list(APPEND LAUNCHER_CPP_SOURCES
-application-impl-snap.h
-application-impl-snap.cpp
-snapd-info.h
-snapd-info.cpp
-)
-endif()
 
 add_custom_target(format
 	COMMAND clang-format -i -style=file ${LAUNCHER_CPP_HEADERS} ${LAUNCHER_CPP_SOURCES}
@@ -107,7 +110,6 @@ target_link_libraries(launcher-static
 	${LIBERTINE_LIBRARIES}
 	${CURL_LIBRARIES}
 	-lpthread
-	helpers
 	-Wl,--no-undefined
 )
 
@@ -134,7 +136,6 @@ target_link_libraries(ubuntu-launcher
 	${LIBERTINE_LIBRARIES}
 	${CURL_LIBRARIES}
 	-lpthread
-	helpers
 	-Wl,--no-undefined
 )
 

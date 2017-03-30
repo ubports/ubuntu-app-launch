@@ -76,12 +76,6 @@ include_directories(${JSONGLIB_INCLUDE_DIRS})
 pkg_check_modules(ZEITGEIST REQUIRED zeitgeist-2.0)
 include_directories(${ZEITGEIST_INCLUDE_DIRS})
 
-pkg_check_modules(CLICK REQUIRED click-0.4>=0.4.18)
-include_directories(${CLICK_INCLUDE_DIRS})
-
-pkg_check_modules(LIBUPSTART REQUIRED libupstart)
-include_directories(${LIBUPSTART_INCLUDE_DIRS})
-
 pkg_check_modules(DBUS REQUIRED dbus-1)
 include_directories(${DBUS_INCLUDE_DIRS})
 
@@ -106,6 +100,9 @@ include_directories(${LIBERTINE_INCLUDE_DIRS})
 pkg_check_modules(CURL libcurl>=7.47)
 include_directories(${CURL_INCLUDE_DIRS})
 
+pkg_check_modules(UNITY_API REQUIRED libunity-api)
+include_directories(${UNITY_API_INCLUDE_DIRS})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
@@ -113,137 +110,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 add_definitions( -DXMIR_HELPER="${pkglibexecdir}/xmir-helper" )
 add_definitions( -DSNAPPY_XMIR="${CMAKE_INSTALL_FULL_BINDIR}/snappy-xmir" )
 
-####################
-# Helpers
-####################
-
-add_library(helpers STATIC helpers.c helpers-shared.c)
-target_link_libraries(helpers ${GIO2_LIBRARIES} ${JSONGLIB_LIBRARIES} ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
-
-####################
-# desktop-hook
-####################
-
-add_executable(desktop-hook desktop-hook.c)
-set_target_properties(desktop-hook PROPERTIES OUTPUT_NAME "desktop-hook")
-target_link_libraries(desktop-hook helpers ${CLICK_LIBRARIES} ${WHOOPSIE_LIBRARIES})
-install(TARGETS desktop-hook RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# exec-line-exec
-####################
-
-add_lttng_gen_tp(NAME exec-line-exec-trace)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-add_executable(exec-line-exec exec-line-exec.c "${CMAKE_CURRENT_BINARY_DIR}/exec-line-exec-trace.c")
-set_target_properties(exec-line-exec PROPERTIES OUTPUT_NAME "exec-line-exec")
-target_link_libraries(exec-line-exec helpers ${LTTNG_LIBRARIES})
-install(TARGETS exec-line-exec RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# zg-report-app
-####################
-
-add_executable(zg-report-app zg-report-app.c)
-set_target_properties(zg-report-app PROPERTIES OUTPUT_NAME "zg-report-app")
-target_link_libraries(zg-report-app ubuntu-launcher ${ZEITGEIST_LIBRARIES} ${GOBJECT2_LIBRARIES} ${GLIB2_LIBRARIES})
-install(TARGETS zg-report-app RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# application-job
-####################
-
-add_executable(application-job application-job.c)
-set_target_properties(application-job PROPERTIES OUTPUT_NAME "application-job")
-target_link_libraries(application-job ubuntu-launcher)
-install(TARGETS application-job RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# application-failed
-####################
-
-add_executable(application-failed application-failed.c)
-set_target_properties(application-failed PROPERTIES OUTPUT_NAME "application-failed")
-target_link_libraries(application-failed ${GIO2_LIBRARIES})
-install(TARGETS application-failed RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# xmir-helper
-####################
-
-add_executable(xmir-helper xmir-helper.c)
-set_target_properties(xmir-helper PROPERTIES OUTPUT_NAME "xmir-helper")
-install(TARGETS xmir-helper RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# untrusted-helper-type-end
-####################
-
-add_executable(untrusted-helper-type-end untrusted-helper-type-end.c)
-set_target_properties(untrusted-helper-type-end PROPERTIES OUTPUT_NAME "untrusted-helper-type-end")
-target_link_libraries(untrusted-helper-type-end ubuntu-launcher)
-install(TARGETS untrusted-helper-type-end RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# cgroup-reap-all
-####################
-
-add_executable(cgroup-reap-all cgroup-reap-all.c)
-set_target_properties(cgroup-reap-all PROPERTIES OUTPUT_NAME "cgroup-reap-all")
-target_link_libraries(cgroup-reap-all helpers)
-install(TARGETS cgroup-reap-all RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# oom-adjust-setuid-helper
-####################
-
-add_executable(oom-adjust-setuid-helper oom-adjust-setuid-helper.c)
-set_target_properties(oom-adjust-setuid-helper PROPERTIES OUTPUT_NAME "oom-adjust-setuid-helper")
-install(TARGETS oom-adjust-setuid-helper RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# socket-demangler
-####################
-
-add_executable(socket-demangler-helper socket-demangler.c)
-set_target_properties(socket-demangler-helper PROPERTIES OUTPUT_NAME "socket-demangler")
-target_link_libraries(socket-demangler-helper ${GIO2_LIBRARIES})
-install(TARGETS socket-demangler-helper RUNTIME DESTINATION "${pkglibexecdir}")
-
-####################
-# snappy-xmir
-####################
-
-####################
-# NOTE: This only can link to libraries that are in
-# the base UBUNTU CORE image. Which is basically libc
-# and not much else. Don't add libs.
-####################
-
-add_executable(snappy-xmir snappy-xmir.c)
-set_target_properties(snappy-xmir PROPERTIES OUTPUT_NAME "snappy-xmir")
-install(TARGETS snappy-xmir RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-####################
-# snappy-xmir-envvars
-####################
-
-add_executable(snappy-xmir-envvars snappy-xmir-envvars.c)
-set_target_properties(snappy-xmir-envvars PROPERTIES OUTPUT_NAME "snappy-xmir-envvars")
-# No libs, otherwise we have to worry about how to handle finding them
-install(TARGETS snappy-xmir-envvars RUNTIME DESTINATION "${CMAKE_INSTALL_FULL_BINDIR}")
-
-
-####################
-# ubuntu-app-launch-desktop.click-hook
-####################
-
-configure_file("ubuntu-app-launch-desktop.click-hook.in" "${CMAKE_CURRENT_SOURCE_DIR}/debian/ubuntu-app-launch-desktop.click-hook" @ONLY)
-
 add_subdirectory(libubuntu-app-launch)
-add_subdirectory(upstart-jobs)
 add_subdirectory(tools)
 add_subdirectory(ubuntu-app-test)
+add_subdirectory(utils)
 
 # testing & coverage
 if (${enable_tests})
@@ -265,7 +135,6 @@ ENABLE_COVERAGE_REPORT(
   TESTS
   	application-icon-finder-test
 	application-info-desktop-test
-	cgroup-reap-test
 	exec-util-test
 	failure-test
 	helper-test

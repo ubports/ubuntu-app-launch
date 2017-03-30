@@ -21,19 +21,24 @@
 #include "application-icon-finder.h"
 #include "application-impl-base.h"
 #include <regex>
-#include <upstart.h>
+#include <unity/util/GObjectMemory.h>
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
 
 namespace ubuntu
 {
 namespace app_launch
 {
 
-Registry::Impl::Impl(Registry* registry)
+Registry::Impl::Impl(Registry& registry)
+    : Impl(registry, app_store::Base::allAppStores())
+{
+}
+
+Registry::Impl::Impl(Registry& registry, std::list<std::shared_ptr<app_store::Base>> appStores)
     : thread([]() {},
              [this]() {
-                 _clickUser.reset();
-                 _clickDB.reset();
-
                  zgLog_.reset();
                  jobs.reset();
 
@@ -43,12 +48,11 @@ Registry::Impl::Impl(Registry* registry)
              })
     , _registry{registry}
     , _iconFinders()
+    , _appStores(appStores)
 {
     auto cancel = thread.getCancellable();
-    _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
-        return std::shared_ptr<GDBusConnection>(g_bus_get_sync(G_BUS_TYPE_SESSION, cancel.get(), nullptr),
-                                                [](GDBusConnection* bus) { g_clear_object(&bus); });
-    });
+    _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>(
+        [cancel]() { return share_gobject(g_bus_get_sync(G_BUS_TYPE_SESSION, cancel.get(), nullptr)); });
 
     /* Determine where we're getting the helper from */
     auto goomHelper = g_getenv("UBUNTU_APP_LAUNCH_OOM_HELPER");
@@ -59,52 +63,6 @@ Registry::Impl::Impl(Registry* registry)
     else
     {
         oomHelper_ = OOM_HELPER;
-    }
-}
-
-void Registry::Impl::initClick()
-{
-    if (_clickDB && _clickUser)
-    {
-        return;
-    }
-
-    auto init = thread.executeOnThread<bool>([this]() {
-        GError* error = nullptr;
-
-        if (!_clickDB)
-        {
-            _clickDB = std::shared_ptr<ClickDB>(click_db_new(), [](ClickDB* db) { g_clear_object(&db); });
-            /* If TEST_CLICK_DB is unset, this reads the system database. */
-            click_db_read(_clickDB.get(), g_getenv("TEST_CLICK_DB"), &error);
-
-            if (error != nullptr)
-            {
-                auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-                throw std::runtime_error(perror->message);
-            }
-        }
-
-        if (!_clickUser)
-        {
-            _clickUser =
-                std::shared_ptr<ClickUser>(click_user_new_for_user(_clickDB.get(), g_getenv("TEST_CLICK_USER"), &error),
-                                           [](ClickUser* user) { g_clear_object(&user); });
-
-            if (error != nullptr)
-            {
-                auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-                throw std::runtime_error(perror->message);
-            }
-        }
-
-        g_debug("Initialized Click DB");
-        return true;
-    });
-
-    if (!init)
-    {
-        throw std::runtime_error("Unable to initialize the Click Database");
     }
 }
 
@@ -122,100 +80,18 @@ std::string Registry::Impl::printJson(std::shared_ptr<JsonObject> jsonobj)
 std::string Registry::Impl::printJson(std::shared_ptr<JsonNode> jsonnode)
 {
     std::string retval;
-    auto gstr = json_to_string(jsonnode.get(), TRUE);
+    auto gstr = unique_gchar(json_to_string(jsonnode.get(), TRUE));
 
-    if (gstr != nullptr)
+    if (gstr)
     {
-        retval = gstr;
-        g_free(gstr);
+        retval = gstr.get();
     }
 
     return retval;
 }
 
-std::shared_ptr<JsonObject> Registry::Impl::getClickManifest(const std::string& package)
-{
-    initClick();
-
-    auto retval = thread.executeOnThread<std::shared_ptr<JsonObject>>([this, package]() {
-        GError* error = nullptr;
-        auto mani = click_user_get_manifest(_clickUser.get(), package.c_str(), &error);
-
-        if (error != nullptr)
-        {
-            auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            g_debug("Error parsing manifest for package '%s': %s", package.c_str(), perror->message);
-            return std::shared_ptr<JsonObject>();
-        }
-
-        auto node = json_node_alloc();
-        json_node_init_object(node, mani);
-        json_object_unref(mani);
-
-        auto retval = std::shared_ptr<JsonObject>(json_node_dup_object(node), json_object_unref);
-
-        json_node_free(node);
-
-        return retval;
-    });
-
-    if (!retval)
-        throw std::runtime_error("Unable to get Click manifest for package: " + package);
-
-    return retval;
-}
-
-std::list<AppID::Package> Registry::Impl::getClickPackages()
-{
-    initClick();
-
-    return thread.executeOnThread<std::list<AppID::Package>>([this]() {
-        GError* error = nullptr;
-        GList* pkgs = click_user_get_package_names(_clickUser.get(), &error);
-
-        if (error != nullptr)
-        {
-            auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            throw std::runtime_error(perror->message);
-        }
-
-        std::list<AppID::Package> list;
-        for (GList* item = pkgs; item != nullptr; item = g_list_next(item))
-        {
-            auto pkgobj = static_cast<gchar*>(item->data);
-            if (pkgobj)
-            {
-                list.emplace_back(AppID::Package::from_raw(pkgobj));
-            }
-        }
-
-        g_list_free_full(pkgs, g_free);
-        return list;
-    });
-}
-
-std::string Registry::Impl::getClickDir(const std::string& package)
-{
-    initClick();
-
-    return thread.executeOnThread<std::string>([this, package]() {
-        GError* error = nullptr;
-        auto dir = click_user_get_path(_clickUser.get(), package.c_str(), &error);
-
-        if (error != nullptr)
-        {
-            auto perror = std::shared_ptr<GError>(error, [](GError* error) { g_error_free(error); });
-            throw std::runtime_error(perror->message);
-        }
-
-        std::string cppdir(dir);
-        g_free(dir);
-        return cppdir;
-    });
-}
-
-/** Send an event to Zeitgeist using the registry thread so that
-        the callback comes back in the right place. */
+/** Send an event to Zietgeist using the registry thread so that
+    the callback comes back in the right place. */
 void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
 {
     thread.executeOnThread([this, appid, eventtype] {
@@ -234,45 +110,38 @@ void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
 
         if (!zgLog_)
         {
-            zgLog_ =
-                std::shared_ptr<ZeitgeistLog>(zeitgeist_log_new(), /* create a new log for us */
-                                              [](ZeitgeistLog* log) { g_clear_object(&log); }); /* Free as a GObject */
+            zgLog_ = share_gobject(zeitgeist_log_new()); /* create a new log for us */
         }
 
-        ZeitgeistEvent* event = zeitgeist_event_new();
-        zeitgeist_event_set_actor(event, "application://ubuntu-app-launch.desktop");
-        zeitgeist_event_set_interpretation(event, eventtype.c_str());
-        zeitgeist_event_set_manifestation(event, ZEITGEIST_ZG_USER_ACTIVITY);
+        auto event = unique_gobject(zeitgeist_event_new());
+        zeitgeist_event_set_actor(event.get(), "application://ubuntu-app-launch.desktop");
+        zeitgeist_event_set_interpretation(event.get(), eventtype.c_str());
+        zeitgeist_event_set_manifestation(event.get(), ZEITGEIST_ZG_USER_ACTIVITY);
 
-        ZeitgeistSubject* subject = zeitgeist_subject_new();
-        zeitgeist_subject_set_interpretation(subject, ZEITGEIST_NFO_SOFTWARE);
-        zeitgeist_subject_set_manifestation(subject, ZEITGEIST_NFO_SOFTWARE_ITEM);
-        zeitgeist_subject_set_mimetype(subject, "application/x-desktop");
-        zeitgeist_subject_set_uri(subject, uri.c_str());
+        auto subject = unique_gobject(zeitgeist_subject_new());
+        zeitgeist_subject_set_interpretation(subject.get(), ZEITGEIST_NFO_SOFTWARE);
+        zeitgeist_subject_set_manifestation(subject.get(), ZEITGEIST_NFO_SOFTWARE_ITEM);
+        zeitgeist_subject_set_mimetype(subject.get(), "application/x-desktop");
+        zeitgeist_subject_set_uri(subject.get(), uri.c_str());
 
-        zeitgeist_event_add_subject(event, subject);
+        zeitgeist_event_add_subject(event.get(), subject.get());
 
         zeitgeist_log_insert_event(zgLog_.get(), /* log */
-                                   event,        /* event */
+                                   event.get(),  /* event */
                                    nullptr,      /* cancellable */
                                    [](GObject* obj, GAsyncResult* res, gpointer user_data) {
                                        GError* error = nullptr;
-                                       GArray* result = nullptr;
 
-                                       result = zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error);
+                                       unique_glib(zeitgeist_log_insert_event_finish(ZEITGEIST_LOG(obj), res, &error));
 
                                        if (error != nullptr)
                                        {
                                            g_warning("Unable to submit Zeitgeist Event: %s", error->message);
                                            g_error_free(error);
                                        }
-
-                                       g_array_free(result, TRUE);
                                    },        /* callback */
                                    nullptr); /* userdata */
 
-        g_object_unref(event);
-        g_object_unref(subject);
     });
 }
 
@@ -311,7 +180,7 @@ core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdate
     std::call_once(flag_appInfoUpdated, [this, reg] {
         g_debug("App Info Updated Signal Initialized");
 
-        auto apps = app_impls::Base::createInfoWatchers(reg);
+        std::list<std::shared_ptr<info_watcher::Base>> apps{_appStores.begin(), _appStores.end()};
         apps.push_back(Registry::Impl::getZgWatcher(reg));
 
         for (const auto& app : apps)

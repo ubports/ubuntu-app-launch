@@ -20,8 +20,12 @@
 #include "application-impl-legacy.h"
 #include "application-info-desktop.h"
 #include "registry-impl.h"
+#include "string-util.h"
 
 #include <regex>
+#include <unity/util/GlibMemory.h>
+
+using namespace unity::util;
 
 namespace ubuntu
 {
@@ -62,8 +66,14 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
         rootDir = rootenv;
     }
 
-    appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, rootDir,
-                                                   app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
+    auto flags = app_info::DesktopFlags::ALLOW_NO_DISPLAY;
+
+    if (!g_key_file_has_key(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Touch", nullptr))
+    {
+        flags |= app_info::DesktopFlags::XMIR_DEFAULT;
+    }
+
+    appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, rootDir, flags, _registry);
 
     if (!_keyfile)
     {
@@ -83,19 +93,17 @@ std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(co
     auto desktopName = name.value() + ".desktop";
     std::string desktopPath;
     auto keyfilecheck = [desktopName, &desktopPath](const std::string& dir) -> std::shared_ptr<GKeyFile> {
-        auto fullname = g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr);
-        if (!g_file_test(fullname, G_FILE_TEST_EXISTS))
+        auto fullname = unique_gchar(g_build_filename(dir.c_str(), "applications", desktopName.c_str(), nullptr));
+        if (!g_file_test(fullname.get(), G_FILE_TEST_EXISTS))
         {
-            g_free(fullname);
             return {};
         }
-        desktopPath = fullname;
+        desktopPath = fullname.get();
 
-        auto keyfile = std::shared_ptr<GKeyFile>(g_key_file_new(), clear_keyfile);
+        auto keyfile = unique_glib(g_key_file_new());
 
         GError* error = nullptr;
-        g_key_file_load_from_file(keyfile.get(), fullname, G_KEY_FILE_NONE, &error);
-        g_free(fullname);
+        g_key_file_load_from_file(keyfile.get(), fullname.get(), G_KEY_FILE_NONE, &error);
 
         if (error != nullptr)
         {
@@ -123,161 +131,6 @@ std::tuple<std::string, std::shared_ptr<GKeyFile>, std::string> keyfileForApp(co
 std::shared_ptr<Application::Info> Legacy::info()
 {
     return appinfo_;
-}
-
-/** Checks the AppID by ensuring the version and package are empty
-    then looks for the application.
-
-    \param appid AppID to check
-    \param registry persistent connections to use
-*/
-bool Legacy::hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry)
-{
-    try
-    {
-        if (!appid.version.value().empty())
-        {
-            return false;
-        }
-
-        return verifyAppname(appid.package, appid.appname, registry);
-    }
-    catch (std::runtime_error& e)
-    {
-        return false;
-    }
-}
-
-/** Ensure the package is empty
-
-    \param package Container name
-    \param registry persistent connections to use
-*/
-bool Legacy::verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry)
-{
-    return package.value().empty();
-}
-
-/** Looks for an application by looking through the system and user
-    application directories to find the desktop file.
-
-    \param package Container name
-    \param appname Application name to look for
-    \param registry persistent connections to use
-*/
-bool Legacy::verifyAppname(const AppID::Package& package,
-                           const AppID::AppName& appname,
-                           const std::shared_ptr<Registry>& registry)
-{
-    if (!verifyPackage(package, registry))
-    {
-        throw std::runtime_error{"Invalid Legacy package: " + std::string(package)};
-    }
-
-    auto desktop = std::string(appname) + ".desktop";
-    auto evaldir = [&desktop](const gchar* dir) -> bool {
-        char* fulldir = g_build_filename(dir, "applications", desktop.c_str(), nullptr);
-        gboolean found = g_file_test(fulldir, G_FILE_TEST_EXISTS);
-        g_free(fulldir);
-        return found == TRUE;
-    };
-
-    if (evaldir(g_get_user_data_dir()))
-    {
-        return true;
-    }
-
-    const char* const* data_dirs = g_get_system_data_dirs();
-    for (int i = 0; data_dirs[i] != nullptr; i++)
-    {
-        if (evaldir(data_dirs[i]))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/** We don't really have a way to implement this for Legacy, any
-    search wouldn't really make sense. We just throw an error.
-
-    \param package Container name
-    \param card Application search paths
-    \param registry persistent connections to use
-*/
-AppID::AppName Legacy::findAppname(const AppID::Package& package,
-                                   AppID::ApplicationWildcard card,
-                                   const std::shared_ptr<Registry>& registry)
-{
-    throw std::runtime_error("Legacy apps can't be discovered by package");
-}
-
-/** Function to return an empty string
-
-    \param package Container name (unused)
-    \param appname Application name (unused)
-    \param registry persistent connections to use (unused)
-*/
-AppID::Version Legacy::findVersion(const AppID::Package& package,
-                                   const AppID::AppName& appname,
-                                   const std::shared_ptr<Registry>& registry)
-{
-    return AppID::Version::from_raw({});
-}
-
-static const std::regex desktop_remover("^(.*)\\.desktop$");
-
-std::list<std::shared_ptr<Application>> Legacy::list(const std::shared_ptr<Registry>& registry)
-{
-    std::list<std::shared_ptr<Application>> list;
-    GList* head = g_app_info_get_all();
-    for (GList* item = head; item != nullptr; item = g_list_next(item))
-    {
-        GDesktopAppInfo* appinfo = G_DESKTOP_APP_INFO(item->data);
-
-        if (appinfo == nullptr)
-        {
-            continue;
-        }
-
-        if (g_app_info_should_show(G_APP_INFO(appinfo)) == FALSE)
-        {
-            continue;
-        }
-
-        auto desktopappid = std::string(g_app_info_get_id(G_APP_INFO(appinfo)));
-        std::string appname;
-        std::smatch match;
-        if (std::regex_match(desktopappid, match, desktop_remover))
-        {
-            appname = match[1].str();
-        }
-        else
-        {
-            continue;
-        }
-
-        /* Remove entries generated by the desktop hook in .local */
-        if (g_desktop_app_info_has_key(appinfo, "X-Ubuntu-Application-ID"))
-        {
-            continue;
-        }
-
-        try
-        {
-            auto app = std::make_shared<Legacy>(AppID::AppName::from_raw(appname), registry);
-            list.push_back(app);
-        }
-        catch (std::runtime_error& e)
-        {
-            g_debug("Unable to create application for legacy appname '%s': %s", appname.c_str(), e.what());
-        }
-    }
-
-    g_list_free_full(head, g_object_unref);
-
-    return list;
 }
 
 std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
@@ -335,17 +188,16 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
     /* Honor the 'Path' key if it is in the desktop file */
     if (g_key_file_has_key(_keyfile.get(), "Desktop Entry", "Path", nullptr))
     {
-        gchar* path = g_key_file_get_string(_keyfile.get(), "Desktop Entry", "Path", nullptr);
-        retval.emplace_back(std::make_pair("APP_DIR", path));
-        g_free(path);
+        auto path = unique_gchar(g_key_file_get_string(_keyfile.get(), "Desktop Entry", "Path", nullptr));
+        retval.emplace_back(std::make_pair("APP_DIR", path.get()));
     }
 
     /* If they've asked for an Apparmor profile, let's use it! */
-    gchar* apparmor = g_key_file_get_string(_keyfile.get(), "Desktop Entry", "X-Ubuntu-AppArmor-Profile", nullptr);
-    if (apparmor != nullptr)
+    auto apparmor =
+        unique_gchar(g_key_file_get_string(_keyfile.get(), "Desktop Entry", "X-Ubuntu-AppArmor-Profile", nullptr));
+    if (apparmor)
     {
-        retval.emplace_back(std::make_pair("APP_EXEC_POLICY", apparmor));
-        g_free(apparmor);
+        retval.emplace_back(std::make_pair("APP_EXEC_POLICY", apparmor.get()));
 
         retval.splice(retval.end(), confinedEnv(_appname, "/usr/share"));
     }
@@ -392,11 +244,6 @@ std::shared_ptr<Application::Instance> Legacy::launchTest(const std::vector<Appl
 std::shared_ptr<Application::Instance> Legacy::findInstance(const std::string& instanceid)
 {
     return _registry->impl->jobs->existing(appId(), "application-legacy", instanceid, std::vector<Application::URL>{});
-}
-
-std::shared_ptr<info_watcher::Base> Legacy::createInfoWatcher(const std::shared_ptr<Registry>& reg)
-{
-    return {};
 }
 
 }  // namespace app_impls
