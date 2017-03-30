@@ -24,8 +24,10 @@
 class LibertineService
 {
 private:
-    DbusTestProcess* process = nullptr;
-    DbusTestTask* wait = nullptr;
+    DbusTestProcess *process = nullptr;
+    std::string uniquename{};
+    std::once_flag uniqueflag;
+    guint namewatcher;
 
 public:
     LibertineService()
@@ -39,33 +41,46 @@ public:
         dbus_test_task_set_name(DBUS_TEST_TASK(process), "libertine");
         dbus_test_task_set_return(DBUS_TEST_TASK(process), DBUS_TEST_TASK_RETURN_IGNORE);
         dbus_test_task_set_wait_finished(DBUS_TEST_TASK(process), FALSE);
-
-        wait = dbus_test_task_new();
-        dbus_test_task_set_wait_for(wait, "com.canonical.libertine.Service");
-        dbus_test_task_set_name(wait, "lib-wait");
     }
 
     ~LibertineService()
     {
         g_debug("Destroying the Libertined Task");
         g_clear_object(&process);
-        g_clear_object(&wait);
-    }
 
-    DbusTestTask* waitTask()
-    {
-        return wait;
+        if (namewatcher)
+        {
+            g_bus_unwatch_name(namewatcher);
+        }
     }
 
     operator std::shared_ptr<DbusTestTask>()
     {
         std::shared_ptr<DbusTestTask> retval(DBUS_TEST_TASK(g_object_ref(process)),
-                                             [](DbusTestTask* process) { g_clear_object(&process); });
+                                             [](DbusTestTask *process) { g_clear_object(&process); });
         return retval;
     }
 
-    operator DbusTestTask*()
+    operator DbusTestTask *()
     {
         return DBUS_TEST_TASK(process);
+    }
+
+    const std::string &getUniqueName()
+    {
+        std::call_once(uniqueflag, [this]() {
+            namewatcher = g_bus_watch_name(
+                G_BUS_TYPE_SESSION, "com.canonical.libertine.Service", G_BUS_NAME_WATCHER_FLAGS_NONE,
+                [](GDBusConnection *con, const gchar *name, const gchar *name_owner, gpointer user_data) {
+                    auto pthis = static_cast<LibertineService *>(user_data);
+                    pthis->uniquename = name_owner;
+                },
+                [](GDBusConnection *con, const gchar *name, gpointer user_data) {
+                    auto pthis = static_cast<LibertineService *>(user_data);
+                    pthis->uniquename.clear();
+                },
+                this, nullptr);
+        });
+        return uniquename;
     }
 };

@@ -59,13 +59,14 @@ protected:
 
         libertine = std::make_shared<LibertineService>();
         dbus_test_service_add_task(service, *libertine);
-        dbus_test_service_add_task(service, libertine->waitTask());
 
         dbus_test_service_start_tasks(service);
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
+
+        ASSERT_EVENTUALLY_FUNC_EQ(false, std::function<bool()>{[&] { return libertine->getUniqueName().empty(); }});
     }
 
     virtual void TearDown()
