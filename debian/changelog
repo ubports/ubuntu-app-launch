@@ -1,3 +1,9 @@
+ubuntu-app-launch (0.12) UNRELEASED; urgency=medium
+
+  * Bump version for new AppID methods
+
+ -- Michael Terry <mterry@ubuntu.com>  Tue, 28 Feb 2017 15:59:05 -0500
+
 ubuntu-app-launch (0.11+17.04.20170321-0ubuntu1) zesty; urgency=medium
 
   [ Ted Gould ]
@@ -12,12 +18,6 @@ ubuntu-app-launch (0.11+17.04.20170321-0ubuntu1) zesty; urgency=medium
   * Run make format target following managed memory branch
 
  -- Ted Gould <ted@gould.cx>  Tue, 21 Mar 2017 03:29:09 +0000
-
-ubuntu-app-launch (0.11) UNRELEASED; urgency=medium
-
-  * Bump version for new AppID methods
-
- -- Michael Terry <mterry@ubuntu.com>  Tue, 28 Feb 2017 15:59:05 -0500
 
 ubuntu-app-launch (0.10+17.04.20170310-0ubuntu1) zesty; urgency=medium
 
