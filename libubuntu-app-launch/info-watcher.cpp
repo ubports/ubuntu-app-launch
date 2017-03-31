@@ -26,7 +26,8 @@ namespace app_launch
 namespace info_watcher
 {
 
-Base::Base(const std::shared_ptr<Registry>& registry)
+Base::Base(const Registry& registry)
+    : registry_(registry)
 {
 }
 

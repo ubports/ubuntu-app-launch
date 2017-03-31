@@ -48,20 +48,7 @@ std::shared_ptr<Application> Application::create(const AppID& appid, const std::
         throw std::runtime_error("Invalid registry object");
     }
 
-    if (!registry->impl->jobs)
-    {
-        registry->impl->jobs = jobs::manager::Base::determineFactory(registry);
-    }
-
-    for (const auto& appStore : registry->impl->appStores())
-    {
-        if (appStore->hasAppId(appid, registry))
-        {
-            return appStore->create(appid, registry);
-        }
-    }
-
-    throw std::runtime_error("Invalid app ID: " + std::string(appid));
+    return registry->impl->createApp(appid);
 }
 
 AppID::AppID()
@@ -110,10 +97,15 @@ bool AppID::valid(const std::string& sappid)
 AppID AppID::find(const std::string& sappid)
 {
     auto registry = Registry::getDefault();
-    return find(registry, sappid);
+    return registry->impl->find(sappid);
 }
 
 AppID AppID::find(const std::shared_ptr<Registry>& registry, const std::string& sappid)
+{
+    return registry->impl->find(sappid);
+}
+
+AppID Registry::Impl::find(const std::string& sappid)
 {
     std::smatch match;
 
@@ -124,7 +116,7 @@ AppID AppID::find(const std::shared_ptr<Registry>& registry, const std::string& 
     }
     else if (std::regex_match(sappid, match, short_appid_regex))
     {
-        return discover(registry, match[1].str(), match[2].str());
+        return discover(match[1].str(), match[2].str(), AppID::VersionWildcard::CURRENT_USER_VERSION);
     }
     else if (std::regex_match(sappid, match, legacy_appid_regex))
     {
@@ -181,33 +173,38 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                       const std::string& appname,
                       const std::string& version)
 {
+    return registry->impl->discover(package, appname, version);
+}
+
+AppID Registry::Impl::discover(const std::string& package, const std::string& appname, const std::string& version)
+{
     auto pkg = AppID::Package::from_raw(package);
 
-    for (const auto& appStore : registry->impl->appStores())
+    for (const auto& appStore : appStores())
     {
         /* Figure out which type we have */
         try
         {
-            if (appStore->verifyPackage(pkg, registry))
+            if (appStore->verifyPackage(pkg))
             {
                 auto app = AppID::AppName::from_raw({});
 
                 if (appname.empty() || appname == "first-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::FIRST_LISTED, registry);
+                    app = appStore->findAppname(pkg, AppID::ApplicationWildcard::FIRST_LISTED);
                 }
                 else if (appname == "last-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::LAST_LISTED, registry);
+                    app = appStore->findAppname(pkg, AppID::ApplicationWildcard::LAST_LISTED);
                 }
                 else if (appname == "only-listed-app")
                 {
-                    app = appStore->findAppname(pkg, ApplicationWildcard::ONLY_LISTED, registry);
+                    app = appStore->findAppname(pkg, AppID::ApplicationWildcard::ONLY_LISTED);
                 }
                 else
                 {
                     app = AppID::AppName::from_raw(appname);
-                    if (!appStore->verifyAppname(pkg, app, registry))
+                    if (!appStore->verifyAppname(pkg, app))
                     {
                         throw std::runtime_error("App name passed in is not valid for this package type");
                     }
@@ -216,12 +213,12 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                 auto ver = AppID::Version::from_raw({});
                 if (version.empty() || version == "current-user-version")
                 {
-                    ver = appStore->findVersion(pkg, app, registry);
+                    ver = appStore->findVersion(pkg, app);
                 }
                 else
                 {
                     ver = AppID::Version::from_raw(version);
-                    if (!appStore->hasAppId({pkg, app, ver}, registry))
+                    if (!appStore->hasAppId({pkg, app, ver}))
                     {
                         throw std::runtime_error("Invalid version passed for this package type");
                     }
@@ -244,16 +241,23 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                       ApplicationWildcard appwildcard,
                       VersionWildcard versionwildcard)
 {
+    return registry->impl->discover(package, appwildcard, versionwildcard);
+}
+
+AppID Registry::Impl::discover(const std::string& package,
+                               AppID::ApplicationWildcard appwildcard,
+                               AppID::VersionWildcard versionwildcard)
+{
     auto pkg = AppID::Package::from_raw(package);
 
-    for (const auto& appStore : registry->impl->appStores())
+    for (const auto& appStore : appStores())
     {
         try
         {
-            if (appStore->verifyPackage(pkg, registry))
+            if (appStore->verifyPackage(pkg))
             {
-                auto app = appStore->findAppname(pkg, appwildcard, registry);
-                auto ver = appStore->findVersion(pkg, app, registry);
+                auto app = appStore->findAppname(pkg, appwildcard);
+                auto ver = appStore->findVersion(pkg, app);
                 return AppID{pkg, app, ver};
             }
         }
@@ -272,16 +276,23 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
                       const std::string& appname,
                       VersionWildcard versionwildcard)
 {
+    return registry->impl->discover(package, appname, versionwildcard);
+}
+
+AppID Registry::Impl::discover(const std::string& package,
+                               const std::string& appname,
+                               AppID::VersionWildcard versionwildcard)
+{
     auto pkg = AppID::Package::from_raw(package);
     auto app = AppID::AppName::from_raw(appname);
 
-    for (const auto& appStore : registry->impl->appStores())
+    for (const auto& appStore : appStores())
     {
         try
         {
-            if (appStore->verifyPackage(pkg, registry) && appStore->verifyAppname(pkg, app, registry))
+            if (appStore->verifyPackage(pkg) && appStore->verifyAppname(pkg, app))
             {
-                auto ver = appStore->findVersion(pkg, app, registry);
+                auto ver = appStore->findVersion(pkg, app);
                 return AppID{pkg, app, ver};
             }
         }
@@ -298,19 +309,19 @@ AppID AppID::discover(const std::shared_ptr<Registry>& registry,
 AppID AppID::discover(const std::string& package, const std::string& appname, const std::string& version)
 {
     auto registry = Registry::getDefault();
-    return discover(registry, package, appname, version);
+    return registry->impl->discover(package, appname, version);
 }
 
 AppID AppID::discover(const std::string& package, ApplicationWildcard appwildcard, VersionWildcard versionwildcard)
 {
     auto registry = Registry::getDefault();
-    return discover(registry, package, appwildcard, versionwildcard);
+    return registry->impl->discover(package, appwildcard, versionwildcard);
 }
 
 AppID AppID::discover(const std::string& package, const std::string& appname, VersionWildcard versionwildcard)
 {
     auto registry = Registry::getDefault();
-    return discover(registry, package, appname, versionwildcard);
+    return registry->impl->discover(package, appname, versionwildcard);
 }
 
 enum class oom::Score : std::int32_t

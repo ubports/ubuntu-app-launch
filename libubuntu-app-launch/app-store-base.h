@@ -28,36 +28,34 @@ namespace ubuntu
 {
 namespace app_launch
 {
+namespace app_impls
+{
+class Base;
+}
 namespace app_store
 {
 
 class Base : public info_watcher::Base
 {
 public:
-    Base();
+    Base(const Registry& registry);
     virtual ~Base();
 
     /* Discover tools */
-    virtual bool verifyPackage(const AppID::Package& package, const std::shared_ptr<Registry>& registry) = 0;
-    virtual bool verifyAppname(const AppID::Package& package,
-                               const AppID::AppName& appname,
-                               const std::shared_ptr<Registry>& registry) = 0;
-    virtual AppID::AppName findAppname(const AppID::Package& package,
-                                       AppID::ApplicationWildcard card,
-                                       const std::shared_ptr<Registry>& registry) = 0;
-    virtual AppID::Version findVersion(const AppID::Package& package,
-                                       const AppID::AppName& appname,
-                                       const std::shared_ptr<Registry>& registry) = 0;
-    virtual bool hasAppId(const AppID& appid, const std::shared_ptr<Registry>& registry) = 0;
+    virtual bool verifyPackage(const AppID::Package& package) = 0;
+    virtual bool verifyAppname(const AppID::Package& package, const AppID::AppName& appname) = 0;
+    virtual AppID::AppName findAppname(const AppID::Package& package, AppID::ApplicationWildcard card) = 0;
+    virtual AppID::Version findVersion(const AppID::Package& package, const AppID::AppName& appname) = 0;
+    virtual bool hasAppId(const AppID& appid) = 0;
 
     /* Possible apps */
-    virtual std::list<std::shared_ptr<Application>> list(const std::shared_ptr<Registry>& registry) = 0;
+    virtual std::list<std::shared_ptr<Application>> list() = 0;
 
     /* Application Creation */
-    virtual std::shared_ptr<app_impls::Base> create(const AppID& appid, const std::shared_ptr<Registry>& registry) = 0;
+    virtual std::shared_ptr<app_impls::Base> create(const AppID& appid) = 0;
 
     /* Static get all */
-    static std::list<std::shared_ptr<Base>> allAppStores();
+    static std::list<std::shared_ptr<Base>> allAppStores(const Registry& registry);
 };
 
 }  // namespace app_store

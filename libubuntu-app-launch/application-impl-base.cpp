@@ -40,8 +40,8 @@ namespace app_launch
 namespace app_impls
 {
 
-Base::Base(const std::shared_ptr<Registry>& registry)
-    : _registry(registry)
+Base::Base(const std::shared_ptr<Registry::Impl>& registry)
+    : registry_(registry)
 {
     g_debug("Application construction:   %p", static_cast<void*>(this));
 }

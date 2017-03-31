@@ -66,7 +66,7 @@ public:
 class Base : public Helper
 {
 public:
-    Base(const Helper::Type& type, const AppID& appid, const std::shared_ptr<Registry>& registry);
+    Base(const Helper::Type& type, const AppID& appid, const std::shared_ptr<Registry::Impl>& registry);
 
     AppID appId() const override;
 
@@ -86,7 +86,7 @@ public:
 private:
     Helper::Type _type;
     AppID _appid;
-    std::shared_ptr<Registry> _registry;
+    std::shared_ptr<Registry::Impl> registry_;
 
     std::list<std::pair<std::string, std::string>> defaultEnv();
 };

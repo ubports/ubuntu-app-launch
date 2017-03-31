@@ -20,6 +20,7 @@
 #include "registry-impl.h"
 #include "application-icon-finder.h"
 #include "application-impl-base.h"
+#include "helper-impl.h"
 #include <regex>
 #include <unity/util/GObjectMemory.h>
 #include <unity/util/GlibMemory.h>
@@ -32,11 +33,13 @@ namespace app_launch
 {
 
 Registry::Impl::Impl(Registry& registry)
-    : Impl(registry, app_store::Base::allAppStores())
+    : Impl(registry, app_store::Base::allAppStores(registry), jobs::manager::Base::determineFactory(registry))
 {
 }
 
-Registry::Impl::Impl(Registry& registry, std::list<std::shared_ptr<app_store::Base>> appStores)
+Registry::Impl::Impl(Registry& registry,
+                     std::list<std::shared_ptr<app_store::Base>> appStores,
+                     std::shared_ptr<jobs::manager::Base> jobEngine)
     : thread([]() {},
              [this]() {
                  zgLog_.reset();
@@ -46,6 +49,7 @@ Registry::Impl::Impl(Registry& registry, std::list<std::shared_ptr<app_store::Ba
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
                  _dbus.reset();
              })
+    , jobs(jobEngine)
     , _registry{registry}
     , _iconFinders()
     , _appStores(appStores)
@@ -175,22 +179,42 @@ bool Registry::Impl::isWatchingAppStarting()
     return watchingAppStarting_;
 }
 
-core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated(const std::shared_ptr<Registry>& reg)
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated()
 {
-    std::call_once(flag_appInfoUpdated, [this, reg] {
+    std::call_once(flag_appInfoUpdated, [this] {
         g_debug("App Info Updated Signal Initialized");
 
         std::list<std::shared_ptr<info_watcher::Base>> apps{_appStores.begin(), _appStores.end()};
-        apps.push_back(Registry::Impl::getZgWatcher(reg));
+        apps.push_back(getZgWatcher());
 
         for (const auto& app : apps)
         {
             infoWatchers_.emplace_back(
-                std::make_pair(app, app->infoChanged().connect(
-                                        [this](const std::shared_ptr<Application>& app) { sig_appInfoUpdated(app); })));
+                std::make_pair(app, app->infoChanged().connect([this](const std::shared_ptr<Application>& app) {
+                    sig_appInfoUpdated(app);
+                })));
         }
     });
     return sig_appInfoUpdated;
+}
+
+std::shared_ptr<Application> Registry::Impl::createApp(const AppID& appid)
+{
+    for (const auto& appStore : appStores())
+    {
+        if (appStore->hasAppId(appid))
+        {
+            return appStore->create(appid);
+        }
+    }
+
+    throw std::runtime_error("Invalid app ID: " + std::string(appid));
+}
+
+std::shared_ptr<Helper> Registry::Impl::createHelper(const Helper::Type& type, const AppID& appid)
+{
+    /* Only one type today */
+    return std::make_shared<helper_impls::Base>(type, appid, _registry.impl);
 }
 
 }  // namespace app_launch
