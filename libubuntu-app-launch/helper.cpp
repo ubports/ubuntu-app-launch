@@ -427,6 +427,42 @@ std::shared_ptr<Helper> Helper::create(Type type, AppID appid, std::shared_ptr<R
     return std::make_shared<helper_impls::Base>(type, appid, registry);
 }
 
+bool Helper::operator==(const Helper& b) const
+{
+    auto ja = dynamic_cast<const helper_impls::Base*>(this);
+    auto jb = dynamic_cast<const helper_impls::Base*>(&b);
+
+    return ja->appId() == jb->appId() && ja->getType() == jb->getType();
+}
+
+bool Helper::operator!=(const Helper& b) const
+{
+    auto ja = dynamic_cast<const helper_impls::Base*>(this);
+    auto jb = dynamic_cast<const helper_impls::Base*>(&b);
+
+    return ja->appId() != jb->appId() || ja->getType() != jb->getType();
+}
+
+bool Helper::Instance::operator==(const Helper::Instance& b) const
+{
+    auto ja = dynamic_cast<const helper_impls::BaseInstance*>(this);
+    auto jb = dynamic_cast<const helper_impls::BaseInstance*>(&b);
+
+    return ja->getAppId() == jb->getAppId() &&         /* AppID */
+           ja->getType() == jb->getType() &&           /* Type */
+           ja->getInstanceId() == jb->getInstanceId(); /* Instance ID */
+}
+
+bool Helper::Instance::operator!=(const Helper::Instance& b) const
+{
+    auto ja = dynamic_cast<const helper_impls::BaseInstance*>(this);
+    auto jb = dynamic_cast<const helper_impls::BaseInstance*>(&b);
+
+    return ja->getAppId() != jb->getAppId() ||         /* AppID */
+           ja->getType() != jb->getType() ||           /* Type */
+           ja->getInstanceId() != jb->getInstanceId(); /* Instance ID */
+}
+
 /* Hardcore socket stuff */
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -480,42 +516,6 @@ void Helper::setExec(std::vector<std::string> exec)
             throw std::runtime_error{"Error writing to systemd-helper-helper socket"};
         }
     }
-}
-
-bool Helper::operator==(const Helper& b) const
-{
-    auto ja = dynamic_cast<const helper_impls::Base*>(this);
-    auto jb = dynamic_cast<const helper_impls::Base*>(&b);
-
-    return ja->appId() == jb->appId() && ja->getType() == jb->getType();
-}
-
-bool Helper::operator!=(const Helper& b) const
-{
-    auto ja = dynamic_cast<const helper_impls::Base*>(this);
-    auto jb = dynamic_cast<const helper_impls::Base*>(&b);
-
-    return ja->appId() != jb->appId() || ja->getType() != jb->getType();
-}
-
-bool Helper::Instance::operator==(const Helper::Instance& b) const
-{
-    auto ja = dynamic_cast<const helper_impls::BaseInstance*>(this);
-    auto jb = dynamic_cast<const helper_impls::BaseInstance*>(&b);
-
-    return ja->getAppId() == jb->getAppId() &&         /* AppID */
-           ja->getType() == jb->getType() &&           /* Type */
-           ja->getInstanceId() == jb->getInstanceId(); /* Instance ID */
-}
-
-bool Helper::Instance::operator!=(const Helper::Instance& b) const
-{
-    auto ja = dynamic_cast<const helper_impls::BaseInstance*>(this);
-    auto jb = dynamic_cast<const helper_impls::BaseInstance*>(&b);
-
-    return ja->getAppId() != jb->getAppId() ||         /* AppID */
-           ja->getType() != jb->getType() ||           /* Type */
-           ja->getInstanceId() != jb->getInstanceId(); /* Instance ID */
 }
 
 }  // namespace app_launch
