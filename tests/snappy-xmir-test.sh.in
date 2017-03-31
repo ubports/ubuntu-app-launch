@@ -2,6 +2,10 @@
 
 set -ex
 
+# TODO: Remove these with socket activation
+export GDK_BACKEND=foo
+export QT_QPA_PLATFORM=bar
+
 # Unset MIR_SOCKET as we might be in an environment it exists in
 
 export MIR_SOCKET=
@@ -28,3 +32,5 @@ export MIR_SOCKET="/this/is/a/socket"
 export UBUNTU_APP_LAUNCH_SNAPPY_XMIR_HELPER="@CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-helper-long.sh"
 
 @CMAKE_BINARY_DIR@/utils/snappy-xmir "this-is-a-really-really-really_long_appid-that-we-shouldnt-reallyhave_13523432324235.234.234.234234+foo" @CMAKE_CURRENT_SOURCE_DIR@/snappy-xmir-test-check.sh
+
+exit 0

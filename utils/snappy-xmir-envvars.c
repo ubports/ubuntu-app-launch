@@ -98,6 +98,10 @@ main (int argc, char * argv[])
 	snprintf(mypid, 16, "%ld", (long)getpid());
 	copyenv(socketfd, "UBUNTU_APP_LAUNCH_SNAPPY_XMIR_ENVVARS_PID", mypid);
 
+	/* TODO: See xmir-helper */
+	copyenv(socketfd, "GDK_BACKEND", getenv("GDK_BACKEND"));
+	copyenv(socketfd, "QT_QPA_PLATFORM", getenv("QT_QPA_PLATFORM"));
+
 	/* Close the socket */
 	close(socketfd);
 

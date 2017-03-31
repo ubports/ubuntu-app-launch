@@ -55,15 +55,6 @@ main (int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 
-	/* TODO: Forcing backends shouldn't be done */
-	/* Here we're forcing Qt and GTK to use the X11 backends until
-	 * everything can be fixed with probing and all that. It really
-	 * kinda sucks but it's the closest we're gonna get to 'just working'
-	 * in the near term. Please kill this code sometime. */
-	setenv("GDK_BACKEND", "x11", 1);
-	setenv("QT_QPA_PLATFORM", "xcb", 1);
-	/* end: code that should die */
-
 	char * appid = argv[1];
 
 	/* Build Socket Name */
