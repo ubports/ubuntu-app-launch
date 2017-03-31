@@ -86,7 +86,7 @@ public:
     static std::shared_ptr<Helper> create(Type type, AppID appid, std::shared_ptr<Registry> registry);
 
     /** Get the AppID for this helper */
-    virtual AppID appId() = 0;
+    virtual AppID appId() const = 0;
 
     /** Running instance of a a Helper */
     class Instance
@@ -101,6 +101,9 @@ public:
 
         /** Stop a running helper */
         virtual void stop() = 0;
+
+        bool operator==(const Instance& b) const;
+        bool operator!=(const Instance& b) const;
     };
 
     /** Check to see if there are any instances of this untrusted helper */
@@ -128,6 +131,9 @@ public:
         \param exec The exec line to use for the helper with the AppID given
     */
     static void setExec(std::vector<std::string> exec);
+
+    bool operator==(const Helper& b) const;
+    bool operator!=(const Helper& b) const;
 };
 
 }  // namespace app_launch

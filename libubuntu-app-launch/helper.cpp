@@ -49,13 +49,15 @@ namespace helper_impls
  * Instance
  **********************/
 
-BaseInstance::BaseInstance(const std::shared_ptr<jobs::instance::Base>& inst)
+BaseInstance::BaseInstance(const Helper::Type& type, const std::shared_ptr<jobs::instance::Base>& inst)
     : impl{inst}
+    , type_(type)
 {
 }
 
-BaseInstance::BaseInstance(const std::shared_ptr<Application::Instance>& inst)
+BaseInstance::BaseInstance(const Helper::Type& type, const std::shared_ptr<Application::Instance>& inst)
     : impl{std::dynamic_pointer_cast<jobs::instance::Base>(inst)}
+    , type_(type)
 {
 }
 
@@ -80,7 +82,7 @@ Base::Base(const Helper::Type& type, const AppID& appid, const std::shared_ptr<R
 {
 }
 
-AppID Base::appId()
+AppID Base::appId() const
 {
     return _appid;
 }
@@ -95,8 +97,9 @@ std::vector<std::shared_ptr<Helper::Instance>> Base::instances()
     auto insts = _registry->impl->jobs->instances(_appid, _type.value());
     std::vector<std::shared_ptr<Helper::Instance>> wrapped{insts.size()};
 
-    std::transform(insts.begin(), insts.end(), wrapped.begin(),
-                   [](std::shared_ptr<jobs::instance::Base>& inst) { return std::make_shared<BaseInstance>(inst); });
+    std::transform(insts.begin(), insts.end(), wrapped.begin(), [this](std::shared_ptr<jobs::instance::Base>& inst) {
+        return std::make_shared<BaseInstance>(_type, inst);
+    });
 
     return wrapped;
 }
@@ -106,7 +109,7 @@ std::shared_ptr<Helper::Instance> Base::existingInstance(const std::string& inst
 {
     auto appinst = _registry->impl->jobs->existing(_appid, _type.value(), instanceid, {});
 
-    return std::make_shared<BaseInstance>(appinst);
+    return std::make_shared<BaseInstance>(_type, appinst);
 }
 
 std::string genInstanceId()
@@ -212,8 +215,10 @@ std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
     auto defaultenv = defaultEnv();
     std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [defaultenv]() { return defaultenv; };
 
-    return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
-        _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
+    return std::make_shared<BaseInstance>(
+        _type,
+        _registry->impl->jobs->launch(_appid, _type.value(), genInstanceId(), appURL(urls),
+                                      jobs::manager::launchMode::STANDARD, envfunc));
 }
 
 class MirFDProxy
@@ -404,8 +409,10 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
     proxy->setTimeout(
         _registry->impl->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); }));
 
-    return std::make_shared<BaseInstance>(_registry->impl->jobs->launch(
-        _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
+    return std::make_shared<BaseInstance>(
+        _type,
+        _registry->impl->jobs->launch(_appid, _type.value(), genInstanceId(), appURL(urls),
+                                      jobs::manager::launchMode::STANDARD, envfunc));
 }
 
 }  // namespace helper_impl
@@ -473,6 +480,42 @@ void Helper::setExec(std::vector<std::string> exec)
             throw std::runtime_error{"Error writing to systemd-helper-helper socket"};
         }
     }
+}
+
+bool Helper::operator==(const Helper& b) const
+{
+    auto ja = dynamic_cast<const helper_impls::Base*>(this);
+    auto jb = dynamic_cast<const helper_impls::Base*>(&b);
+
+    return ja->appId() == jb->appId() && ja->getType() == jb->getType();
+}
+
+bool Helper::operator!=(const Helper& b) const
+{
+    auto ja = dynamic_cast<const helper_impls::Base*>(this);
+    auto jb = dynamic_cast<const helper_impls::Base*>(&b);
+
+    return ja->appId() != jb->appId() || ja->getType() != jb->getType();
+}
+
+bool Helper::Instance::operator==(const Helper::Instance& b) const
+{
+    auto ja = dynamic_cast<const helper_impls::BaseInstance*>(this);
+    auto jb = dynamic_cast<const helper_impls::BaseInstance*>(&b);
+
+    return ja->getAppId() == jb->getAppId() &&         /* AppID */
+           ja->getType() == jb->getType() &&           /* Type */
+           ja->getInstanceId() == jb->getInstanceId(); /* Instance ID */
+}
+
+bool Helper::Instance::operator!=(const Helper::Instance& b) const
+{
+    auto ja = dynamic_cast<const helper_impls::BaseInstance*>(this);
+    auto jb = dynamic_cast<const helper_impls::BaseInstance*>(&b);
+
+    return ja->getAppId() != jb->getAppId() ||         /* AppID */
+           ja->getType() != jb->getType() ||           /* Type */
+           ja->getInstanceId() != jb->getInstanceId(); /* Instance ID */
 }
 
 }  // namespace app_launch
