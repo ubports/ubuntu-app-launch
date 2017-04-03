@@ -54,6 +54,19 @@ public:
 
     /* Application Creation */
     MOCK_METHOD1(create, std::shared_ptr<ubuntu::app_launch::app_impls::Base>(const ubuntu::app_launch::AppID&));
+
+    void mock_signalAppAdded(const std::shared_ptr<ubuntu::app_launch::Application>& app)
+    {
+        appAdded_(app);
+    }
+    void mock_signalAppRemoved(const ubuntu::app_launch::AppID& appid)
+    {
+        appRemoved_(appid);
+    }
+    void mock_signalAppInfoChanged(const std::shared_ptr<ubuntu::app_launch::Application>& app)
+    {
+        infoChanged_(app);
+    }
 };
 
 class MockApp : public ubuntu::app_launch::app_impls::Base

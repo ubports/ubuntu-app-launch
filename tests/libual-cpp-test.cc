@@ -44,6 +44,7 @@
 #include "snapd-mock.h"
 #include "spew-master.h"
 #include "systemd-mock.h"
+#include "test-directory.h"
 #include "zg-mock.h"
 
 #define LOCAL_SNAPD_TEST_SOCKET (SNAPD_TEST_SOCKET "-libual-cpp-test")
@@ -1152,6 +1153,46 @@ TEST_F(LibUAL, MultiPause)
                                  [](const int& acc, SpewMaster& spew) { return acc + spew.dataCnt(); }));
 
     g_spawn_command_line_sync("rm -rf " CMAKE_BINARY_DIR "/libual-proc", NULL, NULL, NULL, NULL);
+}
+
+TEST_F(LibUAL, AppInfoSignals)
+{
+    /* Setup the stores mock */
+    auto mockstore = std::make_shared<MockStore>(*registry);
+    registry =
+        std::make_shared<RegistryMock>(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>>{mockstore},
+                                       std::shared_ptr<ubuntu::app_launch::jobs::manager::Base>{});
+
+    /* Build an app */
+    auto singleappid = ubuntu::app_launch::AppID::find(registry, "single");
+    auto myapp = std::make_shared<MockApp>(singleappid, registry->impl);
+
+    /* Setup an app added signal handler */
+    std::promise<ubuntu::app_launch::AppID> addedAppId;
+    ubuntu::app_launch::Registry::appAdded(registry).connect(
+        [&](const std::shared_ptr<ubuntu::app_launch::Application>& app) { addedAppId.set_value(app->appId()); });
+
+    mockstore->mock_signalAppAdded(myapp);
+
+    EXPECT_EVENTUALLY_FUTURE_EQ(singleappid, addedAppId.get_future());
+
+    /* Setup an info changed signal handler */
+    std::promise<ubuntu::app_launch::AppID> changedAppId;
+    ubuntu::app_launch::Registry::appInfoUpdated(registry).connect(
+        [&](const std::shared_ptr<ubuntu::app_launch::Application>& app) { changedAppId.set_value(app->appId()); });
+
+    mockstore->mock_signalAppInfoChanged(myapp);
+
+    EXPECT_EVENTUALLY_FUTURE_EQ(singleappid, changedAppId.get_future());
+
+    /* Setup an app removed signal handler */
+    std::promise<ubuntu::app_launch::AppID> removedAppId;
+    ubuntu::app_launch::Registry::appRemoved(registry).connect(
+        [&](const ubuntu::app_launch::AppID& appid) { removedAppId.set_value(appid); });
+
+    mockstore->mock_signalAppRemoved(singleappid);
+
+    EXPECT_EVENTUALLY_FUTURE_EQ(singleappid, removedAppId.get_future());
 }
 
 TEST_F(LibUAL, OOMSet)
