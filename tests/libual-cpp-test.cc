@@ -598,6 +598,27 @@ TEST_F(LibUAL, ApplicationList)
     EXPECT_EQ("unity8-package_foo_x123", (std::string)apps.back()->appId());
 }
 
+TEST_F(LibUAL, Equality)
+{
+    auto appid = ubuntu::app_launch::AppID::find(registry, "single");
+
+    auto black = std::make_shared<MockApp>(appid, registry->impl);
+    auto white = std::make_shared<MockApp>(appid, registry->impl);
+
+    /* The outside isn't equal */
+    EXPECT_NE(black, white);
+
+    /* The inside is */
+    EXPECT_EQ(*black, *white);
+
+    auto multiappid = ubuntu::app_launch::AppID::find(registry, "multiple");
+
+    auto cat = std::make_shared<MockApp>(appid, registry->impl);
+    auto dog = std::make_shared<MockApp>(multiappid, registry->impl);
+
+    EXPECT_NE(*cat, *dog);
+}
+
 TEST_F(LibUAL, StartingResponses)
 {
     /* Get Bus */
