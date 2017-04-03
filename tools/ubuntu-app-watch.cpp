@@ -75,12 +75,12 @@ int main(int argc, char* argv[])
         std::cout << std::endl;
     });
     registry.appAdded().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app) {
-        std::cout << "Added:   " << std::string{app->appId()};
+        std::cout << "Added:   " << std::string{app->appId()} << std::endl;
     });
     registry.appRemoved().connect(
-        [](const ubuntu::app_launch::AppID& appid) { std::cout << "Removed: " << std::string{appid}; });
+        [](const ubuntu::app_launch::AppID& appid) { std::cout << "Removed: " << std::string{appid} << std::endl; });
     registry.appInfoUpdated().connect([](const std::shared_ptr<ubuntu::app_launch::Application>& app) {
-        std::cout << "Updated: " << std::string{app->appId()};
+        std::cout << "Updated: " << std::string{app->appId()} << std::endl;
     });
 
     std::signal(SIGTERM, [](int signal) -> void { retval.set_value(EXIT_SUCCESS); });
