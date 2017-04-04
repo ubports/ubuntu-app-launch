@@ -76,10 +76,8 @@ private:
 
     /** Connection to the User DBus bus */
     std::shared_ptr<GDBusConnection> userbus_;
-    /** A flag to see if we've already connected or not */
-    std::once_flag userbus_flag;
-    /** Get the user bus and ensure we've got it already */
-    std::shared_ptr<GDBusConnection>& get_userbus();
+    /** Setup the bus and all the details in it */
+    void setupUserbus(const std::shared_ptr<Registry::Impl>& reg);
 
     core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStarted;
     core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStopped;
