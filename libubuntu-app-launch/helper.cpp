@@ -92,7 +92,7 @@ bool Base::hasInstances()
 
 std::vector<std::shared_ptr<Helper::Instance>> Base::instances()
 {
-    auto insts = registry_->jobs->instances(_appid, _type.value());
+    auto insts = registry_->jobs()->instances(_appid, _type.value());
     std::vector<std::shared_ptr<Helper::Instance>> wrapped{insts.size()};
 
     std::transform(insts.begin(), insts.end(), wrapped.begin(),
@@ -104,7 +104,7 @@ std::vector<std::shared_ptr<Helper::Instance>> Base::instances()
 /** Find an instance that we already know the ID of */
 std::shared_ptr<Helper::Instance> Base::existingInstance(const std::string& instanceid)
 {
-    auto appinst = registry_->jobs->existing(_appid, _type.value(), instanceid, {});
+    auto appinst = registry_->jobs()->existing(_appid, _type.value(), instanceid, {});
 
     return std::make_shared<BaseInstance>(appinst);
 }
@@ -212,8 +212,8 @@ std::shared_ptr<Helper::Instance> Base::launch(std::vector<Helper::URL> urls)
     auto defaultenv = defaultEnv();
     std::function<std::list<std::pair<std::string, std::string>>()> envfunc = [defaultenv]() { return defaultenv; };
 
-    return std::make_shared<BaseInstance>(registry_->jobs->launch(_appid, _type.value(), genInstanceId(), appURL(urls),
-                                                                  jobs::manager::launchMode::STANDARD, envfunc));
+    return std::make_shared<BaseInstance>(registry_->jobs()->launch(
+        _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
 }
 
 class MirFDProxy
@@ -403,8 +403,8 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
        seconds. And then it'll be dropped. */
     proxy->setTimeout(registry_->thread.timeout(std::chrono::seconds{2}, [proxy]() { g_debug("Mir Proxy Timeout"); }));
 
-    return std::make_shared<BaseInstance>(registry_->jobs->launch(_appid, _type.value(), genInstanceId(), appURL(urls),
-                                                                  jobs::manager::launchMode::STANDARD, envfunc));
+    return std::make_shared<BaseInstance>(registry_->jobs()->launch(
+        _appid, _type.value(), genInstanceId(), appURL(urls), jobs::manager::launchMode::STANDARD, envfunc));
 }
 
 }  // namespace helper_impl
@@ -415,7 +415,7 @@ std::shared_ptr<Helper::Instance> Base::launch(MirPromptSession* session, std::v
 
 std::shared_ptr<Helper> Helper::create(Type type, AppID appid, std::shared_ptr<Registry> registry)
 {
-    return registry->impl->createHelper(type, appid);
+    return registry->impl->createHelper(type, appid, registry->impl);
 }
 
 /* Hardcore socket stuff */

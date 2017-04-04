@@ -32,27 +32,19 @@ namespace ubuntu
 namespace app_launch
 {
 
-Registry::Impl::Impl(Registry& registry)
-    : Impl(registry, app_store::Base::allAppStores(registry), jobs::manager::Base::determineFactory(registry))
-{
-}
-
-Registry::Impl::Impl(Registry& registry,
-                     std::list<std::shared_ptr<app_store::Base>> appStores,
-                     std::shared_ptr<jobs::manager::Base> jobEngine)
+Registry::Impl::Impl()
     : thread([]() {},
              [this]() {
                  zgLog_.reset();
-                 jobs.reset();
+                 jobs_.reset();
 
                  if (_dbus)
                      g_dbus_connection_flush_sync(_dbus.get(), nullptr, nullptr);
                  _dbus.reset();
              })
-    , jobs(jobEngine)
-    , _registry{registry}
-    , _iconFinders()
-    , _appStores(appStores)
+    , jobs_{}
+    , _iconFinders{}
+    , _appStores{}
 {
     auto cancel = thread.getCancellable();
     _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>(
@@ -149,7 +141,7 @@ void Registry::Impl::zgSendEvent(AppID appid, const std::string& eventtype)
     });
 }
 
-std::shared_ptr<IconFinder> Registry::Impl::getIconFinder(std::string basePath)
+std::shared_ptr<IconFinder>& Registry::Impl::getIconFinder(std::string basePath)
 {
     if (_iconFinders.find(basePath) == _iconFinders.end())
     {
@@ -237,10 +229,12 @@ std::shared_ptr<Application> Registry::Impl::createApp(const AppID& appid)
     throw std::runtime_error("Invalid app ID: " + std::string(appid));
 }
 
-std::shared_ptr<Helper> Registry::Impl::createHelper(const Helper::Type& type, const AppID& appid)
+std::shared_ptr<Helper> Registry::Impl::createHelper(const Helper::Type& type,
+                                                     const AppID& appid,
+                                                     const std::shared_ptr<Registry::Impl>& sharedimpl)
 {
     /* Only one type today */
-    return std::make_shared<helper_impls::Base>(type, appid, _registry.impl);
+    return std::make_shared<helper_impls::Base>(type, appid, sharedimpl);
 }
 
 }  // namespace app_launch

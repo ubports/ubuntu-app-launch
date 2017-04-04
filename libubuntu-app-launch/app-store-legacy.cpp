@@ -31,7 +31,7 @@ namespace app_launch
 namespace app_store
 {
 
-Legacy::Legacy(const Registry& registry)
+Legacy::Legacy(const std::shared_ptr<Registry::Impl>& registry)
     : Base(registry)
 {
 }
@@ -138,6 +138,7 @@ static const std::regex desktop_remover("^(.*)\\.desktop$");
 
 std::list<std::shared_ptr<Application>> Legacy::list()
 {
+    auto reg = getReg();
     std::list<std::shared_ptr<Application>> list;
     std::unique_ptr<GList, decltype(&g_list_free)> head(g_app_info_get_all(),
                                                         [](GList* l) { g_list_free_full(l, g_object_unref); });
@@ -175,7 +176,7 @@ std::list<std::shared_ptr<Application>> Legacy::list()
 
         try
         {
-            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry_.impl);
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), reg);
             list.push_back(app);
         }
         catch (std::runtime_error& e)
@@ -189,7 +190,7 @@ std::list<std::shared_ptr<Application>> Legacy::list()
 
 std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid)
 {
-    return std::make_shared<app_impls::Legacy>(appid.appname, registry_.impl);
+    return std::make_shared<app_impls::Legacy>(appid.appname, getReg());
 }
 
 /** Turns a directory changed event from a file monitor into an
@@ -225,18 +226,20 @@ void Legacy::directoryChanged(GFile* file, GFileMonitorEvent type)
         return;
     }
 
+    auto reg = getReg();
+
     switch (type)
     {
         case G_FILE_MONITOR_EVENT_CREATED:
         {
-            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry_.impl);
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), reg);
 
             appAdded_(app);
             break;
         }
         case G_FILE_MONITOR_EVENT_CHANGED:
         {
-            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry_.impl);
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), reg);
 
             infoChanged_(app);
             break;
@@ -248,7 +251,7 @@ void Legacy::directoryChanged(GFile* file, GFileMonitorEvent type)
             {
                 /* Check to see if we've got a shadow situation and we
                  * can still build this app */
-                auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry_.impl);
+                auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), reg);
                 infoChanged_(app);
             }
             else
@@ -269,72 +272,71 @@ void Legacy::directoryChanged(GFile* file, GFileMonitorEvent type)
 void Legacy::setupMonitors()
 {
     std::call_once(monitorsSetup_, [this]() {
+        auto reg = getReg();
         monitors_ =
-            registry_.impl->thread
-                .executeOnThread<std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>>>([this]() {
-                    std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>> monitors;
+            reg->thread.executeOnThread<std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>>>([this]() {
+                std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>> monitors;
 
-                    auto monitorDir = [this](const gchar* dirname) {
-                        auto appdir = unique_gchar(g_build_filename(dirname, "applications", nullptr));
-                        auto gfile = unity::util::unique_gobject(g_file_new_for_path(appdir.get()));
+                auto monitorDir = [this](const gchar* dirname) {
+                    auto appdir = unique_gchar(g_build_filename(dirname, "applications", nullptr));
+                    auto gfile = unity::util::unique_gobject(g_file_new_for_path(appdir.get()));
 
-                        if (!g_file_query_exists(gfile.get(), nullptr))
-                        {
-                            throw std::runtime_error{std::string{"Directory '"} + appdir.get() + "' doesn't exist"};
-                        }
-
-                        if (g_file_query_file_type(gfile.get(), G_FILE_QUERY_INFO_NONE, nullptr) !=
-                            G_FILE_TYPE_DIRECTORY)
-                        {
-                            throw std::runtime_error{std::string{"'"} + appdir.get() + "' is not a directory"};
-                        }
-
-                        GError* error = nullptr;
-                        auto monitor = unity::util::unique_gobject(
-                            g_file_monitor_directory(gfile.get(), G_FILE_MONITOR_NONE, nullptr, &error));
-
-                        if (error != nullptr)
-                        {
-                            std::string message = std::string{"Unable to create file monitor: "} + error->message;
-                            g_error_free(error);
-                            throw std::runtime_error{message};
-                        }
-
-                        g_signal_connect(monitor.get(), "changed",
-                                         G_CALLBACK(+[](GFileMonitor*, GFile* file, GFile*, GFileMonitorEvent type,
-                                                        gpointer user_data) {
-                                             auto pthis = static_cast<Legacy*>(user_data);
-                                             pthis->directoryChanged(file, type);
-                                         }),
-                                         this);
-
-                        return monitor;
-                    };
-
-                    auto dirs = g_get_system_data_dirs();
-                    for (int i = 0; dirs != nullptr && dirs[i] != nullptr; i++)
+                    if (!g_file_query_exists(gfile.get(), nullptr))
                     {
-                        try
-                        {
-                            monitors.insert(monitorDir(dirs[i]));
-                        }
-                        catch (std::runtime_error& e)
-                        {
-                            g_debug("Unable to create directory monitor for system dir '%s': %s", dirs[i], e.what());
-                        }
+                        throw std::runtime_error{std::string{"Directory '"} + appdir.get() + "' doesn't exist"};
                     }
 
+                    if (g_file_query_file_type(gfile.get(), G_FILE_QUERY_INFO_NONE, nullptr) != G_FILE_TYPE_DIRECTORY)
+                    {
+                        throw std::runtime_error{std::string{"'"} + appdir.get() + "' is not a directory"};
+                    }
+
+                    GError* error = nullptr;
+                    auto monitor = unity::util::unique_gobject(
+                        g_file_monitor_directory(gfile.get(), G_FILE_MONITOR_NONE, nullptr, &error));
+
+                    if (error != nullptr)
+                    {
+                        std::string message = std::string{"Unable to create file monitor: "} + error->message;
+                        g_error_free(error);
+                        throw std::runtime_error{message};
+                    }
+
+                    g_signal_connect(
+                        monitor.get(), "changed",
+                        G_CALLBACK(+[](GFileMonitor*, GFile* file, GFile*, GFileMonitorEvent type, gpointer user_data) {
+                            auto pthis = static_cast<Legacy*>(user_data);
+                            pthis->directoryChanged(file, type);
+                        }),
+                        this);
+
+                    return monitor;
+                };
+
+                auto dirs = g_get_system_data_dirs();
+                for (int i = 0; dirs != nullptr && dirs[i] != nullptr; i++)
+                {
                     try
                     {
-                        monitors.insert(monitorDir(g_get_user_data_dir()));
+                        monitors.insert(monitorDir(dirs[i]));
                     }
                     catch (std::runtime_error& e)
                     {
-                        g_debug("Unable to create directory monitor for user data dir: %s", e.what());
+                        g_debug("Unable to create directory monitor for system dir '%s': %s", dirs[i], e.what());
                     }
+                }
 
-                    return monitors;
-                });
+                try
+                {
+                    monitors.insert(monitorDir(g_get_user_data_dir()));
+                }
+                catch (std::runtime_error& e)
+                {
+                    g_debug("Unable to create directory monitor for user data dir: %s", e.what());
+                }
+
+                return monitors;
+            });
     });
 }
 

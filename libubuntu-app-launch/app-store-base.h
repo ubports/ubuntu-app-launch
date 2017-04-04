@@ -38,7 +38,7 @@ namespace app_store
 class Base : public info_watcher::Base
 {
 public:
-    Base(const Registry& registry);
+    Base(const std::shared_ptr<Registry::Impl>& registry);
     virtual ~Base();
 
     /* Discover tools */
@@ -55,7 +55,7 @@ public:
     virtual std::shared_ptr<app_impls::Base> create(const AppID& appid) = 0;
 
     /* Static get all */
-    static std::list<std::shared_ptr<Base>> allAppStores(const Registry& registry);
+    static std::list<std::shared_ptr<Base>> allAppStores(const std::shared_ptr<Registry::Impl>& registry);
 };
 
 }  // namespace app_store

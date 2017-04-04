@@ -30,7 +30,7 @@ namespace app_launch
 namespace app_store
 {
 
-Libertine::Libertine(const Registry& registry)
+Libertine::Libertine(const std::shared_ptr<Registry::Impl>& registry)
     : Base(registry)
 {
 }
@@ -134,6 +134,7 @@ std::list<std::shared_ptr<Application>> Libertine::list()
 {
     std::list<std::shared_ptr<Application>> applist;
 
+    auto reg = getReg();
     auto containers = unique_gcharv(libertine_list_containers());
 
     for (int i = 0; containers.get()[i] != nullptr; i++)
@@ -146,7 +147,7 @@ std::list<std::shared_ptr<Application>> Libertine::list()
             try
             {
                 auto appid = AppID::parse(apps.get()[j]);
-                auto sapp = std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry_.impl);
+                auto sapp = std::make_shared<app_impls::Libertine>(appid.package, appid.appname, reg);
                 applist.emplace_back(sapp);
             }
             catch (std::runtime_error& e)
@@ -161,7 +162,7 @@ std::list<std::shared_ptr<Application>> Libertine::list()
 
 std::shared_ptr<app_impls::Base> Libertine::create(const AppID& appid)
 {
-    return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, registry_.impl);
+    return std::make_shared<app_impls::Libertine>(appid.package, appid.appname, getReg());
 }
 
 }  // namespace app_store

@@ -31,7 +31,7 @@ namespace app_store
 class Snap : public Base
 {
 public:
-    Snap(const Registry& registry);
+    Snap(const std::shared_ptr<Registry::Impl>& registry);
     virtual ~Snap();
 
     /* Discover tools */

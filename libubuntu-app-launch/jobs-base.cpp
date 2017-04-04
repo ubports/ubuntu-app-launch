@@ -43,8 +43,8 @@ namespace jobs
 namespace manager
 {
 
-Base::Base(const Registry& registry)
-    : registry_(registry)
+Base::Base(const std::shared_ptr<Registry::Impl>& registry)
+    : registry_{registry}
     , allApplicationJobs_{"application-legacy", "application-snap"}
 {
 }
@@ -55,7 +55,7 @@ Base::~Base()
 
 /** Should determine which jobs backend to use, but we only have
     one right now. */
-std::shared_ptr<Base> Base::determineFactory(const Registry& registry)
+std::shared_ptr<Base> Base::determineFactory(const std::shared_ptr<Registry::Impl>& registry)
 {
     g_debug("Building a systemd jobs manager");
     return std::make_shared<jobs::manager::SystemD>(registry);
@@ -78,8 +78,9 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
             try
             {
-                auto appId = registry_.impl->find(appid);
-                auto app = registry_.impl->createApp(appId);
+                auto reg = getReg();
+                auto appId = reg->find(appid);
+                auto app = reg->createApp(appId);
                 auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
                 sig_appStarted(app, inst);
@@ -106,8 +107,9 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
             try
             {
-                auto appId = registry_.impl->find(appid);
-                auto app = registry_.impl->createApp(appId);
+                auto reg = getReg();
+                auto appId = reg->find(appid);
+                auto app = reg->createApp(appId);
                 auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
                 sig_appStopped(app, inst);
@@ -136,8 +138,9 @@ core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Applicat
 
             try
             {
-                auto appId = registry_.impl->find(appid);
-                auto app = registry_.impl->createApp(appId);
+                auto reg = getReg();
+                auto appId = reg->find(appid);
+                auto app = reg->createApp(appId);
                 auto inst = std::dynamic_pointer_cast<app_impls::Base>(app)->findInstance(instanceid);
 
                 sig_appFailed(app, inst, reason);
@@ -203,11 +206,12 @@ core::Signal<const std::shared_ptr<Application>&,
     Base::appPaused()
 {
     std::call_once(flag_appPaused, [this]() {
-        registry_.impl->thread.executeOnThread<bool>([this]() {
-            upstartEventData* data = new upstartEventData{registry_.impl};
+        auto reg = getReg();
+        reg->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
 
             handle_appPaused = managedDBusSignalConnection(
-                g_dbus_connection_signal_subscribe(registry_.impl->_dbus.get(),     /* bus */
+                g_dbus_connection_signal_subscribe(reg->_dbus.get(),                /* bus */
                                                    nullptr,                         /* sender */
                                                    "com.canonical.UbuntuAppLaunch", /* interface */
                                                    "ApplicationPaused",             /* signal */
@@ -226,7 +230,7 @@ core::Signal<const std::shared_ptr<Application>&,
                                                        }
 
                                                        auto sparams = share_glib(g_variant_ref(params));
-                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->jobs);
+                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->jobs());
                                                        manager->pauseEventEmitted(manager->sig_appPaused, sparams, reg);
                                                    },    /* callback */
                                                    data, /* user data */
@@ -234,7 +238,7 @@ core::Signal<const std::shared_ptr<Application>&,
                                                        auto data = reinterpret_cast<upstartEventData*>(user_data);
                                                        delete data;
                                                    }), /* user data destroy */
-                registry_.impl->_dbus);
+                reg->_dbus);
 
             return true;
         });
@@ -251,11 +255,12 @@ core::Signal<const std::shared_ptr<Application>&,
     Base::appResumed()
 {
     std::call_once(flag_appResumed, [this]() {
-        registry_.impl->thread.executeOnThread<bool>([this]() {
-            upstartEventData* data = new upstartEventData{registry_.impl};
+        auto reg = getReg();
+        reg->thread.executeOnThread<bool>([this, reg]() {
+            upstartEventData* data = new upstartEventData{reg};
 
             handle_appResumed = managedDBusSignalConnection(
-                g_dbus_connection_signal_subscribe(registry_.impl->_dbus.get(),     /* bus */
+                g_dbus_connection_signal_subscribe(reg->_dbus.get(),                /* bus */
                                                    nullptr,                         /* sender */
                                                    "com.canonical.UbuntuAppLaunch", /* interface */
                                                    "ApplicationResumed",            /* signal */
@@ -274,7 +279,7 @@ core::Signal<const std::shared_ptr<Application>&,
                                                        }
 
                                                        auto sparams = share_glib(g_variant_ref(params));
-                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->jobs);
+                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->jobs());
                                                        manager->pauseEventEmitted(manager->sig_appResumed, sparams,
                                                                                   reg);
                                                    },    /* callback */
@@ -283,7 +288,7 @@ core::Signal<const std::shared_ptr<Application>&,
                                                        auto data = reinterpret_cast<upstartEventData*>(user_data);
                                                        delete data;
                                                    }), /* user data destroy */
-                registry_.impl->_dbus);
+                reg->_dbus);
 
             return true;
         });
@@ -310,8 +315,9 @@ core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Insta
 
                 try
                 {
-                    auto appId = registry_.impl->find(appid);
-                    auto helper = registry_.impl->createHelper(type, appId);
+                    auto reg = getReg();
+                    auto appId = reg->find(appid);
+                    auto helper = reg->createHelper(type, appId, reg);
                     auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
 
                     (*sig_helpersStarted.at(type.value()))(helper, inst);
@@ -348,8 +354,9 @@ core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Insta
 
                 try
                 {
+                    auto reg = getReg();
                     auto appId = ubuntu::app_launch::AppID::parse(appid);
-                    auto helper = registry_.impl->createHelper(type, appId);
+                    auto helper = reg->createHelper(type, appId, reg);
                     auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
 
                     (*sig_helpersStopped.at(type.value()))(helper, inst);
@@ -386,8 +393,9 @@ core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Insta
 
             try
             {
+                auto reg = getReg();
                 auto appId = ubuntu::app_launch::AppID::parse(appid);
-                auto helper = registry_.impl->createHelper(type, appId);
+                auto helper = reg->createHelper(type, appId, reg);
                 auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
 
                 (*sig_helpersFailed.at(type.value()))(helper, inst, reason);
@@ -455,10 +463,11 @@ guint Base::managerSignalHelper(const std::string& signalname,
                                                    const std::string&,
                                                    const std::shared_ptr<GVariant>&)> responsefunc)
 {
-    managerEventData* focusdata = new managerEventData{registry_.impl, responsefunc};
+    auto reg = getReg();
+    managerEventData* focusdata = new managerEventData{reg, responsefunc};
 
     return g_dbus_connection_signal_subscribe(
-        registry_.impl->_dbus.get(),     /* bus */
+        reg->_dbus.get(),                /* bus */
         nullptr,                         /* sender */
         "com.canonical.UbuntuAppLaunch", /* interface */
         signalname.c_str(),              /* signal */
@@ -478,7 +487,7 @@ guint Base::managerSignalHelper(const std::string& signalname,
 
             /* If we're still conneted and the manager has been cleared
                we'll just be a no-op */
-            auto ljobs = std::dynamic_pointer_cast<Base>(reg->jobs);
+            auto ljobs = std::dynamic_pointer_cast<Base>(reg->jobs());
             if (!ljobs->manager_)
             {
                 return;
@@ -524,7 +533,9 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
     manager_ = manager;
 
     std::call_once(flag_managerSignals, [this]() {
-        if (!registry_.impl->thread.executeOnThread<bool>([this]() {
+        auto reg = getReg();
+
+        if (!reg->thread.executeOnThread<bool>([this, reg]() {
                 handle_managerSignalFocus = managedDBusSignalConnection(
                     managerSignalHelper(
                         "UnityFocusRequest",
@@ -533,23 +544,23 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                            const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
                            const std::shared_ptr<GVariant>& params) {
                             /* Nothing to do today */
-                            std::dynamic_pointer_cast<Base>(reg->jobs)->manager_->focusRequest(app, instance,
-                                                                                               [](bool response) {
-                                                                                                   /* NOTE: We have no
-                                                                                                      clue what thread
-                                                                                                      this is gonna be
-                                                                                                      executed on, but
-                                                                                                      since we're just
-                                                                                                      talking to the
-                                                                                                      GDBus
-                                                                                                      thread it isn't an
-                                                                                                      issue today. Be
-                                                                                                      careful in
-                                                                                                      changing
-                                                                                                      this code. */
-                                                                                               });
+                            std::dynamic_pointer_cast<Base>(reg->jobs())
+                                ->manager_->focusRequest(app, instance, [](bool response) {
+                                    /* NOTE: We have no
+                                       clue what thread
+                                       this is gonna be
+                                       executed on, but
+                                       since we're just
+                                       talking to the
+                                       GDBus
+                                       thread it isn't an
+                                       issue today. Be
+                                       careful in
+                                       changing
+                                       this code. */
+                                });
                         }),
-                    registry_.impl->_dbus);
+                    reg->_dbus);
                 handle_managerSignalStarting = managedDBusSignalConnection(
                     managerSignalHelper(
                         "UnityStartingBroadcast",
@@ -558,8 +569,8 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                            const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
                            const std::shared_ptr<GVariant>& params) {
 
-                            std::dynamic_pointer_cast<Base>(reg->jobs)->manager_->startingRequest(
-                                app, instance, [conn, sender, params](bool response) {
+                            std::dynamic_pointer_cast<Base>(reg->jobs())
+                                ->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
                                     /* NOTE: We have no clue what thread this is gonna be
                                        executed on, but since we're just talking to the GDBus
                                        thread it isn't an issue today. Be careful in changing
@@ -575,7 +586,7 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                                     }
                                 });
                         }),
-                    registry_.impl->_dbus);
+                    reg->_dbus);
                 handle_managerSignalResume = managedDBusSignalConnection(
                     managerSignalHelper(
                         "UnityResumeRequest",
@@ -583,8 +594,8 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                            const std::shared_ptr<Application::Instance>& instance,
                            const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
                            const std::shared_ptr<GVariant>& params) {
-                            std::dynamic_pointer_cast<Base>(reg->jobs)->manager_->resumeRequest(
-                                app, instance, [conn, sender, params](bool response) {
+                            std::dynamic_pointer_cast<Base>(reg->jobs())
+                                ->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
                                     /* NOTE: We have no clue what thread this is gonna be
                                        executed on, but since we're just talking to the GDBus
                                        thread it isn't an issue today. Be careful in changing
@@ -600,7 +611,7 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                                     }
                                 });
                         }),
-                    registry_.impl->_dbus);
+                    reg->_dbus);
 
                 return true;
             }))
@@ -621,12 +632,13 @@ void Base::clearManager()
     on the appids associated with the application jobs */
 std::list<std::shared_ptr<Application>> Base::runningApps()
 {
+    auto reg = getReg();
     auto appids = runningAppIds(allApplicationJobs_);
 
     std::list<std::shared_ptr<Application>> apps;
     for (const auto& appid : appids)
     {
-        auto id = registry_.impl->find(appid);
+        auto id = reg->find(appid);
         if (id.empty())
         {
             g_debug("Unable to handle AppID: %s", appid.c_str());
@@ -635,7 +647,7 @@ std::list<std::shared_ptr<Application>> Base::runningApps()
 
         try
         {
-            apps.emplace_back(registry_.impl->createApp(id));
+            apps.emplace_back(reg->createApp(id));
         }
         catch (std::runtime_error& e)
         {
@@ -650,19 +662,20 @@ std::list<std::shared_ptr<Application>> Base::runningApps()
     on the appids associated with the application jobs */
 std::list<std::shared_ptr<Helper>> Base::runningHelpers(const Helper::Type& type)
 {
+    auto reg = getReg();
     auto appids = runningAppIds({type.value()});
 
     std::list<std::shared_ptr<Helper>> helpers;
     for (const auto& appid : appids)
     {
-        auto id = registry_.impl->find(appid);
+        auto id = reg->find(appid);
         if (id.empty())
         {
             g_debug("Unable to handle AppID: %s", appid.c_str());
             continue;
         }
 
-        helpers.emplace_back(registry_.impl->createHelper(type, id));
+        helpers.emplace_back(reg->createHelper(type, id, reg));
     }
 
     return helpers;

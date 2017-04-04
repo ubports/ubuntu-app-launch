@@ -29,7 +29,7 @@ namespace app_launch
 namespace app_store
 {
 
-Base::Base(const Registry& registry)
+Base::Base(const std::shared_ptr<Registry::Impl>& registry)
     : info_watcher::Base(registry)
 {
 }
@@ -38,7 +38,7 @@ Base::~Base()
 {
 }
 
-std::list<std::shared_ptr<Base>> Base::allAppStores(const Registry& registry)
+std::list<std::shared_ptr<Base>> Base::allAppStores(const std::shared_ptr<Registry::Impl>& registry)
 {
     return {
         std::make_shared<Legacy>(registry) /* Legacy */

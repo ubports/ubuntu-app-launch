@@ -139,7 +139,7 @@ protected:
 TEST_F(ListApps, ListLegacy)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
-    ubuntu::app_launch::app_store::Legacy store(*registry);
+    ubuntu::app_launch::app_store::Legacy store(registry->impl);
     auto apps = store.list();
 
     printApps(apps);
@@ -154,7 +154,7 @@ TEST_F(ListApps, ListLegacy)
 TEST_F(ListApps, ListLibertine)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
-    ubuntu::app_launch::app_store::Libertine store(*registry);
+    ubuntu::app_launch::app_store::Libertine store(registry->impl);
     auto apps = store.list();
 
     printApps(apps);
@@ -197,7 +197,7 @@ TEST_F(ListApps, ListSnap)
                     interfaces, x11Package, x11Package, x11Package}};                  /* x11 check */
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
 
-    ubuntu::app_launch::app_store::Snap store(*registry);
+    ubuntu::app_launch::app_store::Snap store(registry->impl);
     auto apps = store.list();
 
     printApps(apps);
