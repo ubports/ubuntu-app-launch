@@ -47,7 +47,7 @@ protected:
 
 TEST_F(AppStoreLegacy, Init)
 {
-    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(registry->impl);
     store.reset();
 }
 
@@ -63,7 +63,7 @@ TEST_F(AppStoreLegacy, FindApp)
                          {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
                      }}});
 
-    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(registry->impl);
 
     EXPECT_TRUE(store->verifyAppname(ubuntu::app_launch::AppID::Package::from_raw({}),
                                      ubuntu::app_launch::AppID::AppName::from_raw("testapp")));
@@ -81,7 +81,7 @@ TEST_F(AppStoreLegacy, RemoveApp)
                          {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
                      }}});
 
-    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(registry->impl);
 
     std::promise<std::string> removedAppId;
     store->appRemoved().connect([&](const ubuntu::app_launch::AppID &appid) { removedAppId.set_value(appid); });
@@ -94,7 +94,7 @@ TEST_F(AppStoreLegacy, RemoveApp)
 TEST_F(AppStoreLegacy, AddedApp)
 {
     TestDirectory testdir;
-    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(registry->impl);
 
     std::promise<std::string> addedAppId;
     store->appAdded().connect(
@@ -134,7 +134,7 @@ TEST_F(AppStoreLegacy, ShadowDelete)
                           {G_KEY_FILE_DESKTOP_KEY_EXEC, "foo"},
                       }}});
 
-    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(*registry);
+    auto store = std::make_shared<ubuntu::app_launch::app_store::Legacy>(registry->impl);
 
     std::promise<std::string> updatedAppId;
     store->infoChanged().connect(

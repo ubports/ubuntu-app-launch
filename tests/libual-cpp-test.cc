@@ -1158,7 +1158,7 @@ TEST_F(LibUAL, MultiPause)
 TEST_F(LibUAL, AppInfoSignals)
 {
     /* Setup the stores mock */
-    auto mockstore = std::make_shared<MockStore>(*registry);
+    auto mockstore = std::make_shared<MockStore>(registry->impl);
     registry =
         std::make_shared<RegistryMock>(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>>{mockstore},
                                        std::shared_ptr<ubuntu::app_launch::jobs::manager::Base>{});
