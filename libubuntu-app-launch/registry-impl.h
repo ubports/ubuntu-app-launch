@@ -89,9 +89,12 @@ public:
 
     std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher()
     {
-        /* std::call_once(zgWatcherOnce_, [this] { zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(); });  TODO
-         */
         return zgWatcher_;
+    }
+
+    void setZgWatcher(const std::shared_ptr<info_watcher::Zeitgeist>& watcher)
+    {
+        zgWatcher_ = watcher;
     }
 
     core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated();
@@ -158,11 +161,8 @@ private:
     /** List of info watchers along with a signal handle to our connection to their update signal */
     std::list<std::pair<std::shared_ptr<info_watcher::Base>, core::ScopedConnection>> infoWatchers_;
 
-protected:
     /** ZG Info Watcher */
     std::shared_ptr<info_watcher::Zeitgeist> zgWatcher_;
-    /** Init checker for ZG Watcher */
-    std::once_flag zgWatcherOnce_;
 };
 
 }  // namespace app_launch

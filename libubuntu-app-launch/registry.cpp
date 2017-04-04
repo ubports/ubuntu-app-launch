@@ -21,6 +21,7 @@
 #include <numeric>
 #include <regex>
 
+#include "info-watcher-zg.h"
 #include "jobs-base.h"
 #include "registry-impl.h"
 #include "registry.h"
@@ -35,6 +36,7 @@ Registry::Registry()
 {
     impl->setJobs(jobs::manager::Base::determineFactory(impl));
     impl->setAppStores(app_store::Base::allAppStores(impl));
+    impl->setZgWatcher(std::make_shared<info_watcher::Zeitgeist>(impl));
 }
 
 Registry::Registry(const std::shared_ptr<Impl>& inimpl)
