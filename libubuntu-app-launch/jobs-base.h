@@ -45,7 +45,7 @@ public:
          const std::string& job,
          const std::string& instance,
          const std::vector<Application::URL>& urls,
-         const std::shared_ptr<Registry>& registry);
+         const std::shared_ptr<Registry::Impl>& registry);
     virtual ~Base() = default;
 
     bool isRunning() override;
@@ -74,10 +74,10 @@ protected:
         should look at perhaps changing that. */
     std::vector<Application::URL> urls_;
     /** A link to the registry we're using for connections */
-    std::shared_ptr<Registry> registry_;
+    std::shared_ptr<Registry::Impl> registry_;
 
     std::vector<pid_t> forAllPids(std::function<void(pid_t)> eachPid);
-    static void pidListToDbus(const std::shared_ptr<Registry>& reg,
+    static void pidListToDbus(const std::shared_ptr<Registry::Impl>& reg,
                               const AppID& appid,
                               const std::string& instanceid,
                               const std::vector<pid_t>& pids,
@@ -104,7 +104,7 @@ enum class launchMode
 class Base
 {
 public:
-    Base(const std::shared_ptr<Registry>& registry);
+    Base(const std::shared_ptr<Registry::Impl>& registry);
     virtual ~Base();
 
     virtual std::shared_ptr<Application::Instance> launch(
@@ -129,7 +129,7 @@ public:
 
     const std::list<std::string>& getAllApplicationJobs() const;
 
-    static std::shared_ptr<Base> determineFactory(std::shared_ptr<Registry> registry);
+    static std::shared_ptr<Base> determineFactory(const std::shared_ptr<Registry::Impl>& registry);
 
     /* Signals to apps */
     virtual core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>&
@@ -153,9 +153,8 @@ public:
         Helper::Type type);
     virtual core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& helperStopped(
         Helper::Type type);
-    virtual core::Signal<const std::shared_ptr<Helper>&,
-                         const std::shared_ptr<Helper::Instance>&,
-                         Registry::FailureType>&
+    virtual core::
+        Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
         helperFailed(Helper::Type type);
     /* Job signals from implementations */
     virtual core::Signal<const std::string&, const std::string&, const std::string&>& jobStarted() = 0;
@@ -168,19 +167,28 @@ public:
     virtual void clearManager();
 
 protected:
-    /** A link to the registry */
-    std::weak_ptr<Registry> registry_;
-
-    /** A set of all the job names used by applications */
-    std::list<std::string> allApplicationJobs_;
-
-    /** The DBus connection we're connecting to */
-    std::shared_ptr<GDBusConnection> dbus_;
+    /** Accessor function to the registry that ensures we can still
+        get it, which we always should be able to, but in case. */
+    std::shared_ptr<Registry::Impl> getReg()
+    {
+        auto reg = registry_.lock();
+        if (G_UNLIKELY(!reg))
+        {
+            throw std::runtime_error{"Jobs manager lost track of the Registry that owns it"};
+        }
+        return reg;
+    }
 
     /** Application manager instance */
     std::shared_ptr<Registry::Manager> manager_;
 
 private:
+    /** A link to the registry */
+    std::weak_ptr<Registry::Impl> registry_;
+
+    /** A set of all the job names used by applications */
+    std::list<std::string> allApplicationJobs_;
+
     /** Signal object for applications started */
     core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&> sig_appStarted;
     /** Signal object for applications stopped */
@@ -241,18 +249,17 @@ private:
                                         const std::shared_ptr<Application::Instance>&,
                                         const std::vector<pid_t>&>& signal,
                            const std::shared_ptr<GVariant>& params,
-                           const std::shared_ptr<Registry>& reg);
+                           const std::shared_ptr<Registry::Impl>& reg);
 
     static std::tuple<std::shared_ptr<Application>, std::shared_ptr<Application::Instance>> managerParams(
-        const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry>& reg);
-    static guint managerSignalHelper(const std::shared_ptr<Registry>& reg,
-                                     const std::string& signalname,
-                                     std::function<void(const std::shared_ptr<Registry>& reg,
-                                                        const std::shared_ptr<Application>& app,
-                                                        const std::shared_ptr<Application::Instance>& instance,
-                                                        const std::shared_ptr<GDBusConnection>&,
-                                                        const std::string&,
-                                                        const std::shared_ptr<GVariant>&)> responsefunc);
+        const std::shared_ptr<GVariant>& params, const std::shared_ptr<Registry::Impl>& reg);
+    guint managerSignalHelper(const std::string& signalname,
+                              std::function<void(const std::shared_ptr<Registry::Impl>& reg,
+                                                 const std::shared_ptr<Application>& app,
+                                                 const std::shared_ptr<Application::Instance>& instance,
+                                                 const std::shared_ptr<GDBusConnection>&,
+                                                 const std::string&,
+                                                 const std::shared_ptr<GVariant>&)> responsefunc);
 };
 
 }  // namespace manager

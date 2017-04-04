@@ -17,21 +17,21 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include "application-info-desktop.h"
 #include "application.h"
-#include "info-watcher.h"
-
-extern "C" {
-#include "ubuntu-app-launch.h"
-#include <gio/gio.h>
-}
-
-#pragma once
+#include "registry-impl.h"
+#include "registry.h"
 
 namespace ubuntu
 {
 namespace app_launch
 {
+namespace app_info
+{
+class Desktop;
+}
 namespace app_impls
 {
 
@@ -41,7 +41,7 @@ namespace app_impls
 class Base : public ubuntu::app_launch::Application
 {
 public:
-    Base(const std::shared_ptr<Registry>& registry);
+    Base(const std::shared_ptr<Registry::Impl>& registry);
     virtual ~Base();
 
     bool hasInstances() override;
@@ -52,7 +52,7 @@ public:
 
 protected:
     /** Pointer to the registry so we can ask it for things */
-    std::shared_ptr<Registry> _registry;
+    std::shared_ptr<Registry::Impl> registry_;
 
     static std::list<std::pair<std::string, std::string>> confinedEnv(const std::string& package,
                                                                       const std::string& pkgdir);

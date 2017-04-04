@@ -29,8 +29,8 @@
 class MockStore : public ubuntu::app_launch::app_store::Base
 {
 public:
-    MockStore()
-        : ubuntu::app_launch::app_store::Base()
+    MockStore(const std::shared_ptr<ubuntu::app_launch::Registry::Impl>& registry)
+        : ubuntu::app_launch::app_store::Base(registry)
     {
     }
 
@@ -38,32 +38,22 @@ public:
     {
     }
 
-    MOCK_METHOD2(verifyPackage,
-                 bool(const ubuntu::app_launch::AppID::Package&, const std::shared_ptr<ubuntu::app_launch::Registry>&));
-    MOCK_METHOD3(verifyAppname,
-                 bool(const ubuntu::app_launch::AppID::Package&,
-                      const ubuntu::app_launch::AppID::AppName&,
-                      const std::shared_ptr<ubuntu::app_launch::Registry>&));
-    MOCK_METHOD3(findAppname,
+    MOCK_METHOD1(verifyPackage, bool(const ubuntu::app_launch::AppID::Package&));
+    MOCK_METHOD2(verifyAppname,
+                 bool(const ubuntu::app_launch::AppID::Package&, const ubuntu::app_launch::AppID::AppName&));
+    MOCK_METHOD2(findAppname,
                  ubuntu::app_launch::AppID::AppName(const ubuntu::app_launch::AppID::Package&,
-                                                    ubuntu::app_launch::AppID::ApplicationWildcard,
-                                                    const std::shared_ptr<ubuntu::app_launch::Registry>&));
-    MOCK_METHOD3(findVersion,
+                                                    ubuntu::app_launch::AppID::ApplicationWildcard));
+    MOCK_METHOD2(findVersion,
                  ubuntu::app_launch::AppID::Version(const ubuntu::app_launch::AppID::Package&,
-                                                    const ubuntu::app_launch::AppID::AppName&,
-                                                    const std::shared_ptr<ubuntu::app_launch::Registry>&));
-    MOCK_METHOD2(hasAppId,
-                 bool(const ubuntu::app_launch::AppID&, const std::shared_ptr<ubuntu::app_launch::Registry>&));
+                                                    const ubuntu::app_launch::AppID::AppName&));
+    MOCK_METHOD1(hasAppId, bool(const ubuntu::app_launch::AppID&));
 
     /* Possible apps */
-    MOCK_METHOD1(list,
-                 std::list<std::shared_ptr<ubuntu::app_launch::Application>>(
-                     const std::shared_ptr<ubuntu::app_launch::Registry>&));
+    MOCK_METHOD0(list, std::list<std::shared_ptr<ubuntu::app_launch::Application>>());
 
     /* Application Creation */
-    MOCK_METHOD2(create,
-                 std::shared_ptr<ubuntu::app_launch::app_impls::Base>(
-                     const ubuntu::app_launch::AppID&, const std::shared_ptr<ubuntu::app_launch::Registry>&));
+    MOCK_METHOD1(create, std::shared_ptr<ubuntu::app_launch::app_impls::Base>(const ubuntu::app_launch::AppID&));
 };
 
 class MockApp : public ubuntu::app_launch::app_impls::Base
@@ -71,7 +61,7 @@ class MockApp : public ubuntu::app_launch::app_impls::Base
 public:
     ubuntu::app_launch::AppID appid_;
 
-    MockApp(const ubuntu::app_launch::AppID& appid, const std::shared_ptr<ubuntu::app_launch::Registry>& reg)
+    MockApp(const ubuntu::app_launch::AppID& appid, const std::shared_ptr<ubuntu::app_launch::Registry::Impl>& reg)
         : ubuntu::app_launch::app_impls::Base(reg)
         , appid_(appid)
     {
@@ -105,7 +95,7 @@ public:
              const std::string& job,
              const std::string& instance,
              const std::vector<ubuntu::app_launch::Application::URL>& urls,
-             const std::shared_ptr<ubuntu::app_launch::Registry>& registry)
+             const std::shared_ptr<ubuntu::app_launch::Registry::Impl>& registry)
         : ubuntu::app_launch::jobs::instance::Base(appId, job, instance, urls, registry){};
     ~MockInst(){};
 
@@ -117,7 +107,7 @@ public:
 class MockJobsManager : public ubuntu::app_launch::jobs::manager::Base
 {
 public:
-    MockJobsManager(const std::shared_ptr<ubuntu::app_launch::Registry>& reg)
+    MockJobsManager(const std::shared_ptr<ubuntu::app_launch::Registry::Impl>& reg)
         : ubuntu::app_launch::jobs::manager::Base(reg)
     {
     }
@@ -164,8 +154,8 @@ public:
 class zgWatcherMock : public ubuntu::app_launch::info_watcher::Zeitgeist
 {
 public:
-    zgWatcherMock()
-        : ubuntu::app_launch::info_watcher::Zeitgeist({})
+    zgWatcherMock(const std::shared_ptr<ubuntu::app_launch::Registry::Impl>& registry)
+        : ubuntu::app_launch::info_watcher::Zeitgeist(registry)
     {
     }
 
@@ -180,31 +170,10 @@ public:
 class RegistryImplMock : public ubuntu::app_launch::Registry::Impl
 {
 public:
-    RegistryImplMock(ubuntu::app_launch::Registry& reg)
-        : ubuntu::app_launch::Registry::Impl(reg)
+    RegistryImplMock()
+        : ubuntu::app_launch::Registry::Impl()
     {
-        setupZgWatcher();
-
         g_debug("Registry Mock Implementation Created");
-    }
-
-    RegistryImplMock(ubuntu::app_launch::Registry& reg,
-                     std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> appStores)
-        : ubuntu::app_launch::Registry::Impl(reg, appStores)
-    {
-        setupZgWatcher();
-
-        g_debug("Registry Mock Implementation Created");
-    }
-
-    void setupZgWatcher()
-    {
-        auto zgWatcher = std::make_shared<zgWatcherMock>();
-        zgWatcher_ = zgWatcher;
-        std::call_once(zgWatcherOnce_, [] {});
-
-        ON_CALL(*zgWatcher, lookupAppPopularity(testing::_))
-            .WillByDefault(testing::Return(ubuntu::app_launch::Application::Info::Popularity::from_raw(1u)));
     }
 
     ~RegistryImplMock()
@@ -219,15 +188,29 @@ class RegistryMock : public ubuntu::app_launch::Registry
 {
 public:
     RegistryMock()
+        : Registry(std::make_shared<RegistryImplMock>())
     {
+        auto zgWatcher = std::make_shared<zgWatcherMock>(impl);
+        ON_CALL(*zgWatcher, lookupAppPopularity(testing::_))
+            .WillByDefault(testing::Return(ubuntu::app_launch::Application::Info::Popularity::from_raw(1u)));
+        impl->setZgWatcher(zgWatcher);
+
         g_debug("Registry Mock Created");
-        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(*this));
     }
 
-    RegistryMock(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> appStores)
+    RegistryMock(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> appStores,
+                 std::shared_ptr<ubuntu::app_launch::jobs::manager::Base> jobManager)
+        : Registry(std::make_shared<RegistryImplMock>())
     {
+        impl->setAppStores(appStores);
+        impl->setJobs(jobManager);
+
+        auto zgWatcher = std::make_shared<zgWatcherMock>(impl);
+        ON_CALL(*zgWatcher, lookupAppPopularity(testing::_))
+            .WillByDefault(testing::Return(ubuntu::app_launch::Application::Info::Popularity::from_raw(1u)));
+        impl->setZgWatcher(zgWatcher);
+
         g_debug("Registry Mock Created");
-        impl = std::unique_ptr<RegistryImplMock>(new RegistryImplMock(*this, appStores));
     }
 
     ~RegistryMock()

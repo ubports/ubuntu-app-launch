@@ -17,6 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma once
+
 #include "app-store-base.h"
 #include "glib-thread.h"
 #include "info-watcher-zg.h"
@@ -29,14 +31,16 @@
 #include <unordered_map>
 #include <zeitgeist.h>
 
-#pragma once
-
 namespace ubuntu
 {
 namespace app_launch
 {
 
 class IconFinder;
+namespace app_store
+{
+class Base;
+}
 
 /** \private
     \brief Private implementation of the Registry object
@@ -45,8 +49,7 @@ class IconFinder;
 class Registry::Impl
 {
 public:
-    Impl(Registry& registry);
-    Impl(Registry& registry, std::list<std::shared_ptr<app_store::Base>> appStores);
+    Impl();
 
     virtual ~Impl()
     {
@@ -66,9 +69,7 @@ public:
     /** Snapd information object */
     snapd::Info snapdInfo;
 
-    std::shared_ptr<jobs::manager::Base> jobs;
-
-    std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
+    std::shared_ptr<IconFinder>& getIconFinder(std::string basePath);
 
     virtual void zgSendEvent(AppID appid, const std::string& eventtype);
 
@@ -86,27 +87,59 @@ public:
         return oomHelper_;
     }
 
-    static std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher(const std::shared_ptr<Registry>& reg)
+    std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher()
     {
-        std::call_once(reg->impl->zgWatcherOnce_,
-                       [reg] { reg->impl->zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(reg); });
-        return reg->impl->zgWatcher_;
+        return zgWatcher_;
     }
 
-    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated(const std::shared_ptr<Registry>& reg);
+    void setZgWatcher(const std::shared_ptr<info_watcher::Zeitgeist>& watcher)
+    {
+        zgWatcher_ = watcher;
+    }
 
-    std::list<std::shared_ptr<app_store::Base>> appStores()
+    core::Signal<const std::shared_ptr<Application>&>& appInfoUpdated();
+
+    const std::list<std::shared_ptr<app_store::Base>>& appStores()
     {
         return _appStores;
     }
 
-    void setAppStores(std::list<std::shared_ptr<app_store::Base>>& newlist)
+    void setAppStores(const std::list<std::shared_ptr<app_store::Base>>& newlist)
     {
         _appStores = newlist;
     }
 
+    const std::shared_ptr<jobs::manager::Base>& jobs()
+    {
+        if (G_UNLIKELY(!jobs_))
+        {
+            throw std::runtime_error{"Registry Implmentation has no Jobs object"};
+        }
+        return jobs_;
+    }
+
+    void setJobs(const std::shared_ptr<jobs::manager::Base>& jobs)
+    {
+        jobs_ = jobs;
+    }
+
+    /* Create functions */
+    std::shared_ptr<Application> createApp(const AppID& appid);
+    std::shared_ptr<Helper> createHelper(const Helper::Type& type,
+                                         const AppID& appid,
+                                         const std::shared_ptr<Registry::Impl>& sharedimpl);
+
+    /* AppID functions */
+    AppID find(const std::string& sappid);
+    AppID discover(const std::string& package, const std::string& appname, const std::string& version);
+    AppID discover(const std::string& package,
+                   AppID::ApplicationWildcard appwildcard,
+                   AppID::VersionWildcard versionwildcard);
+    AppID discover(const std::string& package, const std::string& appname, AppID::VersionWildcard versionwildcard);
+
 private:
-    Registry& _registry; /**< The Registry that we're spawned from */
+    /** The job creation engine */
+    std::shared_ptr<jobs::manager::Base> jobs_;
 
     /** Shared instance of the Zeitgeist Log */
     std::shared_ptr<ZeitgeistLog> zgLog_;
@@ -128,11 +161,8 @@ private:
     /** List of info watchers along with a signal handle to our connection to their update signal */
     std::list<std::pair<std::shared_ptr<info_watcher::Base>, core::ScopedConnection>> infoWatchers_;
 
-protected:
     /** ZG Info Watcher */
     std::shared_ptr<info_watcher::Zeitgeist> zgWatcher_;
-    /** Init checker for ZG Watcher */
-    std::once_flag zgWatcherOnce_;
 };
 
 }  // namespace app_launch

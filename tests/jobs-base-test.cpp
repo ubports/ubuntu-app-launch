@@ -34,7 +34,7 @@ public:
                  const std::string& job,
                  const std::string& instance,
                  const std::vector<ubuntu::app_launch::Application::URL>& urls,
-                 const std::shared_ptr<ubuntu::app_launch::Registry>& registry)
+                 const std::shared_ptr<ubuntu::app_launch::Registry::Impl>& registry)
         : ubuntu::app_launch::jobs::instance::Base(appId, job, instance, urls, registry)
     {
     }
@@ -76,7 +76,7 @@ protected:
     std::shared_ptr<instanceMock> simpleInstance()
     {
         return std::make_shared<instanceMock>(simpleAppID(), "application-job", "1234567890",
-                                              std::vector<ubuntu::app_launch::Application::URL>{}, registry);
+                                              std::vector<ubuntu::app_launch::Application::URL>{}, registry->impl);
     }
 };
 

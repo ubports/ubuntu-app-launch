@@ -18,6 +18,7 @@
  */
 
 #include "info-watcher.h"
+#include <glib.h>
 
 namespace ubuntu
 {
@@ -26,8 +27,21 @@ namespace app_launch
 namespace info_watcher
 {
 
-Base::Base(const std::shared_ptr<Registry>& registry)
+Base::Base(const std::shared_ptr<Registry::Impl>& registry)
+    : registry_(registry)
 {
+}
+
+/** Accessor function to the registry that ensures we can still
+    get it, which we always should be able to, but in case. */
+std::shared_ptr<Registry::Impl> Base::getReg()
+{
+    auto reg = registry_.lock();
+    if (G_UNLIKELY(!reg))
+    {
+        throw std::runtime_error{"App Store lost track of the Registry that owns it"};
+    }
+    return reg;
 }
 
 }  // namespace info_watcher

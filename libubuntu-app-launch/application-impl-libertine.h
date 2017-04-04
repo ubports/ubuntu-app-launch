@@ -52,7 +52,7 @@ class Libertine : public Base
 public:
     Libertine(const AppID::Package& container,
               const AppID::AppName& appname,
-              const std::shared_ptr<Registry>& registry);
+              const std::shared_ptr<Registry::Impl>& registry);
 
     AppID appId() override
     {

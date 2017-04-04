@@ -62,7 +62,7 @@ class SnapInfo : public app_info::Desktop
 
 public:
     SnapInfo(const AppID& appid,
-             const std::shared_ptr<Registry>& registry,
+             const std::shared_ptr<Registry::Impl>& registry,
              const Snap::InterfaceInfo& interfaceInfo,
              const std::string& snapDir)
         : Desktop(appid,
@@ -187,11 +187,11 @@ public:
     \param registry Registry to use for persistent connections
     \param interfaceInfo Metadata gleaned from the snap's interfaces
 */
-Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const InterfaceInfo& interfaceInfo)
+Snap::Snap(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry, const InterfaceInfo& interfaceInfo)
     : Base(registry)
     , appid_(appid)
 {
-    pkgInfo_ = registry->impl->snapdInfo.pkgInfo(appid.package);
+    pkgInfo_ = registry->snapdInfo.pkgInfo(appid.package);
     if (!pkgInfo_)
     {
         throw std::runtime_error("Unable to get snap package info for AppID: " + std::string(appid));
@@ -202,7 +202,7 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
         throw std::runtime_error("AppID does not match installed package for: " + std::string(appid));
     }
 
-    info_ = std::make_shared<SnapInfo>(appid_, _registry, interfaceInfo, pkgInfo_->directory);
+    info_ = std::make_shared<SnapInfo>(appid_, registry_, interfaceInfo, pkgInfo_->directory);
 
     g_debug("Application Snap object for AppID '%s'", std::string(appid).c_str());
 }
@@ -213,7 +213,7 @@ Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry, const 
     \param appid Application ID of the snap
     \param registry Registry to use for persistent connections
 */
-Snap::Snap(const AppID& appid, const std::shared_ptr<Registry>& registry)
+Snap::Snap(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry)
     : Snap(appid, registry, findInterfaceInfo(appid, registry))
 {
 }
@@ -230,9 +230,9 @@ AppID Snap::appId()
     \param appid Application ID of the snap
     \param registry Registry to use for persistent connections
 */
-Snap::InterfaceInfo Snap::findInterfaceInfo(const AppID& appid, const std::shared_ptr<Registry>& registry)
+Snap::InterfaceInfo Snap::findInterfaceInfo(const AppID& appid, const std::shared_ptr<Registry::Impl>& registry)
 {
-    auto ifaceset = registry->impl->snapdInfo.interfacesForAppId(appid);
+    auto ifaceset = registry->snapdInfo.interfacesForAppId(appid);
     auto xMirEnable = app_info::Desktop::XMirEnable::from_raw(false);
     auto ubuntuLifecycle = Application::Info::UbuntuLifecycle::from_raw(false);
 
@@ -282,7 +282,7 @@ std::shared_ptr<Application::Info> Snap::info()
 /** Get all of the instances of this snap package that are running */
 std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
 {
-    auto vbase = _registry->impl->jobs->instances(appId(), "application-snap");
+    auto vbase = registry_->jobs()->instances(appId(), "application-snap");
     return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
@@ -326,8 +326,8 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 {
     auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls,
-                                         jobs::manager::launchMode::STANDARD, envfunc);
+    return registry_->jobs()->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::STANDARD,
+                                     envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -339,13 +339,13 @@ std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Applic
 {
     auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return _registry->impl->jobs->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::TEST,
-                                         envfunc);
+    return registry_->jobs()->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::TEST,
+                                     envfunc);
 }
 
 std::shared_ptr<Application::Instance> Snap::findInstance(const std::string& instanceid)
 {
-    return _registry->impl->jobs->existing(appId(), "application-snap", instanceid, std::vector<Application::URL>{});
+    return registry_->jobs()->existing(appId(), "application-snap", instanceid, std::vector<Application::URL>{});
 }
 
 }  // namespace app_impls

@@ -48,7 +48,7 @@ namespace app_impls
 class Legacy : public Base
 {
 public:
-    Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& registry);
+    Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry::Impl>& registry);
 
     AppID appId() override
     {

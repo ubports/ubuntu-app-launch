@@ -265,7 +265,7 @@ Desktop::Desktop(const AppID& appid,
                  const std::string& basePath,
                  const std::string& rootDir,
                  std::bitset<2> flags,
-                 std::shared_ptr<Registry> registry)
+                 const std::shared_ptr<Registry::Impl>& registry)
     : _keyfile([keyfile, flags]() {
         if (!keyfile)
         {
@@ -318,7 +318,7 @@ Desktop::Desktop(const AppID& appid,
             if (!iconName.value().empty() && iconName.value()[0] != '/')
             {
                 /* If it is not a direct filename look it up */
-                return registry->impl->getIconFinder(basePath)->find(iconName);
+                return registry->getIconFinder(basePath)->find(iconName);
             }
         }
         return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon");
@@ -331,7 +331,7 @@ Desktop::Desktop(const AppID& appid,
     , _keywords(stringlistFromKeyfile<Application::Info::Keywords>(keyfile, "Keywords"))
     , _popularity([registry, appid] {
         if (registry)
-            return Registry::Impl::getZgWatcher(registry)->lookupAppPopularity(appid);
+            return registry->getZgWatcher()->lookupAppPopularity(appid);
         else
             return Application::Info::Popularity::from_raw(0);
     }())

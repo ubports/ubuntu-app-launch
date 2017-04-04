@@ -41,7 +41,7 @@ namespace manager
 class SystemD : public Base
 {
 public:
-    SystemD(std::shared_ptr<Registry> registry);
+    SystemD(const std::shared_ptr<Registry::Impl>& registry);
     virtual ~SystemD();
 
     virtual std::shared_ptr<Application::Instance> launch(
@@ -73,7 +73,11 @@ public:
 
 private:
     std::string cgroup_root_;
+
+    /** Connection to the User DBus bus */
     std::shared_ptr<GDBusConnection> userbus_;
+    /** Setup the bus and all the details in it */
+    void setupUserbus(const std::shared_ptr<Registry::Impl>& reg);
 
     core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStarted;
     core::Signal<const std::string&, const std::string&, const std::string&> sig_jobStopped;
@@ -131,7 +135,7 @@ private:
     static std::vector<std::string> parseExec(std::list<std::pair<std::string, std::string>>& env);
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);
 
-    void resetUnit(const UnitInfo& info) const;
+    void resetUnit(const UnitInfo& info);
 };
 
 }  // namespace manager

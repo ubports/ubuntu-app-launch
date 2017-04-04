@@ -99,9 +99,8 @@ public:
 
         \param reg Registry to get the handler from
     */
-    static core::Signal<const std::shared_ptr<Application>&,
-                        const std::shared_ptr<Application::Instance>&,
-                        FailureType>&
+    static core::
+        Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, FailureType>&
         appFailed(const std::shared_ptr<Registry>& reg = getDefault());
 
     /** Get the signal object that is signaled when an application has been
@@ -269,7 +268,10 @@ public:
     /** \private */
     class Impl;
     /** \private */
-    std::unique_ptr<Impl> impl;
+    std::shared_ptr<Impl> impl;
+
+protected:
+    Registry(const std::shared_ptr<Impl>& inimpl);
 };
 
 }  // namespace app_launch
