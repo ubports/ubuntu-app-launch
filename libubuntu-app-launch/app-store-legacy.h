@@ -31,7 +31,7 @@ namespace app_store
 class Legacy : public Base
 {
 public:
-    Legacy(const Registry& registry);
+    Legacy(const std::shared_ptr<Registry::Impl>& registry);
     virtual ~Legacy();
 
     /* Discover tools */

@@ -43,7 +43,7 @@ const std::string LIFECYCLE_INTERFACE{"unity8"};
 /** Snappy has more restrictive appnames than everyone else */
 const std::regex appnameRegex{"^[a-zA-Z0-9](?:-?[a-zA-Z0-9])*$"};
 
-Snap::Snap(const Registry& registry)
+Snap::Snap(const std::shared_ptr<Registry::Impl>& registry)
     : Base(registry)
 {
 }
@@ -72,7 +72,7 @@ bool Snap::hasAppId(const AppID& appId)
         return false;
     }
 
-    auto pkginfo = registry_.impl->snapdInfo.pkgInfo(appId.package);
+    auto pkginfo = getReg()->snapdInfo.pkgInfo(appId.package);
     return app_impls::Snap::checkPkgInfo(pkginfo, appId);
 }
 
@@ -85,7 +85,7 @@ bool Snap::verifyPackage(const AppID::Package& package)
 {
     try
     {
-        auto pkgInfo = registry_.impl->snapdInfo.pkgInfo(package);
+        auto pkgInfo = getReg()->snapdInfo.pkgInfo(package);
         return pkgInfo != nullptr;
     }
     catch (std::runtime_error& e)
@@ -107,7 +107,7 @@ bool Snap::verifyAppname(const AppID::Package& package, const AppID::AppName& ap
         return false;
     }
 
-    auto pkgInfo = registry_.impl->snapdInfo.pkgInfo(package);
+    auto pkgInfo = getReg()->snapdInfo.pkgInfo(package);
 
     if (!pkgInfo)
     {
@@ -126,7 +126,7 @@ bool Snap::verifyAppname(const AppID::Package& package, const AppID::AppName& ap
 */
 AppID::AppName Snap::findAppname(const AppID::Package& package, AppID::ApplicationWildcard card)
 {
-    auto pkgInfo = registry_.impl->snapdInfo.pkgInfo(package);
+    auto pkgInfo = getReg()->snapdInfo.pkgInfo(package);
 
     if (!pkgInfo)
     {
@@ -164,7 +164,7 @@ AppID::AppName Snap::findAppname(const AppID::Package& package, AppID::Applicati
 */
 AppID::Version Snap::findVersion(const AppID::Package& package, const AppID::AppName& appname)
 {
-    auto pkgInfo = registry_.impl->snapdInfo.pkgInfo(package);
+    auto pkgInfo = getReg()->snapdInfo.pkgInfo(package);
     if (pkgInfo)
     {
         return AppID::Version::from_raw(pkgInfo->revision);
@@ -192,8 +192,9 @@ struct appcompare
 std::list<std::shared_ptr<Application>> Snap::list()
 {
     std::set<std::shared_ptr<Application>, appcompare> apps;
+    auto reg = getReg();
 
-    auto lifecycleApps = registry_.impl->snapdInfo.appsForInterface(LIFECYCLE_INTERFACE);
+    auto lifecycleApps = reg->snapdInfo.appsForInterface(LIFECYCLE_INTERFACE);
 
     auto lifecycleForApp = [&](const AppID& appID) {
         auto iterator = lifecycleApps.find(appID);
@@ -208,12 +209,12 @@ std::list<std::shared_ptr<Application>> Snap::list()
     };
 
     auto addAppsForInterface = [&](const std::string& interface, app_info::Desktop::XMirEnable xMirEnable) {
-        for (const auto& id : registry_.impl->snapdInfo.appsForInterface(interface))
+        for (const auto& id : reg->snapdInfo.appsForInterface(interface))
         {
             auto interfaceInfo = std::make_tuple(xMirEnable, lifecycleForApp(id));
             try
             {
-                auto app = std::make_shared<app_impls::Snap>(id, registry_.impl, interfaceInfo);
+                auto app = std::make_shared<app_impls::Snap>(id, reg, interfaceInfo);
                 apps.emplace(app);
             }
             catch (std::runtime_error& e)
@@ -236,7 +237,7 @@ std::list<std::shared_ptr<Application>> Snap::list()
 
 std::shared_ptr<app_impls::Base> Snap::create(const AppID& appid)
 {
-    return std::make_shared<app_impls::Snap>(appid, registry_.impl);
+    return std::make_shared<app_impls::Snap>(appid, getReg());
 }
 
 }  // namespace app_store

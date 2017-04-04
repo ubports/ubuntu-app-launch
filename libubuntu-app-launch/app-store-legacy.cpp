@@ -30,7 +30,7 @@ namespace app_launch
 namespace app_store
 {
 
-Legacy::Legacy(const Registry& registry)
+Legacy::Legacy(const std::shared_ptr<Registry::Impl>& registry)
     : Base(registry)
 {
 }
@@ -137,6 +137,7 @@ static const std::regex desktop_remover("^(.*)\\.desktop$");
 
 std::list<std::shared_ptr<Application>> Legacy::list()
 {
+    auto reg = getReg();
     std::list<std::shared_ptr<Application>> list;
     std::unique_ptr<GList, decltype(&g_list_free)> head(g_app_info_get_all(),
                                                         [](GList* l) { g_list_free_full(l, g_object_unref); });
@@ -174,7 +175,7 @@ std::list<std::shared_ptr<Application>> Legacy::list()
 
         try
         {
-            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), registry_.impl);
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), reg);
             list.push_back(app);
         }
         catch (std::runtime_error& e)
@@ -188,7 +189,7 @@ std::list<std::shared_ptr<Application>> Legacy::list()
 
 std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid)
 {
-    return std::make_shared<app_impls::Legacy>(appid.appname, registry_.impl);
+    return std::make_shared<app_impls::Legacy>(appid.appname, getReg());
 }
 
 }  // namespace app_store

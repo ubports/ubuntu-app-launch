@@ -286,7 +286,7 @@ protected:
     std::shared_ptr<MockStore> storeForHelper(const ubuntu::app_launch::AppID& appid)
     {
         /* Setup a store for looking up the AppID */
-        auto store = std::make_shared<MockStore>(*registry);
+        auto store = std::make_shared<MockStore>(registry->impl);
 
         ON_CALL(*store, verifyPackage(appid.package)).WillByDefault(testing::Return(true));
         ON_CALL(*store, verifyAppname(appid.package, appid.appname)).WillByDefault(testing::Return(true));
@@ -433,7 +433,7 @@ TEST_F(LibUAL, ApplicationPid)
 
 TEST_F(LibUAL, ApplicationId)
 {
-    auto mockstore = std::make_shared<MockStore>(*registry);
+    auto mockstore = std::make_shared<MockStore>(registry->impl);
     registry =
         std::make_shared<RegistryMock>(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>>{mockstore},
                                        std::shared_ptr<ubuntu::app_launch::jobs::manager::Base>{});

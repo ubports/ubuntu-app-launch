@@ -282,7 +282,7 @@ std::shared_ptr<Application::Info> Snap::info()
 /** Get all of the instances of this snap package that are running */
 std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
 {
-    auto vbase = registry_->jobs->instances(appId(), "application-snap");
+    auto vbase = registry_->jobs()->instances(appId(), "application-snap");
     return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
@@ -326,8 +326,8 @@ std::shared_ptr<Application::Instance> Snap::launch(const std::vector<Applicatio
 {
     auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return registry_->jobs->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::STANDARD,
-                                   envfunc);
+    return registry_->jobs()->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::STANDARD,
+                                     envfunc);
 }
 
 /** Create a new instance of this Snap with a testing environment
@@ -339,13 +339,13 @@ std::shared_ptr<Application::Instance> Snap::launchTest(const std::vector<Applic
 {
     auto instance = getInstance(info_);
     std::function<std::list<std::pair<std::string, std::string>>(void)> envfunc = [this]() { return launchEnv(); };
-    return registry_->jobs->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::TEST,
-                                   envfunc);
+    return registry_->jobs()->launch(appid_, "application-snap", instance, urls, jobs::manager::launchMode::TEST,
+                                     envfunc);
 }
 
 std::shared_ptr<Application::Instance> Snap::findInstance(const std::string& instanceid)
 {
-    return registry_->jobs->existing(appId(), "application-snap", instanceid, std::vector<Application::URL>{});
+    return registry_->jobs()->existing(appId(), "application-snap", instanceid, std::vector<Application::URL>{});
 }
 
 }  // namespace app_impls
