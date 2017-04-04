@@ -37,8 +37,7 @@ protected:
         service = std::shared_ptr<DbusTestService>(dbus_test_service_new(nullptr),
                                                    [](DbusTestService* service) { g_clear_object(&service); });
         dbus_test_service_start_tasks(service.get());
-
-        registry = std::shared_ptr<RegistryMock>();
+        registry = std::make_shared<RegistryMock>();
     }
 
     virtual void TearDown()
