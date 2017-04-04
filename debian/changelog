@@ -1,3 +1,9 @@
+ubuntu-app-launch (0.12) UNRELEASED; urgency=medium
+
+  * Bump version for new AppID methods
+
+ -- Michael Terry <mterry@ubuntu.com>  Tue, 28 Feb 2017 15:59:05 -0500
+
 ubuntu-app-launch (0.11+17.04.20170328-0ubuntu1) zesty; urgency=medium
 
   * Explicitly depend on libertine-xmir-tools (#1671938).

@@ -579,6 +579,30 @@ TEST_F(LibUAL, AppIdParse)
     return;
 }
 
+TEST_F(LibUAL, DBusID)
+{
+    auto id = ubuntu::app_launch::AppID::parse("container-name_test_0.0");
+    ASSERT_FALSE(id.empty());
+    EXPECT_EQ("container_2dname_5ftest_5f0_2e0", id.dbusID());
+    EXPECT_FALSE(ubuntu::app_launch::AppID::valid(id.dbusID()));
+
+    auto parsed = ubuntu::app_launch::AppID::parseDBusID(id.dbusID());
+    ASSERT_FALSE(parsed.empty());
+    EXPECT_EQ(id, parsed);
+}
+
+TEST_F(LibUAL, PersistentID)
+{
+    auto id = ubuntu::app_launch::AppID::parse("container-name_test_0.0");
+    ASSERT_FALSE(id.empty());
+    EXPECT_EQ("container-name_test", id.persistentID());
+    EXPECT_FALSE(ubuntu::app_launch::AppID::valid(id.persistentID()));
+
+    auto found = ubuntu::app_launch::AppID::find(registry, id.persistentID());
+    ASSERT_FALSE(found.empty());
+    EXPECT_EQ(id, found);
+}
+
 TEST_F(LibUAL, ApplicationList)
 {
     SnapdMock snapd{LOCAL_SNAPD_TEST_SOCKET, {u8Package, interfaces, u8Package}};

@@ -277,7 +277,7 @@ public:
                     skel);
 
                 /* Find a path to export on */
-                auto dbusAppid = dbusSafe(std::string{appid});
+                auto dbusAppid = appid.dbusID();
                 std::string path;
 
                 while (path.empty())
@@ -317,13 +317,6 @@ public:
     void setTimeout(guint timeoutin)
     {
         timeout = timeoutin;
-    }
-
-    static std::string dbusSafe(const std::string& in)
-    {
-        std::string out = in;
-        std::transform(out.begin(), out.end(), out.begin(), [](char in) { return std::isalpha(in) ? in : '_'; });
-        return out;
     }
 
     bool proxyCb(GDBusMethodInvocation* invocation)
