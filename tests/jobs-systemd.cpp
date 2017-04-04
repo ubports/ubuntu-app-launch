@@ -18,6 +18,7 @@
  */
 
 #include "jobs-systemd.h"
+#include "app-store-legacy.h"
 
 #include "eventually-fixture.h"
 #include "registry-mock.h"
@@ -57,6 +58,7 @@ protected:
 
         dbus_test_service_start_tasks(service.get());
         registry = std::make_shared<RegistryMock>();
+        registry->impl->setAppStores({std::make_shared<ubuntu::app_launch::app_store::Legacy>(registry->impl)});
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
         g_dbus_connection_set_exit_on_close(bus, FALSE);
