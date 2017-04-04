@@ -29,7 +29,7 @@
 class MockStore : public ubuntu::app_launch::app_store::Base
 {
 public:
-    MockStore(const ubuntu::app_launch::Registry& registry)
+    MockStore(const std::shared_ptr<ubuntu::app_launch::Registry::Impl>& registry)
         : ubuntu::app_launch::app_store::Base(registry)
     {
     }
@@ -107,7 +107,7 @@ public:
 class MockJobsManager : public ubuntu::app_launch::jobs::manager::Base
 {
 public:
-    MockJobsManager(const ubuntu::app_launch::Registry& reg)
+    MockJobsManager(const std::shared_ptr<ubuntu::app_launch::Registry::Impl>& reg)
         : ubuntu::app_launch::jobs::manager::Base(reg)
     {
     }
@@ -170,18 +170,8 @@ public:
 class RegistryImplMock : public ubuntu::app_launch::Registry::Impl
 {
 public:
-    RegistryImplMock(ubuntu::app_launch::Registry& reg)
-        : ubuntu::app_launch::Registry::Impl(reg)
-    {
-        setupZgWatcher();
-
-        g_debug("Registry Mock Implementation Created");
-    }
-
-    RegistryImplMock(ubuntu::app_launch::Registry& reg,
-                     std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> appStores,
-                     std::shared_ptr<ubuntu::app_launch::jobs::manager::Base> jobManager)
-        : ubuntu::app_launch::Registry::Impl(reg, appStores, jobManager)
+    RegistryImplMock()
+        : ubuntu::app_launch::Registry::Impl()
     {
         setupZgWatcher();
 
@@ -210,15 +200,17 @@ class RegistryMock : public ubuntu::app_launch::Registry
 {
 public:
     RegistryMock()
-        : Registry(std::make_shared<RegistryImplMock>(*this))
+        : Registry(std::make_shared<RegistryImplMock>())
     {
         g_debug("Registry Mock Created");
     }
 
     RegistryMock(std::list<std::shared_ptr<ubuntu::app_launch::app_store::Base>> appStores,
                  std::shared_ptr<ubuntu::app_launch::jobs::manager::Base> jobManager)
-        : Registry(std::make_shared<RegistryImplMock>(*this, appStores, jobManager))
+        : Registry(std::make_shared<RegistryImplMock>())
     {
+        impl->setAppStores(appStores);
+        impl->setJobs(jobManager);
         g_debug("Registry Mock Created");
     }
 
