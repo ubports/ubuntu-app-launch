@@ -34,7 +34,7 @@ Registry::Registry()
     : impl{std::make_shared<Impl>()}
 {
     impl->setJobs(jobs::manager::Base::determineFactory(impl));
-    impl->setAppStores(app_store::Base::allAppStores(*this)); /* TODO ref */
+    impl->setAppStores(app_store::Base::allAppStores(impl));
 }
 
 Registry::Registry(const std::shared_ptr<Impl>& inimpl)

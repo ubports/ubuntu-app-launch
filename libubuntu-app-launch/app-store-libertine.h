@@ -31,7 +31,7 @@ namespace app_store
 class Libertine : public Base
 {
 public:
-    Libertine(const Registry& registry);
+    Libertine(const std::shared_ptr<Registry::Impl>& registry);
     virtual ~Libertine();
 
     /* Discover tools */
