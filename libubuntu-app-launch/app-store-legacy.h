@@ -21,6 +21,8 @@
 
 #include "app-store-base.h"
 
+#include <unity/util/GObjectMemory.h>
+
 namespace ubuntu
 {
 namespace app_launch
@@ -46,6 +48,18 @@ public:
 
     /* Application Creation */
     virtual std::shared_ptr<app_impls::Base> create(const AppID& appid) override;
+
+    /* Info watching */
+    virtual core::Signal<const std::shared_ptr<Application>&>& infoChanged() override;
+    virtual core::Signal<const std::shared_ptr<Application>&>& appAdded() override;
+    virtual core::Signal<const AppID&>& appRemoved() override;
+
+private:
+    std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>> monitors_;
+    std::once_flag monitorsSetup_;
+
+    void directoryChanged(GFile* file, GFileMonitorEvent type);
+    void setupMonitors();
 };
 
 }  // namespace app_store

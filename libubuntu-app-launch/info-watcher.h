@@ -43,9 +43,23 @@ public:
         return infoChanged_;
     }
 
+    virtual core::Signal<const std::shared_ptr<Application>&>& appAdded()
+    {
+        return appAdded_;
+    }
+
+    virtual core::Signal<const AppID&>& appRemoved()
+    {
+        return appRemoved_;
+    }
+
 protected:
     /** Signal for info changed on an application */
     core::Signal<const std::shared_ptr<Application>&> infoChanged_;
+    /** Signal for applications added */
+    core::Signal<const std::shared_ptr<Application>&> appAdded_;
+    /** Signal for applications removed */
+    core::Signal<const AppID&> appRemoved_;
 
     /** Accessor function to the registry that ensures we can still
         get it, which we always should be able to, but in case. */

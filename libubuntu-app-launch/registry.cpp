@@ -154,5 +154,15 @@ core::Signal<const std::shared_ptr<Application>&>& Registry::appInfoUpdated(cons
     return reg->impl->appInfoUpdated();
 }
 
+core::Signal<const std::shared_ptr<Application>&>& Registry::appAdded(const std::shared_ptr<Registry>& reg)
+{
+    return reg->impl->appAdded();
+}
+
+core::Signal<const AppID&>& Registry::appRemoved(const std::shared_ptr<Registry>& reg)
+{
+    return reg->impl->appRemoved();
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

@@ -19,6 +19,7 @@
 
 #include "app-store-legacy.h"
 #include "application-impl-legacy.h"
+#include "registry-impl.h"
 #include "string-util.h"
 
 #include <regex>
@@ -190,6 +191,177 @@ std::list<std::shared_ptr<Application>> Legacy::list()
 std::shared_ptr<app_impls::Base> Legacy::create(const AppID& appid)
 {
     return std::make_shared<app_impls::Legacy>(appid.appname, getReg());
+}
+
+/** Turns a directory changed event from a file monitor into an
+ *  internal signal. Makes sure we can deal with it first, and
+ *  then propegates up the stack. */
+void Legacy::directoryChanged(GFile* file, GFileMonitorEvent type)
+{
+    g_debug("Getting event for '%s'", unique_gchar(g_file_get_path(file)).get());
+
+    auto filetype = g_file_query_file_type(file, G_FILE_QUERY_INFO_NONE, nullptr);
+    if (filetype != G_FILE_TYPE_REGULAR && filetype != G_FILE_TYPE_UNKNOWN)
+    {
+        g_debug("\tNot a regular file");
+        return;
+    }
+
+    auto cdesktopname = unique_gchar(g_file_get_basename(file));
+    if (!cdesktopname)
+    {
+        g_debug("\tNo basename");
+        return;
+    }
+    std::string desktopname{cdesktopname.get()};
+
+    std::string appname;
+    std::smatch match;
+    if (std::regex_match(desktopname, match, desktop_remover))
+    {
+        appname = match[1].str();
+    }
+    else
+    {
+        return;
+    }
+
+    auto reg = getReg();
+
+    switch (type)
+    {
+        case G_FILE_MONITOR_EVENT_CREATED:
+        {
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), reg);
+
+            appAdded_(app);
+            break;
+        }
+        case G_FILE_MONITOR_EVENT_CHANGED:
+        {
+            auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), reg);
+
+            infoChanged_(app);
+            break;
+        }
+        case G_FILE_MONITOR_EVENT_DELETED:
+        {
+            AppID appid{AppID::Package::from_raw({}), AppID::AppName::from_raw(appname), AppID::Version::from_raw({})};
+            if (verifyAppname(appid.package, appid.appname))
+            {
+                /* Check to see if we've got a shadow situation and we
+                 * can still build this app */
+                auto app = std::make_shared<app_impls::Legacy>(AppID::AppName::from_raw(appname), reg);
+                infoChanged_(app);
+            }
+            else
+            {
+                appRemoved_(appid);
+            }
+            break;
+        }
+        default:
+            break;
+    };
+}
+
+/** Function that setups file monitors on all of the system application
+ *  directories and the user application directory. Any time an application
+ *  is added or removed or changed we send the appropriate signal up the
+ *  stack. */
+void Legacy::setupMonitors()
+{
+    std::call_once(monitorsSetup_, [this]() {
+        auto reg = getReg();
+        monitors_ =
+            reg->thread.executeOnThread<std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>>>([this]() {
+                std::set<std::unique_ptr<GFileMonitor, unity::util::GObjectDeleter>> monitors;
+
+                auto monitorDir = [this](const gchar* dirname) {
+                    auto appdir = unique_gchar(g_build_filename(dirname, "applications", nullptr));
+                    auto gfile = unity::util::unique_gobject(g_file_new_for_path(appdir.get()));
+
+                    if (!g_file_query_exists(gfile.get(), nullptr))
+                    {
+                        throw std::runtime_error{std::string{"Directory '"} + appdir.get() + "' doesn't exist"};
+                    }
+
+                    if (g_file_query_file_type(gfile.get(), G_FILE_QUERY_INFO_NONE, nullptr) != G_FILE_TYPE_DIRECTORY)
+                    {
+                        throw std::runtime_error{std::string{"'"} + appdir.get() + "' is not a directory"};
+                    }
+
+                    GError* error = nullptr;
+                    auto monitor = unity::util::unique_gobject(
+                        g_file_monitor_directory(gfile.get(), G_FILE_MONITOR_NONE, nullptr, &error));
+
+                    if (error != nullptr)
+                    {
+                        std::string message = std::string{"Unable to create file monitor: "} + error->message;
+                        g_error_free(error);
+                        throw std::runtime_error{message};
+                    }
+
+                    g_signal_connect(
+                        monitor.get(), "changed",
+                        G_CALLBACK(+[](GFileMonitor*, GFile* file, GFile*, GFileMonitorEvent type, gpointer user_data) {
+                            auto pthis = static_cast<Legacy*>(user_data);
+                            pthis->directoryChanged(file, type);
+                        }),
+                        this);
+
+                    return monitor;
+                };
+
+                auto dirs = g_get_system_data_dirs();
+                for (int i = 0; dirs != nullptr && dirs[i] != nullptr; i++)
+                {
+                    try
+                    {
+                        monitors.insert(monitorDir(dirs[i]));
+                    }
+                    catch (std::runtime_error& e)
+                    {
+                        g_debug("Unable to create directory monitor for system dir '%s': %s", dirs[i], e.what());
+                    }
+                }
+
+                try
+                {
+                    monitors.insert(monitorDir(g_get_user_data_dir()));
+                }
+                catch (std::runtime_error& e)
+                {
+                    g_debug("Unable to create directory monitor for user data dir: %s", e.what());
+                }
+
+                return monitors;
+            });
+    });
+}
+
+/** Return the signal object, but make sure we have the
+ *  monitors setup first */
+core::Signal<const std::shared_ptr<Application>&>& Legacy::infoChanged()
+{
+    setupMonitors();
+    return infoChanged_;
+}
+
+/** Return the signal object, but make sure we have the
+ *  monitors setup first */
+core::Signal<const std::shared_ptr<Application>&>& Legacy::appAdded()
+{
+    setupMonitors();
+    return appAdded_;
+}
+
+/** Return the signal object, but make sure we have the
+ *  monitors setup first */
+core::Signal<const AppID&>& Legacy::appRemoved()
+{
+    setupMonitors();
+    return appRemoved_;
 }
 
 }  // namespace app_store

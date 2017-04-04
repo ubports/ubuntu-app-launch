@@ -171,23 +171,49 @@ bool Registry::Impl::isWatchingAppStarting()
     return watchingAppStarting_;
 }
 
-core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated()
+/** Sets up the signals down to the info watchers and we aggregate
+    them up to users of UAL. We connect to all their signals and
+    pass them up. */
+void Registry::Impl::infoWatchersSetup()
 {
-    std::call_once(flag_appInfoUpdated, [this] {
-        g_debug("App Info Updated Signal Initialized");
+    std::call_once(flag_infoWatchersSetup, [this] {
+        g_debug("Info watchers signals setup");
 
-        std::list<std::shared_ptr<info_watcher::Base>> apps{_appStores.begin(), _appStores.end()};
-        apps.push_back(getZgWatcher());
+        /* Grab all the app stores and the ZG info watcher */
+        std::list<std::shared_ptr<info_watcher::Base>> watchers{_appStores.begin(), _appStores.end()};
+        watchers.push_back(getZgWatcher());
 
-        for (const auto& app : apps)
+        /* Connect each of their signals to us, and track that connection */
+        for (const auto& watcher : watchers)
         {
-            infoWatchers_.emplace_back(
-                std::make_pair(app, app->infoChanged().connect([this](const std::shared_ptr<Application>& app) {
-                    sig_appInfoUpdated(app);
-                })));
+            infoWatchers_.emplace_back(std::make_pair(
+                watcher,
+                infoWatcherConnections{
+                    watcher->infoChanged().connect(
+                        [this](const std::shared_ptr<Application>& app) { sig_appInfoUpdated(app); }),
+                    watcher->appAdded().connect([this](const std::shared_ptr<Application>& app) { sig_appAdded(app); }),
+                    watcher->appRemoved().connect([this](const AppID& appid) { sig_appRemoved(appid); }),
+                }));
         }
     });
+}
+
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appInfoUpdated()
+{
+    infoWatchersSetup();
     return sig_appInfoUpdated;
+}
+
+core::Signal<const std::shared_ptr<Application>&>& Registry::Impl::appAdded()
+{
+    infoWatchersSetup();
+    return sig_appAdded;
+}
+
+core::Signal<const AppID&>& Registry::Impl::appRemoved()
+{
+    infoWatchersSetup();
+    return sig_appRemoved;
 }
 
 std::shared_ptr<Application> Registry::Impl::createApp(const AppID& appid)

@@ -50,6 +50,15 @@ add_executable (socket-tool
 add_test (NAME libual-test COMMAND libual-test)
 add_test (NAME libual-cpp-test COMMAND libual-cpp-test)
 
+# App Store Legacy
+
+add_executable (app-store-legacy
+	app-store-legacy.cpp)
+target_link_libraries (app-store-legacy ${GMOCK_LIBRARIES} ${GTEST_MAIN_LIBRARIES} launcher-static ${DBUSTEST_LIBRARIES})
+
+add_test(NAME app-store-legacy COMMAND "${CMAKE_CURRENT_BINARY_DIR}/app-store-legacy" --gtest_list_tests "|" grep "\"^  \"" "|" xargs -n 1 printf "\"--gtest_filter=*.%s\\n\"" "|" xargs -n 1 "${CMAKE_CURRENT_BINARY_DIR}/app-store-legacy")
+
+
 # Jobs Base Test
 
 add_executable (jobs-base-test
@@ -129,6 +138,7 @@ add_test (NAME snappy-xmir-test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/snappy-xmir-
 add_custom_target(format-tests
 	COMMAND clang-format -i -style=file
 	application-info-desktop.cpp
+	app-store-legacy.cpp
 	libual-cpp-test.cc
 	libual-test.cc
 	list-apps.cpp
