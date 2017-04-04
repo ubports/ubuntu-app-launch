@@ -112,6 +112,15 @@ main (int argc, char * argv[])
 	/* Set up the display variable */
 	setenv("DISPLAY", displaynumber, 1);
 
+	/* TODO: Forcing backends shouldn't be done */
+	/* Here we're forcing Qt and GTK to use the X11 backends until
+	 * everything can be fixed with probing and all that. It really
+	 * kinda sucks but it's the closest we're gonna get to 'just working'
+	 * in the near term. Please kill this code sometime. */
+	setenv("GDK_BACKEND", "x11", 1);
+	setenv("QT_QPA_PLATFORM", "xcb", 1);
+	/* end: code that should die */
+
 	/* Now that we have everything setup, we can execute */
 	char ** nargv = &argv[2];
 	int execret = execvp(nargv[0], nargv);
