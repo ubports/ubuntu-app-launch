@@ -181,11 +181,11 @@ public:
     void setupZgWatcher()
     {
         auto zgWatcher = std::make_shared<zgWatcherMock>();
-        zgWatcher_ = zgWatcher;
-        std::call_once(zgWatcherOnce_, [] {});
 
         ON_CALL(*zgWatcher, lookupAppPopularity(testing::_))
             .WillByDefault(testing::Return(ubuntu::app_launch::Application::Info::Popularity::from_raw(1u)));
+
+        setZgWatcher(zgWatcher);
     }
 
     ~RegistryImplMock()
