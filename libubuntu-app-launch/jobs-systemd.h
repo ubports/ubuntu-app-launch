@@ -41,7 +41,7 @@ namespace manager
 class SystemD : public Base
 {
 public:
-    SystemD(const Registry& registry);
+    SystemD(const std::shared_ptr<Registry::Impl>& registry);
     virtual ~SystemD();
 
     virtual std::shared_ptr<Application::Instance> launch(

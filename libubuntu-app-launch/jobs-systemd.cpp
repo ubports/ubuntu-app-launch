@@ -111,7 +111,7 @@ static const char* SYSTEMD_DBUS_PATH_MANAGER{"/org/freedesktop/systemd1"};
 // static const char * SYSTEMD_DBUS_IFACE_UNIT{"org.freedesktop.systemd1.Unit"};
 static const char* SYSTEMD_DBUS_IFACE_SERVICE{"org.freedesktop.systemd1.Service"};
 
-SystemD::SystemD(const Registry& registry)
+SystemD::SystemD(const std::shared_ptr<Registry::Impl>& registry)
     : Base(registry)
     , handle_unitNew(DBusSignalUnsubscriber{})
     , handle_unitRemoved(DBusSignalUnsubscriber{})
@@ -138,8 +138,9 @@ SystemD::SystemD(const Registry& registry)
 std::shared_ptr<GDBusConnection>& SystemD::get_userbus()
 {
     std::call_once(userbus_flag, [this] {
-        auto cancel = registry_.impl->thread.getCancellable();
-        userbus_ = registry_.impl->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
+        auto reg = getReg();
+        auto cancel = reg->thread.getCancellable();
+        userbus_ = reg->thread.executeOnThread<std::shared_ptr<GDBusConnection>>([this, cancel]() {
             GError* error = nullptr;
             auto bus = std::shared_ptr<GDBusConnection>(
                 [&]() -> GDBusConnection* {
@@ -586,246 +587,246 @@ std::shared_ptr<Application::Instance> SystemD::launch(
     if (appId.empty())
         return {};
 
-    bool isApplication =
-        std::find(allApplicationJobs_.begin(), allApplicationJobs_.end(), job) != allApplicationJobs_.end();
+    auto appJobs = getAllApplicationJobs();
+    bool isApplication = std::find(appJobs.begin(), appJobs.end(), job) != appJobs.end();
 
-    return registry_.impl->thread.executeOnThread<std::shared_ptr<instance::SystemD>>(
-        [&]() -> std::shared_ptr<instance::SystemD> {
-            auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_.impl->jobs());
-            std::string appIdStr{appId};
-            g_debug("Initializing params for an new instance::SystemD for: %s", appIdStr.c_str());
+    auto reg = getReg();
+    return reg->thread.executeOnThread<std::shared_ptr<instance::SystemD>>([&]() -> std::shared_ptr<instance::SystemD> {
+        auto manager = std::dynamic_pointer_cast<manager::SystemD>(reg->jobs());
+        std::string appIdStr{appId};
+        g_debug("Initializing params for an new instance::SystemD for: %s", appIdStr.c_str());
 
-            tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
+        tracepoint(ubuntu_app_launch, libual_start, appIdStr.c_str());
 
-            int timeout = 1;
-            if (ubuntu::app_launch::Registry::Impl::isWatchingAppStarting())
+        int timeout = 1;
+        if (ubuntu::app_launch::Registry::Impl::isWatchingAppStarting())
+        {
+            timeout = 0;
+        }
+
+        handshake_t* handshake{nullptr};
+
+        if (isApplication)
+        {
+            handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
+            if (handshake == nullptr)
             {
-                timeout = 0;
+                g_warning("Unable to setup starting handshake");
             }
+        }
 
-            handshake_t* handshake{nullptr};
+        /* Figure out the unit name for the job */
+        auto unitname = unitName(SystemD::UnitInfo{appIdStr, job, instance});
 
-            if (isApplication)
+        /* Build up our environment */
+        auto env = getenv();
+
+        env.emplace_back(std::make_pair("APP_ID", appIdStr));                           /* Application ID */
+        env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
+
+        copyEnv("DISPLAY", env);
+
+        for (const auto& prefix : {"DBUS_", "MIR_", "UBUNTU_APP_LAUNCH_"})
+        {
+            copyEnvByPrefix(prefix, env);
+        }
+
+        /* If we're in deb mode and launching legacy apps, they're gonna need
+         * more context, they really have no other way to get it. */
+        if (g_getenv("SNAP") == nullptr && appId.package.value().empty())
+        {
+            copyEnvByPrefix("QT_", env);
+            copyEnvByPrefix("XDG_", env);
+            copyEnv("UBUNTU_APP_LAUNCH_XMIR_PATH", env);
+
+            /* If we're in Unity8 we don't want to pass it's platform, we want
+             * an application platform. */
+            if (findEnv("QT_QPA_PLATFORM", env) == "mirserver")
             {
-                handshake = starting_handshake_start(appIdStr.c_str(), instance.c_str(), timeout);
-                if (handshake == nullptr)
+                removeEnv("QT_QPA_PLATFORM", env);
+                env.emplace_back(std::make_pair("QT_QPA_PLATFORM", "ubuntumirclient"));
+            }
+        }
+
+        /* Mir socket if we don't have one in our env */
+        if (findEnv("MIR_SOCKET", env).empty())
+        {
+            env.emplace_back(std::make_pair("MIR_SOCKET", g_get_user_runtime_dir() + std::string{"/mir_socket"}));
+        }
+
+        if (!urls.empty())
+        {
+            auto accumfunc = [](const std::string& prev, Application::URL thisurl) -> std::string {
+                gchar* gescaped = g_shell_quote(thisurl.value().c_str());
+                std::string escaped;
+                if (gescaped != nullptr)
                 {
-                    g_warning("Unable to setup starting handshake");
-                }
-            }
-
-            /* Figure out the unit name for the job */
-            auto unitname = unitName(SystemD::UnitInfo{appIdStr, job, instance});
-
-            /* Build up our environment */
-            auto env = getenv();
-
-            env.emplace_back(std::make_pair("APP_ID", appIdStr));                           /* Application ID */
-            env.emplace_back(std::make_pair("APP_LAUNCHER_PID", std::to_string(getpid()))); /* Who we are, for bugs */
-
-            copyEnv("DISPLAY", env);
-
-            for (const auto& prefix : {"DBUS_", "MIR_", "UBUNTU_APP_LAUNCH_"})
-            {
-                copyEnvByPrefix(prefix, env);
-            }
-
-            /* If we're in deb mode and launching legacy apps, they're gonna need
-             * more context, they really have no other way to get it. */
-            if (g_getenv("SNAP") == nullptr && appId.package.value().empty())
-            {
-                copyEnvByPrefix("QT_", env);
-                copyEnvByPrefix("XDG_", env);
-                copyEnv("UBUNTU_APP_LAUNCH_XMIR_PATH", env);
-
-                /* If we're in Unity8 we don't want to pass it's platform, we want
-                 * an application platform. */
-                if (findEnv("QT_QPA_PLATFORM", env) == "mirserver")
-                {
-                    removeEnv("QT_QPA_PLATFORM", env);
-                    env.emplace_back(std::make_pair("QT_QPA_PLATFORM", "ubuntumirclient"));
-                }
-            }
-
-            /* Mir socket if we don't have one in our env */
-            if (findEnv("MIR_SOCKET", env).empty())
-            {
-                env.emplace_back(std::make_pair("MIR_SOCKET", g_get_user_runtime_dir() + std::string{"/mir_socket"}));
-            }
-
-            if (!urls.empty())
-            {
-                auto accumfunc = [](const std::string& prev, Application::URL thisurl) -> std::string {
-                    gchar* gescaped = g_shell_quote(thisurl.value().c_str());
-                    std::string escaped;
-                    if (gescaped != nullptr)
-                    {
-                        escaped = gescaped;
-                        g_free(gescaped);
-                    }
-                    else
-                    {
-                        g_warning("Unable to escape URL: %s", thisurl.value().c_str());
-                        return prev;
-                    }
-
-                    if (prev.empty())
-                    {
-                        return escaped;
-                    }
-                    else
-                    {
-                        return prev + " " + escaped;
-                    }
-                };
-                auto urlstring = std::accumulate(urls.begin(), urls.end(), std::string{}, accumfunc);
-                env.emplace_back(std::make_pair("APP_URIS", urlstring));
-            }
-
-            if (mode == launchMode::TEST)
-            {
-                env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
-            }
-
-            /* Convert to GVariant */
-            GVariantBuilder builder;
-            g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
-
-            g_variant_builder_add_value(&builder, g_variant_new_string(unitname.c_str()));
-            g_variant_builder_add_value(&builder, g_variant_new_string("replace"));  // Job mode
-
-            /* Parameter Array */
-            g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-
-            /* ExecStart */
-            auto commands = parseExec(env);
-            if (!commands.empty())
-            {
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-                g_variant_builder_add_value(&builder, g_variant_new_string("ExecStart"));
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-
-                gchar* pathexec = g_find_program_in_path(commands[0].c_str());
-                if (pathexec != nullptr)
-                {
-                    g_variant_builder_add_value(&builder, g_variant_new_take_string(pathexec));
+                    escaped = gescaped;
+                    g_free(gescaped);
                 }
                 else
                 {
-                    g_debug("Unable to find '%s' in PATH=%s", commands[0].c_str(), g_getenv("PATH"));
-                    g_variant_builder_add_value(&builder, g_variant_new_string(commands[0].c_str()));
+                    g_warning("Unable to escape URL: %s", thisurl.value().c_str());
+                    return prev;
                 }
 
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-                for (const auto& param : commands)
+                if (prev.empty())
                 {
-                    g_variant_builder_add_value(&builder, g_variant_new_string(param.c_str()));
+                    return escaped;
                 }
-                g_variant_builder_close(&builder);
+                else
+                {
+                    return prev + " " + escaped;
+                }
+            };
+            auto urlstring = std::accumulate(urls.begin(), urls.end(), std::string{}, accumfunc);
+            env.emplace_back(std::make_pair("APP_URIS", urlstring));
+        }
 
-                g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
+        if (mode == launchMode::TEST)
+        {
+            env.emplace_back(std::make_pair("QT_LOAD_TESTABILITY", "1"));
+        }
 
-                g_variant_builder_close(&builder);
-                g_variant_builder_close(&builder);
-                g_variant_builder_close(&builder);
-                g_variant_builder_close(&builder);
-            }
+        /* Convert to GVariant */
+        GVariantBuilder builder;
+        g_variant_builder_init(&builder, G_VARIANT_TYPE_TUPLE);
 
-            /* RemainAfterExit */
+        g_variant_builder_add_value(&builder, g_variant_new_string(unitname.c_str()));
+        g_variant_builder_add_value(&builder, g_variant_new_string("replace"));  // Job mode
+
+        /* Parameter Array */
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+
+        /* ExecStart */
+        auto commands = parseExec(env);
+        if (!commands.empty())
+        {
             g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-            g_variant_builder_add_value(&builder, g_variant_new_string("RemainAfterExit"));
-            g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
-            g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
-            g_variant_builder_close(&builder);
-            g_variant_builder_close(&builder);
-
-            /* Type */
-            g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-            g_variant_builder_add_value(&builder, g_variant_new_string("Type"));
-            g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
-            g_variant_builder_add_value(&builder, g_variant_new_string("oneshot"));
-            g_variant_builder_close(&builder);
-            g_variant_builder_close(&builder);
-
-            /* Working Directory */
-            if (!findEnv("APP_DIR", env).empty())
-            {
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-                g_variant_builder_add_value(&builder, g_variant_new_string("WorkingDirectory"));
-                g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
-                g_variant_builder_add_value(&builder, g_variant_new_string(findEnv("APP_DIR", env).c_str()));
-                g_variant_builder_close(&builder);
-                g_variant_builder_close(&builder);
-            }
-
-            /* Clean up env before shipping it */
-            for (const auto& rmenv :
-                 {"APP_XMIR_ENABLE", "APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
-                  "INSTANCE_ID", "MIR_SERVER_PLATFORM_PATH", "MIR_SERVER_PROMPT_FILE", "MIR_SERVER_HOST_SOCKET",
-                  "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT", "UBUNTU_APP_LAUNCH_XMIR_HELPER"})
-            {
-                removeEnv(rmenv, env);
-            }
-
-            g_debug("Environment length: %d", envSize(env));
-
-            /* Environment */
-            g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
-            g_variant_builder_add_value(&builder, g_variant_new_string("Environment"));
+            g_variant_builder_add_value(&builder, g_variant_new_string("ExecStart"));
             g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
             g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
-            for (const auto& envvar : env)
+
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+
+            gchar* pathexec = g_find_program_in_path(commands[0].c_str());
+            if (pathexec != nullptr)
             {
-                if (!envvar.first.empty() && !envvar.second.empty())
-                {
-                    g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
-                                                              "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
-                    // g_debug("Setting environment: %s=%s", envvar.first.c_str(), envvar.second.c_str());
-                }
+                g_variant_builder_add_value(&builder, g_variant_new_take_string(pathexec));
+            }
+            else
+            {
+                g_debug("Unable to find '%s' in PATH=%s", commands[0].c_str(), g_getenv("PATH"));
+                g_variant_builder_add_value(&builder, g_variant_new_string(commands[0].c_str()));
             }
 
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+            for (const auto& param : commands)
+            {
+                g_variant_builder_add_value(&builder, g_variant_new_string(param.c_str()));
+            }
+            g_variant_builder_close(&builder);
+
+            g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
+
             g_variant_builder_close(&builder);
             g_variant_builder_close(&builder);
             g_variant_builder_close(&builder);
-
-            /* Parameter Array */
             g_variant_builder_close(&builder);
+        }
 
-            /* Dependent Units (none) */
-            g_variant_builder_add_value(&builder, g_variant_new_array(G_VARIANT_TYPE("(sa(sv))"), nullptr, 0));
+        /* RemainAfterExit */
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+        g_variant_builder_add_value(&builder, g_variant_new_string("RemainAfterExit"));
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
+        g_variant_builder_add_value(&builder, g_variant_new_boolean(FALSE));
+        g_variant_builder_close(&builder);
+        g_variant_builder_close(&builder);
 
-            auto retval = std::make_shared<instance::SystemD>(appId, job, instance, urls, registry_.impl);
-            auto chelper = new StartCHelper{};
-            chelper->ptr = retval;
-            chelper->bus = registry_.impl->_dbus;
+        /* Type */
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+        g_variant_builder_add_value(&builder, g_variant_new_string("Type"));
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
+        g_variant_builder_add_value(&builder, g_variant_new_string("oneshot"));
+        g_variant_builder_close(&builder);
+        g_variant_builder_close(&builder);
 
-            tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
-            starting_handshake_wait(handshake);
-            tracepoint(ubuntu_app_launch, handshake_complete, appIdStr.c_str());
+        /* Working Directory */
+        if (!findEnv("APP_DIR", env).empty())
+        {
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+            g_variant_builder_add_value(&builder, g_variant_new_string("WorkingDirectory"));
+            g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
+            g_variant_builder_add_value(&builder, g_variant_new_string(findEnv("APP_DIR", env).c_str()));
+            g_variant_builder_close(&builder);
+            g_variant_builder_close(&builder);
+        }
 
-            /* Call the job start function */
-            g_debug("Asking systemd to start task for: %s", appIdStr.c_str());
-            g_dbus_connection_call(manager->get_userbus().get(),                  /* bus */
-                                   SYSTEMD_DBUS_ADDRESS,                          /* service name */
-                                   SYSTEMD_DBUS_PATH_MANAGER,                     /* Path */
-                                   SYSTEMD_DBUS_IFACE_MANAGER,                    /* interface */
-                                   "StartTransientUnit",                          /* method */
-                                   g_variant_builder_end(&builder),               /* params */
-                                   G_VARIANT_TYPE("(o)"),                         /* return */
-                                   G_DBUS_CALL_FLAGS_NONE,                        /* flags */
-                                   -1,                                            /* default timeout */
-                                   registry_.impl->thread.getCancellable().get(), /* cancellable */
-                                   application_start_cb,                          /* callback */
-                                   chelper                                        /* object */
-                                   );
+        /* Clean up env before shipping it */
+        for (const auto& rmenv :
+             {"APP_XMIR_ENABLE", "APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
+              "INSTANCE_ID", "MIR_SERVER_PLATFORM_PATH", "MIR_SERVER_PROMPT_FILE", "MIR_SERVER_HOST_SOCKET",
+              "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT", "UBUNTU_APP_LAUNCH_XMIR_HELPER"})
+        {
+            removeEnv(rmenv, env);
+        }
 
-            tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
+        g_debug("Environment length: %d", envSize(env));
 
-            return retval;
-        });
+        /* Environment */
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_TUPLE);
+        g_variant_builder_add_value(&builder, g_variant_new_string("Environment"));
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_VARIANT);
+        g_variant_builder_open(&builder, G_VARIANT_TYPE_ARRAY);
+        for (const auto& envvar : env)
+        {
+            if (!envvar.first.empty() && !envvar.second.empty())
+            {
+                g_variant_builder_add_value(&builder, g_variant_new_take_string(g_strdup_printf(
+                                                          "%s=%s", envvar.first.c_str(), envvar.second.c_str())));
+                // g_debug("Setting environment: %s=%s", envvar.first.c_str(), envvar.second.c_str());
+            }
+        }
+
+        g_variant_builder_close(&builder);
+        g_variant_builder_close(&builder);
+        g_variant_builder_close(&builder);
+
+        /* Parameter Array */
+        g_variant_builder_close(&builder);
+
+        /* Dependent Units (none) */
+        g_variant_builder_add_value(&builder, g_variant_new_array(G_VARIANT_TYPE("(sa(sv))"), nullptr, 0));
+
+        auto retval = std::make_shared<instance::SystemD>(appId, job, instance, urls, reg);
+        auto chelper = new StartCHelper{};
+        chelper->ptr = retval;
+        chelper->bus = reg->_dbus;
+
+        tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
+        starting_handshake_wait(handshake);
+        tracepoint(ubuntu_app_launch, handshake_complete, appIdStr.c_str());
+
+        /* Call the job start function */
+        g_debug("Asking systemd to start task for: %s", appIdStr.c_str());
+        g_dbus_connection_call(manager->get_userbus().get(),       /* bus */
+                               SYSTEMD_DBUS_ADDRESS,               /* service name */
+                               SYSTEMD_DBUS_PATH_MANAGER,          /* Path */
+                               SYSTEMD_DBUS_IFACE_MANAGER,         /* interface */
+                               "StartTransientUnit",               /* method */
+                               g_variant_builder_end(&builder),    /* params */
+                               G_VARIANT_TYPE("(o)"),              /* return */
+                               G_DBUS_CALL_FLAGS_NONE,             /* flags */
+                               -1,                                 /* default timeout */
+                               reg->thread.getCancellable().get(), /* cancellable */
+                               application_start_cb,               /* callback */
+                               chelper                             /* object */
+                               );
+
+        tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
+
+        return retval;
+    });
 }
 
 std::shared_ptr<Application::Instance> SystemD::existing(const AppID& appId,
@@ -833,11 +834,12 @@ std::shared_ptr<Application::Instance> SystemD::existing(const AppID& appId,
                                                          const std::string& instance,
                                                          const std::vector<Application::URL>& urls)
 {
-    return std::make_shared<instance::SystemD>(appId, job, instance, urls, registry_.impl);
+    return std::make_shared<instance::SystemD>(appId, job, instance, urls, getReg());
 }
 
 std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& appID, const std::string& job)
 {
+    auto reg = getReg();
     get_userbus();
 
     std::vector<std::shared_ptr<instance::Base>> instances;
@@ -858,7 +860,7 @@ std::vector<std::shared_ptr<instance::Base>> SystemD::instances(const AppID& app
             continue;
         }
 
-        instances.emplace_back(std::make_shared<instance::SystemD>(appID, job, unitinfo.inst, urls, registry_.impl));
+        instances.emplace_back(std::make_shared<instance::SystemD>(appID, job, unitinfo.inst, urls, reg));
     }
 
     g_debug("Found %d instances for AppID '%s'", int(instances.size()), std::string(appID).c_str());
@@ -917,6 +919,7 @@ std::string SystemD::unitName(const SystemD::UnitInfo& info) const
 
 std::string SystemD::unitPath(const SystemD::UnitInfo& info)
 {
+    auto reg = getReg();
     get_userbus();
     auto data = unitPaths[info];
 
@@ -927,7 +930,7 @@ std::string SystemD::unitPath(const SystemD::UnitInfo& info)
 
     /* Execute on the thread so that we're sure that we're not in
        a dbus call to get the value. No racey for you! */
-    return registry_.impl->thread.executeOnThread<std::string>([&data]() { return data->unitpath; });
+    return reg->thread.executeOnThread<std::string>([&data]() { return data->unitpath; });
 }
 
 SystemD::UnitInfo SystemD::unitNew(const std::string& name,
@@ -939,9 +942,11 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
         throw std::runtime_error{"Job path for unit is '/' so likely failed"};
     }
 
+    auto info = parseUnit(name);
+
     g_debug("New Unit: %s", name.c_str());
 
-    auto info = parseUnit(name);
+    auto reg = getReg();
 
     auto data = std::make_shared<UnitData>();
     data->jobpath = path;
@@ -958,16 +963,16 @@ SystemD::UnitInfo SystemD::unitNew(const std::string& name,
        comes an asking at this point we'll think that we have the
        app, but not yet its path */
     GError* error{nullptr};
-    auto call = unique_glib(g_dbus_connection_call_sync(bus.get(),                                     /* user bus */
-                                                        SYSTEMD_DBUS_ADDRESS,                          /* bus name */
-                                                        SYSTEMD_DBUS_PATH_MANAGER,                     /* path */
-                                                        SYSTEMD_DBUS_IFACE_MANAGER,                    /* interface */
-                                                        "GetUnit",                                     /* method */
-                                                        g_variant_new("(s)", name.c_str()),            /* params */
-                                                        G_VARIANT_TYPE("(o)"),                         /* ret type */
-                                                        G_DBUS_CALL_FLAGS_NONE,                        /* flags */
-                                                        -1,                                            /* timeout */
-                                                        registry_.impl->thread.getCancellable().get(), /* cancellable */
+    auto call = unique_glib(g_dbus_connection_call_sync(bus.get(),                          /* user bus */
+                                                        SYSTEMD_DBUS_ADDRESS,               /* bus name */
+                                                        SYSTEMD_DBUS_PATH_MANAGER,          /* path */
+                                                        SYSTEMD_DBUS_IFACE_MANAGER,         /* interface */
+                                                        "GetUnit",                          /* method */
+                                                        g_variant_new("(s)", name.c_str()), /* params */
+                                                        G_VARIANT_TYPE("(o)"),              /* ret type */
+                                                        G_DBUS_CALL_FLAGS_NONE,             /* flags */
+                                                        -1,                                 /* timeout */
+                                                        reg->thread.getCancellable().get(), /* cancellable */
                                                         &error));
 
     if (error != nullptr)
@@ -1011,7 +1016,9 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
         return 0;
     }
 
-    return registry_.impl->thread.executeOnThread<pid_t>([this, unitname, unitpath]() {
+    auto reg = getReg();
+
+    return reg->thread.executeOnThread<pid_t>([this, unitname, unitpath, reg]() {
         GError* error{nullptr};
         auto call = unique_glib(
             g_dbus_connection_call_sync(get_userbus().get(),                                          /* user bus */
@@ -1023,7 +1030,7 @@ pid_t SystemD::unitPrimaryPid(const AppID& appId, const std::string& job, const 
                                         G_VARIANT_TYPE("(v)"),                                        /* ret type */
                                         G_DBUS_CALL_FLAGS_NONE,                                       /* flags */
                                         -1,                                                           /* timeout */
-                                        registry_.impl->thread.getCancellable().get(),                /* cancellable */
+                                        reg->thread.getCancellable().get(),                           /* cancellable */
                                         &error));
 
         if (error != nullptr)
@@ -1060,7 +1067,9 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
         return {};
     }
 
-    auto cgrouppath = registry_.impl->thread.executeOnThread<std::string>([this, unitname, unitpath]() {
+    auto reg = getReg();
+
+    auto cgrouppath = reg->thread.executeOnThread<std::string>([this, unitname, unitpath, reg]() {
         GError* error{nullptr};
         auto call = unique_glib(
             g_dbus_connection_call_sync(get_userbus().get(),               /* user bus */
@@ -1069,10 +1078,10 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
                                         "org.freedesktop.DBus.Properties", /* interface */
                                         "Get",                             /* method */
                                         g_variant_new("(ss)", SYSTEMD_DBUS_IFACE_SERVICE, "ControlGroup"), /* params */
-                                        G_VARIANT_TYPE("(v)"),                         /* ret type */
-                                        G_DBUS_CALL_FLAGS_NONE,                        /* flags */
-                                        -1,                                            /* timeout */
-                                        registry_.impl->thread.getCancellable().get(), /* cancellable */
+                                        G_VARIANT_TYPE("(v)"),              /* ret type */
+                                        G_DBUS_CALL_FLAGS_NONE,             /* flags */
+                                        -1,                                 /* timeout */
+                                        reg->thread.getCancellable().get(), /* cancellable */
                                         &error));
 
         if (error != nullptr)
@@ -1146,8 +1155,9 @@ std::vector<pid_t> SystemD::unitPids(const AppID& appId, const std::string& job,
 void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::string& instance)
 {
     auto unitname = unitName(SystemD::UnitInfo{appId, job, instance});
+    auto reg = getReg();
 
-    registry_.impl->thread.executeOnThread<bool>([this, unitname] {
+    reg->thread.executeOnThread<bool>([this, unitname, reg] {
         GError* error{nullptr};
         unique_glib(g_dbus_connection_call_sync(
             get_userbus().get(),        /* user bus */
@@ -1156,13 +1166,13 @@ void SystemD::stopUnit(const AppID& appId, const std::string& job, const std::st
             SYSTEMD_DBUS_IFACE_MANAGER, /* interface */
             "StopUnit",                 /* method */
             g_variant_new(
-                "(ss)",                  /* params */
-                unitname.c_str(),        /* param: specify unit */
-                "replace-irreversibly"), /* param: replace the current job but don't allow us to be replaced */
-            G_VARIANT_TYPE("(o)"),       /* ret type */
-            G_DBUS_CALL_FLAGS_NONE,      /* flags */
-            -1,                          /* timeout */
-            registry_.impl->thread.getCancellable().get(), /* cancellable */
+                "(ss)",                         /* params */
+                unitname.c_str(),               /* param: specify unit */
+                "replace-irreversibly"),        /* param: replace the current job but don't allow us to be replaced */
+            G_VARIANT_TYPE("(o)"),              /* ret type */
+            G_DBUS_CALL_FLAGS_NONE,             /* flags */
+            -1,                                 /* timeout */
+            reg->thread.getCancellable().get(), /* cancellable */
             &error));
 
         if (error != nullptr)
@@ -1199,8 +1209,9 @@ struct FailedData
 core::Signal<const std::string&, const std::string&, const std::string&, Registry::FailureType>& SystemD::jobFailed()
 {
     std::call_once(flag_appFailed, [this]() {
-        registry_.impl->thread.executeOnThread<bool>([this]() {
-            auto data = new FailedData{registry_.impl};
+        auto reg = getReg();
+        reg->thread.executeOnThread<bool>([this, reg]() {
+            auto data = new FailedData{reg};
 
             handle_appFailed = managedDBusSignalConnection(
                 g_dbus_connection_signal_subscribe(
@@ -1300,11 +1311,12 @@ void SystemD::resetUnit(const UnitInfo& info)
         return;
     }
 
+    auto reg = getReg();
     auto unitname = unitName(info);
     auto bus = get_userbus();
-    auto cancel = registry_.impl->thread.getCancellable();
+    auto cancel = reg->thread.getCancellable();
 
-    registry_.impl->thread.executeOnThread([bus, unitname, cancel] {
+    reg->thread.executeOnThread([bus, unitname, cancel] {
         if (g_cancellable_is_cancelled(cancel.get()))
         {
             return;

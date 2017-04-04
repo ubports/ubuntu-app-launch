@@ -33,8 +33,8 @@ namespace app_launch
 Registry::Registry()
     : impl{std::make_shared<Impl>()}
 {
-    impl->setJobs(jobs::manager::Base::determineFactory(*this)); /* TODO ref*/
-    impl->setAppStores(app_store::Base::allAppStores(*this));    /* TODO ref */
+    impl->setJobs(jobs::manager::Base::determineFactory(impl));
+    impl->setAppStores(app_store::Base::allAppStores(*this)); /* TODO ref */
 }
 
 Registry::Registry(const std::shared_ptr<Impl>& inimpl)
