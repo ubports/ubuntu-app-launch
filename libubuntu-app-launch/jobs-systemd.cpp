@@ -84,19 +84,19 @@ SystemD::SystemD(const AppID& appId,
 
 pid_t SystemD::primaryPid()
 {
-    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs);
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs());
     return manager->unitPrimaryPid(appId_, job_, instance_);
 }
 
 std::vector<pid_t> SystemD::pids()
 {
-    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs);
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs());
     return manager->unitPids(appId_, job_, instance_);
 }
 
 void SystemD::stop()
 {
-    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs);
+    auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_->jobs());
     manager->stopUnit(appId_, job_, instance_);
 }
 
@@ -591,7 +591,7 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
     return registry_.impl->thread.executeOnThread<std::shared_ptr<instance::SystemD>>(
         [&]() -> std::shared_ptr<instance::SystemD> {
-            auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_.impl->jobs);
+            auto manager = std::dynamic_pointer_cast<manager::SystemD>(registry_.impl->jobs());
             std::string appIdStr{appId};
             g_debug("Initializing params for an new instance::SystemD for: %s", appIdStr.c_str());
 
@@ -1221,7 +1221,7 @@ core::Signal<const std::string&, const std::string&, const std::string&, Registr
                             throw std::runtime_error{"Lost our connection with the registry"};
                         }
 
-                        auto manager = std::dynamic_pointer_cast<SystemD>(reg->jobs);
+                        auto manager = std::dynamic_pointer_cast<SystemD>(reg->jobs());
 
                         /* Check to see if this is a path we care about */
                         bool pathfound{false};

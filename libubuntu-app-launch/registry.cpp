@@ -21,6 +21,7 @@
 #include <numeric>
 #include <regex>
 
+#include "jobs-base.h"
 #include "registry-impl.h"
 #include "registry.h"
 
@@ -30,13 +31,16 @@ namespace app_launch
 {
 
 Registry::Registry()
-    : impl{std::make_shared<Impl>(*this)}
+    : impl{std::make_shared<Impl>()}
 {
+    impl->setJobs(jobs::manager::Base::determineFactory(*this)); /* TODO ref*/
+    impl->setAppStores(app_store::Base::allAppStores(*this));    /* TODO ref */
 }
 
 Registry::Registry(const std::shared_ptr<Impl>& inimpl)
     : impl{inimpl}
 {
+    /* We're assuming the impl has been setup */
 }
 
 Registry::~Registry()
@@ -45,7 +49,7 @@ Registry::~Registry()
 
 std::list<std::shared_ptr<Application>> Registry::runningApps(std::shared_ptr<Registry> registry)
 {
-    return registry->impl->jobs->runningApps();
+    return registry->impl->jobs()->runningApps();
 }
 
 std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<Registry> connection)
@@ -62,22 +66,17 @@ std::list<std::shared_ptr<Application>> Registry::installedApps(std::shared_ptr<
 
 std::list<std::shared_ptr<Helper>> Registry::runningHelpers(Helper::Type type, std::shared_ptr<Registry> registry)
 {
-    return registry->impl->jobs->runningHelpers(type);
+    return registry->impl->jobs()->runningHelpers(type);
 }
 
 void Registry::setManager(const std::shared_ptr<Manager>& manager, const std::shared_ptr<Registry>& registry)
 {
-    registry->impl->jobs->setManager(manager);
+    registry->impl->jobs()->setManager(manager);
 }
 
 void Registry::clearManager()
 {
-    if (!impl->jobs)
-    {
-        return;
-    }
-
-    impl->jobs->clearManager();
+    impl->jobs()->clearManager();
 }
 
 std::shared_ptr<Registry> defaultRegistry;
@@ -99,19 +98,19 @@ void Registry::clearDefault()
 core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Registry::appStarted(
     const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->jobs->appStarted();
+    return reg->impl->jobs()->appStarted();
 }
 
 core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&>& Registry::appStopped(
     const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->jobs->appStopped();
+    return reg->impl->jobs()->appStopped();
 }
 
 core::Signal<const std::shared_ptr<Application>&, const std::shared_ptr<Application::Instance>&, Registry::FailureType>&
     Registry::appFailed(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->jobs->appFailed();
+    return reg->impl->jobs()->appFailed();
 }
 
 core::Signal<const std::shared_ptr<Application>&,
@@ -119,7 +118,7 @@ core::Signal<const std::shared_ptr<Application>&,
              const std::vector<pid_t>&>&
     Registry::appPaused(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->jobs->appPaused();
+    return reg->impl->jobs()->appPaused();
 }
 
 core::Signal<const std::shared_ptr<Application>&,
@@ -127,25 +126,25 @@ core::Signal<const std::shared_ptr<Application>&,
              const std::vector<pid_t>&>&
     Registry::appResumed(const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->jobs->appResumed();
+    return reg->impl->jobs()->appResumed();
 }
 
 core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Registry::helperStarted(
     Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->jobs->helperStarted(type);
+    return reg->impl->jobs()->helperStarted(type);
 }
 
 core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&>& Registry::helperStopped(
     Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->jobs->helperStopped(type);
+    return reg->impl->jobs()->helperStopped(type);
 }
 
 core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Instance>&, Registry::FailureType>&
     Registry::helperFailed(Helper::Type type, const std::shared_ptr<Registry>& reg)
 {
-    return reg->impl->jobs->helperFailed(type);
+    return reg->impl->jobs()->helperFailed(type);
 }
 
 core::Signal<const std::shared_ptr<Application>&>& Registry::appInfoUpdated(const std::shared_ptr<Registry>& reg)

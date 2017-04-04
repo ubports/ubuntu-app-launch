@@ -49,10 +49,7 @@ class Base;
 class Registry::Impl
 {
 public:
-    Impl(Registry& registry);
-    Impl(Registry& registry,
-         std::list<std::shared_ptr<app_store::Base>> appStores,
-         std::shared_ptr<jobs::manager::Base> jobEngine);
+    Impl();
 
     virtual ~Impl()
     {
@@ -72,9 +69,7 @@ public:
     /** Snapd information object */
     snapd::Info snapdInfo;
 
-    std::shared_ptr<jobs::manager::Base> jobs;
-
-    std::shared_ptr<IconFinder> getIconFinder(std::string basePath);
+    std::shared_ptr<IconFinder>& getIconFinder(std::string basePath);
 
     virtual void zgSendEvent(AppID appid, const std::string& eventtype);
 
@@ -94,7 +89,8 @@ public:
 
     std::shared_ptr<info_watcher::Zeitgeist> getZgWatcher()
     {
-        std::call_once(zgWatcherOnce_, [this] { zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(_registry); });
+        /* std::call_once(zgWatcherOnce_, [this] { zgWatcher_ = std::make_shared<info_watcher::Zeitgeist>(); });  TODO
+         */
         return zgWatcher_;
     }
 
@@ -105,14 +101,30 @@ public:
         return _appStores;
     }
 
-    void setAppStores(std::list<std::shared_ptr<app_store::Base>>& newlist)
+    void setAppStores(const std::list<std::shared_ptr<app_store::Base>>& newlist)
     {
         _appStores = newlist;
     }
 
+    const std::shared_ptr<jobs::manager::Base>& jobs()
+    {
+        if (G_UNLIKELY(!jobs_))
+        {
+            throw std::runtime_error{"Registry Implmentation has no Jobs object"};
+        }
+        return jobs_;
+    }
+
+    void setJobs(const std::shared_ptr<jobs::manager::Base>& jobs)
+    {
+        jobs_ = jobs;
+    }
+
     /* Create functions */
     std::shared_ptr<Application> createApp(const AppID& appid);
-    std::shared_ptr<Helper> createHelper(const Helper::Type& type, const AppID& appid);
+    std::shared_ptr<Helper> createHelper(const Helper::Type& type,
+                                         const AppID& appid,
+                                         const std::shared_ptr<Registry::Impl>& sharedimpl);
 
     /* AppID functions */
     AppID find(const std::string& sappid);
@@ -123,7 +135,8 @@ public:
     AppID discover(const std::string& package, const std::string& appname, AppID::VersionWildcard versionwildcard);
 
 private:
-    Registry& _registry; /**< The Registry that we're spawned from */
+    /** The job creation engine */
+    std::shared_ptr<jobs::manager::Base> jobs_;
 
     /** Shared instance of the Zeitgeist Log */
     std::shared_ptr<ZeitgeistLog> zgLog_;

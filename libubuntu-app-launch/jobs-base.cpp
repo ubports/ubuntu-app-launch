@@ -226,7 +226,7 @@ core::Signal<const std::shared_ptr<Application>&,
                                                        }
 
                                                        auto sparams = share_glib(g_variant_ref(params));
-                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->jobs);
+                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->jobs());
                                                        manager->pauseEventEmitted(manager->sig_appPaused, sparams, reg);
                                                    },    /* callback */
                                                    data, /* user data */
@@ -274,7 +274,7 @@ core::Signal<const std::shared_ptr<Application>&,
                                                        }
 
                                                        auto sparams = share_glib(g_variant_ref(params));
-                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->jobs);
+                                                       auto manager = std::dynamic_pointer_cast<Base>(reg->jobs());
                                                        manager->pauseEventEmitted(manager->sig_appResumed, sparams,
                                                                                   reg);
                                                    },    /* callback */
@@ -311,7 +311,7 @@ core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Insta
                 try
                 {
                     auto appId = registry_.impl->find(appid);
-                    auto helper = registry_.impl->createHelper(type, appId);
+                    auto helper = registry_.impl->createHelper(type, appId, registry_.impl);
                     auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
 
                     (*sig_helpersStarted.at(type.value()))(helper, inst);
@@ -349,7 +349,7 @@ core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Insta
                 try
                 {
                     auto appId = ubuntu::app_launch::AppID::parse(appid);
-                    auto helper = registry_.impl->createHelper(type, appId);
+                    auto helper = registry_.impl->createHelper(type, appId, registry_.impl);
                     auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
 
                     (*sig_helpersStopped.at(type.value()))(helper, inst);
@@ -387,7 +387,7 @@ core::Signal<const std::shared_ptr<Helper>&, const std::shared_ptr<Helper::Insta
             try
             {
                 auto appId = ubuntu::app_launch::AppID::parse(appid);
-                auto helper = registry_.impl->createHelper(type, appId);
+                auto helper = registry_.impl->createHelper(type, appId, registry_.impl);
                 auto inst = std::dynamic_pointer_cast<helper_impls::Base>(helper)->existingInstance(instanceid);
 
                 (*sig_helpersFailed.at(type.value()))(helper, inst, reason);
@@ -478,7 +478,7 @@ guint Base::managerSignalHelper(const std::string& signalname,
 
             /* If we're still conneted and the manager has been cleared
                we'll just be a no-op */
-            auto ljobs = std::dynamic_pointer_cast<Base>(reg->jobs);
+            auto ljobs = std::dynamic_pointer_cast<Base>(reg->jobs());
             if (!ljobs->manager_)
             {
                 return;
@@ -533,21 +533,21 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                            const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
                            const std::shared_ptr<GVariant>& params) {
                             /* Nothing to do today */
-                            std::dynamic_pointer_cast<Base>(reg->jobs)->manager_->focusRequest(app, instance,
-                                                                                               [](bool response) {
-                                                                                                   /* NOTE: We have no
-                                                                                                      clue what thread
-                                                                                                      this is gonna be
-                                                                                                      executed on, but
-                                                                                                      since we're just
-                                                                                                      talking to the
-                                                                                                      GDBus
-                                                                                                      thread it isn't an
-                                                                                                      issue today. Be
-                                                                                                      careful in
-                                                                                                      changing
-                                                                                                      this code. */
-                                                                                               });
+                            std::dynamic_pointer_cast<Base>(reg->jobs())
+                                ->manager_->focusRequest(app, instance, [](bool response) {
+                                    /* NOTE: We have no
+                                       clue what thread
+                                       this is gonna be
+                                       executed on, but
+                                       since we're just
+                                       talking to the
+                                       GDBus
+                                       thread it isn't an
+                                       issue today. Be
+                                       careful in
+                                       changing
+                                       this code. */
+                                });
                         }),
                     registry_.impl->_dbus);
                 handle_managerSignalStarting = managedDBusSignalConnection(
@@ -558,8 +558,8 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                            const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
                            const std::shared_ptr<GVariant>& params) {
 
-                            std::dynamic_pointer_cast<Base>(reg->jobs)->manager_->startingRequest(
-                                app, instance, [conn, sender, params](bool response) {
+                            std::dynamic_pointer_cast<Base>(reg->jobs())
+                                ->manager_->startingRequest(app, instance, [conn, sender, params](bool response) {
                                     /* NOTE: We have no clue what thread this is gonna be
                                        executed on, but since we're just talking to the GDBus
                                        thread it isn't an issue today. Be careful in changing
@@ -583,8 +583,8 @@ void Base::setManager(std::shared_ptr<Registry::Manager> manager)
                            const std::shared_ptr<Application::Instance>& instance,
                            const std::shared_ptr<GDBusConnection>& conn, const std::string& sender,
                            const std::shared_ptr<GVariant>& params) {
-                            std::dynamic_pointer_cast<Base>(reg->jobs)->manager_->resumeRequest(
-                                app, instance, [conn, sender, params](bool response) {
+                            std::dynamic_pointer_cast<Base>(reg->jobs())
+                                ->manager_->resumeRequest(app, instance, [conn, sender, params](bool response) {
                                     /* NOTE: We have no clue what thread this is gonna be
                                        executed on, but since we're just talking to the GDBus
                                        thread it isn't an issue today. Be careful in changing
@@ -662,7 +662,7 @@ std::list<std::shared_ptr<Helper>> Base::runningHelpers(const Helper::Type& type
             continue;
         }
 
-        helpers.emplace_back(registry_.impl->createHelper(type, id));
+        helpers.emplace_back(registry_.impl->createHelper(type, id, registry_.impl));
     }
 
     return helpers;
