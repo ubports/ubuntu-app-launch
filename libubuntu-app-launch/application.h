@@ -66,7 +66,7 @@ public:
 
     /* System level info */
     /** Get the Application ID of this Application */
-    virtual AppID appId() = 0;
+    virtual AppID appId() const = 0;
 
     /** \brief Information and metadata about the application for programs that
             are displaying the application to users
@@ -255,6 +255,9 @@ public:
         virtual void stop() = 0;
         /** Signal the shell to focus the Application::Instance */
         virtual void focus() = 0;
+
+        bool operator==(const Instance& b) const;
+        bool operator!=(const Instance& b) const;
     };
 
     /** A quick check to see if this application has any running instances */
@@ -279,6 +282,9 @@ public:
         \param pid The pid to find the instance of
     */
     virtual std::shared_ptr<Instance> findInstance(const pid_t& pid) = 0;
+
+    bool operator==(const Application& b) const;
+    bool operator!=(const Application& b) const;
 };
 
 }  // namespace app_launch

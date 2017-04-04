@@ -83,7 +83,7 @@ public:
     {
     }
 
-    ubuntu::app_launch::AppID appId() override
+    ubuntu::app_launch::AppID appId() const override
     {
         return appid_;
     }

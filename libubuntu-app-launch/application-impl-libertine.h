@@ -54,7 +54,7 @@ public:
               const AppID::AppName& appname,
               const std::shared_ptr<Registry::Impl>& registry);
 
-    AppID appId() override
+    AppID appId() const override
     {
         return {_container, _appname, AppID::Version::from_raw("0.0")};
     }

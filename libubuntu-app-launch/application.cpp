@@ -425,5 +425,31 @@ const oom::Score oom::fromLabelAndValue(std::int32_t value, const std::string& l
     return static_cast<oom::Score>(value);
 }
 
+bool Application::operator==(const Application& b) const
+{
+    return appId() == b.appId();
+}
+
+bool Application::operator!=(const Application& b) const
+{
+    return appId() != b.appId();
+}
+
+bool Application::Instance::operator==(const Application::Instance& b) const
+{
+    auto ja = dynamic_cast<const jobs::instance::Base*>(this);
+    auto jb = dynamic_cast<const jobs::instance::Base*>(&b);
+
+    return ja->getAppId() == jb->getAppId() && ja->getInstanceId() == jb->getInstanceId();
+}
+
+bool Application::Instance::operator!=(const Application::Instance& b) const
+{
+    auto ja = dynamic_cast<const jobs::instance::Base*>(this);
+    auto jb = dynamic_cast<const jobs::instance::Base*>(&b);
+
+    return ja->getAppId() != jb->getAppId() || ja->getInstanceId() != jb->getInstanceId();
+}
+
 }  // namespace app_launch
 }  // namespace ubuntu

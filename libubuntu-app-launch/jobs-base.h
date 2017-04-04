@@ -54,9 +54,14 @@ public:
     void resume() override;
     void focus() override;
 
-    const std::string& getInstanceId()
+    const std::string& getInstanceId() const
     {
         return instance_;
+    }
+
+    const AppID& getAppId() const
+    {
+        return appId_;
     }
 
     /* OOM Functions */
