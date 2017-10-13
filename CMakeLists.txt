@@ -226,7 +226,7 @@ if (${enable_tests})
   add_subdirectory(tests)
 endif ()
 
-include(EnableCoverageReport)
+#include(EnableCoverageReport)
 set(filter-list)
 list(APPEND filter-list "/usr/include")
 list(APPEND filter-list "${CMAKE_SOURCE_DIR}/tests/*")
