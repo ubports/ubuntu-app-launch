@@ -1,3 +1,9 @@
+ubuntu-app-launch (0.10+ubports) xenial; urgency=medium
+
+  * Imported to UBports
+
+ -- UBports auto importer <infra@ubports.com>  Fri, 13 Oct 2017 05:01:30 +0200
+
 ubuntu-app-launch (0.9+15.04.20161110-0ubuntu1) vivid; urgency=medium
 
   * Make resume/pause non-blocking
