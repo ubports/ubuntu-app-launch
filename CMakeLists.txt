@@ -233,8 +233,8 @@ list(APPEND filter-list "${CMAKE_SOURCE_DIR}/tests/*")
 if (NOT ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
   list(APPEND filter-list "${CMAKE_BINARY_DIR}/*")
 endif()
-ENABLE_COVERAGE_REPORT(
-  TARGETS ubuntu-launcher
-  TESTS application-icon-finder-test application-info-desktop-test cgroup-reap-test exec-util-test failure-test helper-test helper-handshake-test libual-test libual-cpp-test zg-test
-  FILTER ${filter-list}
-)
+# ENABLE_COVERAGE_REPORT(
+#   TARGETS ubuntu-launcher
+#   TESTS application-icon-finder-test application-info-desktop-test cgroup-reap-test exec-util-test failure-test helper-test helper-handshake-test libual-test libual-cpp-test zg-test
+#   FILTER ${filter-list}
+# )
