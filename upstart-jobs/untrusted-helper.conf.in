@@ -16,7 +16,8 @@ export UBUNTU_APP_LAUNCH_ARCH
 
 apparmor switch ${APP_ID}
 cgroup freezer
-oom score 800
+# FIXME
+#oom score 800
 
 # This is unconfined
 pre-start script
