@@ -65,15 +65,8 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry>& r
         rootDir = rootenv;
     }
 
-    auto flags = app_info::DesktopFlags::ALLOW_NO_DISPLAY;
-
-    if (!g_key_file_has_key(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Touch", nullptr))
-    {
-        flags |= app_info::DesktopFlags::XMIR_DEFAULT;
-    }
-
     appinfo_ = std::make_shared<app_info::Desktop>(_keyfile, _basedir, rootDir,
-                                                   flags, _registry);
+                                                   app_info::DesktopFlags::ALLOW_NO_DISPLAY, _registry);
 
     if (!_keyfile)
     {

@@ -199,7 +199,7 @@ TEST_F(ExecUtil, DesktopExec)
 {
 	StartCheckEnv("foo", {
 		{"APP_EXEC", [](const gchar * value) {
-			EXPECT_STREQ("libertine-launch foo", value); }},
+			EXPECT_STREQ("foo", value); }},
 		{"APP_DESKTOP_FILE_PATH", [](const gchar * value) {
 			EXPECT_STREQ(CMAKE_SOURCE_DIR "/applications/foo.desktop", value); }},
 		{"APP_EXEC_POLICY", [](const gchar * value) {
@@ -210,7 +210,7 @@ TEST_F(ExecUtil, DesktopExec)
 		{"APP_LAUNCHER_PID", [](const gchar * value) {
 			EXPECT_EQ(getpid(), atoi(value)); }},
 		{"APP_XMIR_ENABLE", [](const gchar * value) {
-			EXPECT_STREQ("1", value); }},
+			EXPECT_STREQ("0", value); }},
 	});
 }
 
