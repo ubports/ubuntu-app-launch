@@ -38,12 +38,6 @@ handshake_t * starting_handshake_start   (const gchar *   app_id,
                                           int timeout_s);
 void      starting_handshake_wait        (handshake_t *   handshake);
 
-GDBusConnection * cgroup_manager_connection (void);
-void              cgroup_manager_unref (GDBusConnection * cgroup_manager);
-GList *   pids_from_cgroup       (GDBusConnection * cgmanager,
-                                  const gchar *   jobname,
-                                  const gchar *   instancename);
-
 gboolean   verify_keyfile        (GKeyFile *    inkeyfile,
                                   const gchar * desktop);
 
