@@ -1,4 +1,4 @@
-ubuntu-app-launch (0.12+17.04.20170404.2-0ubuntu1) bionic; urgency=medium
+ubuntu-app-launch (0.13+ubports) bionic; urgency=medium
 
   [ Michael Terry ]
   * Bump version for new AppID methods
