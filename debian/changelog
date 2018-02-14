@@ -1,4 +1,4 @@
-ubuntu-app-launch (0.12+17.04.20170404.2-0ubuntu1) zesty; urgency=medium
+ubuntu-app-launch (0.12+17.04.20170404.2-0ubuntu1) bionic; urgency=medium
 
   [ Michael Terry ]
   * Bump version for new AppID methods
@@ -889,7 +889,7 @@ upstart-app-launch (0.1+13.10.20130703-0ubuntu1) saucy; urgency=low
 upstart-app-launch (0.1daily13.06.19-0ubuntu1) saucy; urgency=low
 
   [ Ted Gould ]
-  * Initial release 
+  * Initial release
   * The application config file
   * Adding debian stuff
   * Fixing the make file to make it work-ish
