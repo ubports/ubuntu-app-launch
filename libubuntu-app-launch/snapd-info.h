@@ -22,6 +22,7 @@
 #include <list>
 #include <memory>
 #include <set>
+#include <functional>
 
 #include <json-glib/json-glib.h>
 
