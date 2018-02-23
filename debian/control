@@ -54,6 +54,7 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          ubuntu-app-launch (= ${binary:Version}),
+         unity8-pasted
 Replaces: upstart-app-launch-tools
 Conflicts: upstart-app-launch-tools
 Provides: upstart-app-launch-tools
