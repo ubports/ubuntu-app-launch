@@ -83,6 +83,7 @@ main (int argc, char * argv[])
 			socketbuf,
 			"-mir",
 			appid,
+			"-rootless"
 			NULL
 		};
 
