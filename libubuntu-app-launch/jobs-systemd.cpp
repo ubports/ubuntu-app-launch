@@ -636,10 +636,10 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
             /* If we're in Unity8 we don't want to pass it's platform, we want
              * an application platform. */
-            if (findEnv("QT_QPA_PLATFORM", env) == "mirserver")
+            if (findEnv("QT_QPA_PLATFORM", env) == "mirserver" || findEnv("QT_QPA_PLATFORM", env) == "ubuntumirclient")
             {
                 removeEnv("QT_QPA_PLATFORM", env);
-                env.emplace_back(std::make_pair("QT_QPA_PLATFORM", "ubuntumirclient"));
+                env.emplace_back(std::make_pair("QT_QPA_PLATFORM", "wayland"));
             }
         }
 
