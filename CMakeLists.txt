@@ -88,9 +88,6 @@ include_directories(${LTTNG_INCLUDE_DIRS})
 pkg_check_modules(MIR REQUIRED mirclient)
 include_directories(${MIR_INCLUDE_DIRS})
 
-pkg_check_modules(WHOOPSIE REQUIRED libwhoopsie)
-include_directories(${WHOOPSIE_INCLUDE_DIRS})
-
 pkg_check_modules(LIBERTINE REQUIRED libertine)
 include_directories(${LIBERTINE_INCLUDE_DIRS})
 
