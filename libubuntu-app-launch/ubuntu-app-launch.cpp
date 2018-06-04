@@ -25,7 +25,6 @@ extern "C" {
 #include <fcntl.h>
 #include <errno.h>
 #include <zeitgeist.h>
-#include <libwhoopsie/recoverable-problem.h>
 
 #include "ubuntu-app-launch-trace.h"
 #include "utils.h"
