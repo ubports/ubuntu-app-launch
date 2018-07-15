@@ -1,0 +1,8 @@
+# -*- shell-script -*-
+
+function _ubuntu-app-launch()
+{
+    local cur
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=( $(compgen -W "$(ubuntu-app-launch-appids)" -- ${cur} ) )
+} && complete -F _ubuntu-app-launch ubuntu-app-launch
