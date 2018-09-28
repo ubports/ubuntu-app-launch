@@ -17,6 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#ifdef HAVE_LIBERTINE
+
 #include "app-store-libertine.h"
 #include "application-impl-libertine.h"
 #include "string-util.h"
@@ -168,3 +170,5 @@ std::shared_ptr<app_impls::Base> Libertine::create(const AppID& appid)
 }  // namespace app_store
 }  // namespace app_launch
 }  // namespace ubuntu
+
+#endif // HAVE_LIBERTINE

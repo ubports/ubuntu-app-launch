@@ -17,6 +17,8 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#ifdef HAVE_LIBERTINE
+
 #include "application-impl-libertine.h"
 #include "libertine.h"
 #include "registry-impl.h"
@@ -199,3 +201,5 @@ std::shared_ptr<Application::Instance> Libertine::findInstance(const std::string
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu
+
+#endif // HAVE_LIBERTINE

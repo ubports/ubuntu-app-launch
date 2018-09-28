@@ -16,12 +16,13 @@
  * Authors:
  *     Ted Gould <ted.gould@canonical.com>
  */
+#pragma once
+
+#ifdef HAVE_LIBERTINE
 
 #include "application-impl-base.h"
 #include "application-info-desktop.h"
 #include <gio/gdesktopappinfo.h>
-
-#pragma once
 
 namespace ubuntu
 {
@@ -86,3 +87,5 @@ private:
 }  // namespace app_impls
 }  // namespace app_launch
 }  // namespace ubuntu
+
+#endif // HAVE_LIBERTINE

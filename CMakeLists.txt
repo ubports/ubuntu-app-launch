@@ -88,8 +88,11 @@ include_directories(${LTTNG_INCLUDE_DIRS})
 pkg_check_modules(MIR REQUIRED mirclient)
 include_directories(${MIR_INCLUDE_DIRS})
 
-pkg_check_modules(LIBERTINE REQUIRED libertine)
+pkg_check_modules(LIBERTINE libertine)
 include_directories(${LIBERTINE_INCLUDE_DIRS})
+if(${LIBERTINE_FOUND})
+  add_definitions(-DHAVE_LIBERTINE=1)
+endif(${LIBERTINE_FOUND})
 
 pkg_check_modules(CURL libcurl>=7.47)
 include_directories(${CURL_INCLUDE_DIRS})

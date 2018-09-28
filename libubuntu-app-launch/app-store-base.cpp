@@ -19,7 +19,9 @@
 
 #include "app-store-base.h"
 #include "app-store-legacy.h"
+#ifdef HAVE_LIBERTINE
 #include "app-store-libertine.h"
+#endif
 #include "app-store-snap.h"
 
 namespace ubuntu
@@ -43,8 +45,10 @@ std::list<std::shared_ptr<Base>> Base::allAppStores(const std::shared_ptr<Regist
     return {
         std::make_shared<Legacy>(registry) /* Legacy */
         ,
+#ifdef HAVE_LIBERTINE
         std::make_shared<Libertine>(registry) /* Libertine */
         ,
+#endif
         std::make_shared<Snap>(registry) /* Snappy */
     };
 }

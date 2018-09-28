@@ -19,6 +19,8 @@
 
 #pragma once
 
+#ifdef HAVE_LIBERTINE
+
 #include "app-store-base.h"
 
 namespace ubuntu
@@ -51,3 +53,5 @@ public:
 }  // namespace app_store
 }  // namespace app_launch
 }  // namespace ubuntu
+
+#endif // HAVE_LIBERTINE

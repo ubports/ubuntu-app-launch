@@ -26,7 +26,9 @@
 #include "libertine-service.h"
 
 #include "app-store-legacy.h"
+#ifdef HAVE_LIBERTINE
 #include "app-store-libertine.h"
+#endif
 #include "app-store-snap.h"
 #include "application-impl-snap.h"
 #include "application.h"
@@ -40,7 +42,10 @@ class ListApps : public EventuallyFixture
 protected:
     DbusTestService* service = nullptr;
     GDBusConnection* bus = nullptr;
+
+#ifdef HAVE_LIBERTINE
     std::shared_ptr<LibertineService> libertine;
+#endif
 
     virtual void SetUp()
     {
@@ -54,7 +59,7 @@ protected:
         g_setenv("UBUNTU_APP_LAUNCH_SNAPD_SOCKET", SNAPD_LIST_APPS_SOCKET, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_SNAP_BASEDIR", SNAP_BASEDIR, TRUE);
         g_setenv("UBUNTU_APP_LAUNCH_DISABLE_SNAPD_TIMEOUT", "You betcha!", TRUE);
-
+#ifdef HAVE_LIBERTINE
         service = dbus_test_service_new(nullptr);
 
         libertine = std::make_shared<LibertineService>();
@@ -67,17 +72,19 @@ protected:
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
 
         ASSERT_EVENTUALLY_FUNC_EQ(false, std::function<bool()>{[&] { return libertine->getUniqueName().empty(); }});
+#endif // HAVE_LIBERTINE
     }
 
     virtual void TearDown()
     {
         g_unlink(SNAPD_LIST_APPS_SOCKET);
-
+#ifdef HAVE_LIBERTINE
         libertine.reset();
         g_clear_object(&service);
 
         g_object_unref(bus);
         ASSERT_EVENTUALLY_EQ(nullptr, bus);
+#endif // HAVE_LIBERTINE
     }
 
     bool findApp(const std::list<std::shared_ptr<ubuntu::app_launch::Application>>& apps, const std::string& appid)
@@ -152,6 +159,7 @@ TEST_F(ListApps, ListLegacy)
                                                         ubuntu::app_launch::AppID::Version::from_raw({}))));
 }
 
+#ifdef HAVE_LIBERTINE
 TEST_F(ListApps, ListLibertine)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
@@ -165,6 +173,7 @@ TEST_F(ListApps, ListLibertine)
     EXPECT_TRUE(findApp(apps, "container-name_test_0.0"));
     EXPECT_TRUE(findApp(apps, "container-name_user-app_0.0"));
 }
+#endif // HAVE_LIBERTINE
 
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
