@@ -400,8 +400,7 @@ Desktop::Desktop(const AppID& appid,
     , _rotatesWindow(
           boolFromKeyfile<Application::Info::RotatesWindow>(keyfile, "X-Ubuntu-Rotates-Window-Contents", false))
     , _ubuntuLifecycle(boolFromKeyfile<Application::Info::UbuntuLifecycle>(keyfile, "X-Ubuntu-Touch", false))
-    , _xMirEnable(
-          boolFromKeyfile<XMirEnable>(keyfile, "X-Ubuntu-XMir-Enable", (flags & DesktopFlags::XMIR_DEFAULT).any()))
+    , _xMirEnable(false)
     , _exec(stringFromKeyfile<Exec>(keyfile, "Exec"))
     , _singleInstance(boolFromKeyfile<SingleInstance>(keyfile, "X-Ubuntu-Single-Instance", false))
 {

@@ -39,7 +39,7 @@ namespace app_impls
  ** Interface Lists
  ************************/
 
-/** All the interfaces that we run XMir for by default */
+/** All the interfaces that use X11 translation layers */
 const std::set<std::string> X11_INTERFACES{"unity7", "x11"};
 /** The interface to indicate direct Mir support */
 const std::string MIR_INTERFACE{"mir"};
@@ -241,23 +241,6 @@ Snap::InterfaceInfo Snap::findInterfaceInfo(const AppID& appid, const std::share
         ubuntuLifecycle = Application::Info::UbuntuLifecycle::from_raw(true);
     }
 
-    if (ifaceset.find(MIR_INTERFACE) == ifaceset.end())
-    {
-        for (const auto& interface : X11_INTERFACES)
-        {
-            if (ifaceset.find(interface) != ifaceset.end())
-            {
-                xMirEnable = app_info::Desktop::XMirEnable::from_raw(true);
-                break;
-            }
-        }
-
-        if (!xMirEnable.value())
-        {
-            throw std::runtime_error("Graphical interface not found for: " + std::string(appid));
-        }
-    }
-
     return std::make_tuple(xMirEnable, ubuntuLifecycle);
 }
 
@@ -286,34 +269,14 @@ std::vector<std::shared_ptr<Application::Instance>> Snap::instances()
     return std::vector<std::shared_ptr<Application::Instance>>(vbase.begin(), vbase.end());
 }
 
-/** Return the launch environment for this snap. That includes whether
-    or not it needs help from XMir (including Libertine helpers)
-*/
+/** Return the launch environment for this snap. */
 std::list<std::pair<std::string, std::string>> Snap::launchEnv()
 {
     g_debug("Getting snap specific environment");
     std::list<std::pair<std::string, std::string>> retval;
 
-    retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", info_->xMirEnable().value() ? "1" : "0"));
-    if (info_->xMirEnable() && getenv("SNAP") == nullptr)
-    {
-        /* If we're setting up XMir we also need the other helpers
-           that libertine is helping with */
-        auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
-        if (libertine_launch == nullptr)
-        {
-            libertine_launch = LIBERTINE_LAUNCH;
-        }
-
-        retval.emplace_back(
-            std::make_pair("APP_EXEC", std::string(libertine_launch) + " " + info_->execLine().value()));
-    }
-    else
-    {
-        /* If we're in a snap the libertine helpers are setup by
-           the snap stuff */
-        retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
-    }
+    /* The helpers are setup by the snap stuff */
+    retval.emplace_back(std::make_pair("APP_EXEC", info_->execLine().value()));
 
     return retval;
 }

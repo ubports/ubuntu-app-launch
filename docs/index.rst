@@ -35,7 +35,7 @@ UBUNTU_APP_LAUNCH_LEGACY_ROOT
   Set the path that represents the root for legacy applications.
 
 UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH
-  Path to the libertine launch utility for setting up libertine containers and XMir based legacy apps.
+  Path to the libertine launch utility for setting up libertine applications.
 
 UBUNTU_APP_LAUNCH_OOM_HELPER
   Path to the setuid helper that configures OOM values on application processes that we otherwise couldn't, mostly this is for Oxide.
@@ -61,11 +61,6 @@ UBUNTU_APP_LAUNCH_SYSTEMD_PATH
 UBUNTU_APP_LAUNCH_SYSTEMD_NO_RESET
   Don't reset the job after it fails. This makes it so it can't be run again, but leaves debugging information around for investigation.
 
-UBUNTU_APP_LAUNCH_XMIR_HELPER
-  Tool that helps to start XMir and sets the DISPLAY variable for applications
-
-UBUNTU_APP_LAUNCH_XMIR_PATH
-  Specifies the location of the XMir binary to use
 
 
 API Documentation

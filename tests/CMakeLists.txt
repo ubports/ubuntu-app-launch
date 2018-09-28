@@ -123,16 +123,6 @@ add_test (NAME application-icon-finder-test COMMAND application-icon-finder-test
 
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-# XMir helper Test
-
-configure_file ("xmir-helper-test.in" "${CMAKE_CURRENT_BINARY_DIR}/xmir-helper-test" @ONLY)
-add_test (xmir-helper-test xmir-helper-test)
-
-# Snappy XMir Wrapper Test
-
-configure_file("snappy-xmir-test.sh.in" "${CMAKE_CURRENT_BINARY_DIR}/snappy-xmir-test.sh" @ONLY) 
-add_test (NAME snappy-xmir-test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/snappy-xmir-test.sh)
-
 # Formatted code
 
 add_custom_target(format-tests

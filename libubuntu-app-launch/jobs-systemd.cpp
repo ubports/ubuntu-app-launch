@@ -444,34 +444,6 @@ std::vector<std::string> SystemD::parseExec(std::list<std::pair<std::string, std
         g_warning("After parsing 'APP_EXEC=%s' we ended up with no tokens", exec.c_str());
     }
 
-    /* See if we need the xmir helper */
-    if (findEnv("APP_XMIR_ENABLE", env) == "1" && getenv("DISPLAY") == nullptr)
-    {
-        retval.emplace(retval.begin(), findEnv("APP_ID", env));
-
-        auto snapenv = getenv("SNAP");
-        if (snapenv == nullptr)
-        {
-            auto xmirenv = getenv("UBUNTU_APP_LAUNCH_XMIR_HELPER");
-            if (xmirenv == nullptr)
-            {
-                retval.emplace(retval.begin(), XMIR_HELPER);
-            }
-            else
-            {
-                retval.emplace(retval.begin(), xmirenv);
-            }
-        }
-        else
-        {
-            /* If we're in a snap we need to use the utility which
-               gets us back into the snap */
-            std::string snappath{snapenv};
-
-            retval.emplace(retval.begin(), snappath + SNAPPY_XMIR);
-        }
-    }
-
     /* See if we're doing apparmor by hand */
     auto appexecpolicy = findEnv("APP_EXEC_POLICY", env);
     if (!appexecpolicy.empty() && appexecpolicy != "unconfined")
@@ -632,7 +604,6 @@ std::shared_ptr<Application::Instance> SystemD::launch(
         {
             copyEnvByPrefix("QT_", env);
             copyEnvByPrefix("XDG_", env);
-            copyEnv("UBUNTU_APP_LAUNCH_XMIR_PATH", env);
 
             /* If we're in Unity8 we don't want to pass it's platform, we want
              * an application platform. */
@@ -759,9 +730,9 @@ std::shared_ptr<Application::Instance> SystemD::launch(
 
         /* Clean up env before shipping it */
         for (const auto& rmenv :
-             {"APP_XMIR_ENABLE", "APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
+             {"APP_DIR", "APP_URIS", "APP_EXEC", "APP_EXEC_POLICY", "APP_LAUNCHER_PID",
               "INSTANCE_ID", "MIR_SERVER_PLATFORM_PATH", "MIR_SERVER_PROMPT_FILE", "MIR_SERVER_HOST_SOCKET",
-              "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT", "UBUNTU_APP_LAUNCH_XMIR_HELPER"})
+              "UBUNTU_APP_LAUNCH_OOM_HELPER", "UBUNTU_APP_LAUNCH_LEGACY_ROOT"})
         {
             removeEnv(rmenv, env);
         }

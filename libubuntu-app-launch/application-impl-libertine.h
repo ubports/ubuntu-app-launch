@@ -42,8 +42,8 @@ namespace app_impls
     ".desktop" suffix. UAL has no way to know the version, so it is always hard
     coded to "0.0".
 
-    Libertine applications always are setup with XMir and started using the
-    libertine-launch utility which configures the environment for the container.
+    Libertine applications are always started using the libertine-launch
+    utility which configures the environment for the container.
 
     More info: https://wiki.ubuntu.com/Touch/Libertine
 */

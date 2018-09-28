@@ -202,11 +202,11 @@ protected:
 static std::pair<std::string, std::string> interfaces{
     "GET /v2/interfaces HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::interfacesJson(
-        {{"unity8", "unity8-package", {"foo", "single", "xmir", "noxmir"}}, {"mir", "unity8-package", {"foo"}}})))};
+        {{"unity8", "unity8-package", {"foo", "single"}}, {"mir", "unity8-package", {"foo"}}})))};
 static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
-        "unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single", "xmir", "noxmir"})))};
+        "unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
 
 TEST_F(LibUAL, StartApplication)
 {

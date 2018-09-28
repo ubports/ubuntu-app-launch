@@ -68,7 +68,7 @@ Libertine::Libertine(const AppID::Package& container,
                                  container.value() + "'"};
 
     appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, _container_path,
-                                                   app_info::DesktopFlags::XMIR_DEFAULT, registry_);
+                                                   app_info::DesktopFlags::NONE, registry_);
 
     g_debug("Application Libertine object for container '%s' app '%s'", container.value().c_str(),
             appname.value().c_str());
@@ -143,7 +143,7 @@ std::vector<std::shared_ptr<Application::Instance>> Libertine::instances()
 
 /** Grabs all the environment variables for the application to
     launch in. It sets up the confinement ones and then adds in
-    the APP_EXEC line and whether to use XMir.
+    the APP_EXEC line.
 
     This function adds 'libertine-launch' at the beginning of the
     Exec line with the container name as a parameter. The command
@@ -155,8 +155,6 @@ std::list<std::pair<std::string, std::string>> Libertine::launchEnv()
     std::list<std::pair<std::string, std::string>> retval;
 
     info();
-
-    retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
 
     /* The container is our confinement */
     retval.emplace_back(std::make_pair("APP_EXEC_POLICY", "unconfined"));

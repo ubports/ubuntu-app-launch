@@ -68,12 +68,6 @@ Legacy::Legacy(const AppID::AppName& appname, const std::shared_ptr<Registry::Im
 
     auto flags = app_info::DesktopFlags::ALLOW_NO_DISPLAY;
 
- //   Since we are using wayland now, we should not use X by default!!
- //   if (!g_key_file_has_key(_keyfile.get(), "Desktop Entry", "X-Ubuntu-Touch", nullptr))
- //   {
- //       flags |= app_info::DesktopFlags::XMIR_DEFAULT;
- //   }
-
     appinfo_ = std::make_shared<app_info::Desktop>(appId(), _keyfile, _basedir, rootDir, flags, registry_);
 
     if (!_keyfile)
@@ -141,9 +135,8 @@ std::vector<std::shared_ptr<Application::Instance>> Legacy::instances()
 }
 
 /** Grabs all the environment for a legacy app. Mostly this consists of
-    the exec line and whether it needs XMir. Also we set the path if that
-    is specified in the desktop file. We can also set an AppArmor profile
-    if requested. */
+    the exec line. Also we set the path if that is specified in the desktop
+    file. We can also set an AppArmor profile if requested. */
 std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::string& instance)
 {
     std::list<std::pair<std::string, std::string>> retval;
@@ -152,7 +145,6 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
 
     info();
 
-    retval.emplace_back(std::make_pair("APP_XMIR_ENABLE", appinfo_->xMirEnable().value() ? "1" : "0"));
     auto execline = appinfo_->execLine().value();
 
     auto snappath = getenv("SNAP");
@@ -170,18 +162,6 @@ std::list<std::pair<std::string, std::string>> Legacy::launchEnv(const std::stri
         }
 
         execline = std::string{legacyexec} + " " + execline;
-    }
-    else if (appinfo_->xMirEnable().value())
-    {
-        /* If we're setting up XMir we also need the other helpers
-           that libertine is helping with */
-        auto libertine_launch = g_getenv("UBUNTU_APP_LAUNCH_LIBERTINE_LAUNCH");
-        if (libertine_launch == nullptr)
-        {
-            libertine_launch = LIBERTINE_LAUNCH;
-        }
-
-        execline = std::string{libertine_launch} + " " + execline;
     }
 
     retval.emplace_back(std::make_pair("APP_EXEC", execline));

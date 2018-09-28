@@ -366,42 +366,6 @@ TEST_F(ApplicationInfoDesktop, Orientations)
                   .supportedOrientations());
 }
 
-TEST_F(ApplicationInfoDesktop, XMirCases)
-{
-    auto xmirunset = defaultKeyfile();
-    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirunset, "/", {},
-                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                     .xMirEnable()
-                     .value());
-    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirunset, "/", {},
-                                                      ubuntu::app_launch::app_info::DesktopFlags::XMIR_DEFAULT, nullptr)
-                    .xMirEnable()
-                    .value());
-
-    auto xmirtrue = defaultKeyfile();
-    g_key_file_set_boolean(xmirtrue.get(), DESKTOP, "X-Ubuntu-XMir-Enable", TRUE);
-    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirtrue, "/", {},
-                                                      ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                    .xMirEnable()
-                    .value());
-    EXPECT_TRUE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirtrue, "/", {},
-                                                      ubuntu::app_launch::app_info::DesktopFlags::XMIR_DEFAULT, nullptr)
-                    .xMirEnable()
-                    .value());
-
-    auto xmirfalse = defaultKeyfile();
-    g_key_file_set_boolean(xmirfalse.get(), DESKTOP, "X-Ubuntu-XMir-Enable", FALSE);
-    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirfalse, "/", {},
-                                                       ubuntu::app_launch::app_info::DesktopFlags::NONE, nullptr)
-                     .xMirEnable()
-                     .value());
-    EXPECT_FALSE(ubuntu::app_launch::app_info::Desktop(simpleAppID(), xmirfalse, "/", {},
-                                                       ubuntu::app_launch::app_info::DesktopFlags::XMIR_DEFAULT,
-                                                       nullptr)
-                     .xMirEnable()
-                     .value());
-}
-
 TEST_F(ApplicationInfoDesktop, Popularity)
 {
     EXPECT_CALL(*zgWatcher(), lookupAppPopularity(simpleAppID()))

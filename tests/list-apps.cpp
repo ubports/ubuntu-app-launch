@@ -220,13 +220,13 @@ TEST_F(ListApps, ListSnap)
     EXPECT_FALSE(getApp(apps, "unity7-package_single_x123")->info()->supportsUbuntuLifecycle());
     EXPECT_FALSE(getApp(apps, "unity7-package_multiple_x123")->info()->supportsUbuntuLifecycle());
 
-    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
+    EXPECT_FALSE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
                     getApp(apps, "x11-package_multiple_x123")->info())
                     ->xMirEnable());
-    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
+    EXPECT_FALSE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
                     getApp(apps, "unity7-package_single_x123")->info())
                     ->xMirEnable());
-    EXPECT_TRUE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
+    EXPECT_FALSE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(
                     getApp(apps, "unity8-package_foo_x123")->info())
                     ->xMirEnable());
     EXPECT_FALSE(std::dynamic_pointer_cast<ubuntu::app_launch::app_info::Desktop>(

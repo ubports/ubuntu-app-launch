@@ -229,7 +229,7 @@ std::list<std::shared_ptr<Application>> Snap::list()
     /* If an app has both, this will get rejected */
     for (const auto& interface : X11_INTERFACES)
     {
-        addAppsForInterface(interface, app_info::Desktop::XMirEnable::from_raw(true));
+        addAppsForInterface(interface, app_info::Desktop::XMirEnable::from_raw(false));
     }
 
     return std::list<std::shared_ptr<Application>>(apps.begin(), apps.end());
