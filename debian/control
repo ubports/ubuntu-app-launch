@@ -12,12 +12,12 @@ Build-Depends: abi-compliance-checker,
                libcurl4-dev | libcurl4-gnutls-dev,
                libdbus-1-dev,
                libdbustest1-dev (>= 14.04.0),
-               libertined (>= 1.6),
+#               libertined (>= 1.6),
                libgirepository1.0-dev,
                libglib2.0-dev,
                libgtest-dev,
                libjson-glib-dev (>= 1.1.2),
-               liblibertine-dev,
+#               liblibertine-dev,
                liblttng-ust-dev,
                libmirclient-dev (>= 0.5),
                libproperties-cpp-dev,
@@ -68,8 +68,9 @@ Architecture: any
 Depends: ${misc:Depends},
          ${shlibs:Depends},
          ubuntu-app-launch (= ${binary:Version}),
+         unity8-pasted,
+Recommends:
          libertine-xmir-tools [amd64 armhf arm64 i386],
-         unity8-pasted
 Pre-Depends: ${misc:Pre-Depends},
 Multi-Arch: same
 Description: library for sending requests to the ubuntu app launch
