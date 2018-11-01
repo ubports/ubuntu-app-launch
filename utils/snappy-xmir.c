@@ -35,6 +35,8 @@
 #define SOCKETNAME_SIZE 256
 #define ENVNAME_SIZE 64
 
+extern char **environ;
+
 void
 sigchild_handler (int signal)
 {
@@ -174,8 +176,8 @@ main (int argc, char * argv[])
 		unset = 0;
 
 		unsigned int i;
-		for (i = 0; __environ[i] != NULL; i++) {
-			const char * env = __environ[i];
+		for (i = 0; environ[i] != NULL; i++) {
+			const char * env = environ[i];
 			/* Not checking the length becasue imagining that block
 			   size will always be larger than 4 bytes on 32-bit systems.
 			   Compiler should fold this into one comparison. */
