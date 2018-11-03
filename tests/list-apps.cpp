@@ -258,5 +258,9 @@ TEST_F(ListApps, ListAll)
 
     printApps(apps);
 
+#ifdef HAVE_LIBERTINE
     EXPECT_EQ(9, int(apps.size()));
+#else
+    EXPECT_EQ(6u, apps.size());
+#endif
 }

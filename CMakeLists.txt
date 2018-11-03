@@ -124,21 +124,21 @@ if (NOT ${CMAKE_BINARY_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 endif()
 ENABLE_COVERAGE_REPORT(
   TARGETS
-  	ubuntu-launcher
+	ubuntu-launcher
 	launcher-static
   TESTS
-  	application-icon-finder-test
+	app-store-legacy
+	application-icon-finder-test
 	application-info-desktop-test
-	exec-util-test
-	failure-test
 	helper-test
 	helper-handshake-test
+	info-watcher-zg
 	jobs-base-test
+	jobs-systemd
 	libual-test
 	libual-cpp-test
 	list-apps
 	snapd-info-test
-	zg-test
   FILTER
   	${filter-list}
 )

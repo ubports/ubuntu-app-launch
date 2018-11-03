@@ -38,7 +38,9 @@
 #include "ubuntu-app-launch.h"
 
 #include "eventually-fixture.h"
+#ifdef HAVE_LIBERTINE
 #include "libertine-service.h"
+#endif
 #include "mir-mock.h"
 #include "registry-mock.h"
 #include "snapd-mock.h"
@@ -57,7 +59,9 @@ protected:
     DbusTestService* service = NULL;
     DbusTestDbusMock* mock = NULL;
     DbusTestDbusMock* cgmock = NULL;
+#ifdef HAVE_LIBERTINE
     std::shared_ptr<LibertineService> libertine;
+#endif
     std::shared_ptr<SystemdMock> systemd;
     GDBusConnection* bus = NULL;
     guint resume_timeout = 0;
@@ -179,9 +183,11 @@ protected:
         /* Put it together */
         dbus_test_service_add_task(service, *systemd);
 
+#ifdef HAVE_LIBERTINE
         /* Add in Libertine */
         libertine = std::make_shared<LibertineService>();
         dbus_test_service_add_task(service, *libertine);
+#endif
 
         dbus_test_service_start_tasks(service);
 
@@ -189,7 +195,9 @@ protected:
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer*)&bus);
 
+#ifdef HAVE_LIBERTINE
         ASSERT_EVENTUALLY_FUNC_EQ(false, std::function<bool()>{[&] { return libertine->getUniqueName().empty(); }});
+#endif
 
         registry = std::make_shared<ubuntu::app_launch::Registry>();
 
@@ -210,7 +218,9 @@ protected:
         // ubuntu::app_launch::Registry::clearDefault();
 
         systemd.reset();
+#ifdef HAVE_LIBERTINE
         libertine.reset();
+#endif
         g_clear_object(&service);
 
         g_object_unref(bus);
@@ -318,7 +328,7 @@ static std::pair<std::string, std::string> interfaces{
 static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
-        "unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
+        "unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single", "xmir", "noxmir"})))};
 static std::pair<std::string, std::string> helloPackage{
     "GET /v2/snaps/hello HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(
@@ -553,6 +563,7 @@ TEST_F(LibUAL, ApplicationId)
     EXPECT_EQ("", (std::string)ubuntu::app_launch::AppID::discover(registry, "com.test.no-version"));
 }
 
+#ifdef HAVE_LIBERTINE
 TEST_F(LibUAL, ApplicationIdLibertine)
 {
     /* Libertine tests */
@@ -563,6 +574,7 @@ TEST_F(LibUAL, ApplicationIdLibertine)
     EXPECT_EQ("container-name_user-app_0.0",
               (std::string)ubuntu::app_launch::AppID::discover(registry, "container-name", "user-app"));
 }
+#endif
 
 TEST_F(LibUAL, AppIdParse)
 {
@@ -591,6 +603,11 @@ TEST_F(LibUAL, DBusID)
     EXPECT_EQ(id, parsed);
 }
 
+#ifdef HAVE_LIBERTINE
+/* FIXME: This test seems to only work when libertine is available.
+ * However, it shouldn't need it, and should be testable with the snapd
+ * interface, though that too is not working properly when added here.
+ */
 TEST_F(LibUAL, PersistentID)
 {
     auto id = ubuntu::app_launch::AppID::parse("container-name_test_0.0");
@@ -602,6 +619,7 @@ TEST_F(LibUAL, PersistentID)
     ASSERT_FALSE(found.empty());
     EXPECT_EQ(id, found);
 }
+#endif
 
 TEST_F(LibUAL, ApplicationList)
 {
@@ -673,13 +691,11 @@ TEST_F(LibUAL, StartingResponses)
         "/",                                                              /* path */
         "com.canonical.UbuntuAppLaunch",                                  /* interface */
         "UnityStartingBroadcast",                                         /* signal */
-        g_variant_new("(ss)", "container-name_test_0.0", "goodinstance"), /* params, the same */
+        g_variant_new("(ss)", "no-exec", "goodinstance"), /* params, the same */
         NULL);
 
     /* Make sure we run our observer */
-    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID(ubuntu::app_launch::AppID::Package::from_raw("container-name"),
-                                                   ubuntu::app_launch::AppID::AppName::from_raw("test"),
-                                                   ubuntu::app_launch::AppID::Version::from_raw("0.0")),
+    EXPECT_EVENTUALLY_EQ(ubuntu::app_launch::AppID::parse("no-exec"),
                          manager->lastStartedApp);
 
     /* Make sure we return */
@@ -1466,6 +1482,7 @@ TEST_F(LibUAL, AppInfo)
     auto barid = ubuntu::app_launch::AppID::find(registry, "bar");
     EXPECT_THROW(ubuntu::app_launch::Application::create(barid, registry), std::runtime_error);
 
+#ifdef HAVE_LIBERTINE
     /* Correct values for libertine */
     auto libertineid = ubuntu::app_launch::AppID::parse("container-name_test_0.0");
     auto libertine = ubuntu::app_launch::Application::create(libertineid, registry);
@@ -1479,4 +1496,5 @@ TEST_F(LibUAL, AppInfo)
 
     EXPECT_TRUE((bool)nestedlibertine->info());
     EXPECT_EQ("Test Nested", nestedlibertine->info()->name().value());
+#endif
 }

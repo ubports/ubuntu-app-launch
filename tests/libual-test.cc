@@ -32,7 +32,9 @@
 #include "ubuntu-app-launch.h"
 
 #include "eventually-fixture.h"
+#ifdef HAVE_LIBERTINE
 #include "libertine-service.h"
+#endif
 #include "mir-mock.h"
 #include "snapd-mock.h"
 #include "systemd-mock.h"
@@ -46,7 +48,9 @@ protected:
     DbusTestService *service = NULL;
     DbusTestDbusMock *mock = NULL;
     DbusTestDbusMock *cgmock = NULL;
+#ifdef HAVE_LIBERTINE
     std::shared_ptr<LibertineService> libertine;
+#endif
     std::shared_ptr<SystemdMock> systemd;
     GDBusConnection *bus = NULL;
     std::string last_focus_appid;
@@ -121,9 +125,11 @@ protected:
         /* Put it together */
         dbus_test_service_add_task(service, *systemd);
 
+#ifdef HAVE_LIBERTINE
         /* Add in Libertine */
         libertine = std::make_shared<LibertineService>();
         dbus_test_service_add_task(service, *libertine);
+#endif
 
         dbus_test_service_start_tasks(service);
 
@@ -131,7 +137,9 @@ protected:
         g_dbus_connection_set_exit_on_close(bus, FALSE);
         g_object_add_weak_pointer(G_OBJECT(bus), (gpointer *)&bus);
 
+#ifdef HAVE_LIBERTINE
         ASSERT_EVENTUALLY_FUNC_EQ(false, std::function<bool()>{[&] { return libertine->getUniqueName().empty(); }});
+#endif
 
         ASSERT_TRUE(ubuntu_app_launch_observer_add_app_focus(focus_cb, this));
         ASSERT_TRUE(ubuntu_app_launch_observer_add_app_resume(resume_cb, this));
@@ -145,7 +153,9 @@ protected:
         ubuntu::app_launch::Registry::clearDefault();
 
         systemd.reset();
+#ifdef HAVE_LIBERTINE
         libertine.reset();
+#endif
         g_clear_object(&service);
 
         g_object_unref(bus);
@@ -206,7 +216,7 @@ static std::pair<std::string, std::string> interfaces{
 static std::pair<std::string, std::string> u8Package{
     "GET /v2/snaps/unity8-package HTTP/1.1\r\nHost: snapd\r\nAccept: */*\r\n\r\n",
     SnapdMock::httpJsonResponse(SnapdMock::snapdOkay(SnapdMock::packageJson(
-        "unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single"})))};
+        "unity8-package", "active", "app", "1.2.3.4", "x123", {"foo", "single", "xmir", "noxmir"})))};
 
 TEST_F(LibUAL, StartApplication)
 {
@@ -321,12 +331,14 @@ TEST_F(LibUAL, ApplicationId)
     EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-object", NULL, NULL));
     EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("com.test.no-version", NULL, NULL));
 
+#ifdef HAVE_LIBERTINE
     /* Libertine tests */
     EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("container-name", NULL, NULL));
     EXPECT_EQ(nullptr, ubuntu_app_launch_triplet_to_app_id("container-name", "not-exist", NULL));
     EXPECT_STREQ("container-name_test_0.0", ubuntu_app_launch_triplet_to_app_id("container-name", "test", NULL));
     EXPECT_STREQ("container-name_user-app_0.0",
                  ubuntu_app_launch_triplet_to_app_id("container-name", "user-app", NULL));
+#endif
 
     snapd.result();
 }
