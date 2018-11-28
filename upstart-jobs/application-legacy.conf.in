@@ -19,8 +19,7 @@ apparmor switch $APP_EXEC_POLICY
 cgroup freezer
 
 # Initial OOM Score
-# FIXME
-#oom score 110
+oom score 110
 
 # This could be confined
 exec @pkglibexecdir@/exec-line-exec

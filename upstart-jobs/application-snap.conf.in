@@ -21,8 +21,7 @@ export UBUNTU_APP_LAUNCH_ARCH
 cgroup freezer
 
 # Initial OOM Score
-# FIXME
-#oom score 100
+oom score 100
 
 # Remember, this is confined
 exec @pkglibexecdir@/exec-line-exec
