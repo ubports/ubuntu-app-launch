@@ -12,7 +12,7 @@ set(ABI_VERSION 3)
 # Options
 ##########################
 
-option (enable_tests "Build tests" ON)
+option (enable_tests "Build tests" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
 
