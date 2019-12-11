@@ -296,7 +296,7 @@ TEST_F(ExecUtil, ClickNoMir)
 	});
 }
 
-TEST_F(ExecUtil, LibertineExec)
+TEST_F(ExecUtil, DISABLED_LibertineExec)
 {
 	StartCheckEnv("container-name_test_0.0", {
 		{"APP_EXEC", [](const gchar * value) {
@@ -313,7 +313,7 @@ TEST_F(ExecUtil, LibertineExec)
 	});
 }
 
-TEST_F(ExecUtil, LibertineExecUser)
+TEST_F(ExecUtil, DISABLED_LibertineExecUser)
 {
 	StartCheckEnv("container-name_user-app_0.0", {
 		{"APP_EXEC", [](const gchar * value) {
