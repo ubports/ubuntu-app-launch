@@ -45,6 +45,7 @@ You should not modify them and expect any executing under Unity to change.
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <click.h>
+#include <linux/limits.h>
 #include <string.h>
 #include <errno.h>
 
@@ -70,6 +71,8 @@ struct _app_state_t {
 #define SOURCE_FILE_KEY    "X-Ubuntu-UAL-Source-Desktop"
 /* Other */
 #define OLD_KEY_PREFIX     "X-Ubuntu-Old-"
+
+static const gchar * const icon_extensions[] = { "", ".png", ".svg", NULL };
 
 /* Find an entry in the app array */
 app_state_t *
@@ -380,21 +383,36 @@ copy_desktop_file (const gchar * from, const gchar * to, const gchar * appdir, c
 	/* Icon Handling */
 	if (g_key_file_has_key(keyfile, DESKTOP_GROUP, ICON_KEY, NULL)) {
 		gchar * originalicon = g_key_file_get_string(keyfile, DESKTOP_GROUP, ICON_KEY, NULL);
-		gchar * iconpath = g_build_filename(appdir, originalicon, NULL);
 
-		/* If the icon in the path exists, let's use that */
-		if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
-			g_key_file_set_string(keyfile, DESKTOP_GROUP, ICON_KEY, iconpath);
-			/* Save the old value, because, debugging */
-			g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX ICON_KEY, originalicon);
-		} else {
+		gchar icon_name[PATH_MAX];
+		gsize written = g_strlcpy(icon_name, originalicon, sizeof(icon_name));
+		gsize available_size = sizeof(icon_name) - written;
+
+		gboolean found = FALSE;
+		const gchar * const *extension;
+		for (extension = icon_extensions; *extension != NULL; extension++) {
+
+			g_strlcat(icon_name + written, *extension, available_size);
+			gchar * iconpath = g_build_filename(appdir, icon_name, NULL);
+
+			/* If the icon in the path exists, let's use that */
+			if (g_file_test(iconpath, G_FILE_TEST_EXISTS)) {
+				g_key_file_set_string(keyfile, DESKTOP_GROUP, ICON_KEY, iconpath);
+				/* Save the old value, because, debugging */
+				g_key_file_set_string(keyfile, DESKTOP_GROUP, OLD_KEY_PREFIX ICON_KEY, originalicon);
+				found = TRUE;
+				break;
+			}
+
+			g_free(iconpath);
+		}
+
+		if (!found) {
 			/* So here we are, realizing all is lost.  Let's file a bug. */
 			/* The goal here is to realize how often this case is, so we know how to prioritize fixing it */
 
-			report_recoverable_error(app_id, ICON_KEY, originalicon, iconpath);
+			report_recoverable_error(app_id, ICON_KEY, originalicon, icon_name);
 		}
-
-		g_free(iconpath);
 		g_free(originalicon);
 	}
 
