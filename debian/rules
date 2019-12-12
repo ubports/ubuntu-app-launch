@@ -8,11 +8,32 @@ export G_MESSAGES_DEBUG=all
 #export DH_VERBOSE=1
 export DPKG_GENSYMBOLS_CHECK_LEVEL=4
 
+ifneq (,$(findstring cross,$(DEB_BUILD_PROFILES)))
+UAL_DH_OPTIONS = --with click
+CONFIGURE_OPTS += -Denable_introspection=OFF -Denable_abi_checker=OFF
+else
+UAL_DH_OPTIONS = --with click,gir
+endif
+
+ifneq (,$(findstring nocheck,$(DEB_BUILD_OPTIONS)))
+CONFIGURE_OPTS += -Denable_tests=OFF
+endif
+
 %:
-	dh $@ --with click,gir --parallel --fail-missing
+	dh $@ $(UAL_DH_OPTIONS) --parallel --fail-missing
+
+override_dh_auto_configure:
+	dh_auto_configure -- $(CONFIGURE_OPTS)
 
 override_dh_click:
 	dh_click --name ubuntu-app-launch-desktop
+
+override_dh_auto_install:
+ifneq (,$(findstring cross,$(DEB_BUILD_PROFILES)))
+	mkdir -p debian/tmp/usr/share/gir-1.0/
+	touch debian/tmp/usr/share/gir-1.0/void
+endif
+	dh_auto_install --parallel
 
 override_dh_installdeb:
 	sed -e"s/#MULTIARCH#/$(DEB_HOST_MULTIARCH)/g" \

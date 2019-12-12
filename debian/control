@@ -2,21 +2,21 @@ Source: ubuntu-app-launch
 Section: gnome
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
-Build-Depends: abi-compliance-checker,
+Build-Depends: abi-compliance-checker <!cross>,
                click-dev (>= 0.2.2),
                cmake,
                cmake-extras,
-               dbus-x11,
-               dbus-test-runner,
+               dbus-x11 <!nocheck>,
+               dbus-test-runner <!nocheck>,
                debhelper (>= 9),
                libcgmanager-dev,
                libclick-0.4-dev,
                libcurl4-dev | libcurl4-gnutls-dev,
                libdbus-1-dev,
                libdbustest1-dev (>= 14.04.0),
-               libgirepository1.0-dev,
+               libgirepository1.0-dev <!cross>,
                libglib2.0-dev,
-               libgtest-dev,
+               libgtest-dev <!nocheck>,
                libjson-glib-dev,
                liblibertine-dev,
                liblttng-ust-dev,
@@ -28,9 +28,9 @@ Build-Depends: abi-compliance-checker,
 # Make sure to set DEB_BUILD_PROFILES when bootstrapping
                libupstart-dev,
                libzeitgeist-2.0-dev,
-               gobject-introspection,
-               python3-dbusmock,
-               upstart (>= 1.13),
+               gobject-introspection <!cross>,
+               python3-dbusmock <!nocheck>,
+               upstart (>= 1.13) <!nocheck>,
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/ubuntu-app-launch
 # If you aren't a member of ~indicator-applet-developers but need to upload packaging changes,
@@ -102,6 +102,7 @@ Description: library for sending requests to the ubuntu app launch
 Package: gir1.2-ubuntu-app-launch-2
 Section: libs
 Architecture: any
+Build-Profiles: <!cross>
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libubuntu-app-launch3 (= ${binary:Version}),

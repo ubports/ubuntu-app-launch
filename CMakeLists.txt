@@ -12,6 +12,8 @@ set(ABI_VERSION 3)
 # Options
 ##########################
 
+option (enable_abi_checker "Use ABI checker" ON)
+option (enable_introspection "Build GObject Introspection files" ON)
 option (enable_tests "Build tests" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" "${CMAKE_MODULE_PATH}")
