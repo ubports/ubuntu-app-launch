@@ -17,7 +17,10 @@
  *     Ted Gould <ted.gould@canonical.com>
  */
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <zeitgeist.h>
+#pragma GCC diagnostic pop
 
 GPtrArray *
 build_event_templates (void)

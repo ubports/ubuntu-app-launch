@@ -27,7 +27,10 @@
 #include <libdbustest/dbus-test.h>
 #include <numeric>
 #include <thread>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <zeitgeist.h>
+#pragma GCC diagnostic pop
 
 #include "application.h"
 #include "glib-thread.h"

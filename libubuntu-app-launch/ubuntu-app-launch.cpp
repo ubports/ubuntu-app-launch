@@ -24,7 +24,10 @@ extern "C" {
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <zeitgeist.h>
+#pragma GCC diagnostic pop
 
 #include "ubuntu-app-launch-trace.h"
 #include "utils.h"

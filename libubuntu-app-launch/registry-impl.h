@@ -29,7 +29,10 @@
 #include <json-glib/json-glib.h>
 #include <map>
 #include <unordered_map>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <zeitgeist.h>
+#pragma GCC diagnostic pop
 
 namespace ubuntu
 {
