@@ -288,6 +288,7 @@ void UpstartInstance::pause()
                 signalToPid(pid, SIGSTOP);
                 oomValueToPid(pid, oomval);
             }
+            errno = 0;
         });
 
         pidListToDbus(registry, appid, pids, "ApplicationPaused");
@@ -315,6 +316,7 @@ void UpstartInstance::resume()
                 signalToPid(pid, SIGCONT);
                 oomValueToPid(pid, oomval);
             }
+            errno = 0;
         });
 
         pidListToDbus(registry, appid, pids, "ApplicationResumed");
