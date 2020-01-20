@@ -283,7 +283,8 @@ void UpstartInstance::pause()
         auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::paused();
             g_debug("Pausing PID: %d (%d)", pid, int(oomval));
-            if (-1 != kill(pid, 0) && errno != ESRCH) {
+            kill(pid, 0);
+            if (errno != ESRCH) {
                 signalToPid(pid, SIGSTOP);
                 oomValueToPid(pid, oomval);
             }
@@ -309,7 +310,8 @@ void UpstartInstance::resume()
         auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::focused();
             g_debug("Resuming PID: %d (%d)", pid, int(oomval));
-            if (-1 != kill(pid, 0) && errno != ESRCH) {
+            kill(pid, 0);
+            if (errno != ESRCH) {
                 signalToPid(pid, SIGCONT);
                 oomValueToPid(pid, oomval);
             }
