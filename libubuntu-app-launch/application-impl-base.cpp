@@ -283,8 +283,10 @@ void UpstartInstance::pause()
         auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::paused();
             g_debug("Pausing PID: %d (%d)", pid, int(oomval));
-            signalToPid(pid, SIGSTOP);
-            oomValueToPid(pid, oomval);
+            if (-1 != kill(pid, 0) && errno != ESRCH) {
+                signalToPid(pid, SIGSTOP);
+                oomValueToPid(pid, oomval);
+            }
         });
 
         pidListToDbus(registry, appid, pids, "ApplicationPaused");
