@@ -307,8 +307,10 @@ void UpstartInstance::resume()
         auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
             auto oomval = oom::focused();
             g_debug("Resuming PID: %d (%d)", pid, int(oomval));
-            signalToPid(pid, SIGCONT);
-            oomValueToPid(pid, oomval);
+            if (-1 != kill(pid, 0) && errno != ESRCH) {
+                signalToPid(pid, SIGCONT);
+                oomValueToPid(pid, oomval);
+            }
         });
 
         pidListToDbus(registry, appid, pids, "ApplicationResumed");
@@ -461,7 +463,7 @@ void UpstartInstance::signalToPid(pid_t pid, int signal)
     if (-1 == kill(pid, signal))
     {
         /* While that didn't work, we still want to try as many as we can */
-        g_warning("Unable to send signal %d to pid %d", signal, pid);
+        g_warning("Unable to send signal %d to pid %d, errno %d", signal, pid, errno);
     }
 }
 
