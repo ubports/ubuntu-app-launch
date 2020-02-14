@@ -160,24 +160,28 @@ install(
 # Introspection
 ##########################
 
-include(UseGObjectIntrospection)
+if (enable_introspection)
+  include(UseGObjectIntrospection)
 
-set(INTROSPECTION_GIRS)
-set(_introspection_files ${LAUNCHER_HEADERS})
-set(UbuntuAppLaunch_2_gir "ubuntu-app-launch")
-set(UbuntuAppLaunch_2_gir_INCLUDES GObject-2.0)
+  set(INTROSPECTION_GIRS)
+  set(_introspection_files ${LAUNCHER_HEADERS})
+  set(UbuntuAppLaunch_2_gir "ubuntu-app-launch")
+  set(UbuntuAppLaunch_2_gir_INCLUDES GObject-2.0)
 
-gir_get_cflags(_cflags)
-list_prefix(MIR_C_INCLUDES MIR_INCLUDE_DIRS "-I")
-set(UbuntuAppLaunch_2_gir_CFLAGS ${c_flags} ${MIR_C_INCLUDES})
-set(UbuntuAppLaunch_2_gir_LIBS ubuntu-app-launch)
+  gir_get_cflags(_cflags)
+  list_prefix(MIR_C_INCLUDES MIR_INCLUDE_DIRS "-I")
+  set(UbuntuAppLaunch_2_gir_CFLAGS ${c_flags} ${MIR_C_INCLUDES})
+  set(UbuntuAppLaunch_2_gir_LIBS ubuntu-app-launch)
 
-list_make_absolute(_abs_introspection_files _introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
-set(UbuntuAppLaunch_2_gir_FILES ${_abs_introspection_files})
-set(UbuntuAppLaunch_2_gir_SCANNERFLAGS --c-include "ubuntu-app-launch.h")
-set(UbuntuAppLaunch_2_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
+  list_make_absolute(_abs_introspection_files _introspection_files "${CMAKE_CURRENT_SOURCE_DIR}/")
+  set(UbuntuAppLaunch_2_gir_FILES ${_abs_introspection_files})
+  set(UbuntuAppLaunch_2_gir_SCANNERFLAGS --c-include "ubuntu-app-launch.h")
+  set(UbuntuAppLaunch_2_gir_EXPORT_PACKAGES "ubuntu-app-launch-${API_VERSION}")
 
-list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-2.gir)
-gir_add_introspections(INTROSPECTION_GIRS)
+  list(APPEND INTROSPECTION_GIRS UbuntuAppLaunch-2.gir)
+  gir_add_introspections(INTROSPECTION_GIRS)
+endif()
 
-add_subdirectory(abi-check)
+if (enable_abi_checker)
+  add_subdirectory(abi-check)
+endif()

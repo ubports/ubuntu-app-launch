@@ -167,7 +167,7 @@ TEST_F(ListApps, ListLegacy)
                                                         ubuntu::app_launch::AppID::Version::from_raw({}))));
 }
 
-TEST_F(ListApps, ListLibertine)
+TEST_F(ListApps, DISABLED_ListLibertine)
 {
     auto registry = std::make_shared<ubuntu::app_launch::Registry>();
     auto apps = ubuntu::app_launch::app_impls::Libertine::list(registry);
@@ -228,7 +228,7 @@ TEST_F(ListApps, ListSnap)
 }
 #endif
 
-TEST_F(ListApps, ListAll)
+TEST_F(ListApps, DISABLED_ListAll)
 {
 #ifdef ENABLE_SNAPPY
     SnapdMock mock{SNAPD_LIST_APPS_SOCKET,

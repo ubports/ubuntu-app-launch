@@ -276,7 +276,18 @@ Desktop::Desktop(const std::shared_ptr<GKeyFile>& keyfile,
                 return registry->impl->getIconFinder(basePath)->find(iconName);
             }
         }
-        return fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon");
+        auto iconPath = fileFromKeyfile<Application::Info::IconPath>(keyfile, basePath, rootDir, "Icon");
+        if (!g_file_test(iconPath.value().c_str(), G_FILE_TEST_EXISTS)) {
+            static const std::vector<std::string> extensions { ".svg", ".png" };
+            for (const auto extension: extensions) {
+                std::string testIconPath = iconPath.value() + extension;
+                if (g_file_test(testIconPath.c_str(), G_FILE_TEST_EXISTS)) {
+                    iconPath = Application::Info::IconPath::from_raw(testIconPath);
+                    break;
+                }
+            }
+        }
+        return iconPath;
     }())
     , _defaultDepartment(
           stringFromKeyfile<Application::Info::DefaultDepartment>(keyfile, "X-Ubuntu-Default-Department-ID"))
