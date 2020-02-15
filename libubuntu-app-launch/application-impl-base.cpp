@@ -562,9 +562,9 @@ void UpstartInstance::oomValueToPidHelper(const std::shared_ptr<Registry>& reg, 
 
 	g_dbus_connection_call_sync(
 		reg->impl->_dbus_system.get(),
-		"com.ubports.oom-adjust-helper",
+		"com.ubports.OomAdjustHelper",
 		"/",
-		"com.ubports.oom-adjust-helper",
+		"com.ubports.OomAdjustHelper",
 		"setOomValue",
 		g_variant_new(
 			"(ii)",

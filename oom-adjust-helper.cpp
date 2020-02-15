@@ -111,9 +111,9 @@ static int set_oom_adj(const int pidval, const int oomval, const unsigned int ca
 	return EXIT_FAILURE;
 }
 
-#define DBUS_SERVICE "com.ubports.oom-adjust-helper"
+#define DBUS_SERVICE "com.ubports.OomAdjustHelper"
 #define DBUS_PATH "/"
-#define DBUS_INTERFACE "com.ubports.oom-adjust-helper"
+#define DBUS_INTERFACE "com.ubports.OomAdjustHelper"
 
 class DBusHandler : public QObject, protected QDBusContext
 {

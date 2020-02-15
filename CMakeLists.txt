@@ -231,8 +231,8 @@ add_executable(oom-adjust-helper oom-adjust-helper.cpp)
 set_target_properties(oom-adjust-helper PROPERTIES OUTPUT_NAME "oom-adjust-helper")
 install(TARGETS oom-adjust-helper RUNTIME DESTINATION "${pkglibexecdir}")
 target_link_libraries(oom-adjust-helper Qt5::Core Qt5::DBus)
-install (FILES com.ubports.oom-adjust-helper.conf DESTINATION ../etc/dbus-1/system.d)
-dbus_add_activation_service(com.ubports.oom-adjust-helper.service.in)
+install (FILES com.ubports.OomAdjustHelper.conf DESTINATION ../etc/dbus-1/system.d)
+dbus_add_activation_service(com.ubports.OomAdjustHelper.service.in)
 
 ####################
 # socket-demangler
