@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=com.ubports.oom-adjust-helper
+User=root
+Exec=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBEXECDIR@/ubuntu-app-launch/oom-adjust-helper

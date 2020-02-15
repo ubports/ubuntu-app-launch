@@ -122,8 +122,8 @@ private:
                               const std::vector<pid_t>& pids,
                               const std::string& signal);
     static void signalToPid(pid_t pid, int signal);
-    static void oomValueToPid(pid_t pid, const oom::Score oomvalue);
-    static void oomValueToPidHelper(pid_t pid, const oom::Score oomvalue);
+    static void oomValueToPid(const std::shared_ptr<Registry>& reg, pid_t pid, const oom::Score oomvalue);
+    static void oomValueToPidHelper(const std::shared_ptr<Registry>& reg, pid_t pid, const oom::Score oomvalue);
     static std::string pidToOomPath(pid_t pid);
     static std::shared_ptr<gchar*> urlsToStrv(const std::vector<Application::URL>& urls);
     static void application_start_cb(GObject* obj, GAsyncResult* res, gpointer user_data);

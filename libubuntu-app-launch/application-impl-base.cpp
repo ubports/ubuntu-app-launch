@@ -280,13 +280,13 @@ void UpstartInstance::pause()
     auto jobpath = upstartJobPath();
 
     registry->impl->thread.executeOnThread([registry, appid, jobpath] {
-        auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
+        auto pids = forAllPids(registry, appid, jobpath, [registry](pid_t pid) {
             auto oomval = oom::paused();
             g_debug("Pausing PID: %d (%d)", pid, int(oomval));
             kill(pid, 0);
             if (errno != ESRCH) {
                 signalToPid(pid, SIGSTOP);
-                oomValueToPid(pid, oomval);
+                oomValueToPid(registry, pid, oomval);
             }
             errno = 0;
         });
@@ -308,13 +308,13 @@ void UpstartInstance::resume()
     auto jobpath = upstartJobPath();
 
     registry->impl->thread.executeOnThread([registry, appid, jobpath] {
-        auto pids = forAllPids(registry, appid, jobpath, [](pid_t pid) {
+        auto pids = forAllPids(registry, appid, jobpath, [registry](pid_t pid) {
             auto oomval = oom::focused();
             g_debug("Resuming PID: %d (%d)", pid, int(oomval));
             kill(pid, 0);
             if (errno != ESRCH) {
                 signalToPid(pid, SIGCONT);
-                oomValueToPid(pid, oomval);
+                oomValueToPid(registry, pid, oomval);
             }
             errno = 0;
         });
@@ -394,7 +394,7 @@ void UpstartInstance::stop()
 */
 void UpstartInstance::setOomAdjustment(const oom::Score score)
 {
-    forAllPids(registry_, appId_, upstartJobPath(), [score](pid_t pid) { oomValueToPid(pid, score); });
+    forAllPids(registry_, appId_, upstartJobPath(), [this, score](pid_t pid) { oomValueToPid(registry_, pid, score); });
 }
 
 /** Figures out the path to the primary PID of the application and
@@ -504,7 +504,7 @@ std::string UpstartInstance::pidToOomPath(pid_t pid)
     \param pid PID to change the OOM value of
     \param oomvalue OOM value to set
 */
-void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
+void UpstartInstance::oomValueToPid(const std::shared_ptr<Registry>& reg, pid_t pid, const oom::Score oomvalue)
 {
     auto oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
     auto path = pidToOomPath(pid);
@@ -526,7 +526,7 @@ void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
                    don't have their adjustment value available for us to write.
                    We have a helper to deal with this, but it's kinda expensive
                    so we only use it when we have to. */
-                oomValueToPidHelper(pid, oomvalue);
+                oomValueToPidHelper(reg, pid, oomvalue);
                 return;
             }
             default:
@@ -556,43 +556,31 @@ void UpstartInstance::oomValueToPid(pid_t pid, const oom::Score oomvalue)
     \param pid PID to change the OOM value of
     \param oomvalue OOM value to set
 */
-void UpstartInstance::oomValueToPidHelper(pid_t pid, const oom::Score oomvalue)
+void UpstartInstance::oomValueToPidHelper(const std::shared_ptr<Registry>& reg, pid_t pid, const oom::Score oomvalue)
 {
     GError* error = nullptr;
-    std::string oomstr = std::to_string(static_cast<std::int32_t>(oomvalue));
-    std::string pidstr = std::to_string(pid);
-    std::array<const char*, 4> args = {OOM_HELPER, pidstr.c_str(), oomstr.c_str(), nullptr};
 
-    g_debug("Excuting OOM Helper (pid: %d, score: %d): %s", int(pid), int(oomvalue),
-            std::accumulate(args.begin(), args.end(), std::string{},
-                            [](const std::string& instr, const char* output) -> std::string {
-                                if (instr.empty())
-                                {
-                                    return output;
-                                }
-                                else if (output != nullptr)
-                                {
-                                    return instr + " " + std::string(output);
-                                }
-                                else
-                                {
-                                    return instr;
-                                }
-                            })
-                .c_str());
-
-    g_spawn_async(nullptr,               /* working dir */
-                  (char**)(args.data()), /* args */
-                  nullptr,               /* env */
-                  G_SPAWN_DEFAULT,       /* flags */
-                  nullptr,               /* child setup */
-                  nullptr,               /* child setup userdata*/
-                  nullptr,               /* pid */
-                  &error);               /* error */
+	g_dbus_connection_call_sync(
+		reg->impl->_dbus_system.get(),
+		"com.ubports.oom-adjust-helper",
+		"/",
+		"com.ubports.oom-adjust-helper",
+		"setOomValue",
+		g_variant_new(
+			"(ii)",
+			pid,
+			oomvalue
+		),
+		NULL,
+		G_DBUS_CALL_FLAGS_NONE,
+		-1,
+		NULL,
+		&error
+	);
 
     if (error != nullptr)
     {
-        g_warning("Unable to launch OOM helper '" OOM_HELPER "' on PID '%d': %s", pid, error->message);
+        g_warning("Unable to call OOM helper on PID '%d': %s", pid, error->message);
         g_error_free(error);
         return;
     }
