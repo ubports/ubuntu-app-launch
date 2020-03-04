@@ -1,5 +1,5 @@
 Source: ubuntu-app-launch
-Section: gnome
+Section: x11
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
 Build-Depends: abi-compliance-checker <!cross>,
