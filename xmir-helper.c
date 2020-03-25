@@ -110,6 +110,20 @@ main (int argc, char * argv[])
 	/* Set up the display variable */
 	setenv("DISPLAY", displaynumber, 1);
 
+	/*
+	 * Make sure the app will use X11.
+	 * See:
+	 *   - https://wiki.archlinux.org/index.php/Wayland#GUI_libraries
+	 *   - https://github.com/5paceToast/axerc/blob/cf11e5dd1912291bd9afd83fb7beaef95c85ea4a/axerc#L45
+	 */
+
+	setenv("XDG_SESSION_TYPE", "x11", /* replace */ 1);
+	setenv("GDK_BACKEND", "x11", /* replace */ 1);
+	setenv("QT_QPA_PLATFORM", "xcb", /* replace */ 1);
+	setenv("CLUTTER_BACKEND", "x11", /* replace */ 1);
+	setenv("SDL_VIDEODRIVER", "x11", /* replace */ 1);
+	setenv("ELM_DISPLAY", "x11", /* replace */ 1);
+
 	/* Now that we have everything setup, we can execute */
 	char ** nargv = &argv[2];
 	int execret = execvp(nargv[0], nargv);
