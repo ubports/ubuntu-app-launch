@@ -11,6 +11,8 @@ export DPKG_GENSYMBOLS_CHECK_LEVEL=4
 ifneq (,$(findstring cross,$(DEB_BUILD_PROFILES)))
 UAL_DH_OPTIONS = --with click
 CONFIGURE_OPTS += -Denable_introspection=OFF -Denable_abi_checker=OFF
+# Workaround pkg-create-dbgsym bug
+DH_STRIP_OPTIONS := --no-package=gir1.2-ubuntu-app-launch-2
 else
 UAL_DH_OPTIONS = --with click,gir
 endif
@@ -34,6 +36,9 @@ ifneq (,$(findstring cross,$(DEB_BUILD_PROFILES)))
 	touch debian/tmp/usr/share/gir-1.0/void
 endif
 	dh_auto_install --parallel
+
+override_dh_strip:
+	dh_strip $(DH_STRIP_OPTIONS)
 
 override_dh_installdeb:
 	sed -e"s/#MULTIARCH#/$(DEB_HOST_MULTIARCH)/g" \
