@@ -857,10 +857,6 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
             auto chelper = new StartCHelper{};
             chelper->ptr = retval;
 
-            tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
-            starting_handshake_wait(handshake);
-            tracepoint(ubuntu_app_launch, handshake_complete, appIdStr.c_str());
-
             /* Call the job start function */
             g_debug("Asking Upstart to start task for: %s", appIdStr.c_str());
             g_dbus_connection_call(registry->impl->_dbus.get(),                   /* bus */
@@ -878,6 +874,10 @@ std::shared_ptr<UpstartInstance> UpstartInstance::launch(
                                    );
 
             tracepoint(ubuntu_app_launch, libual_start_message_sent, appIdStr.c_str());
+
+            tracepoint(ubuntu_app_launch, handshake_wait, appIdStr.c_str());
+            starting_handshake_wait(handshake);
+            tracepoint(ubuntu_app_launch, handshake_complete, appIdStr.c_str());
 
             return retval;
         });
