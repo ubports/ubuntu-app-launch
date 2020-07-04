@@ -44,9 +44,14 @@ Registry::Impl::Impl(Registry* registry)
     , _iconFinders()
 // _manager(nullptr)
 {
-    auto cancel = thread.getCancellable();
-    _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([cancel]() {
-        return std::shared_ptr<GDBusConnection>(g_bus_get_sync(G_BUS_TYPE_SESSION, cancel.get(), nullptr),
+    auto session_cancel = thread.getCancellable();
+    auto system_cancel = thread.getCancellable();
+    _dbus = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([session_cancel]() {
+        return std::shared_ptr<GDBusConnection>(g_bus_get_sync(G_BUS_TYPE_SESSION, session_cancel.get(), nullptr),
+                                                [](GDBusConnection* bus) { g_clear_object(&bus); });
+    });
+    _dbus_system = thread.executeOnThread<std::shared_ptr<GDBusConnection>>([system_cancel]() {
+        return std::shared_ptr<GDBusConnection>(g_bus_get_sync(G_BUS_TYPE_SYSTEM, system_cancel.get(), nullptr),
                                                 [](GDBusConnection* bus) { g_clear_object(&bus); });
     });
 }

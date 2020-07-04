@@ -1,5 +1,5 @@
 Source: ubuntu-app-launch
-Section: gnome
+Section: x11
 Priority: optional
 Maintainer: Ted Gould <ted@ubuntu.com>
 Build-Depends: abi-compliance-checker <!cross>,
@@ -30,6 +30,8 @@ Build-Depends: abi-compliance-checker <!cross>,
                libzeitgeist-2.0-dev,
                gobject-introspection <!cross>,
                python3-dbusmock <!nocheck>,
+               qt5-default,
+               qtbase5-dev,
                upstart (>= 1.13) <!nocheck>,
 Standards-Version: 3.9.4
 Homepage: http://launchpad.net/ubuntu-app-launch

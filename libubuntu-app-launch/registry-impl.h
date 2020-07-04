@@ -63,6 +63,8 @@ public:
     GLib::ContextThread thread;
     /** DBus shared connection for the session bus */
     std::shared_ptr<GDBusConnection> _dbus;
+    /** DBus shared connection for the system bus */
+    std::shared_ptr<GDBusConnection> _dbus_system;
 
 #ifdef ENABLE_SNAPPY
     /** Snapd information object */
