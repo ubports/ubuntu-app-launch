@@ -68,7 +68,7 @@ main (int argc, char * argv[])
 		return -1;
 	}
 
-	gchar * mirpath = g_build_filename(g_get_user_runtime_dir(), "mir_socket_trusted", NULL);
+	gchar * mirpath = g_build_filename(g_get_user_runtime_dir(), "mir_socket_trusted", (gchar *)NULL);
 	if (!g_file_test(mirpath, G_FILE_TEST_EXISTS)) {
 		g_free(mirpath);
 		g_debug("No Mir detected, exec'ing assuming we're under X11");
